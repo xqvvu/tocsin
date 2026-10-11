@@ -16,6 +16,7 @@ import {
   formatDestinationDateTime,
   resolveDestinationPresentation,
 } from "#destinations/presentation";
+import { zodTemplateDiagnostics } from "#destinations/shared/template-diagnostics";
 import type { DestinationSendInput } from "#destinations/types";
 
 const RE_TEMPLATE_VARIABLE = /\{\{\s*([^{}]+?)\s*\}\}/g;
@@ -371,9 +372,51 @@ export class DestinationTemplateEngine {
   }
 
   static diagnoseConfig(config: JsonObject): TemplateDiagnostic[] {
-    const parsed = DestinationTemplateSchema.safeParse(config.template);
+    // Dispatch on the declared mode first rather than parsing first, so an
+    // unknown template variable is reported as itself.
+    //
+    // Parsing first silently discarded it (#53): a mode schema's superRefine
+    // rejects the very variable a caller wants diagnosed, so safeParse failed
+    // and the caller — the console preview — got an empty list and showed
+    // nothing. A structurally invalid template still has no useful mode arm to
+    // dispatch on, and for those the parse is the only signal, so it falls
+    // back to the zod issues.
+    const template = config.template;
 
-    return parsed.success ? this.diagnoseDestinationTemplate(parsed.data) : [];
+    // No template is a valid configuration — there is nothing to diagnose.
+    if (template === undefined) {
+      return [];
+    }
+
+    if (isDestinationTemplateLike(template)) {
+      return this.diagnoseDestinationTemplate(template);
+    }
+
+    // A template with no `mode` belongs to its destination, not to this
+    // engine: Feishu's builtin card is selected by `source` and is validated
+    // by Feishu's own schema. The shared engine has nothing to say about it,
+    // and reporting a parse failure here would flag a perfectly valid
+    // destination template as broken (caught by the console integration test).
+    if (!isUnknownRecord(template) || typeof template.mode !== "string") {
+      return [];
+    }
+
+    // It declares a shared mode, so it *should* match that mode's schema.
+    // Whatever it got wrong is the operator's next fix. The zod flattener
+    // models absent paths/nulls explicitly; this engine models them as absent
+    // keys, so map at the boundary.
+    const parsed = DestinationTemplateSchema.safeParse(template);
+
+    if (parsed.success) {
+      return [];
+    }
+
+    return zodTemplateDiagnostics(parsed.error).map((diagnostic) => ({
+      severity: diagnostic.severity,
+      message: diagnostic.message,
+      ...(diagnostic.path === null ? {} : { path: diagnostic.path }),
+      ...(diagnostic.variable === null ? {} : { variable: diagnostic.variable }),
+    }));
   }
 
   static diagnoseTemplateValue(
@@ -806,7 +849,35 @@ function isTemplateStaticPath(path: string): path is TemplateStaticPath {
   return AllowedTemplatePaths.has(path as TemplateStaticPath);
 }
 
-function isJsonObject(value: JsonValue): value is JsonObject {
+/**
+ * True when a config's `template` value carries a recognised mode and the body
+ * field that mode reads, so it can be dispatched without schema validation.
+ * Deliberately structural: dispatch must work on templates whose *contents*
+ * are invalid, because diagnosing those contents is the point (#53).
+ */
+function isDestinationTemplateLike(value: unknown): value is DestinationTemplate {
+  if (!isUnknownRecord(value)) {
+    return false;
+  }
+
+  const { mode } = value;
+
+  if (mode === "text") {
+    return typeof value.text === "string";
+  }
+
+  if (mode === "feishu_card") {
+    return isJsonObject(value.card);
+  }
+
+  if (mode === "json_payload" || mode === "slack_blocks") {
+    return isJsonObject(value.payload);
+  }
+
+  return false;
+}
+
+function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

@@ -427,27 +427,40 @@ describe("template mode dispatch", () => {
     ).toEqual([{ path: "template.payload.alert.0.text" }]);
   });
 
-  it("returns no diagnostics from diagnoseConfig when the schema already rejects the template", () => {
+  it("reports the same diagnostics through diagnoseConfig as through direct dispatch", () => {
     const template: DestinationTemplate = {
       mode: "slack_blocks",
       payload: { blocks: [{ text: "{{event.nope}}" }] },
     };
 
-    // Direct dispatch reports the offending variable and its path.
-    expect(DestinationTemplateEngine.diagnoseDestinationTemplate(template)).toEqual([
+    const expected = [
       {
-        severity: "error",
+        severity: "error" as const,
         path: "template.payload.blocks.0.text",
         variable: "event.nope",
         message: "Destination template contains unknown variable: event.nope",
       },
-    ]);
+    ];
 
-    // diagnoseConfig parses first; the mode schema's superRefine already fails
-    // on that variable, so the parse failure short-circuits to an empty array
-    // and the specific diagnostic is lost. A caller holding only a config
-    // object (the console preview path) therefore gets nothing to show.
-    // Pinned as current behaviour; reported as a finding, not fixed here.
-    expect(DestinationTemplateEngine.diagnoseConfig({ template })).toEqual([]);
+    expect(DestinationTemplateEngine.diagnoseDestinationTemplate(template)).toEqual(expected);
+    // The config-level entry point must agree. It previously parsed first and
+    // returned [] here, because the mode schema's superRefine rejects the very
+    // variable being diagnosed — the console preview showed nothing (#53).
+    expect(DestinationTemplateEngine.diagnoseConfig({ template })).toEqual(expected);
+  });
+
+  it("surfaces zod issues when the template is structurally invalid for its mode", () => {
+    // A payload mode whose body is not an object: there is no useful mode arm
+    // to dispatch on, so the parse issues are the only signal.
+    const diagnostics = DestinationTemplateEngine.diagnoseConfig({
+      template: { mode: "json_payload", payload: "not-an-object" },
+    });
+
+    expect(diagnostics.length).toBeGreaterThan(0);
+    expect(diagnostics.every((diagnostic) => diagnostic.severity === "error")).toBe(true);
+  });
+
+  it("returns no diagnostics for a config with no template at all", () => {
+    expect(DestinationTemplateEngine.diagnoseConfig({})).toEqual([]);
   });
 });
