@@ -10,6 +10,7 @@ const ignorePatterns = [
   ".github/**",
   ".output/**",
   ".stitch/**",
+  ".wt/**",
   ".vite-hooks/**",
   "docs/**",
   "pnpm-lock.yaml",

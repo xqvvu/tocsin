@@ -26,6 +26,7 @@ dist-ssr
 *.sw?
 
 # AI agent worktrees
+.wt/
 .claude/worktrees/
 !.vscode/
 !.vscode/settings.json
