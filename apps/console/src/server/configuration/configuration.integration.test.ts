@@ -446,6 +446,79 @@ describe("configuration capabilities", () => {
     await store.close();
   });
 
+  it("previews Slack blocks with resolved bindings and rejects unsafe references", async () => {
+    const { store, services } = await createTestContext();
+    const webhookUrl = "https://hooks.slack.com/services/secret-token-path";
+
+    const result = await services.destinations.previewDestinationDraft({
+      name: "Slack SRE draft",
+      kind: "slack",
+      config: {
+        webhookUrl,
+        template: {
+          mode: "slack_blocks",
+          payload: {
+            text: "{{bindings.statusLabel}}",
+            blocks: [{ type: "section", text: { text: "{{bindings.providerLabel}}" } }],
+          },
+          bindings: {
+            statusLabel: {
+              select: "event.status",
+              cases: { firing: "FIRING" },
+              fallback: "UNKNOWN",
+            },
+            providerLabel: {
+              select: "source.provider",
+              cases: { generic: "GENERIC" },
+              fallback: "OTHER",
+            },
+          },
+        },
+      },
+    });
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.context.bindings).toEqual({
+      statusLabel: "FIRING",
+      providerLabel: "GENERIC",
+    });
+    expect(result.renderedPayload).toMatchObject({
+      text: "FIRING",
+      blocks: [{ type: "section", text: { text: "GENERIC" } }],
+    });
+    expect(JSON.stringify(result)).not.toContain("secret-token-path");
+
+    const unsafe = await services.destinations.previewDestinationDraft({
+      name: "Slack SRE draft",
+      kind: "slack",
+      config: {
+        webhookUrl,
+        template: {
+          mode: "slack_blocks",
+          payload: { url: "{{config.webhookUrl}}", auth: "{{headers.authorization}}" },
+        },
+      },
+    });
+
+    expect(unsafe.diagnostics).toEqual([
+      {
+        severity: "error",
+        path: "template.payload.url",
+        variable: "config.webhookUrl",
+        message: "Destination template contains unknown variable: config.webhookUrl",
+      },
+      {
+        severity: "error",
+        path: "template.payload.auth",
+        variable: "headers.authorization",
+        message: "Destination template contains unknown variable: headers.authorization",
+      },
+    ]);
+    expect(JSON.stringify(unsafe)).not.toContain("secret-token-path");
+
+    await store.close();
+  });
+
   it("tests destinations through registered senders without returning rendered payloads", async () => {
     const calls: Array<{ url: string; init: RequestInit }> = [];
     const { store, services } = await createTestContextWithDestinationFetch(async (url, init) => {
