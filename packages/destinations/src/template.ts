@@ -25,6 +25,17 @@ const RE_TEMPLATE_BINDING_NAME = /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/;
 
 const TEMPLATE_BINDING_VALUE_MAX_LENGTH = 256;
 
+/**
+ * Optional output-encoding hook for text rendering. `escape` is applied to each
+ * interpolated variable value only; the template's own literal text — an HTML
+ * body's `<table>` markup, for example — is emitted untouched. That is what lets
+ * a destination keep operator-written structure while hostile variable values
+ * (an event title containing `<script>`) become inert entities.
+ */
+export interface TemplateRenderOptions {
+  escape?: (value: string) => string;
+}
+
 export const TemplateBindingSelectorSchema = z.enum([
   "event.status",
   "event.severity",
@@ -395,6 +406,7 @@ export class DestinationTemplateEngine {
     template: string,
     path = "text",
     bindings: TemplateBindings = {},
+    options: TemplateRenderOptions = {},
   ): RenderTemplateResult<string> {
     const diagnostics = this.diagnoseTextTemplate(template, path, bindings);
 
@@ -408,7 +420,11 @@ export class DestinationTemplateEngine {
 
     return {
       ok: true,
-      value: interpolateTemplateString(contextWithBindings(context, bindings), template),
+      value: interpolateTemplateString(
+        contextWithBindings(context, bindings),
+        template,
+        options.escape,
+      ),
       diagnostics,
     };
   }
@@ -441,8 +457,9 @@ export class DestinationTemplateEngine {
     template: string,
     path = "text",
     bindings: TemplateBindings = {},
+    options: TemplateRenderOptions = {},
   ): string {
-    const rendered = this.renderText(context, template, path, bindings);
+    const rendered = this.renderText(context, template, path, bindings, options);
 
     if (!rendered.ok) {
       throw new TemplateValidationError(rendered.diagnostics);
@@ -591,10 +608,16 @@ function interpolateJsonTemplate(context: TemplateContext, value: JsonValue): Js
   return value;
 }
 
-function interpolateTemplateString(context: TemplateContext, template: string): string {
-  return template.replaceAll(RE_TEMPLATE_VARIABLE, (_match, rawPath: string) =>
-    templateValue(context, rawPath),
-  );
+function interpolateTemplateString(
+  context: TemplateContext,
+  template: string,
+  escape?: (value: string) => string,
+): string {
+  return template.replaceAll(RE_TEMPLATE_VARIABLE, (_match, rawPath: string) => {
+    const value = templateValue(context, rawPath);
+
+    return escape ? escape(value) : value;
+  });
 }
 
 function templateValue(context: TemplateContext, path: string): string {

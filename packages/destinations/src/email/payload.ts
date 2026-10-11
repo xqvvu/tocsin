@@ -15,8 +15,7 @@ export function renderEmailPayload(
   config: EmailConfig,
 ): JsonValue {
   const event = input.normalizedEvent;
-  const subjectPrefix = config.subjectPrefix ? `${config.subjectPrefix.trim()} ` : "";
-  const subject = `${subjectPrefix}[${displaySeverity(event.severity, input.presentation)} ${displayStatus(event.status, input.presentation)}] ${event.title}`;
+  const subject = renderEmailSubject(input, config);
   const text =
     config.template?.mode === "text"
       ? DestinationTemplateEngine.renderTextOrThrow(
@@ -29,7 +28,7 @@ export function renderEmailPayload(
   return {
     subject,
     text,
-    html: renderEmailHtml(text),
+    html: renderEmailHtml(input, config, text),
     metadata: {
       eventId: input.eventId,
       sourceId: input.source.id,
@@ -71,6 +70,30 @@ export function renderEmailRequestPayload(
   return payload;
 }
 
+/**
+ * Subject line for one event.
+ *
+ * `subjectTemplate` owns the subject outright when set — the prefix is then
+ * ignored, so the operator decides the whole line. Without it the built-in
+ * `[severity status] title` shape (plus optional prefix) is rendered exactly as
+ * before.
+ */
+function renderEmailSubject(input: DestinationSendInput<EmailConfig>, config: EmailConfig): string {
+  if (config.subjectTemplate) {
+    return DestinationTemplateEngine.renderTextOrThrow(
+      DestinationTemplateEngine.createRenderContext(input),
+      config.subjectTemplate,
+      "subjectTemplate",
+      config.template?.bindings,
+    );
+  }
+
+  const event = input.normalizedEvent;
+  const subjectPrefix = config.subjectPrefix ? `${config.subjectPrefix.trim()} ` : "";
+
+  return `${subjectPrefix}[${displaySeverity(event.severity, input.presentation)} ${displayStatus(event.status, input.presentation)}] ${event.title}`;
+}
+
 function renderEmailText(input: DestinationSendInput<EmailConfig>): string {
   const event = input.normalizedEvent;
   const labels = destinationCopy(input.presentation).labels;
@@ -93,11 +116,34 @@ function renderEmailText(input: DestinationSendInput<EmailConfig>): string {
     .join("\n");
 }
 
-function renderEmailHtml(text: string): string {
+/**
+ * HTML alternative for the email body.
+ *
+ * A `htmlTemplate` replaces the auto-generated block. Its markup is trusted
+ * (the operator wrote it) and every interpolated value goes through
+ * `escapeHtml`, so an event field carrying `<script>` stays inert text. Leaving
+ * the template unset keeps the previous behaviour: the rendered text body
+ * escaped into a single <pre>.
+ */
+function renderEmailHtml(
+  input: DestinationSendInput<EmailConfig>,
+  config: EmailConfig,
+  text: string,
+): string {
+  if (config.htmlTemplate) {
+    return DestinationTemplateEngine.renderTextOrThrow(
+      DestinationTemplateEngine.createRenderContext(input),
+      config.htmlTemplate,
+      "htmlTemplate",
+      config.template?.bindings,
+      { escape: escapeHtml },
+    );
+  }
+
   return `<pre>${escapeHtml(text)}</pre>`;
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")

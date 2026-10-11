@@ -44,6 +44,18 @@ export const emailManifest = {
       descriptionKey: "destinations.form.subjectPrefixDescription",
     },
     {
+      type: "text",
+      path: "subjectTemplate",
+      labelKey: "destinations.form.subjectTemplate",
+      descriptionKey: "destinations.form.subjectTemplateDescription",
+    },
+    {
+      type: "text",
+      path: "htmlTemplate",
+      labelKey: "destinations.form.htmlTemplate",
+      descriptionKey: "destinations.form.htmlTemplateDescription",
+    },
+    {
       type: "key-value",
       path: "headers",
       labelKey: "destinations.form.headers",
