@@ -4,7 +4,7 @@ import type {
   DestinationPreviewResult,
   DestinationTestResult,
   JsonObject,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import type {
   DestinationFormKind,
@@ -67,7 +67,7 @@ export type EditDestinationFormInput = DestinationFormSubmitInput & {
 
 /**
  * Form action return values.
- * - DTO results come from server functions / `@vane/core`
+ * - DTO results come from server functions / `@tocsin/core`
  * - `false` keeps create forms open after a handled failure
  * - `null` / `undefined` / `void` are treated as non-blocking completion
  */

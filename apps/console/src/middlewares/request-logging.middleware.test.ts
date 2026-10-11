@@ -20,7 +20,7 @@ describe("request logging middleware", () => {
       },
       loggers: [
         {
-          category: ["vane"],
+          category: ["tocsin"],
           sinks: ["recorder"],
           lowestLevel: "trace",
         },
@@ -40,7 +40,7 @@ describe("request logging middleware", () => {
   });
 
   it("propagates a trusted request id and returns it in the response", async () => {
-    const request = new Request("https://vane.test/api/events?token=query-secret", {
+    const request = new Request("https://tocsin.test/api/events?token=query-secret", {
       headers: {
         authorization: "Bearer header-secret",
         "x-request-id": "request-1",
@@ -48,7 +48,7 @@ describe("request logging middleware", () => {
     });
 
     const result = await runMiddleware(request, "/api/events", async () => {
-      getLogger(["vane", "test"]).info("inside request");
+      getLogger(["tocsin", "test"]).info("inside request");
       return new Response(null, { status: 204 });
     });
 
@@ -57,11 +57,11 @@ describe("request logging middleware", () => {
     expect(records).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          category: ["vane", "test"],
+          category: ["tocsin", "test"],
           properties: expect.objectContaining({ requestId: "request-1" }),
         }),
         expect.objectContaining({
-          category: ["vane", "http"],
+          category: ["tocsin", "http"],
           level: "info",
           properties: expect.objectContaining({
             requestId: "request-1",
@@ -84,23 +84,23 @@ describe("request logging middleware", () => {
       releaseFirst = resolve;
     });
     const first = runMiddleware(
-      new Request("https://vane.test/first", {
+      new Request("https://tocsin.test/first", {
         headers: { "x-request-id": "request-first" },
       }),
       "/first",
       async () => {
         await firstPaused;
-        getLogger(["vane", "test"]).info("first completed", { operation: "first" });
+        getLogger(["tocsin", "test"]).info("first completed", { operation: "first" });
         return new Response(null, { status: 200 });
       },
     );
     const second = runMiddleware(
-      new Request("https://vane.test/second", {
+      new Request("https://tocsin.test/second", {
         headers: { "x-request-id": "request-second" },
       }),
       "/second",
       async () => {
-        getLogger(["vane", "test"]).info("second completed", { operation: "second" });
+        getLogger(["tocsin", "test"]).info("second completed", { operation: "second" });
         return new Response(null, { status: 200 });
       },
     );
@@ -109,7 +109,9 @@ describe("request logging middleware", () => {
     releaseFirst?.();
     await first;
 
-    const operationRecords = records.filter((record) => record.category.join(".") === "vane.test");
+    const operationRecords = records.filter(
+      (record) => record.category.join(".") === "tocsin.test",
+    );
 
     expect(operationRecords).toEqual(
       expect.arrayContaining([
@@ -130,7 +132,7 @@ describe("request logging middleware", () => {
   });
 
   it("replaces invalid request ids and lowers successful probes to debug", async () => {
-    const request = new Request("https://vane.test/api/ready", {
+    const request = new Request("https://tocsin.test/api/ready", {
       headers: { "x-request-id": "invalid request id" },
     });
     const requestId = resolveRequestId(request.headers);
@@ -145,7 +147,7 @@ describe("request logging middleware", () => {
 
     expect(records).toContainEqual(
       expect.objectContaining({
-        category: ["vane", "http"],
+        category: ["tocsin", "http"],
         level: "debug",
         properties: expect.objectContaining({ pathname: "/api/ready" }),
       }),
@@ -154,15 +156,15 @@ describe("request logging middleware", () => {
 
   it("preserves immutable redirect responses while adding the request id", async () => {
     const result = await runMiddleware(
-      new Request("https://vane.test/redirect", {
+      new Request("https://tocsin.test/redirect", {
         headers: { "x-request-id": "request-redirect" },
       }),
       "/redirect",
-      async () => Response.redirect("https://vane.test/login", 307),
+      async () => Response.redirect("https://tocsin.test/login", 307),
     );
 
     expect(result.status).toBe(307);
-    expect(result.headers.get("location")).toBe("https://vane.test/login");
+    expect(result.headers.get("location")).toBe("https://tocsin.test/login");
     expect(result.headers.get("x-request-id")).toBe("request-redirect");
   });
 
@@ -170,14 +172,14 @@ describe("request logging middleware", () => {
     const error = new Error("database failed token=database-secret");
 
     await expect(
-      runMiddleware(new Request("https://vane.test/fail"), "/fail", async () => {
+      runMiddleware(new Request("https://tocsin.test/fail"), "/fail", async () => {
         throw error;
       }),
     ).rejects.toBe(error);
 
     expect(records).toContainEqual(
       expect.objectContaining({
-        category: ["vane", "http"],
+        category: ["tocsin", "http"],
         level: "error",
         properties: expect.objectContaining({
           errorName: "Error",

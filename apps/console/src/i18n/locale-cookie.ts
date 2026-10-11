@@ -1,6 +1,6 @@
 import { defaultLocale, normalizeLocale, type AppLocale } from "#/i18n/locales";
 
-export const localeCookieName = "vane_locale";
+export const localeCookieName = "tocsin_locale";
 
 export function readLocaleCookie(cookieHeader: string | null | undefined): AppLocale | null {
   if (!cookieHeader) {

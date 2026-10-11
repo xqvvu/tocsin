@@ -1,4 +1,4 @@
-import type { OncallPing } from "@vane/core";
+import type { OncallPing } from "@tocsin/core";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import { providerReferenceFromRow } from "#/infra/sqlite/repositories/delivery/delivery.helpers";

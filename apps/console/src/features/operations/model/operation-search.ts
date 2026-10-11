@@ -1,8 +1,8 @@
 import { pickBy } from "es-toolkit/object";
 import { z } from "zod";
 
-import type { AlertSeverity, AlertStatus, DeliveryState } from "@vane/core";
-import { AlertSeveritySchema, AlertStatusSchema, DeliveryStateSchema } from "@vane/core";
+import type { AlertSeverity, AlertStatus, DeliveryState } from "@tocsin/core";
+import { AlertSeveritySchema, AlertStatusSchema, DeliveryStateSchema } from "@tocsin/core";
 
 export const DashboardOperationSearchSchema = z.object({
   sourceId: z.string().catch("").optional(),

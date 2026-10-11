@@ -1,11 +1,11 @@
 # Ready-To-Run Stitch Prompts
 
-Use these prompts after the Vane design system has been uploaded to the Stitch
+Use these prompts after the Tocsin design system has been uploaded to the Stitch
 project. Do not paste color, font, or theme tokens into generation prompts.
 
 ## 1. Events Operations Page
 
-Design the Events page for Vane, a self-hosted Alert Hub used by SRE teams to
+Design the Events page for Tocsin, a self-hosted Alert Hub used by SRE teams to
 inspect immutable inbound webhook history and normalized alert fields. The page
 must feel like a compact operations console for repeated triage work.
 
@@ -13,7 +13,7 @@ must feel like a compact operations console for repeated triage work.
 
 **PAGE STRUCTURE:**
 
-1. **Persistent App Shell:** Compact header with `Vane Console`, subtitle
+1. **Persistent App Shell:** Compact header with `Tocsin Console`, subtitle
    `SQLite-first alert hub`, refresh action, user menu, and primary navigation
    with Events active. Navigation items are Events, Deliveries, Sources, Routes,
    Destinations, and Settings.
@@ -50,7 +50,7 @@ must feel like a compact operations console for repeated triage work.
 
 ## 2. Deliveries Operations Page
 
-Design the Deliveries page for Vane, focused on outbound delivery jobs, retry
+Design the Deliveries page for Tocsin, focused on outbound delivery jobs, retry
 behavior, worker inspection, and failure diagnosis.
 
 **PLATFORM:** Web, desktop-first

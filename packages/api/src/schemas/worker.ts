@@ -1,4 +1,4 @@
-import { IsoDateTimeSchema } from "@vane/core";
+import { IsoDateTimeSchema } from "@tocsin/core";
 import * as z from "zod";
 
 /** Outcome of one delivery-worker pass. */

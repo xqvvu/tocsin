@@ -3,8 +3,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { configure, reset, type LogRecord } from "@logtape/logtape";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 
-import { createDefaultDestinationRegistry } from "@vane/destinations";
-import { createDefaultProviderRegistry } from "@vane/providers";
+import { createDefaultDestinationRegistry } from "@tocsin/destinations";
+import { createDefaultProviderRegistry } from "@tocsin/providers";
 
 import { openSqliteStore, type SqliteStore } from "#/infra/sqlite/store";
 import { DeliveryWorker } from "#/server/deliveries/delivery-worker.service";
@@ -26,7 +26,7 @@ describe("operational logging", () => {
       },
       loggers: [
         {
-          category: ["vane"],
+          category: ["tocsin"],
           sinks: ["recorder"],
           lowestLevel: "trace",
         },
@@ -81,7 +81,7 @@ describe("operational logging", () => {
       token: "source-token",
       headers: {
         authorization: "Bearer source-token",
-        "x-vane-provider-secret": "provider-secret",
+        "x-tocsin-provider-secret": "provider-secret",
       },
       payload: {
         id: "request-1",
@@ -111,7 +111,7 @@ describe("operational logging", () => {
     expect(records).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          category: ["vane", "intake"],
+          category: ["tocsin", "intake"],
           level: "info",
           properties: expect.objectContaining({
             sourceId: "source-1",
@@ -122,7 +122,7 @@ describe("operational logging", () => {
           }),
         }),
         expect.objectContaining({
-          category: ["vane", "delivery"],
+          category: ["tocsin", "delivery"],
           level: "warning",
           properties: expect.objectContaining({
             eventId: accepted.eventId,
@@ -190,7 +190,7 @@ describe("operational logging", () => {
     expect(records).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          category: ["vane", "worker", "delivery"],
+          category: ["tocsin", "worker", "delivery"],
           level: "warning",
           properties: expect.objectContaining({
             claimed: 2,
@@ -199,7 +199,7 @@ describe("operational logging", () => {
           }),
         }),
         expect.objectContaining({
-          category: ["vane", "worker", "delivery"],
+          category: ["tocsin", "worker", "delivery"],
           level: "error",
           properties: expect.objectContaining({
             errorName: "Error",

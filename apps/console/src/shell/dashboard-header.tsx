@@ -24,7 +24,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             to="/events"
             className="font-heading text-primary shrink-0 text-base font-extrabold tracking-tight"
           >
-            Vane
+            Tocsin
           </Link>
           <nav
             className="flex h-full min-w-0 items-center overflow-x-auto text-sm"

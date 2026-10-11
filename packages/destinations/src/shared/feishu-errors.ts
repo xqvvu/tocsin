@@ -126,7 +126,7 @@ export function feishuErrorDecision(
       operatorHint:
         operatorHint ??
         (code !== null && RETRYABLE_CODES.has(code)
-          ? "re-check the app credential and let Vane exchange a fresh tenant access token"
+          ? "re-check the app credential and let Tocsin exchange a fresh tenant access token"
           : "Feishu is rate limiting or temporarily rejecting this call"),
     };
   }
@@ -153,7 +153,7 @@ export function withOperatorHint(message: string, operatorHint: string | null): 
 /**
  * Whether a failed Feishu response is a *business rejection* or a plain HTTP failure.
  *
- * Every endpoint Vane calls documents the same shape: business rejections (invalid
+ * Every endpoint Tocsin calls documents the same shape: business rejections (invalid
  * parameter, bot not in the group, missing scope, exhausted 加急额度, and even the
  * rate limit on legacy endpoints) come back with a non-zero `code` in the body, and
  * most of them are answered with HTTP 400. A gateway or transport failure carries no

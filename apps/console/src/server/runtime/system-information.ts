@@ -5,7 +5,7 @@ import { getLogger } from "@logtape/logtape";
 
 import packageJson from "../../../../../package.json";
 
-const logger = getLogger(["vane", "runtime"]);
+const logger = getLogger(["tocsin", "runtime"]);
 
 export interface SystemInformation {
   version: string;

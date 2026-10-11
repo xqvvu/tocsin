@@ -1,12 +1,12 @@
 # MVP 完成与发布硬化 Checklist
 
-本文档记录 Vane MVP baseline 的完成状态，以及从“可用 MVP”走向“可公开试用发布”的剩余硬化
+本文档记录 Tocsin MVP baseline 的完成状态，以及从“可用 MVP”走向“可公开试用发布”的剩余硬化
 gate。产品范围仍以 `docs/prd/self-hosted-alert-hub-mvp.md` 为准；架构规则仍以 `AGENTS.md`
 和 `docs/architecture/*` 为准。
 
 ## 当前结论
 
-截至 2026-06-26，Vane 可以视为 **MVP baseline 已完成**：Source → Webhook intake → Event →
+截至 2026-06-26，Tocsin 可以视为 **MVP baseline 已完成**：Source → Webhook intake → Event →
 Route → Destination → Delivery → Worker → History 的主链路已经贯通，并且具备 dashboard
 登录、首次 setup、SQLite 持久化、provider/destination registry、TOML/JSON import/export、健康检查和
 Docker runtime 形态。
@@ -40,7 +40,7 @@ Docker runtime 形态。
   secret，并支持 env ref。
 - Runtime：单进程、SQLite-first、application container、request context、显式 migrations、
   health/readiness endpoint、Dockerfile、docker compose 和数据卷。
-- 架构边界：`@vane/core`、`@vane/providers`、`@vane/destinations`、`apps/console` 的职责边界已经建立，
+- 架构边界：`@tocsin/core`、`@tocsin/providers`、`@tocsin/destinations`、`apps/console` 的职责边界已经建立，
   console 内部采用 route-first frontend 与 plain layered backend。
 
 ## 非目标
@@ -149,7 +149,7 @@ provider/destination。
 
 MVP baseline 已能覆盖以下演示路径；发布前仍需要用自动化 E2E 和 Docker smoke 固化：
 
-1. 使用 Docker 或本地命令启动 Vane。
+1. 使用 Docker 或本地命令启动 Tocsin。
 2. 首次 setup owner/admin 并登录 dashboard。
 3. 创建一个告警源，复制 webhook URL 和接入 Token。
 4. 创建一个投递目标并完成 preview/test。

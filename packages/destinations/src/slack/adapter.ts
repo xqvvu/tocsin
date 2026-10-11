@@ -1,4 +1,4 @@
-import type { JsonValue } from "@vane/core";
+import type { JsonValue } from "@tocsin/core";
 import type { z } from "zod";
 
 import { slackManifest } from "#destinations/slack/manifest";

@@ -15,14 +15,14 @@ describe("destination form helpers", () => {
     const data = new FormData();
 
     data.set("kind", "generic_webhook");
-    data.set("url", "https://relay.example.test/vane");
+    data.set("url", "https://relay.example.test/tocsin");
     data.set("method", "PATCH");
     data.set("headers", "Authorization: Bearer relay-secret\nX-Team: sre\ninvalid");
     data.set("templateText", "{{event.title}} from {{source.name}}");
 
     expect(formDestinationKind(data)).toBe("generic_webhook");
     expect(destinationConfigFromForm("generic_webhook", data)).toEqual({
-      url: "https://relay.example.test/vane",
+      url: "https://relay.example.test/tocsin",
       method: "PATCH",
       headers: {
         Authorization: "Bearer relay-secret",
@@ -41,22 +41,22 @@ describe("destination form helpers", () => {
     data.set("kind", "email");
     data.set("endpointUrl", "https://mail.example.test/send");
     data.set("to", "sre@example.test, audit@example.test\nops@example.test");
-    data.set("from", "vane@example.test");
+    data.set("from", "tocsin@example.test");
     data.set("replyTo", "ops@example.test");
-    data.set("subjectPrefix", "[Vane]");
-    data.set("headers", "Authorization: Bearer gateway-secret\nX-Mailer: Vane");
+    data.set("subjectPrefix", "[Tocsin]");
+    data.set("headers", "Authorization: Bearer gateway-secret\nX-Mailer: Tocsin");
     data.set("templateText", "{{event.message}}");
 
     expect(formDestinationKind(data)).toBe("email");
     expect(destinationConfigFromForm("email", data)).toEqual({
       endpointUrl: "https://mail.example.test/send",
       to: ["sre@example.test", "audit@example.test", "ops@example.test"],
-      from: "vane@example.test",
+      from: "tocsin@example.test",
       replyTo: "ops@example.test",
-      subjectPrefix: "[Vane]",
+      subjectPrefix: "[Tocsin]",
       headers: {
         Authorization: "Bearer gateway-secret",
-        "X-Mailer": "Vane",
+        "X-Mailer": "Tocsin",
       },
       template: {
         mode: "text",
@@ -179,10 +179,10 @@ describe("destination form helpers", () => {
     email.set("endpointUrl", "");
     email.set("to", "");
     email.set("from", "");
-    email.set("subjectPrefix", "[Vane]");
+    email.set("subjectPrefix", "[Tocsin]");
 
     expect(destinationConfigPatchFromForm("email", email)).toEqual({
-      subjectPrefix: "[Vane]",
+      subjectPrefix: "[Tocsin]",
     });
 
     const feishuCardWithoutDraft = new FormData();

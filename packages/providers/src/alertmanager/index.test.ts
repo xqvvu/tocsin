@@ -16,7 +16,7 @@ describe("alertmanager provider parser", () => {
       },
       payload: {
         version: "4",
-        receiver: "vane",
+        receiver: "tocsin",
         status: "firing",
         groupKey: '{}:{alertname="InstanceDown"}',
         externalURL: "https://alertmanager.example.test/",
@@ -68,7 +68,7 @@ describe("alertmanager provider parser", () => {
       provider: "alertmanager",
       parserVersion: 1,
       alertCount: 1,
-      receiver: "vane",
+      receiver: "tocsin",
       groupKey: '{}:{alertname="InstanceDown"}',
       externalURL: "https://alertmanager.example.test/",
       generatorURL: "https://prometheus.example.test/graph?g0.expr=up",

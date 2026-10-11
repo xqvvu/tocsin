@@ -1,4 +1,8 @@
-import type { CreateFeishuAppCommand, FeishuAppSummary, UpdateFeishuAppCommand } from "@vane/core";
+import type {
+  CreateFeishuAppCommand,
+  FeishuAppSummary,
+  UpdateFeishuAppCommand,
+} from "@tocsin/core";
 
 export interface FeishuAppFormValues {
   name: string;

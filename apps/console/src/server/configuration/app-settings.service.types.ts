@@ -1,4 +1,4 @@
-import type { AppSettings } from "@vane/core";
+import type { AppSettings } from "@tocsin/core";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 

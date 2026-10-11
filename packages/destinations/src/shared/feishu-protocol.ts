@@ -1,6 +1,6 @@
 /**
  * Numeric limits the Feishu open platform validates server-side for the
- * endpoints Vane calls. They are enforced here as well so a destination can be
+ * endpoints Tocsin calls. They are enforced here as well so a destination can be
  * saved only in a shape that Feishu will actually accept.
  */
 

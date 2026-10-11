@@ -1,5 +1,5 @@
-import { decodeJsonObject, SourceProviderSchema } from "@vane/core";
-import type { SourceSummary } from "@vane/core";
+import { decodeJsonObject, SourceProviderSchema } from "@tocsin/core";
+import type { SourceSummary } from "@tocsin/core";
 
 import { fromSqliteBoolean } from "#/infra/sqlite/codecs";
 import { RecordNotFoundError } from "#/infra/sqlite/errors";

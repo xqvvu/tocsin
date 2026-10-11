@@ -1,9 +1,9 @@
-import alertmanagerIconUrl from "@vane/providers/assets/provider-icons/alertmanager.svg";
-import fastgptIconUrl from "@vane/providers/assets/provider-icons/fastgpt.svg";
-import grafanaIconUrl from "@vane/providers/assets/provider-icons/grafana.svg";
-import signozIconUrl from "@vane/providers/assets/provider-icons/signoz.svg";
-import uptimeKumaIconUrl from "@vane/providers/assets/provider-icons/uptime-kuma.svg";
-import webhookIconUrl from "@vane/providers/assets/provider-icons/webhook.svg";
+import alertmanagerIconUrl from "@tocsin/providers/assets/provider-icons/alertmanager.svg";
+import fastgptIconUrl from "@tocsin/providers/assets/provider-icons/fastgpt.svg";
+import grafanaIconUrl from "@tocsin/providers/assets/provider-icons/grafana.svg";
+import signozIconUrl from "@tocsin/providers/assets/provider-icons/signoz.svg";
+import uptimeKumaIconUrl from "@tocsin/providers/assets/provider-icons/uptime-kuma.svg";
+import webhookIconUrl from "@tocsin/providers/assets/provider-icons/webhook.svg";
 
 import type { SourceSummary } from "#/features/sources/ui/source-ui-types";
 

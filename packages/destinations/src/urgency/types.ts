@@ -21,7 +21,7 @@ export type UrgencyRetryHint = DestinationRetryHint;
 
 /**
  * Platform limit for one urgent call: the endpoint validates that the receiver
- * list is at most {@link FEISHU_MAX_URGENT_RECEIVERS} ids. Vane pages one receiver per ping, so the cap is a
+ * list is at most {@link FEISHU_MAX_URGENT_RECEIVERS} ids. Tocsin pages one receiver per ping, so the cap is a
  * guard against a hand-built input rather than a normal operating point.
  */
 export const MAX_URGENCY_RECEIVERS = FEISHU_MAX_URGENT_RECEIVERS;

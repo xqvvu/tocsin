@@ -1,6 +1,6 @@
 # 仓库内精选适配器扩展模型
 
-Vane 的 provider 和 destination 扩展优先服务仓库内维护的精选适配器，而不是运行时安装第三方插件。`@vane/providers` 和 `@vane/destinations` 暴露 TypeScript adapter 对象、schema-backed manifest 和纯 parse/send 行为；`apps/console` 继续负责存储、编排、密钥保护、UI 渲染、重试策略和 worker 生命周期。
+Tocsin 的 provider 和 destination 扩展优先服务仓库内维护的精选适配器，而不是运行时安装第三方插件。`@tocsin/providers` 和 `@tocsin/destinations` 暴露 TypeScript adapter 对象、schema-backed manifest 和纯 parse/send 行为；`apps/console` 继续负责存储、编排、密钥保护、UI 渲染、重试策略和 worker 生命周期。
 
 这个选择让 MVP 的集成贡献保持小而可审查，避免过早引入插件沙箱、依赖隔离、运行时包加载和动态 UI 执行。公开 adapter 形态使用 `defineProviderAdapter` 与 `defineDestinationAdapter` 这类 identity helper，而不是 abstract class，因为 adapter 是静态能力描述加纯函数行为，不是有生命周期的服务对象。
 
@@ -28,17 +28,17 @@ Adapter config 的演进由 adapter 和 console 分担：adapter manifest 声明
 
 默认 adapter 使用显式集中注册，不做文件系统自动发现或 glob import。集中注册文件是默认支持清单，测试负责审计 core 枚举、registry、manifest、i18n/catalog 和 secret 字段声明之间的一致性。
 
-每个第三方 adapter 使用独立目录模块，而不是继续堆在 package 根层的单个 `.ts` 文件中。目录模块让 adapter 实现、fixtures、自测和未来特定辅助函数保持局部性；package 根只聚合默认支持清单，并通过子路径导出暴露单个 adapter，例如 `@vane/destinations/feishu` 或 `@vane/providers/grafana`。
+每个第三方 adapter 使用独立目录模块，而不是继续堆在 package 根层的单个 `.ts` 文件中。目录模块让 adapter 实现、fixtures、自测和未来特定辅助函数保持局部性；package 根只聚合默认支持清单，并通过子路径导出暴露单个 adapter，例如 `@tocsin/destinations/feishu` 或 `@tocsin/providers/grafana`。
 
-MVP 保持 `SourceProvider` 和 `DestinationKind` 为封闭枚举。由于 Vane 不支持运行时第三方插件，封闭枚举能让 SQLite/TOML、UI、i18n、图标、registry 和测试保持可穷尽校验；adapter catalog 负责减少 console 的手写分支，而不是通过开放字符串放松边界。
+MVP 保持 `SourceProvider` 和 `DestinationKind` 为封闭枚举。由于 Tocsin 不支持运行时第三方插件，封闭枚举能让 SQLite/TOML、UI、i18n、图标、registry 和测试保持可穷尽校验；adapter catalog 负责减少 console 的手写分支，而不是通过开放字符串放松边界。
 
 新增 adapter 的最低测试契约包括 adapter 自测和 registry/catalog audit。Provider 自测覆盖代表性 payload、规范化字段、指纹、idempotency、metadata 脱敏、结构化失败和 config 影响；destination 自测覆盖 schema、preview 脱敏、请求形状、响应解析、错误分类、retry hint 和 rendered payload。Console 集成测试只在新增字段类型、表单 override、secret ref 行为或特殊预览/测试行为时增加。
 
-Manifest primitives 放在 `@vane/core`，包括配置字段、secret 字段、能力、client-safe catalog DTO 和 config version 等共享 schema。完整 `ProviderAdapter` 与 `DestinationAdapter` 接口留在 `@vane/providers` 和 `@vane/destinations`，避免 core 承载 parse/send/fetch 等 integration runtime 行为。
+Manifest primitives 放在 `@tocsin/core`，包括配置字段、secret 字段、能力、client-safe catalog DTO 和 config version 等共享 schema。完整 `ProviderAdapter` 与 `DestinationAdapter` 接口留在 `@tocsin/providers` 和 `@tocsin/destinations`，避免 core 承载 parse/send/fetch 等 integration runtime 行为。
 
-`@vane/core` 中的 manifest primitives 必须保持 JSON-safe 和可序列化，只包含数据 schema、字段描述、catalog DTO、lifecycle 与 config version 等契约。它们不能包含函数、class、React component、RegExp、fetch、parse/send、transport context 或任何运行时 adapter 行为。
+`@tocsin/core` 中的 manifest primitives 必须保持 JSON-safe 和可序列化，只包含数据 schema、字段描述、catalog DTO、lifecycle 与 config version 等契约。它们不能包含函数、class、React component、RegExp、fetch、parse/send、transport context 或任何运行时 adapter 行为。
 
-运维配置摘要默认由 console 从 runtime config 投影生成，adapter 可在服务端提供 override。Vane 是
+运维配置摘要默认由 console 从 runtime config 投影生成，adapter 可在服务端提供 override。Tocsin 是
 私有部署产品：摘要应对已认证操作者展示 endpoint URL、method、收件人、模板 mode 等运维事实；签名
 密钥、密码与敏感 header 值不进入摘要。复杂 adapter 可以返回更贴近目标系统语义的 `JsonObject`，
 但不得把 signing secret / password 放进 list 或 ordinary query DTO。
@@ -47,7 +47,7 @@ MVP 中 provider adapter 每次 parse 仍返回单个规范化告警，对应一
 
 Adapter runtime 只接收已经解析、已经校验的 typed config。SQLite/TOML 中的 `secretRefs`、环境变量引用、未来 secret store 解析、缺失 secret 报错和导入导出策略都由 console 的配置边界处理；adapter 不关心 secret 来自哪里，也不直接读取 env、TOML 或持久化结构。
 
-Provider manifest 可以声明认证需求或可选认证方式，但认证执行属于 console 服务层。所有 Source 默认使用 Vane Source token；额外共享密钥、共享 header、未来 HMAC 等能力由 manifest 描述，console 用它渲染配置、保存 secret refs、执行认证和审计，provider parse 不做认证裁决。
+Provider manifest 可以声明认证需求或可选认证方式，但认证执行属于 console 服务层。所有 Source 默认使用 Tocsin Source token；额外共享密钥、共享 header、未来 HMAC 等能力由 manifest 描述，console 用它渲染配置、保存 secret refs、执行认证和审计，provider parse 不做认证裁决。
 
 Destination transport context 保持小而显式，先稳定 `fetch`、`now`、timeout、user agent 等通用能力。Adapter 不能接收 app container、数据库、logger 或任意服务对象；如果未来需要 SMTP 等新 transport，需要明确扩展 context，而不是让 destination adapter 直接读取全局 runtime。
 
@@ -81,11 +81,11 @@ Provider metadata 由 adapter 产出，但 console 在入库前进行统一脱�
 
 路由规则不匹配 `providerMetadata` 或 raw payload。MVP 的稳定路由面只包括 Source、severity、status、labels、title 和 message；需要参与路由的 provider-specific 信息必须由 adapter 提升为 label 或未来明确扩展的 normalized field。
 
-Adapter 生成 labels 需要遵守轻量规范。Label 表达可路由上下文，优先使用 `service`、`environment`、`cluster`、`namespace`、`team` 等稳定短 key；`environment` 是 Vane 的 canonical 环境标签。高基数字段、trace/request id、时间戳、完整 URL、错误堆栈和不适合路由的 provider 信息应进入 metadata 或 raw debug data，而不是默认进入 labels。
+Adapter 生成 labels 需要遵守轻量规范。Label 表达可路由上下文，优先使用 `service`、`environment`、`cluster`、`namespace`、`team` 等稳定短 key；`environment` 是 Tocsin 的 canonical 环境标签。高基数字段、trace/request id、时间戳、完整 URL、错误堆栈和不适合路由的 provider 信息应进入 metadata 或 raw debug data，而不是默认进入 labels。
 
-`@vane/core` 只定义 normalized event 的枚举和 schema，不承载 provider-specific 映射经验。`@vane/providers` 可以提供共享 normalization helper，供 adapter 复用 severity/status/label 归一化逻辑；特殊 provider 语义由对应 adapter 显式处理。
+`@tocsin/core` 只定义 normalized event 的枚举和 schema，不承载 provider-specific 映射经验。`@tocsin/providers` 可以提供共享 normalization helper，供 adapter 复用 severity/status/label 归一化逻辑；特殊 provider 语义由对应 adapter 显式处理。
 
-Generic provider 和 generic webhook destination 保持简单声明式能力，不引入 JavaScript、JSONPath/JMESPath、条件表达式、动态签名脚本、多步骤 enrichment 或通用 body transform DSL。它们可以支持常见字段提取、有限映射、默认标签、安全模板和 HTTP 参数，但不能把 Vane 扩展成低代码工作流引擎。
+Generic provider 和 generic webhook destination 保持简单声明式能力，不引入 JavaScript、JSONPath/JMESPath、条件表达式、动态签名脚本、多步骤 enrichment 或通用 body transform DSL。它们可以支持常见字段提取、有限映射、默认标签、安全模板和 HTTP 参数，但不能把 Tocsin 扩展成低代码工作流引擎。
 
 Adapter manifest 可以声明简单 lifecycle status：`stable`、`experimental` 或 `deprecated`。该状态用于 catalog 展示、新建表单提示、TOML import warning 和废弃迁移说明；它与 `configVersion` 分离，不引入复杂兼容矩阵。
 

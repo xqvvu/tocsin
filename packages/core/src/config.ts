@@ -11,7 +11,7 @@ import {
 } from "#core/route/route";
 import { SourceProviderSchema } from "#core/source/source";
 
-export const CONFIG_SCHEMA_VERSION = "vane.config.v1";
+export const CONFIG_SCHEMA_VERSION = "tocsin.config.v1";
 
 const NonEmptyConfigStringSchema = z.string().trim().min(1);
 const EnvironmentVariableNameSchema = z

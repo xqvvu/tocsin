@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import type { AlertSeverity, AlertStatus, JsonObject, ProviderReference } from "@vane/core";
+import type { AlertSeverity, AlertStatus, JsonObject, ProviderReference } from "@tocsin/core";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import type { ClaimedDelivery } from "#/infra/sqlite/repositories/delivery/delivery.interface";

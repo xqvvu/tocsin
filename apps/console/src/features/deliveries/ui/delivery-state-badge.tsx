@@ -1,4 +1,4 @@
-import type { DeliveryState } from "@vane/core";
+import type { DeliveryState } from "@tocsin/core";
 
 import { Badge } from "#/components/ui/badge";
 import type { DeliveryDetail } from "#/features/operations/model/operation-types";

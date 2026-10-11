@@ -43,7 +43,7 @@ apps/console/src/
     configuration/
 ```
 
-跨 client/server 的 command schema 与 DTO 已迁入 `@vane/core`：
+跨 client/server 的 command schema 与 DTO 已迁入 `@tocsin/core`：
 
 - `packages/core/src/configuration/configuration-commands.ts`
 - `packages/core/src/operations/operations.ts`
@@ -61,7 +61,7 @@ apps/console/src/
    `ConfigPortabilityService`。
 2. 消除 dashboard auth / request context 的类型与实现循环：dashboard session 类型和 auth error
    独立出来，随后在 0004 后收敛到 `server/runtime/dashboard-session.ts`。
-3. 统一 Events/Deliveries 操作投影：operation DTO 迁入 `@vane/core`，feature 侧从 core re-export。
+3. 统一 Events/Deliveries 操作投影：operation DTO 迁入 `@tocsin/core`，feature 侧从 core re-export。
 4. 服务端目录从早期 `application` 形态收敛为当前 `server` 目录；repository 从 console 顶层移入
    `infra/sqlite/repositories`。
 5. `*.service.ts` 只承载实现，导出的 service option/result 类型放在相邻的

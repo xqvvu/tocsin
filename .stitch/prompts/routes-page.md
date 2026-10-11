@@ -1,6 +1,6 @@
-# Vane Routes Configuration Page
+# Tocsin Routes Configuration Page
 
-Design the Routes page for Vane, a self-hosted Alert Hub console used by SREs to
+Design the Routes page for Tocsin, a self-hosted Alert Hub console used by SREs to
 inspect and configure how normalized inbound Events fan out to one or more
 Destinations. Routes are simple matching rules over normalized fields; they are
 not workflow automation, alert creation, silencing, or incident management.
@@ -9,7 +9,7 @@ not workflow automation, alert creation, silencing, or incident management.
 
 **PAGE STRUCTURE:**
 
-1. **App Shell:** Preserve the Vane console shell pattern from Events,
+1. **App Shell:** Preserve the Tocsin console shell pattern from Events,
    Deliveries, and Sources: compact top navigation, active Routes item, dense
    work area, calm operational styling, and no global "Create Alert" action.
 

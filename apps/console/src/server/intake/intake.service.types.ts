@@ -1,5 +1,5 @@
-import type { JsonValue, RouteMatchResult } from "@vane/core";
-import type { ProviderRegistry } from "@vane/providers";
+import type { JsonValue, RouteMatchResult } from "@tocsin/core";
+import type { ProviderRegistry } from "@tocsin/providers";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 

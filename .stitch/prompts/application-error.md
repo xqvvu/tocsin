@@ -1,13 +1,13 @@
-# Vane Console - Application Error
+# Tocsin Console - Application Error
 
-Design an application error boundary screen for the Vane self-hosted alert hub
+Design an application error boundary screen for the Tocsin self-hosted alert hub
 console. This is for unexpected route loader or runtime failures, not a 404
 page.
 
 **PLATFORM:** Web, desktop-first.
 
 **PAGE STRUCTURE:**
-1. **Application Frame:** Preserve the authenticated Vane console context with
+1. **Application Frame:** Preserve the authenticated Tocsin console context with
    compact navigation and header cues. The page should feel like an operational
    dashboard fallback inside the existing app shell, not a marketing landing
    page.
@@ -26,11 +26,11 @@ page.
    SQLite/runtime configuration, check server logs, and review recent
    configuration changes. Present this as factual SRE guidance with small rows
    and icon-label pairs.
-5. **Context Metadata Strip:** Include small muted metadata such as "Vane Console
+5. **Context Metadata Strip:** Include small muted metadata such as "Tocsin Console
    / error boundary / runtime failure", current route context, and a timestamp
    placeholder. Use monospaced chips for route and request-like identifiers.
 
 The design should be utilitarian, precise, compact, panel-oriented, and
-consistent with existing Vane console screens. Avoid decorative illustrations,
+consistent with existing Tocsin console screens. Avoid decorative illustrations,
 oversized hero typography, marketing copy, SaaS/billing/organization language,
 incident-management controls, on-call concepts, or any "Create Alert" action.

@@ -1,5 +1,5 @@
-import { decodeJson, DeliveryJobSchema, redactText } from "@vane/core";
-import type { DeliveryAttempt, DeliveryJob, JsonValue, ProviderReference } from "@vane/core";
+import { decodeJson, DeliveryJobSchema, redactText } from "@tocsin/core";
+import type { DeliveryAttempt, DeliveryJob, JsonValue, ProviderReference } from "@tocsin/core";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import type {

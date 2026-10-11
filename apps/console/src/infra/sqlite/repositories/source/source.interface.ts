@@ -1,5 +1,5 @@
-import type { JsonObject, SourceProvider, SourceSummary } from "@vane/core";
-import type { IsoDateTimeString } from "@vane/core";
+import type { JsonObject, SourceProvider, SourceSummary } from "@tocsin/core";
+import type { IsoDateTimeString } from "@tocsin/core";
 
 import type { SqliteBoolean, SqliteJsonText } from "#/infra/sqlite/codecs";
 

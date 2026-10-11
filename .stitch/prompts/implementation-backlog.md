@@ -1,4 +1,4 @@
-# Vane UI Implementation Backlog
+# Tocsin UI Implementation Backlog
 
 This backlog starts after the Stitch design system is uploaded and the first
 Events screen is generated, reviewed, and accepted with
@@ -44,7 +44,7 @@ After adding components:
 - Read added files under `apps/console/src/components/ui`.
 - Confirm imports use `#/components/ui` and `#/lib/utils` where relevant.
 - Confirm Remix Icon remains the app icon library for feature actions.
-- Run focused formatting/linting for `@vane/console`.
+- Run focused formatting/linting for `@tocsin/console`.
 
 ## Phase 2: Shared Console Surface
 
@@ -66,7 +66,7 @@ Candidate helpers:
 Constraints:
 
 - Do not create a frontend DI container.
-- Do not put Vane domain components in `components/ui`.
+- Do not put Tocsin domain components in `components/ui`.
 - Keep reusable domain UI in the relevant `features/*` module unless it is truly
   shell-level.
 
@@ -100,13 +100,13 @@ Changes:
 Tests and checks:
 
 ```sh
-pnpm --filter @vane/console lint
-pnpm --filter @vane/console test
+pnpm --filter @tocsin/console lint
+pnpm --filter @tocsin/console test
 ```
 
 Browser verification:
 
-- Start `pnpm --filter @vane/console dev`.
+- Start `pnpm --filter @tocsin/console dev`.
 - Open the local console route in Browser MCP.
 - Verify desktop and narrow viewport layout.
 - Check no text overlaps, tables remain readable, and detail tabs are usable.

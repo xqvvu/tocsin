@@ -1,5 +1,5 @@
-import { AlertSeveritySchema, AlertStatusSchema } from "@vane/core";
-import type { AlertSeverity, AlertStatus } from "@vane/core";
+import { AlertSeveritySchema, AlertStatusSchema } from "@tocsin/core";
+import type { AlertSeverity, AlertStatus } from "@tocsin/core";
 
 export function normalizeSeverity(value: unknown): AlertSeverity {
   const normalized = typeof value === "string" ? value.trim().toLocaleLowerCase() : "";

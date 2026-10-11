@@ -9,8 +9,8 @@ import { createSqliteDatabase } from "#/infra/sqlite/connection";
 
 describe("sqlite connection", () => {
   it("creates the database parent directory before opening a file database", async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vane-sqlite-"));
-    const databasePath = path.join(tempDir, "data", "vane.sqlite");
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "tocsin-sqlite-"));
+    const databasePath = path.join(tempDir, "data", "tocsin.sqlite");
 
     try {
       const db = createSqliteDatabase({ databasePath });

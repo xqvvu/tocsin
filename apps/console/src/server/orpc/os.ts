@@ -1,6 +1,6 @@
 import { implement, os as base } from "@orpc/server";
 
-import { contract } from "@vane/api";
+import { contract } from "@tocsin/api";
 
 import { toContractError } from "#/server/orpc/errors";
 import { requestId } from "#/server/orpc/middlewares/request-id";
@@ -27,7 +27,7 @@ const translateErrors = base.middleware(async ({ next }) => {
 /**
  * The console's single contract implementer.
  *
- * `implement(contract)` binds the API shape from `@vane/api`, so a procedure
+ * `implement(contract)` binds the API shape from `@tocsin/api`, so a procedure
  * name that is missing or extra is a type error rather than a runtime 404. The
  * shared middleware chain is procedure logging, then error translation, then
  * request id. Logging sits outermost so it also records failures raised by

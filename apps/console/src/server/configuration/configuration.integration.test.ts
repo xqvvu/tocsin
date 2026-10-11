@@ -1,8 +1,8 @@
 import { parse as parseToml } from "smol-toml";
 import { describe, expect, it } from "vite-plus/test";
 
-import { createDefaultDestinationRegistry } from "@vane/destinations";
-import type { DestinationSendContext } from "@vane/destinations";
+import { createDefaultDestinationRegistry } from "@tocsin/destinations";
+import type { DestinationSendContext } from "@tocsin/destinations";
 
 import { openSqliteStore } from "#/infra/sqlite/store";
 import { AppSettingsService } from "#/server/configuration/app-settings.service";
@@ -26,7 +26,7 @@ function createTestContexts(
   destinationSendContext?: DestinationSendContext,
 ) {
   const destinationRegistry = createDefaultDestinationRegistry();
-  const generateSourceToken = () => "vane_src_test_token";
+  const generateSourceToken = () => "tocsin_src_test_token";
 
   const sources = new SourceService({ store, generateSourceToken });
   const destinations = new DestinationService({
@@ -87,8 +87,8 @@ describe("configuration capabilities", () => {
       provider: "generic",
       enabled: true,
     });
-    expect(created.token).toBe("vane_src_test_token");
-    expect(stored?.tokenHash).toBe(hashSourceToken("vane_src_test_token"));
+    expect(created.token).toBe("tocsin_src_test_token");
+    expect(stored?.tokenHash).toBe(hashSourceToken("tocsin_src_test_token"));
     expect(stored?.config).toEqual({ team: "sre" });
 
     await store.close();
@@ -103,9 +103,9 @@ describe("configuration capabilities", () => {
 
     const rotated = await services.sources.rotateSourceToken({ id: created.source.id });
 
-    expect(rotated.token).toBe("vane_src_test_token");
+    expect(rotated.token).toBe("tocsin_src_test_token");
     expect((await store.sources.get(created.source.id))?.tokenHash).toBe(
-      hashSourceToken("vane_src_test_token"),
+      hashSourceToken("tocsin_src_test_token"),
     );
 
     await store.close();
@@ -217,9 +217,9 @@ describe("configuration capabilities", () => {
       config: {
         endpointUrl: "https://mail-gateway.example.test/send",
         to: ["sre@example.test"],
-        from: "vane@example.test",
+        from: "tocsin@example.test",
         replyTo: "ops@example.test",
-        subjectPrefix: "[Vane]",
+        subjectPrefix: "[Tocsin]",
         headers: {
           Authorization: "Bearer mail-gateway-secret",
         },
@@ -235,9 +235,9 @@ describe("configuration capabilities", () => {
     expect(stored?.config).toEqual({
       endpointUrl: "https://mail-gateway.example.test/send",
       to: ["sre@example.test"],
-      from: "vane@example.test",
+      from: "tocsin@example.test",
       replyTo: "ops@example.test",
-      subjectPrefix: "[Vane]",
+      subjectPrefix: "[Tocsin]",
       headers: {
         Authorization: "Bearer mail-gateway-secret",
       },
@@ -250,7 +250,7 @@ describe("configuration capabilities", () => {
         config: {
           endpointUrl: "https://mail-gateway.example.test/send",
           to: ["not-an-email"],
-          from: "vane@example.test",
+          from: "tocsin@example.test",
         },
       }),
     ).rejects.toThrow("Invalid email address");
@@ -321,8 +321,8 @@ describe("configuration capabilities", () => {
     // Self-hosted: operational endpoints are visible to dashboard operators.
     expect(listedConfiguration).toContain("https://hooks.slack.com/services/secret");
     // True secrets still stay out of list DTOs.
-    expect(listedConfiguration).not.toContain("vane_src_test_token");
-    expect(listedConfiguration).not.toContain(hashSourceToken("vane_src_test_token"));
+    expect(listedConfiguration).not.toContain("tocsin_src_test_token");
+    expect(listedConfiguration).not.toContain(hashSourceToken("tocsin_src_test_token"));
     expect(listedConfiguration).not.toContain("SLACK_WEBHOOK_URL");
     expect(listedConfiguration).not.toContain("signSecret");
 
@@ -432,7 +432,7 @@ describe("configuration capabilities", () => {
     });
 
     expect(result.renderedPayload).toMatchObject({
-      message: "Vane destination test",
+      message: "Tocsin destination test",
     });
     expect(result.diagnostics).toEqual([
       {
@@ -485,7 +485,7 @@ describe("configuration capabilities", () => {
     expect(JSON.parse(calls[0]?.init.body as string)).toMatchObject({
       eventId: expect.stringMatching(/^test-/),
       alert: {
-        title: "Vane destination test",
+        title: "Tocsin destination test",
         severity: "info",
       },
     });
@@ -517,20 +517,20 @@ describe("configuration capabilities", () => {
       eventId: "preview-event",
       source: {
         id: "preview-source",
-        name: "Vane preview",
+        name: "Tocsin preview",
         provider: "generic",
         enabled: true,
       },
       receivedAt: null,
     });
-    expect(result.context.event.title).toBe("Vane destination test");
-    expect(result.context.source.name).toBe("Vane preview");
-    expect(result.normalizedEvent.title).toBe("Vane destination test");
+    expect(result.context.event.title).toBe("Tocsin destination test");
+    expect(result.context.source.name).toBe("Tocsin preview");
+    expect(result.normalizedEvent.title).toBe("Tocsin destination test");
     expect(result.diagnostics).toEqual([]);
     expect(result.rawPayloadReference).toBeNull();
     expect(result.renderedPayload).toMatchObject({
       eventId: "preview-event",
-      message: "Vane destination test from Vane preview",
+      message: "Tocsin destination test from Tocsin preview",
     });
     expect(result).not.toHaveProperty("config");
     expect(JSON.stringify(result)).not.toContain("https://example.test/webhook");
@@ -541,7 +541,7 @@ describe("configuration capabilities", () => {
       config: {
         endpointUrl: "https://mail-gateway.example.test/send",
         to: ["sre@example.test"],
-        from: "vane@example.test",
+        from: "tocsin@example.test",
         replyTo: "ops@example.test",
       },
     });
@@ -550,7 +550,7 @@ describe("configuration capabilities", () => {
     });
 
     expect(emailPreview.renderedPayload).toMatchObject({
-      subject: "[Info Firing] Vane destination test",
+      subject: "[Info Firing] Tocsin destination test",
     });
     expect(emailPreview.renderedPayload).not.toHaveProperty("to");
     expect(emailPreview.renderedPayload).not.toHaveProperty("from");
@@ -696,7 +696,7 @@ describe("configuration capabilities", () => {
         header: {
           title: {
             tag: "plain_text",
-            content: "[info] Vane destination test",
+            content: "[info] Tocsin destination test",
           },
         },
         elements: [
@@ -704,7 +704,7 @@ describe("configuration capabilities", () => {
             tag: "div",
             text: {
               tag: "lark_md",
-              content: "This is a test alert generated from Vane Console.\nsource=Vane preview",
+              content: "This is a test alert generated from Tocsin Console.\nsource=Tocsin preview",
             },
           },
         ],
@@ -786,7 +786,7 @@ describe("configuration capabilities", () => {
       enabled: true,
     });
     expect(result.renderedPayload).toMatchObject({
-      message: "Vane destination test from Vane preview",
+      message: "Tocsin destination test from Tocsin preview",
     });
     expect(await services.destinations.listDestinations()).toEqual([]);
     expect(result).not.toHaveProperty("config");
@@ -839,7 +839,7 @@ describe("configuration capabilities", () => {
       enabled: true,
     });
     expect(preview.renderedPayload).toMatchObject({
-      message: "Vane destination test from Renamed webhook",
+      message: "Tocsin destination test from Renamed webhook",
     });
     expect(JSON.stringify(preview)).not.toContain("https://example.test/webhook-secret");
     expect(JSON.stringify(preview)).not.toContain("Bearer relay-secret");
@@ -934,16 +934,16 @@ describe("configuration capabilities", () => {
     expect(toml).toContain("[[destinations]]");
     expect(toml).toContain("[[routes]]");
     expect(toml).not.toContain("https://hooks.slack.com/services/secret");
-    expect(toml).toContain("VANE_DEST_");
+    expect(toml).toContain("TOCSIN_DEST_");
     expect(toml).toContain("webhookUrl");
     expect(parseToml(toml)).toMatchObject({
       settings: {
-        schema_version: "vane.config.v1",
+        schema_version: "tocsin.config.v1",
         raw_payload_retention_days: 30,
       },
     });
-    expect(toml).not.toContain("vane_src_test_token");
-    expect(toml).not.toContain(hashSourceToken("vane_src_test_token"));
+    expect(toml).not.toContain("tocsin_src_test_token");
+    expect(toml).not.toContain(hashSourceToken("tocsin_src_test_token"));
 
     await store.close();
   });
@@ -981,11 +981,11 @@ describe("configuration capabilities", () => {
     expect(json.endsWith("\n")).toBe(true);
     expect(json).not.toContain("source-signing-secret");
     expect(json).not.toContain("https://hooks.slack.com/services/secret");
-    expect(json).not.toContain("vane_src_test_token");
-    expect(json).not.toContain(hashSourceToken("vane_src_test_token"));
+    expect(json).not.toContain("tocsin_src_test_token");
+    expect(json).not.toContain(hashSourceToken("tocsin_src_test_token"));
     expect(JSON.parse(json)).toMatchObject({
       settings: {
-        schema_version: "vane.config.v1",
+        schema_version: "tocsin.config.v1",
         exported_at: now,
         include_secrets: false,
         raw_payload_retention_days: 30,
@@ -996,7 +996,7 @@ describe("configuration capabilities", () => {
           config: { team: "sre" },
           secret_refs: {
             signingSecret: {
-              env: expect.stringContaining("VANE_SOURCE_"),
+              env: expect.stringContaining("TOCSIN_SOURCE_"),
             },
           },
         },
@@ -1007,7 +1007,7 @@ describe("configuration capabilities", () => {
           config: {},
           secret_refs: {
             webhookUrl: {
-              env: expect.stringContaining("VANE_DEST_"),
+              env: expect.stringContaining("TOCSIN_DEST_"),
             },
           },
         },
@@ -1073,7 +1073,7 @@ describe("configuration capabilities", () => {
       {
         sourceId: source.source.id,
         sourceName: "Grafana prod",
-        token: "vane_src_test_token",
+        token: "tocsin_src_test_token",
       },
     ]);
     expect(await second.store.settings.get()).toEqual({
@@ -1238,7 +1238,7 @@ describe("configuration capabilities", () => {
       {
         sourceId: source.source.id,
         sourceName: "Grafana prod",
-        token: "vane_src_test_token",
+        token: "tocsin_src_test_token",
       },
     ]);
     expect(await second.store.settings.get()).toEqual({
@@ -1315,7 +1315,7 @@ describe("configuration capabilities", () => {
       name: "Relay with auth",
       kind: "generic_webhook",
       config: {
-        url: "https://relay.example.test/vane",
+        url: "https://relay.example.test/tocsin",
         headers: {
           Authorization: "Bearer relay-secret",
           "X-Team": "sre",
@@ -1327,11 +1327,11 @@ describe("configuration capabilities", () => {
       now: () => now,
     });
 
-    expect(toml).not.toContain("https://relay.example.test/vane");
+    expect(toml).not.toContain("https://relay.example.test/tocsin");
     expect(toml).not.toContain("Bearer relay-secret");
     expect(toml).toContain('X-Team = "sre"');
     expect(toml).toContain("headers.Authorization");
-    expect(toml).toContain("VANE_DEST_");
+    expect(toml).toContain("TOCSIN_DEST_");
 
     await store.close();
   });
@@ -1365,9 +1365,9 @@ describe("configuration capabilities", () => {
     expect(toml).not.toContain("feishu-signing-secret");
     expect(toml).toContain('team = "sre"');
     expect(toml).toContain("[sources.secret_refs.signingSecret]");
-    expect(toml).toContain("VANE_SOURCE_");
+    expect(toml).toContain("TOCSIN_SOURCE_");
     expect(toml).toContain("signSecret");
-    expect(toml).toContain("VANE_DEST_");
+    expect(toml).toContain("TOCSIN_DEST_");
 
     await store.close();
   });
@@ -1376,7 +1376,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       'exported_at = "2026-06-09T08:00:00.000Z"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
@@ -1418,13 +1418,13 @@ describe("configuration capabilities", () => {
       {
         sourceId: "source-imported",
         sourceName: "Imported source",
-        token: "vane_src_test_token",
+        token: "tocsin_src_test_token",
       },
     ]);
     expect(await store.sources.get("source-imported")).toMatchObject({
       name: "Imported source",
       provider: "generic",
-      tokenHash: hashSourceToken("vane_src_test_token"),
+      tokenHash: hashSourceToken("tocsin_src_test_token"),
     });
     expect(await store.destinations.get("destination-imported")).toMatchObject({
       name: "Imported Slack",
@@ -1455,7 +1455,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       'exported_at = "2026-06-09T08:00:00.000Z"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
@@ -1496,7 +1496,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       'exported_at = "2026-06-09T08:00:00.000Z"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
@@ -1520,7 +1520,7 @@ describe("configuration capabilities", () => {
 
     await services.portability.importToml(toml, {
       env: {
-        RELAY_URL: "https://relay.example.test/vane",
+        RELAY_URL: "https://relay.example.test/tocsin",
         RELAY_AUTH: "Bearer relay-secret",
       },
     });
@@ -1529,7 +1529,7 @@ describe("configuration capabilities", () => {
       name: "Relay with auth",
       kind: "generic_webhook",
       config: {
-        url: "https://relay.example.test/vane",
+        url: "https://relay.example.test/tocsin",
         method: "POST",
         headers: {
           Authorization: "Bearer relay-secret",
@@ -1553,7 +1553,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
       "",
@@ -1586,7 +1586,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       'exported_at = "2026-06-09T08:00:00.000Z"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
@@ -1613,7 +1613,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       'exported_at = "2026-06-09T08:00:00.000Z"',
       "include_secrets = true",
       "raw_payload_retention_days = 14",
@@ -1642,7 +1642,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
       "unexpected = true",
@@ -1659,7 +1659,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const unknownProviderToml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
       "",
@@ -1672,7 +1672,7 @@ describe("configuration capabilities", () => {
     ].join("\n");
     const unknownDestinationToml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
       "",
@@ -1701,7 +1701,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
       "",
@@ -1729,7 +1729,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
       "",
@@ -1942,7 +1942,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       'exported_at = "2026-06-09T08:00:00.000Z"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
@@ -1971,7 +1971,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       'exported_at = "2026-06-09T08:00:00.000Z"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
@@ -2010,7 +2010,7 @@ describe("configuration capabilities", () => {
     const { store, services } = await createTestContext();
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       'exported_at = "2026-06-09T08:00:00.000Z"',
       "include_secrets = false",
       "raw_payload_retention_days = 14",
@@ -2064,7 +2064,7 @@ describe("configuration capabilities", () => {
       config: {
         endpointUrl: "https://mail.example.test/send",
         to: ["audit@example.test"],
-        from: "vane@example.test",
+        from: "tocsin@example.test",
       },
     });
 

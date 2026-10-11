@@ -4,11 +4,11 @@ Labels: `ready-for-agent`
 
 ## Problem Statement
 
-Vane 的 MVP 已经支持 Destination message template，但当前能力本质上是文本插值。它可以覆盖飞书文本消息、Slack 正文、Email 文本正文和 generic webhook 的 `message` 字段，却无法表达飞书交互式卡片、Slack blocks、Email HTML 或通用 webhook 的结构化 JSON payload。
+Tocsin 的 MVP 已经支持 Destination message template，但当前能力本质上是文本插值。它可以覆盖飞书文本消息、Slack 正文、Email 文本正文和 generic webhook 的 `message` 字段，却无法表达飞书交互式卡片、Slack blocks、Email HTML 或通用 webhook 的结构化 JSON payload。
 
-SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段文本”，还需要按团队通知规范组织结构化消息：突出 severity/status、展示关键 labels、链接回 Vane Event detail，并在飞书卡片或后续 Slack blocks 中形成可读、可预览、可测试的消息。
+SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段文本”，还需要按团队通知规范组织结构化消息：突出 severity/status、展示关键 labels、链接回 Tocsin Event detail，并在飞书卡片或后续 Slack blocks 中形成可读、可预览、可测试的消息。
 
-同时，模板配置必须保持 Vane 的安全边界：不能执行用户 JavaScript、shell、SQL 或动态代码；不能把 source token、destination secret、raw sensitive payload 或 webhook URL 暴露到浏览器、TOML 默认导出、Delivery rendered payload 或普通日志中。
+同时，模板配置必须保持 Tocsin 的安全边界：不能执行用户 JavaScript、shell、SQL 或动态代码；不能把 source token、destination secret、raw sensitive payload 或 webhook URL 暴露到浏览器、TOML 默认导出、Delivery rendered payload 或普通日志中。
 
 ## Solution
 
@@ -32,10 +32,10 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 
 1. As an SRE, I want a Destination to have a structured template config, so that message formatting is owned by the Destination that sends it.
 2. As an SRE, I want Feishu Destinations to choose between text and card templates, so that simple teams can keep text while advanced teams can use cards.
-3. As an SRE, I want Feishu card templates to use Feishu-native card JSON, so that I can copy patterns from Feishu documentation without learning a Vane-specific card DSL.
+3. As an SRE, I want Feishu card templates to use Feishu-native card JSON, so that I can copy patterns from Feishu documentation without learning a Tocsin-specific card DSL.
 4. As an SRE, I want template strings to interpolate normalized alert fields, so that notification content can include title, message, severity, status, fingerprint, labels, and occurred time.
 5. As an SRE, I want template strings to interpolate Source and Destination summaries, so that notifications can show where an alert came from and where it was sent.
-6. As an SRE, I want a safe Vane Event URL variable, so that notification cards can link back to the Event detail page.
+6. As an SRE, I want a safe Tocsin Event URL variable, so that notification cards can link back to the Event detail page.
 7. As an SRE, I want the template editor to show all available variables, so that I do not need to guess field names.
 8. As an SRE, I want each variable to show example values, so that I can understand what will appear in the notification.
 9. As an SRE, I want to click a variable to insert it into the template, so that template authoring is less error-prone.
@@ -48,13 +48,13 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 16. As an SRE, I want template errors to identify the JSON path where they occur, so that I can fix card templates quickly.
 17. As an SRE, I want the rendered payload preview to omit Feishu signing fields, so that previews remain secret-safe.
 18. As an SRE, I want Destination test to use the same renderer as real delivery, so that a successful test means the saved template and credentials work together.
-19. As an SRE, I want Feishu platform rejection to be recorded separately from local template validation failure, so that I know whether Vane or Feishu rejected the message.
+19. As an SRE, I want Feishu platform rejection to be recorded separately from local template validation failure, so that I know whether Tocsin or Feishu rejected the message.
 20. As an SRE, I want template rendering failures during Delivery to be non-retryable configuration errors, so that the worker does not waste retries on invalid config.
 21. As an SRE, I want TOML import/export to use the new `template` shape, so that portable config represents the actual destination message format.
 22. As an SRE, I want `messageTemplate` removed from new config, so that there is a single template model.
 23. As an open-source contributor, I want shared template renderer and diagnostics primitives, so that future Slack blocks, Email HTML, and generic JSON templates can reuse the same safety model.
 24. As an open-source contributor, I want adapter manifests to declare template modes and defaults, so that the console can render the right editing experience without adapter runtime internals.
-25. As a security-conscious operator, I want templates to avoid user code execution, so that Vane does not become a remote code execution surface.
+25. As a security-conscious operator, I want templates to avoid user code execution, so that Tocsin does not become a remote code execution surface.
 26. As a security-conscious operator, I want source tokens, destination secrets, raw sensitive headers, and webhook URLs excluded from template context, so that notifications cannot leak secrets.
 27. As a maintainer, I want templates to remain Destination config JSON, so that this feature does not introduce new persistence relations before reuse is proven.
 28. As an SRE, I want one Destination template to map `event.status` to platform-specific colors, so that firing and resolved notifications are visually distinct without maintaining duplicate templates.
@@ -70,7 +70,7 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 
 - Destination templates remain adapter-owned config data stored in the existing Destination config JSON.
 - No Template table, Template list page, reusable template library, or new persistence relation is introduced.
-- `template` completely replaces `messageTemplate`. This is allowed because Vane has not reached a stable public release.
+- `template` completely replaces `messageTemplate`. This is allowed because Tocsin has not reached a stable public release.
 - No migration compatibility is required for old `messageTemplate` config.
 - TOML import/export accepts and emits `template`, not `messageTemplate`.
 - Adapter rendering must read `template` only.
@@ -78,8 +78,8 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 - Adapter defaults may be used as server-side fallback for incomplete drafts or tests, but persisted config should be explicit.
 - The first implementation includes shared template model, renderer, diagnostics, and Feishu `text` / `feishu_card` modes.
 - Slack, Email, and generic webhook may receive minimal `template.mode = "text"` compatibility, but Slack blocks, Email HTML, and generic JSON editor are out of this first implementation.
-- Feishu card templates use Feishu-native card JSON. Vane does not define a neutral card abstraction.
-- Vane validates template safety and basic payload shape, but does not attempt to fully mirror the upstream platform's card schema.
+- Feishu card templates use Feishu-native card JSON. Tocsin does not define a neutral card abstraction.
+- Tocsin validates template safety and basic payload shape, but does not attempt to fully mirror the upstream platform's card schema.
 - Destination test remains the authoritative integration check for platform-specific acceptance.
 - Feishu `feishu_card` wire payload is `{ msg_type: "interactive", card }`.
 - Feishu preview/rendered payload must omit `timestamp`, `sign`, webhook URL, and sign secret.
@@ -102,13 +102,13 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 - JSON templates are rendered by recursively interpolating string values only.
 - Unknown variables fail validation before save.
 - Missing allowed label values render as empty strings.
-- Template context v1 includes safe Event, Source, Destination, Vane link fields, and the recursively redacted provider payload under `payload`.
+- Template context v1 includes safe Event, Source, Destination, Tocsin link fields, and the recursively redacted provider payload under `payload`.
 - Payload variables use scalar paths such as `{{payload.monitor.name}}`, `{{payload.heartbeat.ping}}`, or `{{payload.items[0].value}}`. Keys that contain dots or other special characters use JSON-style access such as `{{payload.commonLabels["threshold.name"]}}`. Missing paths and object, array, or null values render as an empty string.
 - Payload interpolation is intentionally provider-specific and may break when an upstream provider changes its payload shape. Normalized Event fields remain the stable choice for common alert semantics.
 - Template context v1 does not include raw headers, source token, destination config, destination secret, route internals, delivery attempt state, last errors, or any unredacted payload value.
 - `event.id` maps to the current render input Event id.
-- `vane.eventUrl` is generated by the console/server runtime and passed into rendering context. Destination adapters do not generate dashboard URLs.
-- If a safe Vane URL cannot be generated, `vane.eventUrl` renders as an empty string.
+- `tocsin.eventUrl` is generated by the console/server runtime and passed into rendering context. Destination adapters do not generate dashboard URLs.
+- If a safe Tocsin URL cannot be generated, `tocsin.eventUrl` renders as an empty string.
 - Historical payload is available in preview as redacted reference data and as the `payload` template context. Preview and real Delivery use the same recursively redacted payload projection.
 - Preview supports an internal sample Event and may support a selected historical Event through `sampleEventId`.
 - Historical Event samples are dashboard-authenticated and return only safe normalized data plus redacted raw payload reference.
@@ -122,7 +122,7 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
   `{{bindings.statusColor}}` instead of hard-coding `red`.
 - Dynamic bindings belong to Destination template config, not Source or Route config. A Source does not own
   separate firing and resolved templates.
-- Shared binding parsing, validation, diagnostics, and rendering live in `@vane/destinations`. The first product
+- Shared binding parsing, validation, diagnostics, and rendering live in `@tocsin/destinations`. The first product
   slice exposes dynamic-property controls only for Feishu card templates; Slack, Email, and generic webhook UI
   remain unchanged.
 - The Feishu template editor includes a compact dynamic-property section with a selector control, case mappings,
@@ -135,7 +135,7 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 
 ## Testing Decisions
 
-- The primary test seam for renderer behavior is `@vane/destinations` unit tests over template model, context construction helpers, interpolation, diagnostics, and Feishu preview/send behavior.
+- The primary test seam for renderer behavior is `@tocsin/destinations` unit tests over template model, context construction helpers, interpolation, diagnostics, and Feishu preview/send behavior.
 - Feishu sender tests should assert both text and card wire payloads using fake fetch and deterministic clock.
 - Feishu tests must assert preview/rendered payloads do not include signing fields or secrets.
 - Template tests should assert unknown variables fail before rendering, missing labels render as empty strings, and JSON path diagnostics identify nested string fields.
@@ -181,7 +181,7 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 
 ## Further Notes
 
-- This PRD should be implemented as vertical slices. The recommended first slice is shared destination template model/renderer/diagnostics plus Feishu text/card rendering in `@vane/destinations`.
+- This PRD should be implemented as vertical slices. The recommended first slice is shared destination template model/renderer/diagnostics plus Feishu text/card rendering in `@tocsin/destinations`.
 - The second slice should expose Feishu template modes through manifest/catalog and adapt config/TOML/form data away from `messageTemplate`.
 - The UI slice should only begin after preview diagnostics and result shape are stable enough to avoid editor churn.
 - Future destination modes should reuse the same TemplateContext and diagnostics model unless a follow-up PRD explicitly changes the safety boundary.

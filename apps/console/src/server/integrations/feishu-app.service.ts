@@ -11,9 +11,9 @@ import {
   type FeishuAppTestResult,
   type TestFeishuAppCommand,
   type UpdateFeishuAppCommand,
-} from "@vane/core";
-import { fetchFeishuTenantAccessToken } from "@vane/destinations";
-import type { FetchLike } from "@vane/destinations";
+} from "@tocsin/core";
+import { fetchFeishuTenantAccessToken } from "@tocsin/destinations";
+import type { FetchLike } from "@tocsin/destinations";
 
 import type { DestinationRuntimeConfig } from "#/infra/sqlite/repositories/destination/destination.interface";
 import {

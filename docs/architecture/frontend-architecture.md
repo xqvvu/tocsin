@@ -1,6 +1,6 @@
 # 前端架构（TanStack Start Console）
 
-本文档定义 Vane console 的前端分层规则。目标不是抽象地描述 React 项目，而是为当前
+本文档定义 Tocsin console 的前端分层规则。目标不是抽象地描述 React 项目，而是为当前
 TanStack Start 单体应用提供可执行的迁移方向：**route-first + feature modules + oRPC
 boundary + query cache + shadcn primitives**。
 
@@ -21,8 +21,8 @@ Settings 的页面路由；新增前端代码应继续沿用 route-first 形状�
 1. `routes` 决定 URL、layout、search params、loader、beforeLoad 和薄渲染入口。
 2. `features` 按业务对象纵切 Sources、Routes、Destinations、Events、Deliveries。
 3. `features/operations` 仍暂时承载 Events/Deliveries 共享 query、filter、DTO re-export 和 worker mutation；Events/Deliveries 的页面 UI 正在向各自 feature 收敛。
-4. `server` 是 server-only 的分层后端：`server/orpc/` 提供 oRPC implementer 和按能力拆分的 procedure router，`*.service.ts` 承载业务逻辑；跨 client/server 的共享契约（oRPC contract、命令 schema、DTO）放在 `@vane/api` 与 `@vane/core` 包，浏览器统一通过 `#/lib/orpc` 调用 procedure。
-5. `components/ui` 只保留 shadcn primitives，不知道 Vane 的领域。
+4. `server` 是 server-only 的分层后端：`server/orpc/` 提供 oRPC implementer 和按能力拆分的 procedure router，`*.service.ts` 承载业务逻辑；跨 client/server 的共享契约（oRPC contract、命令 schema、DTO）放在 `@tocsin/api` 与 `@tocsin/core` 包，浏览器统一通过 `#/lib/orpc` 调用 procedure。
+5. `components/ui` 只保留 shadcn primitives，不知道 Tocsin 的领域。
 6. `components/common` 承载跨 feature 复用的 console UI 组合，但不拥有业务规则。
 7. `infra` 是 SQLite 与 server-only 基础设施，前端代码不可导入。
 
@@ -108,8 +108,8 @@ apps/console/src/
         settings/
 ```
 
-> 共享命令 schema、操作 DTO 等 client/server 契约放在 `@vane/core` 包，oRPC contract
-> 放在 `@vane/api` 包；
+> 共享命令 schema、操作 DTO 等 client/server 契约放在 `@tocsin/core` 包，oRPC contract
+> 放在 `@tocsin/api` 包；
 > 仅后端使用的类型（如 dashboard session 类型）就近放在 `server/runtime/`。
 > 不再保留 console 级的 `contracts/` 目录。
 
@@ -133,13 +133,13 @@ worker、secret helper 或任何 server-only 基础设施。route 文件可以�
 
 ### `features`
 
-`features` 按 Vane 的产品对象纵切。MVP 第一批 feature 是：
+`features` 按 Tocsin 的产品对象纵切。MVP 第一批 feature 是：
 
 - `features/sources`：Source summary/detail DTO、source query keys、list/detail
   `queryOptions`、create/update/disable/rotate-token mutations、Source 表单、Sources 表格、
   webhook URL 展示与复制 UI。
 - `features/routes`：Route rule form model、query/mutation、规则摘要、启停、Routes 表格与
-  表单。这里的 Routes 指 Vane 的告警路由规则，不是 TanStack Router 文件路由。
+  表单。这里的 Routes 指 Tocsin 的告警路由规则，不是 TanStack Router 文件路由。
 - `features/destinations`：Destination form model、preview/test mutations、operator-visible
   config DTO、Destinations 表格、测试结果与预览 UI。
 - `features/events`：Events 页面/详情 UI、normalized fields 展示、raw debug data 的脱敏展示、
@@ -166,7 +166,7 @@ primitives、TanStack Form、TanStack Table、TanStack Query hooks，也可以�
 - user menu 与 session summary。
 - 全局 loading、error、empty shell 状态。
 
-shell 可以知道“这是 Vane console 的 dashboard”，可以展示 Sources、Routes、Destinations、
+shell 可以知道“这是 Tocsin console 的 dashboard”，可以展示 Sources、Routes、Destinations、
 Events、Deliveries 导航项，但不实现这些 feature 的表单、表格、loader 和 mutations。
 `routes/_dashboard.tsx` 应主要挂载 shell、执行 dashboard UX guard，并渲染子路由 outlet。
 通用表格、分页、复制控件、面板、tooltip、状态 badge 等不属于 shell；它们应放在
@@ -180,7 +180,7 @@ Events、Deliveries 导航项，但不实现这些 feature 的表单、表格、
 
 这一层必须保持领域无知：
 
-- 不出现 Source、Destination、Delivery、Event、Route 等 Vane 领域词。
+- 不出现 Source、Destination、Delivery、Event、Route 等 Tocsin 领域词。
 - 不调用 oRPC procedure、TanStack Query hooks、TanStack Router hooks。
 - 不放业务 badge、业务表格、业务空状态或业务 form model。
 - 不读取 auth session、SQLite、env、secret 或 raw payload。
@@ -196,7 +196,7 @@ Events、Deliveries 导航项，但不实现这些 feature 的表单、表格、
 - 复制代码行、图标 tooltip、通用内容面板和表单面板。
 - 通用启用/停用状态 badge、非领域化的状态呈现 helper。
 
-这一层可以沉淀 Vane console 的密度、边框、分页和 row height 等视觉约定，但仍必须保持业务
+这一层可以沉淀 Tocsin console 的密度、边框、分页和 row height 等视觉约定，但仍必须保持业务
 无知：
 
 - 不出现 Source、Destination、Event、Delivery、Route 等特定业务规则。
@@ -206,21 +206,21 @@ Events、Deliveries 导航项，但不实现这些 feature 的表单、表格、
   state 等领域组件。
 
 判断标准：如果组件表达的是“所有 console feature 都应该长得一致的 UI 结构”，放
-`components/common`；如果组件表达的是“某个 Vane 业务对象应该展示哪些字段或动作”，放 owning
+`components/common`；如果组件表达的是“某个 Tocsin 业务对象应该展示哪些字段或动作”，放 owning
 feature。
 
-### 共享契约（`@vane/api` 与 `@vane/core`）
+### 共享契约（`@tocsin/api` 与 `@tocsin/core`）
 
 client 与 server 之间的共享契约分成两层，都必须保持 env-neutral：只包含类型、Zod schema、
 DTO 与命令/结果投影，不导入 `#/server/*`、`#/infra/*`、`node:*` 或带 TanStack Start import
 protection 的模块。相关文件：
 
-- `@vane/api`：oRPC contract（`contract/`）、共享 error map（`errors/`）、procedure input/output
+- `@tocsin/api`：oRPC contract（`contract/`）、共享 error map（`errors/`）、procedure input/output
   schema（`schemas/`）与 client 类型（`client.ts` 的 `RPCClient`）。契约是 client/server
   共享的 API 形状，也是类型漂移的守卫。
-- `@vane/core` 的 `configuration-commands.ts`：Source/Destination/Route/Settings/导入导出的
+- `@tocsin/core` 的 `configuration-commands.ts`：Source/Destination/Route/Settings/导入导出的
   command schema。
-- `@vane/core` 的 `operations.ts`：Events/Deliveries 列表与详情 DTO、worker 健康投影等跨边界形状。
+- `@tocsin/core` 的 `operations.ts`：Events/Deliveries 列表与详情 DTO、worker 健康投影等跨边界形状。
 - `server/runtime/dashboard-session.ts`：`DashboardSession` 与 dashboard auth 错误类型；仅后端
   消费，因此不放进共享包，而是就近放在 runtime。
 
@@ -268,7 +268,7 @@ data 或 feature UI 中的数据，都必须先经过 `server` 投影成安全 D
 
 ## 3. Loader、oRPC 与 Query Cache
 
-Vane console 的数据流固定为：
+Tocsin console 的数据流固定为：
 
 ```txt
 route validateSearch/params
@@ -314,7 +314,7 @@ oRPC procedure 规则：
 - 每个 private dashboard procedure 在 contract 上声明 `dashboardAuth.error`，并在实现处
   `.use(requireDashboard())` 重新建立 dashboard request context、验证 session/角色。public
   procedure（`health`、`i18n`、`auth.getDashboardSession`）不挂该 middleware。
-- 每个 webhook API route 都用 Source token 或 Vane 侧额外共享密钥认证，不依赖 dashboard session。
+- 每个 webhook API route 都用 Source token 或 Tocsin 侧额外共享密钥认证，不依赖 dashboard session。
 - 返回值是 client-safe DTO，不返回 repository row、raw secret config、database object 或
   service 实例。
 
@@ -331,7 +331,7 @@ dashboard route 的 `beforeLoad` 可以存在，但它只是 UX guard：提前�
   Better Auth session 与 owner/admin 权限。
 - 触碰 user-owned data、runtime config、Source/Destination/Route/Event/Delivery 的 API route
   必须在 handler 内鉴权。
-- webhook intake API route 用 Source token 或 Vane 侧额外共享密钥鉴权，不能因为 dashboard
+- webhook intake API route 用 Source token 或 Tocsin 侧额外共享密钥鉴权，不能因为 dashboard
   `beforeLoad` 已经保护了 UI 就跳过服务端认证。
 
 原因很简单：`beforeLoad` 保护的是浏览器导航体验，不保护 `/api/rpc`、`/api/openapi`、
@@ -370,7 +370,7 @@ client component props、TOML/JSON 默认导出或浏览器日志：
 
 ## 6. UI 组合规则
 
-Vane 是重复使用的 SRE 运维工具，前端默认选择密集、冷静、可扫描的界面：
+Tocsin 是重复使用的 SRE 运维工具，前端默认选择密集、冷静、可扫描的界面：
 
 - 列表页优先表格、过滤器、分页、行操作、详情页或 drawer。
 - Sources、Routes、Destinations 的启停、删除、测试、轮换 token 等动作必须显式且可复核。
@@ -378,7 +378,7 @@ Vane 是重复使用的 SRE 运维工具，前端默认选择密集、冷静、�
   具体列内容、route coverage 和 actions 仍由各自 feature 拥有。
 - Destinations 表格默认展示能指导操作的事实：目标 identity（包含 adapter kind）、启停状态、
   启用路由覆盖、运维配置摘要（endpoint URL、method、收件人、模板 mode），以及 test / preview /
-  edit / toggle actions。Vane 是私有部署产品，已登录的 dashboard 操作者应能直接看到排障所需
+  edit / toggle actions。Tocsin 是私有部署产品，已登录的 dashboard 操作者应能直接看到排障所需
   配置；签名密钥、密码、Source token 与敏感 Header 值仍不得进入 list/query DTO。
 - Destinations 的“最近 delivery 健康度”应作为后续服务端安全汇总 DTO 接入，例如最近成功/失败时间、
   失败计数、最后错误摘要和 pending/running job 数；不要在前端从 raw payload、secret config 或完整
@@ -436,5 +436,5 @@ Dashboard mega-route 拆分已经完成：`routes/index.tsx` 现在只负责把�
 - Events/Deliveries 的过滤、分页、详情 query key 包含影响结果的变量。
 - mutation 成功后定向 invalidation，而不是依赖整页 reload。
 
-这些检查是为了让后续迁移可以小步推进，同时保住 Vane 最重要的产品质量：用户能信任它收到
+这些检查是为了让后续迁移可以小步推进，同时保住 Tocsin 最重要的产品质量：用户能信任它收到
 了什么、如何归一化、为何路由、发给了哪里、失败后如何重试，并且 secrets 没有被前端泄漏。

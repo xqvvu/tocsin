@@ -3,7 +3,7 @@ import { useSuspenseQueries } from "@tanstack/react-query";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { DestinationSummary, RouteDefinition, SourceSummary } from "@vane/core";
+import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { PageToolbar } from "#/components/common/page-toolbar";
 import { Button } from "#/components/ui/button";

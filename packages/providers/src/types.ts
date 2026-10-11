@@ -5,14 +5,14 @@ import {
   AdapterLifecycleSchema,
   AdapterSecretFieldSchema,
   SourceProviderSchema,
-} from "@vane/core";
+} from "@tocsin/core";
 import type {
   JsonObject,
   JsonValue,
   NormalizedEvent,
   SourceProvider,
   SourceSummary,
-} from "@vane/core";
+} from "@tocsin/core";
 import { z } from "zod";
 
 export interface ProviderParseInput<Config = unknown> {

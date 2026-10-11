@@ -9,7 +9,7 @@ import {
 describe("webhook request payload reader", () => {
   it("parses JSON request bodies within the configured size limit", async () => {
     const payload = await readWebhookJsonPayload(
-      new Request("https://vane.test/webhook", {
+      new Request("https://tocsin.test/webhook", {
         method: "POST",
         body: JSON.stringify({ title: "CPU high" }),
       }),
@@ -20,7 +20,7 @@ describe("webhook request payload reader", () => {
   });
 
   it("rejects requests whose declared content length exceeds the size limit", async () => {
-    const request = new Request("https://vane.test/webhook", {
+    const request = new Request("https://tocsin.test/webhook", {
       method: "POST",
       headers: {
         "content-length": "2048",
@@ -34,7 +34,7 @@ describe("webhook request payload reader", () => {
   });
 
   it("rejects streamed bodies that exceed the size limit", async () => {
-    const request = new Request("https://vane.test/webhook", {
+    const request = new Request("https://tocsin.test/webhook", {
       method: "POST",
       body: JSON.stringify({ message: "x".repeat(1024) }),
     });
@@ -45,7 +45,7 @@ describe("webhook request payload reader", () => {
   });
 
   it("rejects malformed JSON request bodies", async () => {
-    const request = new Request("https://vane.test/webhook", {
+    const request = new Request("https://tocsin.test/webhook", {
       method: "POST",
       body: "{not json",
     });

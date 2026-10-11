@@ -8,7 +8,7 @@ import type {
   DestinationKind,
   OncallPing,
   SourceProvider,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import type { SqliteBoolean, SqliteJsonText } from "#/infra/sqlite/codecs";
 

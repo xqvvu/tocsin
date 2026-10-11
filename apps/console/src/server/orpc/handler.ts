@@ -55,7 +55,7 @@ export const openAPIHandler = new OpenAPIHandler(router, {
       spec: generateOpenAPISpecs,
       specPath: "/spec.json",
       docsPath: "/docs",
-      docsTitle: "Vane API",
+      docsTitle: "Tocsin API",
     }),
   ],
 });

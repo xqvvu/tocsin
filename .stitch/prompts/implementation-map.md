@@ -1,11 +1,11 @@
 # Stitch To Implementation Map
 
-This file maps the Stitch design intent to the current Vane console codebase.
+This file maps the Stitch design intent to the current Tocsin console codebase.
 Keep implementation route-first and feature-module oriented.
 
 ## Project Facts
 
-- Stitch project: `Vane Console UI`
+- Stitch project: `Tocsin Console UI`
 - Stitch project ID: `8189408707632940093`
 - shadcn preset/style: `base-lyra`
 - base color: `neutral`

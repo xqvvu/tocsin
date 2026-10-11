@@ -1,26 +1,26 @@
 import "@tanstack/react-start/server-only";
 import { randomBytes } from "node:crypto";
 
-import { JsonObjectSchema, redactText } from "@vane/core";
-import type { DestinationKind, JsonObject, JsonValue, NormalizedEvent } from "@vane/core";
-import type { DestinationRegistry } from "@vane/destinations";
+import { JsonObjectSchema, redactText } from "@tocsin/core";
+import type { DestinationKind, JsonObject, JsonValue, NormalizedEvent } from "@tocsin/core";
+import type { DestinationRegistry } from "@tocsin/destinations";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 import { DomainValidationError } from "#/server/runtime/domain-errors";
 
 export function generateSourceToken(): string {
-  return `vane_src_${randomBytes(24).toString("base64url")}`;
+  return `tocsin_src_${randomBytes(24).toString("base64url")}`;
 }
 
 export function createTestNormalizedEvent(): NormalizedEvent {
   return {
-    title: "Vane destination test",
-    message: "This is a test alert generated from Vane Console.",
+    title: "Tocsin destination test",
+    message: "This is a test alert generated from Tocsin Console.",
     severity: "info",
     status: "firing",
-    fingerprint: "vane:test-destination",
+    fingerprint: "tocsin:test-destination",
     labels: {
-      source: "vane",
+      source: "tocsin",
       test: "true",
     },
     occurredAt: new Date().toISOString(),

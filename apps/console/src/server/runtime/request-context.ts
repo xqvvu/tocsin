@@ -70,8 +70,8 @@ export function createWebhookRequestContext(
 
   return {
     ...context,
-    sourceToken: readBearerToken(context.headers) ?? context.headers.get("x-vane-source-token"),
-    hasProviderSecret: context.headers.has("x-vane-provider-secret"),
+    sourceToken: readBearerToken(context.headers) ?? context.headers.get("x-tocsin-source-token"),
+    hasProviderSecret: context.headers.has("x-tocsin-provider-secret"),
   };
 }
 

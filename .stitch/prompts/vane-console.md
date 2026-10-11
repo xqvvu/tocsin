@@ -1,20 +1,20 @@
-# Vane Console Stitch Prompts
+# Tocsin Console Stitch Prompts
 
-These prompts are written for the Stitch project `Vane Console UI`
-(`8189408707632940093`). Use the Vane design system attached to the project.
+These prompts are written for the Stitch project `Tocsin Console UI`
+(`8189408707632940093`). Use the Tocsin design system attached to the project.
 Generation prompts intentionally avoid color, font, and theme-token directives;
 those live in `.stitch/DESIGN.md`.
 
 ## Global Screen Guidance
 
-Create a desktop-first web application console for Vane, a self-hosted Alert Hub
+Create a desktop-first web application console for Tocsin, a self-hosted Alert Hub
 used by SRE teams. The UI should be dense, calm, operational, and optimized for
 repeat use. It should look like a working control console, not a marketing page,
 not an incident timeline product, and not a SaaS analytics homepage.
 
 Persistent app shell:
 
-1. Compact product header with the title `Vane Console`, a short subtitle
+1. Compact product header with the title `Tocsin Console`, a short subtitle
    `SQLite-first alert hub`, refresh action, and user menu.
 2. Primary navigation with Events, Deliveries, Sources, Routes, Destinations, and
    Settings.
@@ -43,7 +43,7 @@ Design the Events page for inspecting inbound normalized alert history.
 
 **PAGE STRUCTURE:**
 
-1. **App Shell:** Compact Vane Console header with refresh and user menu. Primary
+1. **App Shell:** Compact Tocsin Console header with refresh and user menu. Primary
    navigation has Events active.
 2. **Page Toolbar:** Title `Events`; short line explaining this is immutable
    inbound webhook history; compact action area with refresh and reset filters.

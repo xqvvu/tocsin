@@ -1,16 +1,16 @@
 # SQLite 存储层（`apps/console/src/infra/sqlite`）
 
-本文档说明 Vane console 的 SQLite 持久化层：连接组织、Kysely schema、迁移策略、
+本文档说明 Tocsin console 的 SQLite 持久化层：连接组织、Kysely schema、迁移策略、
 repository 分层、事务边界，以及 Better Auth schema 的生成/落库方式。
 
 > 适用范围：`apps/console/src/infra/sqlite/`。跨包共享的领域 schema、command、
-> DTO 和投影类型定义在 `@vane/core`；本层只负责把它们持久化到 SQLite 并读回。
+> DTO 和投影类型定义在 `@tocsin/core`；本层只负责把它们持久化到 SQLite 并读回。
 
 ---
 
 ## 1. 概述
 
-SQLite 层是 Vane 的持久化适配器。对外暴露一个 `SqliteStore`，内部由 9 个 repository
+SQLite 层是 Tocsin 的持久化适配器。对外暴露一个 `SqliteStore`，内部由 9 个 repository
 组成：
 
 - `sources`
@@ -28,7 +28,7 @@ SQLite 层是 Vane 的持久化适配器。对外暴露一个 `SqliteStore`，�
 - `connection.ts` 的公共入口 `createSqliteDatabase()` 返回的是 Kysely handle，命名为
   `db`。
 - raw `better-sqlite3` 实例只在 `createSqliteDatabase()` 内部创建，用于
-  `SqliteDialect` 和必要 PRAGMA；不会作为 Vane 的公共 SQLite handle 暴露。
+  `SqliteDialect` 和必要 PRAGMA；不会作为 Tocsin 的公共 SQLite handle 暴露。
 - repository 通过 Kysely query builder 读写数据，不再手写 `prepare/run/get/all`。
 - store/repository/transaction API 都是 async。
 - DDL、migration ledger 和少量 SQLite 表达式使用 Kysely 的 `sql` raw capability 执行，
@@ -68,7 +68,7 @@ apps/console/src/infra/sqlite/
   migrate.ts                    # 兼容导出，转发到 migrate/
   migrate/                      # MVP baseline schema plan
     0001_initial_schema.ts      # 当前完整 baseline，编排下列 builder
-    schema.ts                   # Vane 业务表和索引
+    schema.ts                   # Tocsin 业务表和索引
     better-auth.schema.ts       # Better Auth 表和索引的 Kysely builder
     better-auth.generated.sql   # Better Auth CLI 生成的 schema 参考
     index.ts                    # public migration API
@@ -94,7 +94,7 @@ apps/console/src/infra/sqlite/
     settings/
 ```
 
-通用 JSON 编解码在 `@vane/core/json.ts`，不放在 SQLite 层。
+通用 JSON 编解码在 `@tocsin/core/json.ts`，不放在 SQLite 层。
 
 ---
 
@@ -290,7 +290,7 @@ bundle 一起打包，不依赖部署环境里的源代码目录。测试或自�
 
 `0001_initial_schema.ts` 只负责编排，不直接堆大量 DDL：
 
-- `vane-schema.ts` 创建 Vane 业务表、settings 默认值和业务索引。
+- `tocsin-schema.ts` 创建 Tocsin 业务表、settings 默认值和业务索引。
 - `better-auth-schema.ts` 创建 Better Auth 所需表和索引。
 - `better-auth.generated.sql` 是 Better Auth CLI 生成的 schema 快照，用于人工和测试对照，
   不是运行时执行的 SQL。
@@ -323,11 +323,11 @@ Schema builder 优先使用 Kysely schema/query builder，因为这能让 DDL、
 
 ## 9. Better Auth Schema
 
-Better Auth 的 `user` / `session` / `account` / `verification` 表与 Vane 表放在同一个
+Better Auth 的 `user` / `session` / `account` / `verification` 表与 Tocsin 表放在同一个
 SQLite 数据库中，但不包装成 `SqliteStore` repository。认证读写由 Better Auth adapter
 拥有。
 
-Vane 的 SQLite 物理列使用 snake_case。Better Auth 的模型字段在 TypeScript/API 层仍是
+Tocsin 的 SQLite 物理列使用 snake_case。Better Auth 的模型字段在 TypeScript/API 层仍是
 `emailVerified`、`createdAt`、`userId` 这类 camelCase 名称，因此
 `lib/auth-options.ts` 通过 `user.fields`、`session.fields`、`account.fields` 和
 `verification.fields` 显式把它们映射到 `email_verified`、`created_at`、`user_id`
@@ -353,7 +353,7 @@ vp exec auth@latest generate \
 
 生成文件只是当前 auth schema 的参考，和 `better-auth-schema.ts` 放在同一目录，方便对照
 CLI 输出和手写 Kysely builder。运行时迁移仍由 `0001_initial_schema.ts` 调用
-`better-auth-schema.ts` 创建表；涉及默认值、约束、owner bootstrap 等 Vane 语义时，以 Vane
+`better-auth-schema.ts` 创建表；涉及默认值、约束、owner bootstrap 等 Tocsin 语义时，以 Tocsin
 builder 为准。
 
 默认 runtime auth 配置在 `server/runtime/container.ts` 中通过：
@@ -459,7 +459,7 @@ vp -C apps/console build
 
 新增表或改 schema：
 
-1. MVP 发布前，更新 `migrate/0001_initial_schema.ts`、`vane-schema.ts` 或
+1. MVP 发布前，更新 `migrate/0001_initial_schema.ts`、`tocsin-schema.ts` 或
    `better-auth-schema.ts`，让 baseline 代表当前完整 schema。
 2. 更新 `schema.ts` 的 Kysely table 类型。
 3. 更新对应 repository helper / implementation。
@@ -478,6 +478,6 @@ vp -C apps/console build
 
 Related:
 
-- [[Vane Index]]
-- [[Vane Application Container]]
-- [[Vane TanStack Start Import Boundaries]]
+- [[Tocsin Index]]
+- [[Tocsin Application Container]]
+- [[Tocsin TanStack Start Import Boundaries]]

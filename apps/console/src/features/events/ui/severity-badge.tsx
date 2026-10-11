@@ -1,4 +1,4 @@
-import type { AlertSeverity } from "@vane/core";
+import type { AlertSeverity } from "@tocsin/core";
 
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";

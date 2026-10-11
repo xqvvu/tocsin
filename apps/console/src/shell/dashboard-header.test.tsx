@@ -59,7 +59,7 @@ describe("dashboard header", () => {
     );
 
     expect(screen.getByRole("navigation", { name: "Dashboard" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Vane" })).toHaveProperty(
+    expect(screen.getByRole("link", { name: "Tocsin" })).toHaveProperty(
       "href",
       expect.stringContaining("/events"),
     );

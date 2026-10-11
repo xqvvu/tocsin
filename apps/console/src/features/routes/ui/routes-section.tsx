@@ -8,7 +8,7 @@ import {
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 
-import type { DestinationSummary, RouteDefinition, SourceSummary } from "@vane/core";
+import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
 import { IconTooltip } from "#/components/common/icon-tooltip";

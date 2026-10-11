@@ -5,7 +5,7 @@ import {
   AdapterLifecycleSchema,
   AdapterSecretFieldSchema,
   DestinationKindSchema,
-} from "@vane/core";
+} from "@tocsin/core";
 import type {
   DestinationKind,
   DestinationSummary,
@@ -13,8 +13,8 @@ import type {
   NormalizedEvent,
   ProviderReference,
   SourceSummary,
-} from "@vane/core";
-import type { Locale } from "@vane/core/presentation";
+} from "@tocsin/core";
+import type { Locale } from "@tocsin/core/presentation";
 import { z } from "zod";
 
 export interface FetchLikeResponse {

@@ -77,7 +77,7 @@ describe("login form", () => {
     );
 
     expect(screen.getByRole("button", { name: "登录" })).toBeTruthy();
-    expect(screen.getByText("登录 Vane")).toBeTruthy();
+    expect(screen.getByText("登录 Tocsin")).toBeTruthy();
   });
 
   it("exposes a colocated skeleton", () => {

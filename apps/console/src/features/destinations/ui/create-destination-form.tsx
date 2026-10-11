@@ -1,6 +1,6 @@
 import { RiArrowRightLine } from "@remixicon/react";
 
-import type { FeishuAppListItem } from "@vane/core";
+import type { FeishuAppListItem } from "@tocsin/core";
 
 import { FormPanel } from "#/components/common/content-panel";
 import {

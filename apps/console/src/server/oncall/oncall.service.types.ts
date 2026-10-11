@@ -1,4 +1,4 @@
-import type { ProviderReference } from "@vane/core";
+import type { ProviderReference } from "@tocsin/core";
 
 import type { ClaimedDelivery } from "#/infra/sqlite/repositories/delivery/delivery.interface";
 import type { SqliteStore } from "#/infra/sqlite/store";

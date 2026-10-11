@@ -1,4 +1,4 @@
-import { RouteDefinitionSchema } from "@vane/core";
+import { RouteDefinitionSchema } from "@tocsin/core";
 import * as z from "zod";
 
 import { IdOutputSchema } from "./shared";

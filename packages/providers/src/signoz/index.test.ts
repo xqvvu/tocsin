@@ -15,7 +15,7 @@ describe("signoz provider parser", () => {
         "content-type": "application/json",
       },
       payload: {
-        receiver: "vane",
+        receiver: "tocsin",
         status: "firing",
         groupKey: '{}:{alertname="HighErrorRate"}',
         commonLabels: {
@@ -62,7 +62,7 @@ describe("signoz provider parser", () => {
       provider: "signoz",
       parserVersion: 1,
       alertCount: 1,
-      receiver: "vane",
+      receiver: "tocsin",
       groupKey: '{}:{alertname="HighErrorRate"}',
     });
     expect(result.idempotencyKey).toMatch(/^signoz:/);

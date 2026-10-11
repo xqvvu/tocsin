@@ -1,5 +1,5 @@
-import { createStableHash, isJsonObject, NormalizedEventSchema, redactText } from "@vane/core";
-import type { AlertSeverity, JsonObject, Labels } from "@vane/core";
+import { createStableHash, isJsonObject, NormalizedEventSchema, redactText } from "@tocsin/core";
+import type { AlertSeverity, JsonObject, Labels } from "@tocsin/core";
 
 import type { FastgptProviderConfig } from "#providers/fastgpt/schema";
 import { normalizeSeverity } from "#providers/shared/normalization";

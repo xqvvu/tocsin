@@ -1,4 +1,4 @@
-import type { JsonObject, JsonValue } from "@vane/core";
+import type { JsonObject, JsonValue } from "@tocsin/core";
 
 import {
   destinationCopy,

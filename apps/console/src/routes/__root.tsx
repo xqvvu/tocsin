@@ -23,7 +23,7 @@ export const Route = createRootRouteWithContext<{
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Vane" },
+      { title: "Tocsin" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

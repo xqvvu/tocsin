@@ -1,6 +1,6 @@
 import { RiPlayLine, RiTimeLine } from "@remixicon/react";
 
-import type { DestinationSummary, SourceSummary } from "@vane/core";
+import type { DestinationSummary, SourceSummary } from "@tocsin/core";
 
 import { ContentPanel } from "#/components/common/content-panel";
 import { Button } from "#/components/ui/button";

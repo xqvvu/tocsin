@@ -26,11 +26,11 @@ import {
   type SourceSummary,
   type TestDestinationCommand,
   type UpdateDestinationCommand,
-} from "@vane/core";
-import { redactHeaders, redactJsonValue } from "@vane/core";
-import type { DestinationCatalogItem } from "@vane/destinations";
-import { DestinationTemplateEngine } from "@vane/destinations";
-import type { TemplateDiagnostic } from "@vane/destinations";
+} from "@tocsin/core";
+import { redactHeaders, redactJsonValue } from "@tocsin/core";
+import type { DestinationCatalogItem } from "@tocsin/destinations";
+import { DestinationTemplateEngine } from "@tocsin/destinations";
+import type { TemplateDiagnostic } from "@tocsin/destinations";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import {
@@ -160,7 +160,7 @@ export class DestinationService {
 
     const source: SourceSummary = {
       id: "test-source",
-      name: "Vane test",
+      name: "Tocsin test",
       provider: "generic",
       enabled: true,
     };
@@ -345,7 +345,7 @@ export class DestinationService {
     if (!sampleEventId) {
       const source: SourceSummary = {
         id: "preview-source",
-        name: "Vane preview",
+        name: "Tocsin preview",
         provider: "generic",
         enabled: true,
       };

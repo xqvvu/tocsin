@@ -1,4 +1,4 @@
-import type { DestinationKind, JsonObject } from "@vane/core";
+import type { DestinationKind, JsonObject } from "@tocsin/core";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 import {

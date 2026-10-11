@@ -1,14 +1,14 @@
 # 应用容器与请求上下文（`apps/console/src/server/runtime`）
 
-本文档定义 Vane 在 TanStack Start 单体应用中的后端依赖组装方式。当前代码采用朴素分层：oRPC procedure 与 API route 作为入口，service 承载业务逻辑，SQLite repository 承载持久化。`server/runtime` 只放跨能力的运行时组装与请求上下文；oRPC 契约与 implementer 形状见 `docs/architecture/orpc-api-layer.md`。
+本文档定义 Tocsin 在 TanStack Start 单体应用中的后端依赖组装方式。当前代码采用朴素分层：oRPC procedure 与 API route 作为入口，service 承载业务逻辑，SQLite repository 承载持久化。`server/runtime` 只放跨能力的运行时组装与请求上下文；oRPC 契约与 implementer 形状见 `docs/architecture/orpc-api-layer.md`。
 
-Vane 的 MVP 约束不变：单进程、SQLite-first、server-only 后端运行时；不引入 NestJS 风格 decorator IoC，也不引入第三方 DI 容器。
+Tocsin 的 MVP 约束不变：单进程、SQLite-first、server-only 后端运行时；不引入 NestJS 风格 decorator IoC，也不引入第三方 DI 容器。
 
 ---
 
 ## 1. 设计原则
 
-1. **默认运行时只存在于 `apps/console`。** `@vane/core`、`@vane/providers`、`@vane/destinations` 只暴露共享 schema、provider parser、destination sender 和 registry，不依赖 console 的运行时。
+1. **默认运行时只存在于 `apps/console`。** `@tocsin/core`、`@tocsin/providers`、`@tocsin/destinations` 只暴露共享 schema、provider parser、destination sender 和 registry，不依赖 console 的运行时。
 2. **业务运行时的长期依赖放在 application container。** SQLite store、provider registry、destination registry、Better Auth database、Better Auth instance、delivery worker runner 由 `server/runtime/container.ts` 懒加载并缓存。LogTape 这类应用级 instrumentation 由 server entry 初始化，不放入 container。
 3. **请求级信息放在 request context。** dashboard session/current user、request id、headers、当前请求时间等每次请求不同的数据只在 `server/runtime/request-context.ts` 创建的 context 中存在，不能塞进全局 container。
 4. **入口层保持薄。** oRPC procedure 和 API routes 只做输入校验、建立 context、从 container 获取 service、调用业务方法、映射 safe DTO。
@@ -24,11 +24,11 @@ Vane 的 MVP 约束不变：单进程、SQLite-first、server-only 后端运行�
 
 | 依赖                   | 生命周期                | 说明                                                                                                                                                                                                                                        |
 | ---------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SqliteStore`          | 默认 container 内懒加载 | 默认使用 `env.VANE_DATABASE_PATH`，应用显式 migrations。承载 Sources、Routes、Destinations、Events、Deliveries、Feishu Apps、Oncall、Settings 等仓储。                                                                                       |
+| `SqliteStore`          | 默认 container 内懒加载 | 默认使用 `env.TOCSIN_DATABASE_PATH`，应用显式 migrations。承载 Sources、Routes、Destinations、Events、Deliveries、Feishu Apps、Oncall、Settings 等仓储。                                                                                       |
 | `ProviderRegistry`     | 默认 container 内懒加载 | 默认来自 `createDefaultProviderRegistry()`，用于把 Source payload 解析为 normalized Event。                                                                                                                                                 |
 | `DestinationRegistry`  | 默认 container 内懒加载 | 默认来自 `createDefaultDestinationRegistry()`，用于校验 Destination config、preview 和 send。                                                                                                                                               |
 | `UrgencyRegistry`      | 默认 container 内单例   | 默认来自 `createDefaultUrgencyRegistry()`，注册 `feishu_urgent_phone` 渠道。它是 destination registry 的并列家族（呼叫而不是通知）；渠道实例按凭证缓存 `tenant_access_token`，所以必须进程内单例，不能按请求新建。                            |
-| Better Auth database   | 默认 container 内懒加载 | 使用与 SQLite store 同一套 Kysely-first connection/migration 入口。Better Auth 拥有 auth 表读写，Vane 不把 auth 表包装成业务 repository。                                                                                                   |
+| Better Auth database   | 默认 container 内懒加载 | 使用与 SQLite store 同一套 Kysely-first connection/migration 入口。Better Auth 拥有 auth 表读写，Tocsin 不把 auth 表包装成业务 repository。                                                                                                   |
 | `AuthServer`             | 默认 container 内懒加载 | Better Auth server runtime，通过 Kysely SQLite adapter 配置连接数据库，包含 HTTP handler 与 `api.getSession(...)`。                                                                                                                         |
 | `DeliveryWorkerRunner` | 默认 container 内单例   | 由 `DeliveryWorker` + store + destination registry + env worker 配置组装，维持 MVP 的 in-process SQLite-backed delivery worker。                                                                                                            |
 | `OncallWorkerRunner`   | 默认 container 内单例   | 由 `OncallWorker` + store + `UrgencyRegistry` + `DestinationConfigResolver` 组装，复用 `createDeliveryWorkerRunner`（它对队列形状无感知），维持加急队列的 in-process 轮询。                                                                 |
@@ -181,7 +181,7 @@ const worker = await context.dashboardRequest.container.createDeliveryWorker();
 return worker.runOnce({ limit });
 ```
 
-Oncall worker（`server/oncall/oncall-worker.service.ts`）与 delivery worker 同形状：`ensureOncallWorkerRunner()` 复用同一个 `createDeliveryWorkerRunner` 工厂（它只依赖 `runOnce()` 与 health snapshot，对队列无感知），`oncall` runner 与 delivery runner 在 container 里并列，各自持有独立 timer，但共用同一组 env 配置（`VANE_WORKER_INTERVAL_MS` 轮询间隔、`VANE_WORKER_BATCH_SIZE` 每轮上限），dispose 时一起停止。它也照抄 reclaim → claim(due) → execute 顺序，退避复用 `DeliveryBackoffOptions`。加急的 run-once 入口是 `operations.buzzDelivery` 之后的 best-effort `dispatchNow`，失败只记日志并交由 runner 重试。
+Oncall worker（`server/oncall/oncall-worker.service.ts`）与 delivery worker 同形状：`ensureOncallWorkerRunner()` 复用同一个 `createDeliveryWorkerRunner` 工厂（它只依赖 `runOnce()` 与 health snapshot，对队列无感知），`oncall` runner 与 delivery runner 在 container 里并列，各自持有独立 timer，但共用同一组 env 配置（`TOCSIN_WORKER_INTERVAL_MS` 轮询间隔、`TOCSIN_WORKER_BATCH_SIZE` 每轮上限），dispose 时一起停止。它也照抄 reclaim → claim(due) → execute 顺序，退避复用 `DeliveryBackoffOptions`。加急的 run-once 入口是 `operations.buzzDelivery` 之后的 best-effort `dispatchNow`，失败只记日志并交由 runner 重试。
 
 ### Logging Runtime
 
@@ -196,7 +196,7 @@ provider/destination adapter 继续只返回稳定结构化结果，不接收 lo
 
 ## 5. 客户端可见性边界（私有部署）
 
-Vane 是 self-hosted 产品。已认证 dashboard 操作者应能看到排障所需的运维配置；只有真正的密钥与
+Tocsin 是 self-hosted 产品。已认证 dashboard 操作者应能看到排障所需的运维配置；只有真正的密钥与
 进程内部句柄必须留在 server-only 模块、SQLite、Better Auth adapter 或服务端响应前的局部变量里。
 
 **不得进入 client components、route loader serialized data、query data 或 procedure 返回值：**
@@ -218,12 +218,12 @@ Vane 是 self-hosted 产品。已认证 dashboard 操作者应能看到排障所
 
 ## 6. 为什么不使用 decorator IoC
 
-Vane 的后端是 TanStack Start 单体应用，MVP 需要的是清晰的 server-only 组装边界，而不是框架级对象生命周期管理。Decorator IoC 或第三方 DI 容器会带来几个问题：
+Tocsin 的后端是 TanStack Start 单体应用，MVP 需要的是清晰的 server-only 组装边界，而不是框架级对象生命周期管理。Decorator IoC 或第三方 DI 容器会带来几个问题：
 
 - 需要运行时 metadata、decorator 编译约定或额外包，增加自托管部署和调试成本。
 - 隐藏构造依赖，反而让 Sources、Routes、Destinations、Events、Deliveries 的 service 边界不如构造函数参数直观。
 - 容易把 request session、request id、locale 等请求级状态错误注册成 singleton。
-- 对当前规模过度设计：Vane 只有一个进程、一个 SQLite store、少量 registry 和几个 service factory。
+- 对当前规模过度设计：Tocsin 只有一个进程、一个 SQLite store、少量 registry 和几个 service factory。
 
 推荐模式是普通 TypeScript object/factory：container 负责默认长期依赖，request context 负责请求级依赖，业务 service 保持显式构造函数。这足够支持测试替身、未来扩展 provider / destination，也不会牺牲 TanStack Start 的 client/server 分离。
 

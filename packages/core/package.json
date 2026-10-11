@@ -1,5 +1,5 @@
 {
-  "name": "@vane/core",
+  "name": "@tocsin/core",
   "private": true,
   "type": "module",
   "imports": {

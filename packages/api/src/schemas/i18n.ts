@@ -1,4 +1,4 @@
-import { LocaleSchema } from "@vane/core";
+import { LocaleSchema } from "@tocsin/core";
 import * as z from "zod";
 
 /** Locale and time zone resolved for the current request. */

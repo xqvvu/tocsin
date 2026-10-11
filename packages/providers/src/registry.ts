@@ -1,4 +1,4 @@
-import { SourceProviderSchema, type SourceProvider } from "@vane/core";
+import { SourceProviderSchema, type SourceProvider } from "@tocsin/core";
 
 import { alertmanagerProviderAdapter } from "#providers/alertmanager/index";
 import { fastgptProviderAdapter } from "#providers/fastgpt/index";

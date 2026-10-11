@@ -8,13 +8,13 @@ describe("redaction", () => {
       redactHeaders({
         Authorization: "Bearer secret",
         "X-Request-Id": "req-1",
-        "X-Vane-Source-Token": "source-token",
+        "X-Tocsin-Source-Token": "source-token",
         Cookie: "session=secret",
       }),
     ).toEqual({
       Authorization: REDACTED_VALUE,
       "X-Request-Id": "req-1",
-      "X-Vane-Source-Token": REDACTED_VALUE,
+      "X-Tocsin-Source-Token": REDACTED_VALUE,
       Cookie: REDACTED_VALUE,
     });
   });

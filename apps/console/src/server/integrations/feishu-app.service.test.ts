@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { FetchLike } from "@vane/destinations";
+import type { FetchLike } from "@tocsin/destinations";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import { openSqliteStore } from "#/infra/sqlite/store";

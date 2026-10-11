@@ -39,7 +39,7 @@ const { router } = await import("#/server/orpc/router");
 const records: LogRecord[] = [];
 
 function orpcRecords(): LogRecord[] {
-  return records.filter((record) => record.category.join(".") === "vane.orpc");
+  return records.filter((record) => record.category.join(".") === "tocsin.orpc");
 }
 
 describe("oRPC procedure logging", () => {
@@ -54,7 +54,7 @@ describe("oRPC procedure logging", () => {
       },
       loggers: [
         {
-          category: ["vane"],
+          category: ["tocsin"],
           sinks: ["recorder"],
           lowestLevel: "trace",
         },

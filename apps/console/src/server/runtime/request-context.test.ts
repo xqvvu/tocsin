@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { createDefaultDestinationRegistry, createDefaultUrgencyRegistry } from "@vane/destinations";
-import { createDefaultProviderRegistry } from "@vane/providers";
+import {
+  createDefaultDestinationRegistry,
+  createDefaultUrgencyRegistry,
+} from "@tocsin/destinations";
+import { createDefaultProviderRegistry } from "@tocsin/providers";
 
 import type { ApplicationContainer, AuthServer } from "#/server/runtime/container";
 import {
@@ -95,11 +98,11 @@ describe("request context", () => {
 
     const context = createWebhookRequestContext({
       container,
-      request: new Request("https://vane.test/api/sources/source-1/webhook", {
+      request: new Request("https://tocsin.test/api/sources/source-1/webhook", {
         method: "POST",
         headers: {
           authorization: "Bearer source-token",
-          "x-vane-provider-secret": "provider-secret",
+          "x-tocsin-provider-secret": "provider-secret",
           "x-correlation-id": "correlation-1",
         },
       }),
@@ -111,7 +114,7 @@ describe("request context", () => {
     expect(context.requestId).toBe("correlation-1");
     expect(context.headersRecord).toMatchObject({
       authorization: "Bearer source-token",
-      "x-vane-provider-secret": "provider-secret",
+      "x-tocsin-provider-secret": "provider-secret",
     });
     expect(fakeGetSession).not.toHaveBeenCalled();
   });

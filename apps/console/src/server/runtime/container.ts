@@ -7,8 +7,8 @@ import {
   createDefaultUrgencyRegistry,
   type DestinationRegistry,
   type UrgencyRegistry,
-} from "@vane/destinations";
-import { createDefaultProviderRegistry, type ProviderRegistry } from "@vane/providers";
+} from "@tocsin/destinations";
+import { createDefaultProviderRegistry, type ProviderRegistry } from "@tocsin/providers";
 
 import { env } from "#/env";
 import { createSqliteDatabase } from "#/infra/sqlite/connection";
@@ -52,8 +52,8 @@ import { safeErrorProperties } from "#/server/runtime/log-safety";
 import { SourceService } from "#/server/sources/source.service";
 import type { SourceServiceOptions } from "#/server/sources/source.service.types";
 
-const deliveryWorkerLogger = getLogger(["vane", "worker", "delivery"]);
-const oncallWorkerLogger = getLogger(["vane", "worker", "oncall"]);
+const deliveryWorkerLogger = getLogger(["tocsin", "worker", "delivery"]);
+const oncallWorkerLogger = getLogger(["tocsin", "worker", "oncall"]);
 
 export interface AuthServer {
   handler(request: Request): Promise<Response>;
@@ -158,7 +158,7 @@ export function createApplicationContainer(
     options.openStore ??
     (() =>
       openSqliteStore({
-        databasePath: env.VANE_DATABASE_PATH,
+        databasePath: env.TOCSIN_DATABASE_PATH,
       }));
   const createProviderRegistry = options.createProviderRegistry ?? createDefaultProviderRegistry;
   const createDestinationRegistry =
@@ -167,9 +167,9 @@ export function createApplicationContainer(
   const createAuthDatabase = options.createAuthDatabase ?? createDefaultBetterAuthDatabase;
   const createAuth = options.createAuth ?? createDefaultAuth;
   const createWorkerRunner = options.createWorkerRunner ?? createDeliveryWorkerRunner;
-  const workerIntervalMs = options.workerIntervalMs ?? env.VANE_WORKER_INTERVAL_MS;
-  const workerBatchSize = options.workerBatchSize ?? env.VANE_WORKER_BATCH_SIZE;
-  const workerStaleRunningMs = options.workerStaleRunningMs ?? env.VANE_WORKER_STALE_RUNNING_MS;
+  const workerIntervalMs = options.workerIntervalMs ?? env.TOCSIN_WORKER_INTERVAL_MS;
+  const workerBatchSize = options.workerBatchSize ?? env.TOCSIN_WORKER_BATCH_SIZE;
+  const workerStaleRunningMs = options.workerStaleRunningMs ?? env.TOCSIN_WORKER_STALE_RUNNING_MS;
   const onWorkerRunComplete = options.onWorkerRunComplete ?? logWorkerRunComplete;
   const onWorkerError = options.onWorkerError ?? logWorkerError;
   const onOncallWorkerRunComplete = options.onOncallWorkerRunComplete ?? logOncallWorkerRunComplete;
@@ -514,7 +514,7 @@ function logOncallWorkerError(error: unknown): void {
 
 async function createDefaultBetterAuthDatabase(): Promise<SqliteKysely> {
   const db = createSqliteDatabase({
-    databasePath: env.VANE_DATABASE_PATH,
+    databasePath: env.TOCSIN_DATABASE_PATH,
   });
 
   await migrateSqliteDatabase(db);

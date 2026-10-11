@@ -1,4 +1,4 @@
-import type { RouteDefinition } from "@vane/core";
+import type { RouteDefinition } from "@tocsin/core";
 
 export type RouteRule = RouteDefinition["rule"];
 

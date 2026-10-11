@@ -5,7 +5,7 @@ import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 
-import type { RPCClient } from "@vane/api/client";
+import type { RPCClient } from "@tocsin/api/client";
 
 import { router } from "#/server/orpc/router";
 

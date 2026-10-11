@@ -2,7 +2,7 @@ import {
   UpdateAppSettingsCommandSchema,
   type AppSettings,
   type UpdateAppSettingsCommand,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import type {
   AppSettingsServiceOptions,

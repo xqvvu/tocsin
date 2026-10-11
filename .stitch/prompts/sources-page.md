@@ -1,6 +1,6 @@
-# Vane Sources Configuration Page
+# Tocsin Sources Configuration Page
 
-Design the Sources page for Vane, a self-hosted Alert Hub console used by SREs
+Design the Sources page for Tocsin, a self-hosted Alert Hub console used by SREs
 to manage inbound webhook senders such as Grafana, SigNoz, Uptime Kuma,
 Alertmanager, and generic systems. The page should make it easy to create a
 Source, copy its webhook URL, rotate its token, disable noisy senders, and
@@ -10,7 +10,7 @@ understand which upstream systems are allowed to create Events.
 
 **PAGE STRUCTURE:**
 
-1. **App Shell:** Preserve the Vane console shell pattern from the Events and
+1. **App Shell:** Preserve the Tocsin console shell pattern from the Events and
    Deliveries screens: compact top navigation, active Sources item, dense work
    area, and calm operational styling.
 

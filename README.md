@@ -1,24 +1,24 @@
-# Vane
+# Tocsin
 
-Vane 是一个面向 SRE 和运维团队的开源、自托管 Alert Hub。它接收来自 SigNoz、Grafana、Uptime Kuma、Alertmanager、FastGPT 或自定义系统的告警 webhook，将 payload 规范化为统一事件，再按简单、可审计的规则路由到 Feishu、Slack、Email 或通用 webhook 等通知目标。
+Tocsin 是一个面向 SRE 和运维团队的开源、自托管 Alert Hub。它接收来自 SigNoz、Grafana、Uptime Kuma、Alertmanager、FastGPT 或自定义系统的告警 webhook，将 payload 规范化为统一事件，再按简单、可审计的规则路由到 Feishu、Slack、Email 或通用 webhook 等通知目标。
 
-Vane 的目标不是做 SaaS 平台，也不是做通用工作流引擎。它更接近一个可以私有部署的运维基础设施组件：一个进程、一个 SQLite 数据库、一个数据卷，清楚记录告警从进入、规范化、匹配、投递、重试到失败的完整路径。
+Tocsin 的目标不是做 SaaS 平台，也不是做通用工作流引擎。它更接近一个可以私有部署的运维基础设施组件：一个进程、一个 SQLite 数据库、一个数据卷，清楚记录告警从进入、规范化、匹配、投递、重试到失败的完整路径。
 
 > 当前项目仍处于 MVP 开发阶段。核心架构、控制台、SQLite 持久化、认证、配置、投递与 UI 基础已经在仓库中推进，但还不应视为稳定发布版。
 
-## 为什么需要 Vane
+## 为什么需要 Tocsin
 
 团队常常同时使用多套监控与告警系统。每个系统都要分别配置 Feishu、Slack、邮件或 webhook，导致：
 
 - 通知渠道和密钥分散在多个上游系统中。
 - 告警路由规则重复、难以审计。
-- 无法统一回答“Vane 收到了什么、匹配了哪条规则、发送到了哪里、为什么失败”。
+- 无法统一回答“Tocsin 收到了什么、匹配了哪条规则、发送到了哪里、为什么失败”。
 - 上游重试、目的端故障、重复告警和敏感字段处理缺乏一致策略。
 
-Vane 把这些能力集中到一个私有部署里：
+Tocsin 把这些能力集中到一个私有部署里：
 
 - Sources 代表上游告警发送方，每个 Source 有独立 webhook URL 和 token。
-- Events 记录每次进入 Vane 的 webhook 请求和规范化后的告警字段。
+- Events 记录每次进入 Tocsin 的 webhook 请求和规范化后的告警字段。
 - Routes 用简单条件匹配 Source、severity、status、labels、title、message。
 - Destinations 保存通知目标配置与模板，密钥只留在服务端。
 - Deliveries 异步投递并记录状态、尝试次数、失败原因和重试计划。
@@ -31,13 +31,13 @@ Vane 把这些能力集中到一个私有部署里：
 - Better Auth dashboard 登录；首次注册用户可成为 owner。
 - SQLite-first 持久化层，显式 migrations，仓储位于 `apps/console/src/infra/sqlite/repositories/`，按 Sources、Destinations、Routes、Intake、Deliveries、History、Settings 切分。
 - Provider parser registry：`generic`、`signoz`、`grafana`、`uptime_kuma`、`alertmanager`、`fastgpt`。
-- FastGPT 模型探测 Source：接收 FastGPT 模型状态探测 webhook（`model_status_error` / `model_status_recovered`），把探测状态 red/yellow/green 规范化为 firing/resolved 告警，并以 `modelId` 作为 fingerprint；FastGPT 侧的 `webhookUrl` 填 Vane 的接入 URL，`webhookToken` 填 Vane 的接入 Token。
+- FastGPT 模型探测 Source：接收 FastGPT 模型状态探测 webhook（`model_status_error` / `model_status_recovered`），把探测状态 red/yellow/green 规范化为 firing/resolved 告警，并以 `modelId` 作为 fingerprint；FastGPT 侧的 `webhookUrl` 填 Tocsin 的接入 URL，`webhookToken` 填 Tocsin 的接入 Token。
 - Destination sender registry：`generic_webhook`、`feishu`、`slack`、`email`。
 - 飞书加急（on-call 电话呼叫）：飞书自建应用是独立可复用资源（登记、测试凭证、被引用时拒删），飞书
   通知目标可选「应用发送模式」（卡片由应用发出并把 `message_id` 记为该次投递的 provider reference），
   在此之上对命中的 firing 投递按 severity 门槛自动或手动向呼叫对象发起 `urgent_phone`。加急有自己的
   状态机、指数退避与 `(指纹, 通知目标, 呼叫对象)` 去重窗口：电话失败不重发卡片，卡片重试不重复打电话。
-- Route rule、normalized event、delivery job、portable config 等核心 schema 位于 `@vane/core`。
+- Route rule、normalized event、delivery job、portable config 等核心 schema 位于 `@tocsin/core`。
 - SQLite-backed in-process delivery worker，支持异步投递、状态记录、失败重试和手动运行。
 - TOML import/export 基础，默认避免导出明文 secret，并支持环境变量引用。
 - shadcn/base-ui 风格的紧凑运维 UI，包含错误页、404、profile menu、toast、loading skeleton 等基础体验。
@@ -117,24 +117,24 @@ vp run -r build     # 构建全部包
 | --- | --- |
 | `BETTER_AUTH_URL` | Better Auth 对外 URL，本地通常是 dev server URL。 |
 | `BETTER_AUTH_SECRET` | Better Auth secret，生产必须使用 32+ 字符随机值。 |
-| `BETTER_AUTH_ALLOWED_HOSTS` | 可选，逗号或换行分隔的 Better Auth 动态 base URL Host 白名单，例如 `localhost:6180,vane.example.com`。通过 PVC、反向代理或预览域名访问时需要加入外部 Host。 |
-| `BETTER_AUTH_TRUSTED_ORIGINS` | 可选，逗号或换行分隔的额外可信 Origin，例如 `http://localhost:6180,https://vane.example.com`，用于通过 Better Auth 的 CSRF/origin 检查。 |
-| `SERVER_URL` | Vane 对外访问 URL，用于生成 webhook URL 等。 |
-| `VANE_DATABASE_PATH` | SQLite 数据库路径。 |
-| `VANE_MAX_WEBHOOK_BYTES` | 入站 webhook 最大 payload 大小。 |
-| `VANE_WORKER_BATCH_SIZE` | delivery worker 每批处理数量。 |
-| `VANE_WORKER_INTERVAL_MS` | delivery worker 轮询间隔。 |
-| `VANE_WORKER_STALE_RUNNING_MS` | running delivery 超时回收窗口。 |
-| `VANE_FEISHU_APP_<APP_ID>_APPSECRET` | 配置导出里飞书应用密钥的环境变量引用；导入时从该变量取值，避免明文 secret 进仓库或进配置文件。 |
+| `BETTER_AUTH_ALLOWED_HOSTS` | 可选，逗号或换行分隔的 Better Auth 动态 base URL Host 白名单，例如 `localhost:6180,tocsin.example.com`。通过 PVC、反向代理或预览域名访问时需要加入外部 Host。 |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | 可选，逗号或换行分隔的额外可信 Origin，例如 `http://localhost:6180,https://tocsin.example.com`，用于通过 Better Auth 的 CSRF/origin 检查。 |
+| `SERVER_URL` | Tocsin 对外访问 URL，用于生成 webhook URL 等。 |
+| `TOCSIN_DATABASE_PATH` | SQLite 数据库路径。 |
+| `TOCSIN_MAX_WEBHOOK_BYTES` | 入站 webhook 最大 payload 大小。 |
+| `TOCSIN_WORKER_BATCH_SIZE` | delivery worker 每批处理数量。 |
+| `TOCSIN_WORKER_INTERVAL_MS` | delivery worker 轮询间隔。 |
+| `TOCSIN_WORKER_STALE_RUNNING_MS` | running delivery 超时回收窗口。 |
+| `TOCSIN_FEISHU_APP_<APP_ID>_APPSECRET` | 配置导出里飞书应用密钥的环境变量引用；导入时从该变量取值，避免明文 secret 进仓库或进配置文件。 |
 
-> `VANE_WORKER_*` 同时作用于 delivery 队列与加急队列：两个 worker 在同一进程内各自轮询。
+> `TOCSIN_WORKER_*` 同时作用于 delivery 队列与加急队列：两个 worker 在同一进程内各自轮询。
 
 ## 飞书加急部署前提
 
 电话加急（`urgent_phone`）依赖飞书开放平台的应用能力与租户额度，上线前逐项确认：
 
 1. **自建应用与凭证**：在[开发者后台](https://open.feishu.cn/app)创建自建应用，把 `app_id` 与
-   `app_secret` 登记到 Vane 的「飞书应用」页面，并用测试按钮验证凭证可换到 `tenant_access_token`。
+   `app_secret` 登记到 Tocsin 的「飞书应用」页面，并用测试按钮验证凭证可换到 `tenant_access_token`。
 2. **开通机器人能力**：应用必须启用机器人能力，否则发消息与加急都会报 `230006`。
 3. **申请权限**：发送消息需要 `im:message` 或 `im:message:send_as_bot`；电话加急需要
    `im:message.urgent:phone`（历史版本 `im:message.urgent:phone_send`）；呼叫对象若按 `user_id`
@@ -144,13 +144,13 @@ vp run -r build     # 构建全部包
    管理员），否则报 `230052`。
 5. **呼叫对象在应用可用范围内**：接收人（`open_id` / `user_id` / `union_id`）必须在应用可用范围内且
    仍在租户内，否则报 `230013`；接收人还必须是该消息所在群的成员，否则接口返回 `code 0` 却把人列进
-   `invalid_user_id_list` —— Vane 把这种呼叫判为失败，不会记成已打通。
+   `invalid_user_id_list` —— Tocsin 把这种呼叫判为失败，不会记成已打通。
 6. **额度与计费**：电话与短信加急消耗企业加急额度，可在[管理后台](https://admin.feishu.cn/) ›
-   费用中心 › 权益数据 › 短信/电话加急查看。额度耗尽报 `230024`，Vane 判定为不可重试并把提示写进加急
+   费用中心 › 权益数据 › 短信/电话加急查看。额度耗尽报 `230024`，Tocsin 判定为不可重试并把提示写进加急
    记录；单个用户未读加急超过 200 条报 `230023`，属于暂时性失败，会退避重试。
 7. **频控**：加急与发消息接口为每应用每租户 1000 次/分钟、50 次/秒；自定义群机器人 webhook 是单租户
    单机器人 100 次/分钟、5 次/秒，官方建议避开 10:00、17:30 等整点半点。触发限流（`99991400` 或
-   HTTP 429）时 Vane 退避重试。
+   HTTP 429）时 Tocsin 退避重试。
 8. **平台限制**：只能加急本机器人自己发送的消息，因此 webhook 模式的投递无法加急（UI 会说明原因）；
    批量发送（`bm_` 前缀消息）不支持加急，折叠会话内的加急只做应用内推送。
 
@@ -164,13 +164,13 @@ vp run -r build     # 构建全部包
 BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 ```
 
-默认服务会暴露在 `http://localhost:3000`，SQLite 数据放在 `vane-data` volume 中。
+默认服务会暴露在 `http://localhost:3000`，SQLite 数据放在 `tocsin-data` volume 中。
 
 ## Roadmap
 
 ### 0. 已落地的基础
 
-- 建立 Vane 的领域语言：Sources、Events、Routes、Destinations、Deliveries、History。
+- 建立 Tocsin 的领域语言：Sources、Events、Routes、Destinations、Deliveries、History。
 - 建立 monorepo 包边界：`core`、`providers`、`destinations`、`console`。
 - 建立 SQLite-first store、显式 migrations 和 repository 分层。
 - 建立 application container、request context、dashboard session 类型与 webhook auth 分离。
@@ -223,7 +223,7 @@ BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 - 多实例部署、分布式队列、Postgres/Redis/Kafka/Temporal 等外部中间件。
 - SaaS tenant、billing、organization workspace。
 - 稳定公开管理 REST API。
-- Vane-owned YAML 配置格式。
+- Tocsin-owned YAML 配置格式。
 
 ## 设计约束
 
@@ -232,7 +232,7 @@ BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 - Route rules 和 message templates 不执行用户提供的 JavaScript、shell、SQL 或动态代码。
 - Secrets 保持 server-side，不进入 route loader data、query data、client props、TOML 默认导出或浏览器日志。
 - UI 面向重复使用的运维工作流，优先表格、筛选、详情、明确启停和可审计动作。
-- Vane-owned portable config 使用 TOML，不使用 YAML。
+- Tocsin-owned portable config 使用 TOML，不使用 YAML。
 
 ## 贡献方向
 

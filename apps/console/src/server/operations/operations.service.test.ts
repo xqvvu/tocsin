@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { OncallPing } from "@vane/core";
+import type { OncallPing } from "@tocsin/core";
 
 import { openSqliteStore } from "#/infra/sqlite/store";
 import { OncallService } from "#/server/oncall/oncall.service";

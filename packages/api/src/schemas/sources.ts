@@ -1,4 +1,4 @@
-import { SourceSummarySchema } from "@vane/core";
+import { SourceSummarySchema } from "@tocsin/core";
 import * as z from "zod";
 
 import { IdOutputSchema } from "./shared";

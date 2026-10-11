@@ -1,6 +1,6 @@
 # Destination Icons
 
-These SVG icons identify destination adapter kinds in Vane's Destinations UI.
+These SVG icons identify destination adapter kinds in Tocsin's Destinations UI.
 
 Downloaded files:
 
@@ -9,4 +9,4 @@ Downloaded files:
 - `webhook.svg`
 
 Product names and logos may be trademarks of their respective owners. Use these
-assets only as destination identifiers inside Vane's console UI.
+assets only as destination identifiers inside Tocsin's console UI.

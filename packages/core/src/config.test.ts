@@ -9,7 +9,7 @@ import {
 
 const portableConfig: Configuration = {
   settings: {
-    schemaVersion: "vane.config.v1",
+    schemaVersion: "tocsin.config.v1",
     exportedAt: "2026-06-09T08:00:00.000Z",
     includeSecrets: false,
     locale: "zh-Hans",
@@ -72,13 +72,13 @@ const portableConfig: Configuration = {
   ],
 };
 
-describe("Vane portable configuration", () => {
+describe("Tocsin portable configuration", () => {
   it("maps portable config to TOML document keys and back", () => {
     const document = configurationToTomlDocument(portableConfig);
 
     expect(document).toMatchObject({
       settings: {
-        schema_version: "vane.config.v1",
+        schema_version: "tocsin.config.v1",
         include_secrets: false,
         locale: "zh-Hans",
         time_zone: "Asia/Shanghai",
@@ -113,7 +113,7 @@ describe("Vane portable configuration", () => {
     expect(() =>
       tomlDocumentToConfiguration({
         settings: {
-          schema_version: "vane.config.v1",
+          schema_version: "tocsin.config.v1",
           include_secrets: false,
           raw_payload_retention_days: 14,
           unknown: true,
@@ -126,7 +126,7 @@ describe("Vane portable configuration", () => {
     expect(() =>
       TomlDocumentSchema.parse({
         settings: {
-          schema_version: "vane.config.v1",
+          schema_version: "tocsin.config.v1",
           include_secrets: false,
           raw_payload_retention_days: 14,
         },
@@ -144,7 +144,7 @@ describe("Vane portable configuration", () => {
     expect(() =>
       TomlDocumentSchema.parse({
         settings: {
-          schema_version: "vane.config.v1",
+          schema_version: "tocsin.config.v1",
           include_secrets: false,
           raw_payload_retention_days: 14,
         },
@@ -162,7 +162,7 @@ describe("Vane portable configuration", () => {
     expect(() =>
       TomlDocumentSchema.parse({
         settings: {
-          schema_version: "vane.config.v1",
+          schema_version: "tocsin.config.v1",
           include_secrets: false,
           raw_payload_retention_days: 14,
         },
@@ -183,7 +183,7 @@ describe("Vane portable configuration", () => {
     expect(() =>
       TomlDocumentSchema.parse({
         settings: {
-          schema_version: "vane.config.v1",
+          schema_version: "tocsin.config.v1",
           include_secrets: false,
           raw_payload_retention_days: 14,
         },
@@ -206,7 +206,7 @@ describe("Vane portable configuration", () => {
     expect(() =>
       TomlDocumentSchema.parse({
         settings: {
-          schema_version: "vane.config.v1",
+          schema_version: "tocsin.config.v1",
           include_secrets: false,
           raw_payload_retention_days: 14,
         },
@@ -229,7 +229,7 @@ describe("Vane portable configuration", () => {
     expect(() =>
       TomlDocumentSchema.parse({
         settings: {
-          schema_version: "vane.config.v1",
+          schema_version: "tocsin.config.v1",
           include_secrets: false,
           raw_payload_retention_days: 14,
         },

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { AppSettings } from "@vane/core";
+import type { AppSettings } from "@tocsin/core";
 
 import { appSettingsQueryKeys } from "#/features/configuration/api/configuration.queries";
 import { i18nQueryKeys } from "#/i18n/i18n.queries";

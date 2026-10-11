@@ -1,7 +1,7 @@
 import { RiErrorWarningLine, RiRefreshLine } from "@remixicon/react";
 import { Link, useLocation, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 
-import { redactText } from "@vane/core";
+import { redactText } from "@tocsin/core";
 
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";

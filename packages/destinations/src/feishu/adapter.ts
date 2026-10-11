@@ -1,4 +1,4 @@
-import type { JsonValue } from "@vane/core";
+import type { JsonValue } from "@tocsin/core";
 import { z } from "zod";
 
 import { feishuManifest } from "#destinations/feishu/manifest";

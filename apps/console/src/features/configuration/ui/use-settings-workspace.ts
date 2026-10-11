@@ -1,7 +1,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { ImportConfigurationResult } from "@vane/core";
+import type { ImportConfigurationResult } from "@tocsin/core";
 
 import { useConfigurationMutations } from "#/features/configuration/api/configuration.mutations";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -181,7 +181,7 @@ export function useSettingsWorkspace() {
         const value = await loadCurrentConfig(format);
 
         downloadTextFile({
-          filename: `vane.${format}`,
+          filename: `tocsin.${format}`,
           text: value,
           type:
             format === "toml" ? "application/toml;charset=utf-8" : "application/json;charset=utf-8",

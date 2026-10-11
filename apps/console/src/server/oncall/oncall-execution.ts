@@ -1,13 +1,13 @@
 import { getLogger } from "@logtape/logtape";
 
-import { redactText } from "@vane/core";
+import { redactText } from "@tocsin/core";
 import {
   UrgencyChannelKindSchema,
   type DestinationRetryHint,
   type DestinationSendContext,
   type UrgencyRegistry,
-} from "@vane/destinations";
-import { FeishuConfigSchema } from "@vane/destinations/feishu";
+} from "@tocsin/destinations";
+import { FeishuConfigSchema } from "@tocsin/destinations/feishu";
 
 import type {
   ClaimedOncallPing,
@@ -18,7 +18,7 @@ import type { DestinationConfigResolver } from "#/server/integrations/destinatio
 import { DomainValidationError } from "#/server/runtime/domain-errors";
 import { safeErrorProperties } from "#/server/runtime/log-safety";
 
-const oncallLogger = getLogger(["vane", "oncall"]);
+const oncallLogger = getLogger(["tocsin", "oncall"]);
 
 export interface OncallExecutionStore {
   readonly oncall: Pick<OncallRepository, "markFired" | "markFailed">;

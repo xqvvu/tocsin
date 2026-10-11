@@ -30,7 +30,7 @@ const input: DestinationSendInput<GenericWebhookConfig> = {
     occurredAt: "2026-06-07T08:00:00.000Z",
   },
   config: {
-    url: "https://relay.example.test/vane",
+    url: "https://relay.example.test/tocsin",
     method: "POST",
     headers: {
       "X-Team": "sre",
@@ -55,7 +55,7 @@ describe("generic webhook sender", () => {
     expect(result.ok).toBe(true);
     expect(result.statusCode).toBe(202);
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.url).toBe("https://relay.example.test/vane");
+    expect(calls[0]?.url).toBe("https://relay.example.test/tocsin");
     expect(calls[0]?.init.headers).toEqual({
       "Content-Type": "application/json",
       "X-Team": "sre",

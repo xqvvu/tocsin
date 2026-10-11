@@ -11,4 +11,4 @@ export type {
   Page,
   WorkerHealthSnapshot,
   WorkerRunNotice,
-} from "@vane/core";
+} from "@tocsin/core";

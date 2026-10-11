@@ -739,7 +739,7 @@ describe("sqlite store", () => {
       config: {
         endpointUrl: "https://mail.example.test/send",
         to: ["audit@example.test"],
-        from: "vane@example.test",
+        from: "tocsin@example.test",
       },
     });
     const criticalRoute = await store.routes.create({

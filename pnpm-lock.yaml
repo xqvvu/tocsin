@@ -516,24 +516,24 @@ importers:
       '@tanstack/router-plugin':
         specifier: catalog:tanstack
         version: 1.168.42(@tanstack/react-router@1.170.41(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@voidzero-dev/vite-plus-core@1.1.0(@types/node@26.6.4)(jiti@2.7.0)(typescript@7.0.2))(rolldown@1.2.13)
+      '@tocsin/api':
+        specifier: workspace:*
+        version: link:../../packages/api
+      '@tocsin/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tocsin/destinations':
+        specifier: workspace:*
+        version: link:../../packages/destinations
+      '@tocsin/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
       '@uiw/codemirror-theme-github':
         specifier: catalog:codemirror
         version: 4.25.12(@codemirror/language@6.13.1)(@codemirror/state@6.7.6)(@codemirror/view@6.43.14)
       '@uiw/react-codemirror':
         specifier: catalog:codemirror
         version: 4.25.12(@babel/runtime@7.29.10)(@codemirror/autocomplete@6.20.3)(@codemirror/language@6.13.1)(@codemirror/lint@6.9.7)(@codemirror/search@6.7.2)(@codemirror/state@6.7.6)(@codemirror/theme-one-dark@6.1.3)(@codemirror/view@6.43.14)(codemirror@6.0.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@vane/api':
-        specifier: workspace:*
-        version: link:../../packages/api
-      '@vane/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@vane/destinations':
-        specifier: workspace:*
-        version: link:../../packages/destinations
-      '@vane/providers':
-        specifier: workspace:*
-        version: link:../../packages/providers
       better-auth:
         specifier: 'catalog:'
         version: 1.7.7(@tanstack/react-start@1.168.60(@voidzero-dev/vite-plus-core@1.1.0(@types/node@26.6.4)(jiti@2.7.0)(typescript@7.0.2))(crossws@0.4.15(srvx@1.0.5))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(rolldown@1.2.13))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(solid-js@1.9.17)(vitest@5.0.3)
@@ -658,7 +658,7 @@ importers:
       '@orpc/zod':
         specifier: catalog:orpc
         version: 2.0.0-beta.42(crossws@0.4.15(srvx@1.0.5))(zod@4.6.5)
-      '@vane/core':
+      '@tocsin/core':
         specifier: workspace:*
         version: link:../core
       zod:
@@ -690,7 +690,7 @@ importers:
 
   packages/destinations:
     dependencies:
-      '@vane/core':
+      '@tocsin/core':
         specifier: workspace:*
         version: link:../core
       zod:
@@ -706,7 +706,7 @@ importers:
 
   packages/providers:
     dependencies:
-      '@vane/core':
+      '@tocsin/core':
         specifier: workspace:*
         version: link:../core
       zod:

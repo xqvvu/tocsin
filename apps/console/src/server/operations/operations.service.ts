@@ -1,4 +1,4 @@
-import type { DeliveryDetail, DeliveryJob, DeliveryPingsResult } from "@vane/core";
+import type { DeliveryDetail, DeliveryJob, DeliveryPingsResult } from "@tocsin/core";
 
 import type {
   ListOperationsInput,

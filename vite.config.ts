@@ -38,14 +38,14 @@ export default defineConfig({
           sortImports: {
             customGroups: [
               {
-                groupName: "vane",
-                elementNamePattern: ["@vane/**"],
+                groupName: "tocsin",
+                elementNamePattern: ["@tocsin/**"],
               },
             ],
             groups: [
               "builtin",
               "external",
-              "vane",
+              "tocsin",
               ["internal", "subpath"],
               ["parent", "sibling", "index"],
               "style",

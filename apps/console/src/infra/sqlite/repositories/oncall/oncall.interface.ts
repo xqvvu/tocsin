@@ -4,8 +4,8 @@ import type {
   OncallPingState,
   OncallPingTrigger,
   ProviderReference,
-} from "@vane/core";
-import type { IsoDateTimeString } from "@vane/core";
+} from "@tocsin/core";
+import type { IsoDateTimeString } from "@tocsin/core";
 
 import type { DestinationRuntimeConfig } from "#/infra/sqlite/repositories/destination/destination.interface";
 

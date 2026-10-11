@@ -1,5 +1,5 @@
 {
-  "name": "@vane/api",
+  "name": "@tocsin/api",
   "private": true,
   "type": "module",
   "exports": {
@@ -16,7 +16,7 @@
     "@orpc/contract": "catalog:orpc",
     "@orpc/openapi": "catalog:orpc",
     "@orpc/zod": "catalog:orpc",
-    "@vane/core": "workspace:*",
+    "@tocsin/core": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

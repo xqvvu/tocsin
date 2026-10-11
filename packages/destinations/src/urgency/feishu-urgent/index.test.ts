@@ -69,7 +69,7 @@ describe("feishu urgent phone channel", () => {
   });
 
   it("records a page that the platform silently skipped as a non-retryable rejection", async () => {
-    // Documented partial success: code 0 plus the ids it did not call. Vane
+    // Documented partial success: code 0 plus the ids it did not call. Tocsin
     // pings one receiver per record, so this receiver never rang.
     const { fetch } = createRecordingFetch([
       jsonResponse(tokenResponse),

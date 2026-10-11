@@ -1,5 +1,5 @@
-import { encodeSchemaJson, RouteDefinitionSchema, RouteRuleSchema } from "@vane/core";
-import type { RouteDefinition } from "@vane/core";
+import { encodeSchemaJson, RouteDefinitionSchema, RouteRuleSchema } from "@tocsin/core";
+import type { RouteDefinition } from "@tocsin/core";
 
 import { toSqliteBoolean } from "#/infra/sqlite/codecs";
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";

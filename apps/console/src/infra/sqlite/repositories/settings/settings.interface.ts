@@ -1,6 +1,6 @@
-import type { AppSettings } from "@vane/core";
+import type { AppSettings } from "@tocsin/core";
 
-export type { AppSettings } from "@vane/core";
+export type { AppSettings } from "@tocsin/core";
 
 export interface SettingsRepository {
   get(): Promise<AppSettings>;

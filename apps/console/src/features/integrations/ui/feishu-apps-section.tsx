@@ -1,4 +1,4 @@
-import type { FeishuAppListItem } from "@vane/core";
+import type { FeishuAppListItem } from "@tocsin/core";
 
 import { SimpleTable } from "#/components/common/simple-table";
 import { FeishuAppActions } from "#/features/integrations/ui/feishu-app-actions";

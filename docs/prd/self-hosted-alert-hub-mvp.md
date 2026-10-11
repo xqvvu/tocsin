@@ -29,7 +29,7 @@ Feishu, Slack, email, or a generic webhook. This creates duplicated setup,
 scattered secrets, inconsistent routing rules, and poor visibility into whether
 a notification was received, routed, retried, or delivered.
 
-The user wants Vane to be an open-source, self-hosted Alert Hub: a single
+The user wants Tocsin to be an open-source, self-hosted Alert Hub: a single
 private deployment that can receive alerts from many upstream systems,
 normalize them, route them using simple rules, and deliver them reliably to one
 or more destinations. The product should feel like self-hosted operations
@@ -38,7 +38,7 @@ general-purpose automation engine.
 
 ## Solution
 
-Build Vane as a SQLite-first, single-image, self-hosted Alert Hub for SRE
+Build Tocsin as a SQLite-first, single-image, self-hosted Alert Hub for SRE
 workflows.
 
 Users create Sources for upstream systems, copy a source-specific webhook URL
@@ -50,8 +50,8 @@ The system stores each inbound webhook as an immutable Event, preserves raw
 payloads for debugging and replay, normalizes provider-specific payloads into
 shared alert fields, creates asynchronous Delivery jobs, and records delivery
 history, retries, failures, and errors. Day-to-day setup happens in the UI,
-while TOML is the Vane-owned config-as-code and import/export format. YAML
-support is explicitly out of scope for Vane-owned configuration.
+while TOML is the Tocsin-owned config-as-code and import/export format. YAML
+support is explicitly out of scope for Tocsin-owned configuration.
 
 The MVP should keep deployment simple: one app process, one Docker image, one
 mounted data volume, and SQLite as the default persistence and delivery queue
@@ -60,15 +60,15 @@ separate worker service, or SaaS-style tenancy.
 
 ## User Stories
 
-1. As an SRE, I want to create a Source for SigNoz, so that SigNoz can send alerts to one Vane webhook URL.
-2. As an SRE, I want to create a Source for Grafana, so that Grafana alert webhooks can be routed from Vane.
+1. As an SRE, I want to create a Source for SigNoz, so that SigNoz can send alerts to one Tocsin webhook URL.
+2. As an SRE, I want to create a Source for Grafana, so that Grafana alert webhooks can be routed from Tocsin.
 3. As an SRE, I want to create a Source for Uptime Kuma, so that uptime notifications can flow through the same hub as other alerts.
 4. As an SRE, I want to create a generic webhook Source, so that custom systems can send alert-like events without first-class provider support.
 5. As an SRE, I want each Source to have its own webhook URL and token, so that I can rotate, disable, and audit one upstream independently.
 6. As an SRE, I want to disable a Source, so that a noisy or retired upstream system stops creating deliveries without deleting its history.
 7. As an SRE, I want inbound webhook requests to be accepted quickly, so that upstream monitoring tools are not blocked by slow destination services.
-8. As an SRE, I want Vane to preserve every inbound webhook as an Event, so that I can prove what Vane received.
-9. As an SRE, I want Vane to show normalized alert fields, so that different providers can be inspected in a common way.
+8. As an SRE, I want Tocsin to preserve every inbound webhook as an Event, so that I can prove what Tocsin received.
+9. As an SRE, I want Tocsin to show normalized alert fields, so that different providers can be inspected in a common way.
 10. As an SRE, I want raw payloads available in debug views, so that I can investigate parser issues and unexpected provider behavior.
 11. As an SRE, I want common sensitive fields redacted, so that secrets are not exposed in logs or ordinary UI views.
 12. As an SRE, I want raw payload retention to be configurable, so that SQLite storage stays bounded.
@@ -97,7 +97,7 @@ separate worker service, or SaaS-style tenancy.
 35. As an SRE, I want message templates for Destinations, so that notifications contain the fields my team needs.
 36. As an SRE, I want message templates to support safe variable interpolation, so that I can customize messages without running code.
 37. As an SRE, I want to preview templates, so that I can see what a destination message will look like before enabling it.
-38. As a security-conscious operator, I want templates and route rules to avoid user-provided JavaScript or shell execution, so that Vane does not become a remote code execution surface.
+38. As a security-conscious operator, I want templates and route rules to avoid user-provided JavaScript or shell execution, so that Tocsin does not become a remote code execution surface.
 39. As an SRE, I want Deliveries to be asynchronous jobs, so that destination outages do not break inbound alert intake.
 40. As an SRE, I want each Delivery to show pending, running, succeeded, or failed state, so that I can understand the current notification pipeline.
 41. As an SRE, I want failed Deliveries to retry with backoff, so that transient Feishu, Slack, or network failures recover automatically.
@@ -108,18 +108,18 @@ separate worker service, or SaaS-style tenancy.
 46. As an SRE, I want to filter by source, severity, status, destination, and delivery state, so that operational debugging is fast.
 47. As an SRE, I want an Event detail view, so that I can see normalized fields, raw payload, route matches, and deliveries from one place.
 48. As an SRE, I want a Delivery detail view, so that I can see destination config metadata, rendered payload, attempts, and errors.
-49. As an SRE, I want Vane to have a simple owner/admin dashboard login, so that the admin UI is not public.
-50. As an SRE, I want webhook intake to authenticate with Source tokens or Vane-side additional shared secrets instead of user sessions, so that upstream systems can send alerts without browser auth.
+49. As an SRE, I want Tocsin to have a simple owner/admin dashboard login, so that the admin UI is not public.
+50. As an SRE, I want webhook intake to authenticate with Source tokens or Tocsin-side additional shared secrets instead of user sessions, so that upstream systems can send alerts without browser auth.
 51. As the first operator of a new deployment, I want the first registered user to become owner/admin, so that setup works without a SaaS tenant flow.
 52. As a self-hosting operator, I want one deployment to represent one team or environment, so that I do not need to configure organizations, tenants, or billing.
-53. As a self-hosting operator, I want Vane to run with SQLite by default, so that I do not need to operate Redis or Postgres for a small private alert hub.
+53. As a self-hosting operator, I want Tocsin to run with SQLite by default, so that I do not need to operate Redis or Postgres for a small private alert hub.
 54. As a self-hosting operator, I want a single Docker image and data volume, so that installation and upgrades are straightforward.
 55. As a self-hosting operator, I want explicit database migrations, so that upgrades are predictable and auditable.
 56. As an SRE, I want configuration to be manageable from the UI, so that daily setup does not require editing config files.
-57. As an SRE, I want TOML import/export for portable configuration, so that Vane can be backed up, reviewed, and moved between deployments.
+57. As an SRE, I want TOML import/export for portable configuration, so that Tocsin can be backed up, reviewed, and moved between deployments.
 58. As an SRE, I want secrets to be omitted from TOML exports by default, so that config files can be stored safely.
 59. As an SRE, I want TOML config to support environment-variable references for secrets, so that Docker and Kubernetes deployments can inject credentials safely.
-60. As a contributor, I want Vane-owned configuration to use TOML instead of YAML, so that config remains aligned with the project's preferred portable format.
+60. As a contributor, I want Tocsin-owned configuration to use TOML instead of YAML, so that config remains aligned with the project's preferred portable format.
 61. As a contributor, I want reusable domain code separated from the app, so that integration contributions remain small and reviewable.
 62. As a contributor, I want app orchestration, persistence, auth, and UI to remain in the app package, so that packages do not accidentally take runtime dependencies on the web app.
 63. As a maintainer, I want the public MVP surface to be limited to inbound webhook endpoints and TOML format, so that the project does not prematurely commit to a full public management API.
@@ -129,14 +129,14 @@ separate worker service, or SaaS-style tenancy.
 67. As an SRE, I want route matching and delivery behavior to be understandable without reading code, so that I can trust the alert pipeline.
 68. As a maintainer, I want the MVP to avoid incident management concepts, so that alert routing ships before more complex lifecycle features.
 69. As a maintainer, I want future silence and suppression concepts to have architectural room, so that they can be added later without rewriting Events and Deliveries.
-70. As a maintainer, I want the system to avoid external middleware by default, so that Vane remains attractive to small private deployments.
+70. As a maintainer, I want the system to avoid external middleware by default, so that Tocsin remains attractive to small private deployments.
 
 ## Implementation Decisions
 
-- Vane will be built as a self-hosted Alert Hub for SRE and operations teams, not as a SaaS product and not as a general-purpose automation platform.
+- Tocsin will be built as a self-hosted Alert Hub for SRE and operations teams, not as a SaaS product and not as a general-purpose automation platform.
 - The user-facing product language should emphasize Alerts, Sources, Routes, Destinations, Deliveries, Retry, and History.
 - The internal persistence model should use immutable inbound Events. An Event records that a Source sent a webhook at a specific time, even if the payload represents a firing alert, a resolved alert, a test notification, a heartbeat, or a generic webhook.
-- Each Source represents one upstream sender and should have its own webhook URL, Source token, and optionally a Vane-side additional shared secret. All providers should not share one unauthenticated generic endpoint.
+- Each Source represents one upstream sender and should have its own webhook URL, Source token, and optionally a Tocsin-side additional shared secret. All providers should not share one unauthenticated generic endpoint.
 - Source provider support should be implemented through a provider adapter registry. Provider adapters parse inbound payloads, validate or recognize payload shape, extract normalized fields, compute fingerprints or idempotency hints, and preserve provider metadata.
 - Provider adapters must not perform routing, outbound delivery, retry handling, or destination secret access.
 - Normalized event fields should include at least title, message, severity, status, fingerprint, labels, and occurred time.
@@ -159,14 +159,14 @@ separate worker service, or SaaS-style tenancy.
 - App-level orchestration, UI, API routes, Better Auth, SQLite migrations, persistence repositories, and the in-process worker should remain in the application package.
 - Adding a provider or destination should normally require an adapter implementation, fixtures, tests, registry registration, and UI work only when new configuration fields must be exposed.
 - Alert identity and request idempotency should be separate concepts. Fingerprint identifies the upstream alert or monitored object; idempotency key identifies duplicate submissions of the same webhook request.
-- Vane should store duplicate inbound Events for audit/debug purposes, but should avoid duplicate Deliveries for the same Source and idempotency key inside a short dedupe window.
+- Tocsin should store duplicate inbound Events for audit/debug purposes, but should avoid duplicate Deliveries for the same Source and idempotency key inside a short dedupe window.
 - Fingerprint alone must not suppress repeated firing notifications, because many monitoring tools intentionally repeat firing alerts.
 - Raw webhook payloads should be stored by default for debugging, replay, parser fixture creation, and audit history.
 - Raw payload handling must include maximum request/payload size, redaction of common sensitive headers and fields, no source tokens or destination secrets in logs, and configurable retention.
 - The UI should default to normalized alert fields, with raw payloads available only in detail/debug views.
 - Destination secrets must stay server-side and must never be serialized into client route data or returned to the UI in plaintext.
 - The primary configuration surface should be the UI.
-- TOML should be the portable config-as-code format for Vane-owned configuration. Vane should not support YAML for its own configuration.
+- TOML should be the portable config-as-code format for Tocsin-owned configuration. Tocsin should not support YAML for its own configuration.
 - Source, Route, Destination, and app settings should be structurally exportable to TOML.
 - Secret values should not be exported to TOML by default; TOML should support environment-variable references for secrets.
 - SQLite schema changes should use explicit forward-only migrations recorded in a migrations table.
@@ -174,15 +174,15 @@ separate worker service, or SaaS-style tenancy.
 - JSON payloads and config blobs should be validated with schemas at the boundary.
 - The MVP stable external surface should be inbound webhook endpoints and, once implemented, TOML import/export format.
 - Dashboard APIs may evolve with the UI and do not need to become a stable public REST API in the MVP.
-- The authentication model should be single-workspace self-hosted. Dashboard access uses Better Auth; webhook intake uses Source tokens or Vane-side additional shared secrets.
+- The authentication model should be single-workspace self-hosted. Dashboard access uses Better Auth; webhook intake uses Source tokens or Tocsin-side additional shared secrets.
 - The first registered user may become owner/admin. SaaS-style tenants, billing, organizations, and complex invitation systems are out of scope.
-- Message templates should use safe deterministic interpolation over normalized alert/event fields. Vane must not execute user-provided JavaScript, shell, SQL, or dynamic code from routes or templates.
-- Starter/demo MCP code should not be treated as part of the Vane product architecture and should be removed or isolated when product work begins.
+- Message templates should use safe deterministic interpolation over normalized alert/event fields. Tocsin must not execute user-provided JavaScript, shell, SQL, or dynamic code from routes or templates.
+- Starter/demo MCP code should not be treated as part of the Tocsin product architecture and should be removed or isolated when product work begins.
 - The UI should be operational and efficient: clear tables, filters, detail views, test buttons, and explicit enable/disable controls. It should avoid marketing-style landing pages and decorative dashboards.
 
 ## Testing Decisions
 
-- Good tests for this feature should assert external behavior at the highest practical seam: given a configured Source, Route, Destination, and payload, Vane should persist an Event, normalize alert fields, match routes, create Deliveries, and record delivery results.
+- Good tests for this feature should assert external behavior at the highest practical seam: given a configured Source, Route, Destination, and payload, Tocsin should persist an Event, normalize alert fields, match routes, create Deliveries, and record delivery results.
 - Provider adapter tests should use real or representative fixtures and assert normalized fields, fingerprints, idempotency hints, and provider metadata. They should not assert private parser implementation steps.
 - Destination adapter tests should assert outbound request shape, secret handling behavior, rendered message content, and success/failure interpretation. They should use fake transports or mocked fetch-like boundaries rather than real Feishu or Slack calls.
 - Routing tests should assert that simple route conditions match or do not match normalized events based on source, severity, status, labels, title, and message.
@@ -210,7 +210,7 @@ separate worker service, or SaaS-style tenancy.
 - On-call scheduling, escalation policies, and paging rotations.
 - Silence, suppression, maintenance windows, schedules, per-fingerprint mute, and alert grouping in the MVP.
 - A stable public REST management API in the MVP.
-- YAML import/export or YAML files for Vane-owned configuration; use TOML instead.
+- YAML import/export or YAML files for Tocsin-owned configuration; use TOML instead.
 - Plaintext secret export in TOML.
 - Treating starter/demo MCP code as product architecture.
 - Provider-specific UI complexity beyond the fields required to configure Sources and Destinations.

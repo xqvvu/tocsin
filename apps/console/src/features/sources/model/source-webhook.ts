@@ -1,6 +1,6 @@
-export { sourceWebhookPath } from "@vane/core";
+export { sourceWebhookPath } from "@tocsin/core";
 
-import { sourceWebhookPath } from "@vane/core";
+import { sourceWebhookPath } from "@tocsin/core";
 
 import { urlFromCurrentOrigin } from "#/lib/browser";
 

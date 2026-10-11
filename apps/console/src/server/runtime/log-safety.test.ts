@@ -74,7 +74,7 @@ describe("log safety", () => {
 
 function createRecord(overrides: Partial<LogRecord>): LogRecord {
   return {
-    category: ["vane", "test"],
+    category: ["tocsin", "test"],
     level: "info",
     message: ["test"],
     rawMessage: "test",

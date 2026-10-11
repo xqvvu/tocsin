@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { createDefaultDestinationRegistry } from "@vane/destinations";
-import { createDefaultProviderRegistry } from "@vane/providers";
+import { createDefaultDestinationRegistry } from "@tocsin/destinations";
+import { createDefaultProviderRegistry } from "@tocsin/providers";
 
 import { openSqliteStore, type SqliteStore } from "#/infra/sqlite/store";
 import { WebhookIntakeService } from "#/server/intake/intake.service";

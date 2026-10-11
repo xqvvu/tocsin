@@ -6,15 +6,15 @@ import type {
   JsonValue,
   ProviderReference,
   RouteDefinition,
-} from "@vane/core";
-import type { IsoDateTimeString } from "@vane/core";
+} from "@tocsin/core";
+import type { IsoDateTimeString } from "@tocsin/core";
 
 import type { SqliteJsonText } from "#/infra/sqlite/codecs";
 import { SqliteError } from "#/infra/sqlite/errors";
 import type { DestinationRuntimeConfig } from "#/infra/sqlite/repositories/destination/destination.interface";
 import type { SourceRuntimeConfig } from "#/infra/sqlite/repositories/source/source.interface";
 
-export type { DeliveryAttempt, DeliveryDetail } from "@vane/core";
+export type { DeliveryAttempt, DeliveryDetail } from "@tocsin/core";
 
 export interface DeliveryRow {
   id: string;

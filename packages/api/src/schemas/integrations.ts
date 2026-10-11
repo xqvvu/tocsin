@@ -2,7 +2,7 @@ import {
   FeishuAppListItemSchema,
   FeishuAppSummarySchema,
   FeishuAppTestResultSchema,
-} from "@vane/core";
+} from "@tocsin/core";
 import * as z from "zod";
 
 import { IdOutputSchema } from "./shared";

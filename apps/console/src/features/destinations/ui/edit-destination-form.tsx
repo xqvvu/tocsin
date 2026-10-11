@@ -1,6 +1,6 @@
 import { RiEditLine } from "@remixicon/react";
 
-import type { DestinationEditorDraftResult, FeishuAppListItem } from "@vane/core";
+import type { DestinationEditorDraftResult, FeishuAppListItem } from "@tocsin/core";
 
 import { Skeleton } from "#/components/ui/skeleton";
 import { destinationTemplateFormStateFromDraft } from "#/features/destinations/model/destination-form";

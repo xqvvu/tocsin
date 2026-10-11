@@ -6,7 +6,7 @@ import type {
   NumberedPage,
   OncallPing,
   Page,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 

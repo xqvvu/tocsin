@@ -15,12 +15,12 @@ describe("uptime kuma provider parser", () => {
         "content-type": "application/json",
       },
       payload: {
-        msg: "[Vane API] is down",
+        msg: "[Tocsin API] is down",
         monitor: {
           id: 42,
-          name: "Vane API",
+          name: "Tocsin API",
           type: "http",
-          url: "https://vane.example.test/health",
+          url: "https://tocsin.example.test/health",
         },
         heartbeat: {
           status: 0,
@@ -31,17 +31,17 @@ describe("uptime kuma provider parser", () => {
     });
 
     expect(result.normalized).toEqual({
-      title: "Vane API is firing",
-      message: "[Vane API] is down",
+      title: "Tocsin API is firing",
+      message: "[Tocsin API] is down",
       severity: "critical",
       status: "firing",
       fingerprint: "uptime_kuma:42",
       labels: {
         provider: "uptime_kuma",
-        monitor: "Vane API",
+        monitor: "Tocsin API",
         monitor_id: "42",
         type: "http",
-        url: "https://vane.example.test/health",
+        url: "https://tocsin.example.test/health",
       },
       occurredAt: "2026-06-09T07:57:00.000Z",
     });
@@ -59,10 +59,10 @@ describe("uptime kuma provider parser", () => {
       receivedAt,
       headers: {},
       payload: {
-        msg: "[Vane API] is up",
+        msg: "[Tocsin API] is up",
         monitor: {
           id: 42,
-          name: "Vane API",
+          name: "Tocsin API",
         },
         heartbeat: {
           status: 1,

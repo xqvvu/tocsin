@@ -1,4 +1,4 @@
-import type { JsonObject, SourceSummary } from "@vane/core";
+import type { JsonObject, SourceSummary } from "@tocsin/core";
 
 export type { SourceSummary };
 

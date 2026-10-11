@@ -1,5 +1,5 @@
-import type { DestinationKind, DestinationSummary, JsonObject } from "@vane/core";
-import type { IsoDateTimeString } from "@vane/core";
+import type { DestinationKind, DestinationSummary, JsonObject } from "@tocsin/core";
+import type { IsoDateTimeString } from "@tocsin/core";
 
 import type { SqliteBoolean, SqliteJsonText } from "#/infra/sqlite/codecs";
 

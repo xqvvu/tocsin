@@ -1,8 +1,8 @@
 import { sql } from "kysely";
 
-import type { DeliveryListItem, EventDetail, EventListItem, NumberedPage } from "@vane/core";
-import { decodeSchemaJson, evaluateRouteMatch, RouteMatchResultsSchema } from "@vane/core";
-import type { Page } from "@vane/core";
+import type { DeliveryListItem, EventDetail, EventListItem, NumberedPage } from "@tocsin/core";
+import { decodeSchemaJson, evaluateRouteMatch, RouteMatchResultsSchema } from "@tocsin/core";
+import type { Page } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
 import type { SqliteDeliveryRepository } from "#/infra/sqlite/repositories/delivery/delivery.repository";

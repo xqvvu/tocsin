@@ -7,18 +7,18 @@ import {
   JsonObjectSchema,
   nonEmptyObject,
   type JsonObject,
-} from "@vane/core";
+} from "@tocsin/core";
 import {
   TemplateBindingsSchema,
   type TemplateBindingSelector,
   type TemplateBindings,
-} from "@vane/destinations";
-import { defaultFeishuCardBindings } from "@vane/destinations/feishu/appearance";
+} from "@tocsin/destinations";
+import { defaultFeishuCardBindings } from "@tocsin/destinations/feishu/appearance";
 import {
   BUILT_IN_FEISHU_ALERT_CARD_ID,
   BUILT_IN_FEISHU_ALERT_CARD_VERSION,
   defaultFeishuCardTemplate,
-} from "@vane/destinations/feishu/default-card";
+} from "@tocsin/destinations/feishu/default-card";
 
 export type DestinationFormKind = "generic_webhook" | "feishu" | "slack" | "email";
 export type DestinationTemplateFormMode = "text" | "feishu_card";

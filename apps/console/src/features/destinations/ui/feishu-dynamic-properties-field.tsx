@@ -1,8 +1,8 @@
 import { RiMagicLine } from "@remixicon/react";
 
-import type { AlertStatus } from "@vane/core";
-import type { TemplateBindingSelector } from "@vane/destinations";
-import { FeishuCardColors, type FeishuCardColor } from "@vane/destinations/feishu/appearance";
+import type { AlertStatus } from "@tocsin/core";
+import type { TemplateBindingSelector } from "@tocsin/destinations";
+import { FeishuCardColors, type FeishuCardColor } from "@tocsin/destinations/feishu/appearance";
 
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { Button } from "#/components/ui/button";

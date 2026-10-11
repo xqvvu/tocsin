@@ -4,8 +4,8 @@ import {
   encodeSchemaJson,
   JsonObjectSchema,
   RouteMatchResultsSchema,
-} from "@vane/core";
-import type { EventRecord } from "@vane/core";
+} from "@tocsin/core";
+import type { EventRecord } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
 import {

@@ -1,4 +1,4 @@
-import { defineAdapterTemplateConfigField } from "@vane/core";
+import { defineAdapterTemplateConfigField } from "@tocsin/core";
 
 import type { DestinationManifest } from "#destinations/types";
 

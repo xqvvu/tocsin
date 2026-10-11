@@ -1,6 +1,6 @@
 # Destination 模板后续模式 Issues
 
-Parent issue: https://github.com/xqvvu/vane/issues/15
+Parent issue: https://github.com/xqvvu/tocsin/issues/15
 
 本文档把 `Follow-up destination template modes` 拆成后续可领取的垂直切片。当前不直接实现
 Slack blocks、Email HTML 或 generic webhook JSON 模板；这些模式需要先基于 Feishu 模板引擎的
@@ -8,7 +8,7 @@ Slack blocks、Email HTML 或 generic webhook JSON 模板；这些模式需要�
 
 ## 1. Review Follow-Up Destination Template Requirements
 
-GitHub issue: https://github.com/xqvvu/vane/issues/16
+GitHub issue: https://github.com/xqvvu/tocsin/issues/16
 
 Type: HITL
 
@@ -31,11 +31,11 @@ diagnostics, preview result, and adapter-local `template` config without changin
 
 ## 2. Slack Blocks Template Mode
 
-GitHub issue: https://github.com/xqvvu/vane/issues/18
+GitHub issue: https://github.com/xqvvu/tocsin/issues/18
 
 Type: AFK
 
-Blocked by: https://github.com/xqvvu/vane/issues/16
+Blocked by: https://github.com/xqvvu/tocsin/issues/16
 
 User stories covered: 23, 24
 
@@ -56,11 +56,11 @@ secret-safe payload through the existing destination test and delivery paths.
 
 ## 3. Email Subject Text And HTML Template Modes
 
-GitHub issue: https://github.com/xqvvu/vane/issues/17
+GitHub issue: https://github.com/xqvvu/tocsin/issues/17
 
 Type: AFK
 
-Blocked by: https://github.com/xqvvu/vane/issues/16
+Blocked by: https://github.com/xqvvu/tocsin/issues/16
 
 User stories covered: 23, 24
 
@@ -81,11 +81,11 @@ boundary before the mode is exposed in the console.
 
 ## 4. Generic Webhook JSON Payload Template Mode
 
-GitHub issue: https://github.com/xqvvu/vane/issues/19
+GitHub issue: https://github.com/xqvvu/tocsin/issues/19
 
 Type: AFK
 
-Blocked by: https://github.com/xqvvu/vane/issues/16
+Blocked by: https://github.com/xqvvu/tocsin/issues/16
 
 User stories covered: 23, 24
 

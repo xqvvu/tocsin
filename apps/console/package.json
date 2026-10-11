@@ -1,5 +1,5 @@
 {
-  "name": "@vane/console",
+  "name": "@tocsin/console",
   "private": true,
   "type": "module",
   "imports": {
@@ -51,12 +51,12 @@
     "@tanstack/react-table": "catalog:tanstack",
     "@tanstack/react-virtual": "catalog:tanstack",
     "@tanstack/router-plugin": "catalog:tanstack",
+    "@tocsin/api": "workspace:*",
+    "@tocsin/core": "workspace:*",
+    "@tocsin/destinations": "workspace:*",
+    "@tocsin/providers": "workspace:*",
     "@uiw/codemirror-theme-github": "catalog:codemirror",
     "@uiw/react-codemirror": "catalog:codemirror",
-    "@vane/api": "workspace:*",
-    "@vane/core": "workspace:*",
-    "@vane/destinations": "workspace:*",
-    "@vane/providers": "workspace:*",
     "better-auth": "catalog:",
     "better-sqlite3": "catalog:",
     "class-variance-authority": "catalog:ui",

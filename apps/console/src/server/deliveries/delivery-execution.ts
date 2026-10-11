@@ -1,13 +1,13 @@
 import { getLogger } from "@logtape/logtape";
 
-import { redactJsonValue, redactText } from "@vane/core";
+import { redactJsonValue, redactText } from "@tocsin/core";
 import type {
   DestinationErrorKind,
   DestinationRetryHint,
   DestinationSendContext,
   DestinationRegistry,
   DestinationPresentation,
-} from "@vane/destinations";
+} from "@tocsin/destinations";
 
 import type {
   ClaimedDelivery,
@@ -18,7 +18,7 @@ import type { OncallPingTrigger } from "#/server/oncall/oncall.service.types";
 import { DomainValidationError } from "#/server/runtime/domain-errors";
 import { safeErrorProperties } from "#/server/runtime/log-safety";
 
-const deliveryLogger = getLogger(["vane", "delivery"]);
+const deliveryLogger = getLogger(["tocsin", "delivery"]);
 
 export interface DeliveryExecutionStore {
   readonly deliveries: Pick<DeliveryRepository, "markSucceeded" | "markFailed">;

@@ -1,8 +1,8 @@
 import { RiMailLine } from "@remixicon/react";
 
-import larkIconUrl from "@vane/destinations/assets/destination-icons/lark.svg?url";
-import slackIconUrl from "@vane/destinations/assets/destination-icons/slack.svg?url";
-import webhookIconUrl from "@vane/destinations/assets/destination-icons/webhook.svg?url";
+import larkIconUrl from "@tocsin/destinations/assets/destination-icons/lark.svg?url";
+import slackIconUrl from "@tocsin/destinations/assets/destination-icons/slack.svg?url";
+import webhookIconUrl from "@tocsin/destinations/assets/destination-icons/webhook.svg?url";
 
 import type { DestinationFormKind } from "#/features/destinations/model/destination-form";
 

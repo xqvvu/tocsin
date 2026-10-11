@@ -4,8 +4,8 @@ import type {
   DestinationListItem,
   DestinationPreviewResult,
   DestinationTestResult,
-} from "@vane/core";
-import type { DestinationRegistry, DestinationSendContext } from "@vane/destinations";
+} from "@tocsin/core";
+import type { DestinationRegistry, DestinationSendContext } from "@tocsin/destinations";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 import type { DestinationConfigResolver } from "#/server/integrations/destination-config-resolver";
@@ -18,7 +18,7 @@ export interface DestinationServiceOptions {
   resolveDestinationConfig?: DestinationConfigResolver;
 }
 
-/** Re-exported dashboard DTOs — source of truth is `@vane/core`. */
+/** Re-exported dashboard DTOs — source of truth is `@tocsin/core`. */
 export type {
   DestinationDeleteResult,
   DestinationEditorDraftResult,

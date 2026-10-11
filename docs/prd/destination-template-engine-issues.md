@@ -2,11 +2,11 @@
 
 Parent PRD: `docs/prd/destination-template-engine.md`
 
-GitHub parent issue: https://github.com/xqvvu/vane/issues/9
+GitHub parent issue: https://github.com/xqvvu/tocsin/issues/9
 
 ## 1. Shared Destination Template Model And Renderer
 
-GitHub issue: https://github.com/xqvvu/vane/issues/10
+GitHub issue: https://github.com/xqvvu/tocsin/issues/10
 
 Type: AFK
 
@@ -20,7 +20,7 @@ Create the shared destination template model, safe TemplateContext, recursive st
 
 ### Acceptance criteria
 
-- [x] TemplateContext v1 exposes only safe Event, Source, Destination, and Vane link fields.
+- [x] TemplateContext v1 exposes only safe Event, Source, Destination, and Tocsin link fields.
 - [x] Renderer interpolates allowed variables in text and nested JSON string fields.
 - [x] Unknown variables return diagnostics with template paths.
 - [x] Missing allowed labels render as empty strings.
@@ -29,7 +29,7 @@ Create the shared destination template model, safe TemplateContext, recursive st
 
 ## 2. Feishu Text And Card Template Modes
 
-GitHub issue: https://github.com/xqvvu/vane/issues/11
+GitHub issue: https://github.com/xqvvu/tocsin/issues/11
 
 Type: AFK
 
@@ -52,7 +52,7 @@ Replace Feishu `messageTemplate` rendering with `template` rendering. Support `t
 
 ## 3. Replace MessageTemplate In Config, TOML, And Form Models
 
-GitHub issue: https://github.com/xqvvu/vane/issues/12
+GitHub issue: https://github.com/xqvvu/tocsin/issues/12
 
 Type: AFK
 
@@ -74,7 +74,7 @@ Remove the old `messageTemplate` config model from destination schemas, TOML por
 
 ## 4. Template Preview Result With Samples And Redacted Raw Reference
 
-GitHub issue: https://github.com/xqvvu/vane/issues/13
+GitHub issue: https://github.com/xqvvu/tocsin/issues/13
 
 Type: AFK
 
@@ -96,7 +96,7 @@ Extend destination preview to return a structured template preview result with s
 
 ## 5. Feishu Template Editing UI
 
-GitHub issue: https://github.com/xqvvu/vane/issues/14
+GitHub issue: https://github.com/xqvvu/tocsin/issues/14
 
 Type: AFK
 
@@ -119,7 +119,7 @@ Add Feishu template editing UI with mode selector, JSON/template editor, variabl
 
 ## 6. Follow-Up Destination Template Modes
 
-GitHub issue: https://github.com/xqvvu/vane/issues/15
+GitHub issue: https://github.com/xqvvu/tocsin/issues/15
 
 Follow-up split: `docs/prd/destination-template-follow-up-issues.md`
 

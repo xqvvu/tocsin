@@ -1,4 +1,4 @@
-import type { FeishuApp, IsoDateTimeString } from "@vane/core";
+import type { FeishuApp, IsoDateTimeString } from "@tocsin/core";
 
 export interface FeishuAppRow {
   id: string;

@@ -70,7 +70,7 @@ describe("setup form", () => {
     );
 
     fireEvent.change(screen.getByLabelText("Name"), {
-      target: { value: "Vane Owner" },
+      target: { value: "Tocsin Owner" },
     });
     fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "owner@example.test" },
@@ -82,7 +82,7 @@ describe("setup form", () => {
 
     await vi.waitFor(() => {
       expect(testState.authClient.signUp.email).toHaveBeenCalledWith({
-        name: "Vane Owner",
+        name: "Tocsin Owner",
         email: "owner@example.test",
         password: "correct horse battery staple",
       });
@@ -123,7 +123,7 @@ describe("setup form", () => {
     );
 
     fireEvent.change(screen.getByLabelText("Name"), {
-      target: { value: "Vane Owner" },
+      target: { value: "Tocsin Owner" },
     });
     fireEvent.change(screen.getByLabelText("Email"), {
       target: { value: "owner@example.test" },
