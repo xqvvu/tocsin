@@ -16,7 +16,8 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 
 本轮实现共享模板基础设施，并以 Feishu 作为首个落地 Destination：
 
-- Feishu 支持 `text` 与 `feishu_card` 两种模板模式。
+- Feishu 支持 `text` 与 `feishu_card` 两种模板模式。Slack、Email 和 generic webhook 由后续切片继续扩展，
+  当前共四种模板模式，完整清单见下面的「模板模式全貌」。
 - `messageTemplate` 被 `template` 完全替代，不做迁移兼容。
 - 模板语言只支持安全路径插值，不支持条件、循环、表达式、函数调用或默认值表达式。
 - 模板支持受控动态绑定（`bindings`）：从一个允许的低基数标量字段选择字符串值，再通过
@@ -27,6 +28,48 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 - UI 为模板编辑提供变量参考、样例事件、normalized fields、redacted raw payload reference、rendered payload 和错误定位。
 
 第一版不做飞书卡片拖拽设计器。用户直接编辑卡片 JSON/template，并通过 preview/test 验证平台是否接受。
+
+## 模板模式全貌（当前实现）
+
+共享引擎目前声明四种模板模式，定义在 `packages/destinations/src/template.ts`
+（`DestinationTemplateSchema`）。每个模式的模板字段名不同：
+
+| 模式 | 模板字段 | 字段类型 | 适用通道 | 渲染结果 |
+| --- | --- | --- | --- | --- |
+| `text` | `text` | 字符串（trim 后 1–4000） | Feishu、Slack、Email、generic webhook | 文本插值；Feishu 作 `msg_type: "text"` 正文，Slack 填默认 blocks 的 `section.text`，Email 作文本正文，generic webhook 填默认 envelope 的 `message` |
+| `feishu_card` | `card` | `JsonObjectSchema` | 仅 Feishu | 递归插值卡片 JSON 的字符串叶子，发送为 `{ msg_type: "interactive", card }` |
+| `json_payload` | `payload` | `JsonObjectSchema` | 仅 generic webhook | 替换整个默认 envelope，运算符拥有出站 JSON 形状 |
+| `slack_blocks` | `payload` | `JsonObjectSchema` | 仅 Slack | 替换整个 Slack webhook body；blocks 数组放在对象里（`{ text?, blocks: [...] }`），不是顶层数组 |
+
+关于这张表的实现事实：
+
+- `json_payload` 与 `slack_blocks` 共用 `payload` 字段名和同一条诊断分派分支，但属于两个互不相干的模式，
+  各自只在自己的通道 config schema 里可选：`GenericWebhookTemplateSchema`（text / json_payload）、
+  `SlackTemplateSchema`（text / slack_blocks）。Feishu 收窄为 text / `feishu_card`，不会因为共享联合类型
+  扩张而多出可选模式。取舍见 `docs/adr/0010-destination-template-object-root-payload-and-html-escaping.md`。
+- 三种 JSON 模式的根都是对象：`packages/core/src/json.ts` 的 `JsonObjectSchema` 是
+  `z.record(z.string(), JsonValueSchema)`，拒绝顶层数组。
+- `bindings`（受控动态绑定）是四种模式共同的可选字段，见 `docs/adr/0005-destination-template-dynamic-bindings.md`。
+- Feishu、Slack 和 generic webhook 的 `manifest.ts` 用 `type: "template"` 字段的 `modes` 数组声明该通道
+  可渲染的模式，console catalog 从这里读取；`registry.test.ts` 断言 Slack 的 `modes` 与 Slack 真实可渲染的
+  模式一致。Email 的 template 字段只有文本模式，因此没有声明 `modes`。
+- Feishu 另有一条不属于模式清单的路径：`source: "builtin"` 的版本化内置卡片引用
+  （`BuiltInFeishuDestinationTemplateSchema`），由 adapter 解析成卡片 JSON 后走同一渲染入口。
+
+Email 没有新增模式，而是增加两个与 `template` **平级**的文本字段（不是模式）：
+
+| 字段 | 类型 | 语义 |
+| --- | --- | --- |
+| `subjectTemplate` | 字符串（trim 后 1–4000，可选） | 设置后整行主题由该模板拥有，`subjectPrefix` 随之失效；未设置时保持内置 `[severity status] title` |
+| `htmlTemplate` | 字符串（trim 后 1–4000，可选） | 取代自动生成的 `<pre>` HTML 正文；运算符手写的 HTML 标记按原样输出，每个变量值经 `escapeHtml` 转义 |
+
+HTML 转义语义与「不提供 raw / 可信原文退出开关」的边界见
+`docs/adr/0010-destination-template-object-root-payload-and-html-escaping.md`。
+
+已知限制（截至本文档更新时）：console 的 Destination 表单只对 Feishu 渲染模式选择器，
+`slack_blocks` 与 `json_payload` 还不能在表单里选择，Email 的 `subjectTemplate` / `htmlTemplate`
+也没有表单输入项。这些模式与字段已经通过 schema、渲染、诊断、preview、test 和 delivery 全链路实现，
+可以用 config JSON / API / TOML 配置；表单侧的缺口由 https://github.com/xqvvu/vane/issues/47 跟踪。
 
 ## User Stories
 
@@ -77,7 +120,8 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 - New Destination creation should write an explicit `template` using the adapter default.
 - Adapter defaults may be used as server-side fallback for incomplete drafts or tests, but persisted config should be explicit.
 - The first implementation includes shared template model, renderer, diagnostics, and Feishu `text` / `feishu_card` modes.
-- Slack, Email, and generic webhook may receive minimal `template.mode = "text"` compatibility, but Slack blocks, Email HTML, and generic JSON editor are out of this first implementation.
+- Slack, Email, and generic webhook may receive minimal `template.mode = "text"` compatibility, but Slack blocks, Email HTML, and generic JSON editor are out of this first implementation.（这三项已由后续切片交付：
+  `slack_blocks`、`json_payload` 模式与 Email 的 `subjectTemplate` / `htmlTemplate` 字段，见「模板模式全貌」）
 - Feishu card templates use Feishu-native card JSON. Tocsin does not define a neutral card abstraction.
 - Tocsin validates template safety and basic payload shape, but does not attempt to fully mirror the upstream platform's card schema.
 - Destination test remains the authoritative integration check for platform-specific acceptance.
@@ -100,6 +144,17 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 - Adapter-specific schema may further restrict binding outputs used for platform fields. Feishu color controls
   expose only Feishu-supported color values even though the shared binding engine operates on strings.
 - JSON templates are rendered by recursively interpolating string values only.
+- 三种 JSON 模板（`feishu_card`、`json_payload`、`slack_blocks`）共用对象根与递归字符串叶子插值；
+  `json_payload` 与 `slack_blocks` 还把模板放在同一个 `payload` 字段下，诊断路径统一为
+  `template.payload.*`。
+- 通道 config 只列出自己能渲染的模式：`DestinationTemplateSchema` 是共享引擎的全量联合，各通道用
+  adapter-local schema 收窄，不直接暴露全量联合。
+- `renderText` / `renderTextOrThrow` 接受可选的 `escape` 输出编码钩子。钩子位于插值替换函数内部，
+  只作用于解析后的变量值；默认关闭，因此未传钩子的通道渲染结果逐字节不变。
+- Email 的多模板槽用 adapter-local 平级字段建模（`subjectTemplate`、`htmlTemplate`），不引入
+  `email_composite` 这类打包模式：一个通道的形状不进共享联合类型。这两个字段不在
+  `DestinationTemplateEngine.diagnoseConfig` 的覆盖范围内（它只读 `config.template`），改由
+  `EmailConfigSchema` 自己的 `superRefine` 调用 `diagnoseTextTemplate` 诊断。
 - Unknown variables fail validation before save.
 - Missing allowed label values render as empty strings.
 - Template context v1 includes safe Event, Source, Destination, Tocsin link fields, and the recursively redacted provider payload under `payload`.
@@ -173,9 +228,9 @@ SRE 用户配置告警通知时，不只需要“把标题和消息拼成一段�
 - Complete Feishu card schema replication.
 - Feishu card drag-and-drop designer or WYSIWYG editor.
 - Feishu interactive callback/action handling.
-- Slack blocks implementation.
-- Email HTML implementation.
-- Generic webhook JSON payload template implementation.
+- Slack blocks implementation.（不在第一个切片内；已由后续切片交付，见「模板模式全貌」）
+- Email HTML implementation.（不在第一个切片内；已由后续切片以 `htmlTemplate` 字段交付，见「模板模式全貌」）
+- Generic webhook JSON payload template implementation.（不在第一个切片内；已由后续切片交付，见「模板模式全貌」）
 - Kubernetes/Helm/deployment changes.
 - New database table, column, or persistence relation.
 

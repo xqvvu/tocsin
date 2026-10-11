@@ -65,9 +65,14 @@ Route matching 层支持完整 `RouteRule` schema，但当前可视化编辑器�
 
 ### 模板
 
-当前 message template 是安全文本插值，适合 MVP 的 Feishu 文本、Slack 正文、Email 文本和 generic
-webhook message 字段。Feishu 卡片、Slack blocks、Email HTML 和 generic JSON payload template 属于
-post-MVP 结构化模板设计。
+（2026-10-11 校正）结构化模板引擎已作为 post-MVP 切片交付：共享引擎支持 `text`、`feishu_card`、
+`json_payload`、`slack_blocks` 四种模式，Email 另有 `subjectTemplate` 与 `htmlTemplate` 两个平级字段，
+清单见 `docs/prd/destination-template-engine.md`，模式扩展决策见
+`docs/adr/0010-destination-template-object-root-payload-and-html-escaping.md`。
+
+仍未完成的是编辑体验：console 的 Destination 表单只对 Feishu 渲染模式选择器，`slack_blocks` 与
+`json_payload` 只能经 config JSON / API / TOML 配置，Email 的两个新字段也没有表单输入项；缺口由
+https://github.com/xqvvu/vane/issues/47 跟踪。
 
 ### 发布硬化
 
@@ -140,6 +145,7 @@ provider/destination。
 下一轮讨论应该从具体 PRD 进入，而不是继续扩写 MVP：
 
 - Destination 结构化模板引擎：Feishu 卡片、Slack blocks、Email HTML、generic JSON payload template。
+  （2026-10-11 已完成，见 `docs/prd/destination-template-engine.md`；剩余缺口是上文的表单侧模式选择。）
 - Alert 操作增强：silence、suppression、maintenance window、per-fingerprint mute。
 - 搜索与排障体验：更强的 Events/Deliveries filter、时间范围、fingerprint 视图、route explain。
 - 自托管发布硬化：CI/E2E/Docker smoke、部署文档、备份恢复、升级回滚。
