@@ -204,12 +204,43 @@ export const FeishuCardDestinationTemplateSchema = z
     }
   });
 
+export const JsonPayloadDestinationTemplateSchema = z
+  .strictObject({
+    source: z.literal("custom").optional(),
+    mode: z.literal("json_payload"),
+    payload: JsonObjectSchema,
+    bindings: TemplateBindingsSchema.optional(),
+  })
+  .superRefine((template, context) => {
+    for (const diagnostic of DestinationTemplateEngine.diagnoseJsonTemplate(
+      template.payload,
+      "template.payload",
+      template.bindings,
+    )) {
+      if (diagnostic.severity !== "error") {
+        continue;
+      }
+
+      context.addIssue({
+        code: "custom",
+        path: diagnostic.path?.replace(/^template\./, "").split(".") ?? ["payload"],
+        message: diagnostic.message,
+      });
+    }
+  });
+
+// Union of every mode the shared engine knows how to diagnose. Feishu narrows
+// this to its own supported modes (see FeishuDestinationTemplateSchema) so a
+// destination never offers a mode it cannot render.
 export const DestinationTemplateSchema = z.discriminatedUnion("mode", [
   TextDestinationTemplateSchema,
   FeishuCardDestinationTemplateSchema,
+  JsonPayloadDestinationTemplateSchema,
 ]);
 
 export const TextOnlyDestinationTemplateSchema = TextDestinationTemplateSchema;
+
+export const JsonPayloadOnlyDestinationTemplateSchema = JsonPayloadDestinationTemplateSchema;
 
 export type TextDestinationTemplate = z.infer<typeof TextDestinationTemplateSchema>;
 export type FeishuCardDestinationTemplate = z.infer<typeof FeishuCardDestinationTemplateSchema>;
@@ -283,9 +314,17 @@ export class DestinationTemplateEngine {
     template: DestinationTemplate,
     path = "template",
   ): TemplateDiagnostic[] {
-    return template.mode === "text"
-      ? this.diagnoseTextTemplate(template.text, `${path}.text`, template.bindings)
-      : this.diagnoseJsonTemplate(template.card, `${path}.card`, template.bindings);
+    // Exhaustive switch on mode: each arm reads its own template field, so
+    // diagnostic paths point at template.text / template.card / template.payload.
+    // A new mode must add an arm here — TypeScript's never check enforces it.
+    switch (template.mode) {
+      case "text":
+        return this.diagnoseTextTemplate(template.text, `${path}.text`, template.bindings);
+      case "feishu_card":
+        return this.diagnoseJsonTemplate(template.card, `${path}.card`, template.bindings);
+      case "json_payload":
+        return this.diagnoseJsonTemplate(template.payload, `${path}.payload`, template.bindings);
+    }
   }
 
   static diagnoseConfig(config: JsonObject): TemplateDiagnostic[] {

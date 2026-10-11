@@ -8,7 +8,11 @@ import {
   resolveBuiltInFeishuCardTemplate,
 } from "#destinations/feishu/default-card";
 import { FEISHU_MAX_URGENT_RECEIVERS } from "#destinations/shared/feishu-protocol";
-import { DestinationTemplateSchema, TemplateBindingsSchema } from "#destinations/template";
+import {
+  FeishuCardDestinationTemplateSchema,
+  TemplateBindingsSchema,
+  TextDestinationTemplateSchema,
+} from "#destinations/template";
 
 const FeishuCardColorSet: ReadonlySet<string> = new Set(FeishuCardColors);
 const NonEmptyFeishuStringSchema = z.string().trim().min(1);
@@ -23,8 +27,15 @@ export const BuiltInFeishuDestinationTemplateSchema = z.strictObject({
   bindings: TemplateBindingsSchema.optional(),
 });
 
+// Feishu only offers its own two modes; the shared engine's other modes
+// (e.g. json_payload) must never become selectable on a Feishu destination.
+const FeishuCustomDestinationTemplateSchema = z.discriminatedUnion("mode", [
+  TextDestinationTemplateSchema,
+  FeishuCardDestinationTemplateSchema,
+]);
+
 const FeishuDestinationTemplateSchema = z
-  .union([BuiltInFeishuDestinationTemplateSchema, DestinationTemplateSchema])
+  .union([BuiltInFeishuDestinationTemplateSchema, FeishuCustomDestinationTemplateSchema])
   .transform((template) => {
     if (template.source === "builtin") {
       return template;

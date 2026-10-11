@@ -7,6 +7,21 @@ import type { DestinationSendInput } from "#destinations/types";
 export function renderGenericWebhookPayload(
   input: DestinationSendInput<GenericWebhookConfig>,
 ): JsonValue {
+  const template = input.config.template;
+
+  // A JSON payload template replaces the whole default envelope: the operator
+  // owns the outbound shape. Only string leaves are interpolated, and only
+  // allow-listed variables resolve, so the config's url/headers are never
+  // injected into the outbound body.
+  if (template?.mode === "json_payload") {
+    return DestinationTemplateEngine.renderJsonOrThrow(
+      DestinationTemplateEngine.createRenderContext(input),
+      template.payload,
+      "template.payload",
+      template.bindings,
+    );
+  }
+
   return {
     eventId: input.eventId,
     source: {
@@ -21,12 +36,12 @@ export function renderGenericWebhookPayload(
     },
     alert: input.normalizedEvent,
     message:
-      input.config.template?.mode === "text"
+      template?.mode === "text"
         ? DestinationTemplateEngine.renderTextOrThrow(
             DestinationTemplateEngine.createRenderContext(input),
-            input.config.template.text,
+            template.text,
             "template.text",
-            input.config.template.bindings,
+            template.bindings,
           )
         : input.normalizedEvent.message,
   };
