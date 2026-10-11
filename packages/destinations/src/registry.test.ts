@@ -76,4 +76,24 @@ describe("destination registry", () => {
       ].sort(),
     );
   });
+
+  it("exposes Slack template modes that match the modes Slack can render", () => {
+    const slackItem = createDefaultDestinationRegistry()
+      .toCatalog()
+      .find((item) => item.kind === "slack");
+    const templateField = slackItem?.configFields.find((field) => field.type === "template");
+
+    // The manifest is what the console renders mode controls from; a mode here
+    // without a schema/renderer (or the reverse) silently breaks template saving.
+    expect(templateField?.modes).toEqual([
+      {
+        mode: "text",
+        labelKey: "destinations.form.templateModeText",
+      },
+      {
+        mode: "slack_blocks",
+        labelKey: "destinations.form.templateModeSlackBlocks",
+      },
+    ]);
+  });
 });

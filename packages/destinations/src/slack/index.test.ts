@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { createDefaultDestinationRegistry } from "#destinations/registry";
 import { slackSender } from "#destinations/slack/index";
 import type { SlackConfig } from "#destinations/slack/index";
+import { DestinationTemplateEngine } from "#destinations/template";
 import type { DestinationSendInput, FetchLike } from "#destinations/types";
 
 const input: DestinationSendInput<SlackConfig> = {
@@ -258,6 +259,239 @@ describe("slack sender", () => {
       expect(result.ok).toBe(true);
       expect(JSON.stringify(result.renderedPayload)).not.toContain("super-secret");
       expect(JSON.stringify(calls[0]?.init.body)).not.toContain("super-secret");
+    });
+
+    it("resolves bindings from each allowed scalar selector", async () => {
+      const calls: Array<{ init: RequestInit }> = [];
+      const fetcher: FetchLike = async (url, init) => {
+        calls.push({ init });
+        return { ok: true, status: 200, text: async () => "ok" };
+      };
+
+      const result = await slackSender.send(
+        {
+          ...input,
+          config: {
+            webhookUrl: input.config.webhookUrl,
+            template: {
+              mode: "slack_blocks",
+              payload: {
+                text: "{{bindings.statusLabel}} {{bindings.severityLabel}} {{bindings.providerLabel}} {{bindings.channelLabel}}",
+              },
+              bindings: {
+                statusLabel: {
+                  select: "event.status",
+                  cases: { firing: "FIRING" },
+                  fallback: "UNKNOWN",
+                },
+                severityLabel: {
+                  select: "event.severity",
+                  cases: { critical: "SEV1" },
+                  fallback: "SEV5",
+                },
+                providerLabel: {
+                  select: "source.provider",
+                  cases: { alertmanager: "ALERTMANAGER" },
+                  fallback: "OTHER",
+                },
+                channelLabel: {
+                  select: "destination.kind",
+                  cases: { slack: "SLACK" },
+                  fallback: "OTHER",
+                },
+              },
+            },
+          },
+        },
+        { fetch: fetcher },
+      );
+      const body = JSON.parse(calls[0]?.init.body as string) as { text: string };
+
+      expect(result.ok).toBe(true);
+      expect(body.text).toBe("FIRING SEV1 ALERTMANAGER SLACK");
+    });
+
+    it("falls back when no binding case matches the selector value", async () => {
+      const calls: Array<{ init: RequestInit }> = [];
+      const fetcher: FetchLike = async (url, init) => {
+        calls.push({ init });
+        return { ok: true, status: 200, text: async () => "ok" };
+      };
+
+      const result = await slackSender.send(
+        {
+          ...input,
+          config: {
+            webhookUrl: input.config.webhookUrl,
+            template: {
+              mode: "slack_blocks",
+              payload: {
+                blocks: [{ type: "section", text: { text: "{{bindings.statusLabel}}" } }],
+              },
+              bindings: {
+                statusLabel: {
+                  select: "event.status",
+                  cases: { resolved: "RECOVERED" },
+                  fallback: "UNHANDLED",
+                },
+              },
+            },
+          },
+        },
+        { fetch: fetcher },
+      );
+      const body = JSON.parse(calls[0]?.init.body as string) as {
+        blocks: Array<{ text: { text: string } }>;
+      };
+
+      expect(result.ok).toBe(true);
+      // The sample event is firing, which the cases map does not cover.
+      expect(body.blocks[0]?.text.text).toBe("UNHANDLED");
+    });
+
+    it("reports unknown binding references as configuration errors and does not send", async () => {
+      const calls: Array<unknown> = [];
+      const fetcher: FetchLike = async () => {
+        calls.push(1);
+        return { ok: true, status: 200, text: async () => "ok" };
+      };
+
+      const result = await slackSender.send(
+        {
+          ...input,
+          config: {
+            webhookUrl: input.config.webhookUrl,
+            template: {
+              mode: "slack_blocks",
+              payload: { text: "{{bindings.declared}} {{bindings.missing}}" },
+              bindings: {
+                declared: {
+                  select: "event.status",
+                  cases: { firing: "FIRING" },
+                  fallback: "UNKNOWN",
+                },
+              },
+            },
+          },
+        },
+        { fetch: fetcher },
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result).toMatchObject({
+        errorKind: "configuration_error",
+        retryHint: "not_retryable",
+      });
+      expect(calls).toHaveLength(0);
+      expect(result.renderedPayload).toMatchObject({
+        templateError: {
+          diagnostics: [
+            {
+              severity: "error",
+              path: "template.payload.text",
+              variable: "bindings.missing",
+            },
+          ],
+        },
+      });
+    });
+
+    it("warns on declared bindings the template never references without blocking rendering", async () => {
+      const template: NonNullable<SlackConfig["template"]> = {
+        mode: "slack_blocks",
+        payload: { text: "{{bindings.used}}" },
+        bindings: {
+          used: {
+            select: "event.severity",
+            cases: { critical: "SEV1" },
+            fallback: "SEV5",
+          },
+          unused: {
+            select: "event.status",
+            cases: { firing: "FIRING" },
+            fallback: "UNKNOWN",
+          },
+        },
+      };
+
+      expect(DestinationTemplateEngine.diagnoseDestinationTemplate(template)).toEqual([
+        {
+          severity: "warning",
+          path: "template.bindings.unused",
+          variable: "bindings.unused",
+          message: "Destination template binding is not referenced: unused",
+        },
+      ]);
+
+      const calls: Array<{ init: RequestInit }> = [];
+      const fetcher: FetchLike = async (url, init) => {
+        calls.push({ init });
+        return { ok: true, status: 200, text: async () => "ok" };
+      };
+
+      const result = await slackSender.send(
+        {
+          ...input,
+          config: {
+            webhookUrl: input.config.webhookUrl,
+            template,
+          },
+        },
+        { fetch: fetcher },
+      );
+      const body = JSON.parse(calls[0]?.init.body as string) as { text: string };
+
+      // Warnings are advisory: the alert is still delivered.
+      expect(result.ok).toBe(true);
+      expect(body.text).toBe("SEV1");
+    });
+
+    it("rejects config/header references in previews and never leaks the webhook url or credentials", () => {
+      const webhookUrl = "https://hooks.slack.com/services/T000/B000/super-secret-path";
+      const config = {
+        webhookUrl,
+        template: {
+          mode: "slack_blocks",
+          payload: {
+            url: "{{config.webhookUrl}}",
+            auth: "{{headers.authorization}}",
+            title: "{{event.title}}",
+          },
+        },
+      } satisfies SlackConfig;
+
+      const preview = slackSender.preview({ ...input, config });
+      const serialized = JSON.stringify(preview);
+
+      // Out-of-allow-list paths are rejected as unknown variables; they never
+      // resolve against the real destination config, so nothing sensitive leaks.
+      expect(serialized).not.toContain("super-secret-path");
+      expect(serialized).not.toContain("T000");
+      expect(serialized).not.toContain("hooks.slack.com");
+      expect(preview).toMatchObject({
+        templateError: {
+          diagnostics: [
+            { severity: "error", path: "template.payload.url", variable: "config.webhookUrl" },
+            {
+              severity: "error",
+              path: "template.payload.auth",
+              variable: "headers.authorization",
+            },
+          ],
+        },
+      });
+
+      // The same destination still previews when only safe variables are used.
+      const safePreview = slackSender.preview({
+        ...input,
+        config: {
+          webhookUrl,
+          template: { mode: "slack_blocks", payload: { text: "{{event.title}}" } },
+        },
+      });
+
+      expect(safePreview).toMatchObject({ text: "Checkout API latency high" });
+      expect(JSON.stringify(safePreview)).not.toContain("super-secret-path");
     });
 
     it("keeps the plain text template compatible", async () => {
