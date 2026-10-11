@@ -536,6 +536,7 @@
   "destinations.form.templateSourceCustomDescription": "Uses the template content maintained for this destination",
   "destinations.form.templateModeText": "Text",
   "destinations.form.templateModeFeishuCard": "Feishu card",
+  "destinations.form.templateModeJsonPayload": "JSON payload",
   "destinations.form.templateModeDescription": "Feishu supports plain text and interactive card templates with native Feishu JSON",
   "destinations.form.feishuCardTemplate": "Feishu card JSON",
   "destinations.form.feishuCardTemplateHelpLabel": "How to configure Feishu card JSON",

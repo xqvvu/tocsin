@@ -42,6 +42,16 @@ export const genericWebhookManifest = {
       path: "template",
       labelKey: "destinations.form.template",
       descriptionKey: "destinations.form.templateDescription",
+      modes: [
+        {
+          mode: "text",
+          labelKey: "destinations.form.templateModeText",
+        },
+        {
+          mode: "json_payload",
+          labelKey: "destinations.form.templateModeJsonPayload",
+        },
+      ],
     },
   ],
   secretFields: [
