@@ -43,3 +43,6 @@ dist-ssr
 .stitch/designs/
 
 .zcodeignore
+
+# pnpm store created by worktree installs
+.pnpm-store/
