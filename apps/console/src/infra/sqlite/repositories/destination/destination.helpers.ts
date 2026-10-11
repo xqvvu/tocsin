@@ -119,6 +119,8 @@ export function destinationEditorFormDraftFromRuntime(
     from: configString(config, "from") ?? "",
     replyTo: configString(config, "replyTo") ?? "",
     subjectPrefix: configString(config, "subjectPrefix") ?? "",
+    subjectTemplate: configString(config, "subjectTemplate") ?? "",
+    htmlTemplate: configString(config, "htmlTemplate") ?? "",
     headers: configHeaderLinesForEditor(config),
     url: configString(config, "url") ?? "",
     webhookUrl: configString(config, "webhookUrl") ?? "",

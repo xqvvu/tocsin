@@ -6,6 +6,9 @@ import {
   destinationTemplateFormStateFromDraft,
   destinationConfigPatchFromForm,
   destinationConfigFromForm,
+  destinationTemplateBodyFormField,
+  isDestinationTemplateBodyDraft,
+  isDestinationTemplateFormMode,
   formDestinationKind,
   formDestinationKindValue,
 } from "#/features/destinations/model/destination-form";
@@ -313,5 +316,84 @@ describe("destination form helpers", () => {
     expect(applied.header.text_tag_list[0]?.color).toBe("red");
     expect(applied.header.text_tag_list[1]?.color).toBe("{{bindings.statusColor}}");
     expect(applied.body.color).toBe("red");
+  });
+});
+
+describe("destination template modes (#47)", () => {
+  it("maps a slack_blocks template into config and back out of the draft", () => {
+    const data = new FormData();
+
+    data.set("kind", "slack");
+    data.set("webhookUrl", "https://hooks.slack.com/services/T/B/x");
+    data.set("templateMode", "slack_blocks");
+    data.set("templatePayload", '{"blocks":[{"type":"section"}]}');
+
+    expect(destinationConfigFromForm("slack", data)).toMatchObject({
+      webhookUrl: "https://hooks.slack.com/services/T/B/x",
+      template: {
+        mode: "slack_blocks",
+        payload: { blocks: [{ type: "section" }] },
+      },
+    });
+
+    const roundTripped = destinationTemplateFormStateFromDraft({
+      mode: "slack_blocks",
+      payload: { blocks: [{ type: "section" }] },
+    });
+
+    expect(roundTripped.templateMode).toBe("slack_blocks");
+    expect(JSON.parse(roundTripped.templatePayload)).toEqual({
+      blocks: [{ type: "section" }],
+    });
+  });
+
+  it("maps a json_payload template into config", () => {
+    const data = new FormData();
+
+    data.set("kind", "generic_webhook");
+    data.set("url", "https://relay.example.test/tocsin");
+    data.set("templateMode", "json_payload");
+    data.set("templatePayload", '{"title":"{{event.title}}"}');
+
+    expect(destinationConfigFromForm("generic_webhook", data)).toMatchObject({
+      template: {
+        mode: "json_payload",
+        payload: { title: "{{event.title}}" },
+      },
+    });
+  });
+
+  it("keeps each mode's body separate so switching modes does not leak drafts", () => {
+    const draft = destinationTemplateFormStateFromDraft({
+      mode: "slack_blocks",
+      payload: { blocks: [] },
+      bindings: {},
+    });
+
+    expect(JSON.parse(draft.templatePayload)).toEqual({ blocks: [] });
+    // A payload body is never copied into the text draft, and the card draft
+    // keeps its own default rather than receiving the payload.
+    expect(draft.templateText).toBe("");
+    expect(JSON.parse(draft.templateCard)).not.toEqual({ blocks: [] });
+  });
+
+  it("accepts an object draft or an empty one, and rejects anything else", () => {
+    // Empty means "no template", which is valid.
+    expect(isDestinationTemplateBodyDraft("")).toBe(true);
+    expect(isDestinationTemplateBodyDraft('{"blocks":[]}')).toBe(true);
+    // A JSON mode's schema requires an object root, so a half-written or
+    // non-object draft must be reported at the form boundary, not at save.
+    expect(isDestinationTemplateBodyDraft("[]")).toBe(false);
+    expect(isDestinationTemplateBodyDraft("{")).toBe(false);
+    expect(isDestinationTemplateBodyDraft('"text"')).toBe(false);
+  });
+
+  it("resolves every shared mode to a form mode", () => {
+    for (const mode of ["text", "feishu_card", "json_payload", "slack_blocks"] as const) {
+      expect(isDestinationTemplateFormMode(mode)).toBe(true);
+      expect(destinationTemplateBodyFormField(mode)).toMatch(/^template/);
+    }
+
+    expect(isDestinationTemplateFormMode("email_html")).toBe(false);
   });
 });

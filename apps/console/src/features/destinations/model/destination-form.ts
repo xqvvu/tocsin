@@ -6,6 +6,8 @@ import {
   formTrimmedString,
   JsonObjectSchema,
   nonEmptyObject,
+  type AdapterConfigHelp,
+  type AdapterTemplateConfigField,
   type JsonObject,
 } from "@tocsin/core";
 import {
@@ -20,21 +22,286 @@ import {
   defaultFeishuCardTemplate,
 } from "@tocsin/destinations/feishu/default-card";
 
+import type { DestinationCatalog } from "#/features/destinations/model/destination-types";
+
 export type DestinationFormKind = "generic_webhook" | "feishu" | "slack" | "email";
-export type DestinationTemplateFormMode = "text" | "feishu_card";
+/**
+ * Every template mode the console knows how to edit. Which of them a
+ * destination offers is decided by that destination's manifest `modes`, never
+ * by a branch on kind, so declaring a mode in a manifest is enough to make it
+ * selectable in the form (see `destinationTemplateModes`).
+ */
+export type DestinationTemplateFormMode = "text" | "feishu_card" | "json_payload" | "slack_blocks";
 export type DestinationTemplateFormSource = "builtin" | "custom";
+
+/** Where one template mode keeps its body, both in form state and in config. */
+interface DestinationTemplateBodyField {
+  /** Form state field the operator edits for this mode. */
+  formField: "templateText" | "templateCard" | "templatePayload";
+  /** Key the saved `template` object stores that body under. */
+  templateKey: "text" | "card" | "payload";
+  /** JSON modes edit an object body, text modes a plain string. */
+  json: boolean;
+  labelKey: string;
+  descriptionKey: string;
+  /**
+   * Hint under the mode control while this mode is selected, used when the
+   * manifest's mode entry declares no `descriptionKey` of its own.
+   */
+  modeDescriptionKey: string;
+  /** Body seeded when the editor is opened on an empty mode. */
+  starter: string;
+}
+
+/**
+ * Mode → body mapping. It mirrors the shared template engine schemas
+ * (`feishu_card` → `card`, `json_payload` and `slack_blocks` → `payload`), so
+ * it is a property of the mode and identical for every destination: one JSON
+ * editor serves all three JSON modes.
+ */
+const DESTINATION_TEMPLATE_BODY_FIELDS: Record<
+  DestinationTemplateFormMode,
+  DestinationTemplateBodyField
+> = {
+  text: {
+    formField: "templateText",
+    templateKey: "text",
+    json: false,
+    labelKey: "destinations.form.template",
+    descriptionKey: "destinations.form.templateDescription",
+    modeDescriptionKey: "destinations.form.templateModeTextDescription",
+    starter: "",
+  },
+  feishu_card: {
+    formField: "templateCard",
+    templateKey: "card",
+    json: true,
+    labelKey: "destinations.form.feishuCardTemplate",
+    descriptionKey: "destinations.form.feishuCardTemplateDescription",
+    modeDescriptionKey: "destinations.form.templateModeFeishuCardDescription",
+    starter: JSON.stringify(defaultFeishuCardTemplate, null, 2),
+  },
+  json_payload: {
+    formField: "templatePayload",
+    templateKey: "payload",
+    json: true,
+    labelKey: "destinations.form.jsonPayloadTemplate",
+    descriptionKey: "destinations.form.jsonPayloadTemplateDescription",
+    modeDescriptionKey: "destinations.form.templateModeJsonPayloadDescription",
+    starter: JSON.stringify(
+      {
+        event: "{{event.title}}",
+        severity: "{{event.severity}}",
+        message: "{{event.message}}",
+      },
+      null,
+      2,
+    ),
+  },
+  slack_blocks: {
+    formField: "templatePayload",
+    templateKey: "payload",
+    json: true,
+    labelKey: "destinations.form.slackBlocksTemplate",
+    descriptionKey: "destinations.form.slackBlocksTemplateDescription",
+    modeDescriptionKey: "destinations.form.templateModeSlackBlocksDescription",
+    starter: JSON.stringify(
+      {
+        text: "[{{event.severity}}] {{event.title}}",
+        blocks: [
+          {
+            type: "section",
+            text: { type: "mrkdwn", text: "*{{event.status}}*: {{event.message}}" },
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  },
+};
+
+/** One selectable entry of the template mode control, resolved from a manifest. */
+export interface DestinationTemplateModeOption {
+  mode: DestinationTemplateFormMode;
+  labelKey: string;
+  descriptionKey?: string;
+}
 
 export interface DestinationTemplateFormState {
   templateSource: DestinationTemplateFormSource;
   templateMode: DestinationTemplateFormMode;
   templateText: string;
   templateCard: string;
+  /** JSON body edited by the `json_payload` and `slack_blocks` modes. */
+  templatePayload: string;
   templateBindings: string;
   templateColorEnabled: boolean;
   templateColorSelector: TemplateBindingSelector;
   templateColorCases: Record<string, string>;
   templateColorFallback: string;
   templatePreviewStatus: "firing" | "resolved" | "unknown";
+}
+
+export function isDestinationTemplateFormMode(
+  value: unknown,
+): value is DestinationTemplateFormMode {
+  return typeof value === "string" && Object.hasOwn(DESTINATION_TEMPLATE_BODY_FIELDS, value);
+}
+
+/** True when the mode edits a JSON object body rather than a text string. */
+export function isDestinationTemplateJsonMode(mode: DestinationTemplateFormMode): boolean {
+  return DESTINATION_TEMPLATE_BODY_FIELDS[mode].json;
+}
+
+/** Form state field that holds the drafted body for one mode. */
+export function destinationTemplateBodyFormField(
+  mode: DestinationTemplateFormMode,
+): DestinationTemplateBodyField["formField"] {
+  return DESTINATION_TEMPLATE_BODY_FIELDS[mode].formField;
+}
+
+/** Editor copy (label / description keys) for one mode's body. */
+export function destinationTemplateBodyCopy(mode: DestinationTemplateFormMode): {
+  labelKey: string;
+  descriptionKey: string;
+} {
+  const field = DESTINATION_TEMPLATE_BODY_FIELDS[mode];
+
+  return { labelKey: field.labelKey, descriptionKey: field.descriptionKey };
+}
+
+/**
+ * Starter body seeded when an operator switches to a JSON mode with an empty
+ * editor. Each JSON mode owns a valid document of its own shape, so the first
+ * save can never post an empty or half-written object.
+ */
+export function destinationTemplateBodyStarter(mode: DestinationTemplateFormMode): string {
+  return DESTINATION_TEMPLATE_BODY_FIELDS[mode].starter;
+}
+
+/**
+ * True when drafted JSON body text is ready to save: empty (no template) or a
+ * JSON object, which is what every JSON mode's schema requires. Checked at the
+ * form boundary so a half-written document reports a field error instead of
+ * throwing out of submit.
+ */
+export function isDestinationTemplateBodyDraft(value: string): boolean {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return true;
+  }
+
+  try {
+    return JsonObjectSchema.safeParse(JSON.parse(trimmed) as unknown).success;
+  } catch {
+    return false;
+  }
+}
+
+function isTemplateConfigField(
+  field: DestinationCatalog[number]["configFields"][number],
+): field is AdapterTemplateConfigField {
+  return field.type === "template";
+}
+
+function templateConfigField(
+  catalog: DestinationCatalog,
+  kind: DestinationFormKind,
+): AdapterTemplateConfigField | undefined {
+  return catalog.find((item) => item.kind === kind)?.configFields.find(isTemplateConfigField);
+}
+
+/**
+ * Template modes offered for one destination kind, read from that kind's
+ * manifest `template` field. A manifest that declares no modes (email today)
+ * still gets the universal `text` mode, and a mode the console cannot edit is
+ * dropped instead of rendering a control that could never save.
+ */
+export function destinationTemplateModes(
+  catalog: DestinationCatalog,
+  kind: DestinationFormKind,
+): DestinationTemplateModeOption[] {
+  const field = templateConfigField(catalog, kind);
+  const modes = field?.modes?.length
+    ? field.modes
+    : ([{ mode: "text", labelKey: undefined }] as const);
+
+  return modes.flatMap((mode): DestinationTemplateModeOption[] => {
+    if (!isDestinationTemplateFormMode(mode.mode)) {
+      return [];
+    }
+
+    const body = DESTINATION_TEMPLATE_BODY_FIELDS[mode.mode];
+
+    // The manifest's optional copy wins; not every mode declares it.
+    const manifestDescriptionKey = "descriptionKey" in mode ? mode.descriptionKey : undefined;
+
+    return [
+      {
+        mode: mode.mode,
+        labelKey: mode.labelKey ?? body.labelKey,
+        ...(manifestDescriptionKey ? { descriptionKey: manifestDescriptionKey } : {}),
+      },
+    ];
+  });
+}
+
+/**
+ * Hint shown under the mode control for the selected mode: the manifest's own
+ * `descriptionKey` wins, then the mode's generic console copy.
+ */
+export function destinationTemplateModeDescriptionKey(
+  options: readonly DestinationTemplateModeOption[],
+  mode: DestinationTemplateFormMode,
+): string {
+  return (
+    options.find((option) => option.mode === mode)?.descriptionKey ??
+    DESTINATION_TEMPLATE_BODY_FIELDS[mode].modeDescriptionKey
+  );
+}
+
+/**
+ * Clamp a drafted mode to the set the destination actually offers, so a stale
+ * value (after switching kind, or an older draft) can never be submitted as a
+ * template the adapter would reject.
+ */
+export function resolveDestinationTemplateFormMode(
+  mode: unknown,
+  options: readonly DestinationTemplateModeOption[],
+): DestinationTemplateFormMode {
+  const allowed = options.map((option) => option.mode);
+  const resolved = isDestinationTemplateFormMode(mode) ? mode : undefined;
+
+  if (resolved && allowed.includes(resolved)) {
+    return resolved;
+  }
+
+  return allowed[0] ?? "text";
+}
+
+/**
+ * Configuration help for the body editor of one mode: the mode's own help wins,
+ * then the template field's help, both straight from the manifest.
+ */
+export function destinationTemplateModeHelp(
+  catalog: DestinationCatalog,
+  kind: DestinationFormKind,
+  mode: DestinationTemplateFormMode,
+): AdapterConfigHelp | null {
+  const field = templateConfigField(catalog, kind);
+  const modeHelp = field?.modes?.find((definition) => definition.mode === mode)?.help;
+
+  if (modeHelp) {
+    return visibleConfigHelp(modeHelp);
+  }
+
+  return visibleConfigHelp(field?.help);
+}
+
+function visibleConfigHelp(help: AdapterConfigHelp | undefined): AdapterConfigHelp | null {
+  return help && help.show !== false ? help : null;
 }
 
 export function formDestinationKind(data: FormData): DestinationFormKind {
@@ -70,6 +337,11 @@ export function destinationConfigFromForm(kind: DestinationFormKind, data: FormD
       from: formTrimmedString(data, "from"),
       ...(replyTo ? { replyTo } : {}),
       ...(subjectPrefix ? { subjectPrefix } : {}),
+      // Email template slots that sit next to `template` rather than being a
+      // template mode: the subject owns the whole header line, the HTML body
+      // replaces the generated <pre> block.
+      ...nonEmptyObject({ subjectTemplate: formTrimmedString(data, "subjectTemplate") }),
+      ...nonEmptyObject({ htmlTemplate: formTrimmedString(data, "htmlTemplate") }),
       ...nonEmptyObject({ headers }),
       ...nonEmptyObject({ template }),
     };
@@ -123,6 +395,8 @@ export function destinationConfigPatchFromForm(
     const from = formTrimmedString(data, "from");
     const replyTo = formTrimmedString(data, "replyTo");
     const subjectPrefix = formTrimmedString(data, "subjectPrefix");
+    const subjectTemplate = formTrimmedString(data, "subjectTemplate");
+    const htmlTemplate = formTrimmedString(data, "htmlTemplate");
     const headers = formHeaderLines(data);
 
     if (endpointUrl) {
@@ -143,6 +417,14 @@ export function destinationConfigPatchFromForm(
 
     if (subjectPrefix) {
       config.subjectPrefix = subjectPrefix;
+    }
+
+    if (subjectTemplate) {
+      config.subjectTemplate = subjectTemplate;
+    }
+
+    if (htmlTemplate) {
+      config.htmlTemplate = htmlTemplate;
     }
 
     if (nonEmptyObject(headers)) {
@@ -256,6 +538,16 @@ function formJsonStringArray(data: FormData, key: string): string[] {
   }
 }
 
+/**
+ * Build the saved `template` object from the drafted mode and that mode's body
+ * field. The mode decides which field is read, so a body drafted for another
+ * mode is never mixed into the result — it stays in form state so switching
+ * back restores it.
+ *
+ * Which modes a destination exposes is the manifest's decision; the adapter's
+ * config schema is what rejects a mode the kind cannot render, so this stays
+ * kind-agnostic apart from Feishu's built-in card reference.
+ */
 function templateFromForm(kind: DestinationFormKind, data: FormData): JsonObject | null {
   const bindings = templateBindingsFromForm(data);
 
@@ -268,29 +560,20 @@ function templateFromForm(kind: DestinationFormKind, data: FormData): JsonObject
     };
   }
 
-  if (kind === "feishu" && templateModeFromForm(data) === "feishu_card") {
-    const card = formTrimmedString(data, "templateCard");
+  const mode = templateModeFromForm(data);
+  const body = DESTINATION_TEMPLATE_BODY_FIELDS[mode];
+  const draft = formTrimmedString(data, body.formField);
 
-    return card
-      ? {
-          source: "custom",
-          mode: "feishu_card",
-          card: JsonObjectSchema.parse(JSON.parse(card)),
-          ...nonEmptyObject({ bindings }),
-        }
-      : null;
+  if (!draft) {
+    return null;
   }
 
-  const text = formTrimmedString(data, "templateText");
-
-  return text
-    ? {
-        ...(kind === "feishu" ? { source: "custom" } : {}),
-        mode: "text",
-        text,
-        ...nonEmptyObject({ bindings }),
-      }
-    : null;
+  return {
+    ...(kind === "feishu" ? { source: "custom" } : {}),
+    mode,
+    [body.templateKey]: body.json ? JsonObjectSchema.parse(JSON.parse(draft)) : draft,
+    ...nonEmptyObject({ bindings }),
+  };
 }
 
 function templateBindingsFromForm(data: FormData): JsonObject {
@@ -300,7 +583,9 @@ function templateBindingsFromForm(data: FormData): JsonObject {
 }
 
 function templateModeFromForm(data: FormData): DestinationTemplateFormMode {
-  return formString(data, "templateMode") === "feishu_card" ? "feishu_card" : "text";
+  const mode = formString(data, "templateMode");
+
+  return isDestinationTemplateFormMode(mode) ? mode : "text";
 }
 
 function templateSourceFromForm(data: FormData): DestinationTemplateFormSource {
@@ -321,6 +606,7 @@ export function createDefaultDestinationTemplateFormState(): DestinationTemplate
     templateMode: "feishu_card",
     templateText: "",
     templateCard: JSON.stringify(defaultFeishuCardTemplate, null, 2),
+    templatePayload: "",
     templateBindings: "{}",
     templateColorEnabled: true,
     templateColorSelector: statusColor.select,
@@ -343,22 +629,43 @@ export function destinationTemplateFormStateFromDraft(
   const bindings = parsedBindings.success ? parsedBindings.data : {};
   const statusColor = bindings.statusColor;
   const card = JsonObjectSchema.safeParse(template.card);
+  const payload = JsonObjectSchema.safeParse(template.payload);
   const isBuiltIn = template.source === "builtin";
 
   return {
     ...defaults,
     templateSource: isBuiltIn ? "builtin" : "custom",
-    templateMode: isBuiltIn || template.mode === "feishu_card" ? "feishu_card" : "text",
+    templateMode: destinationTemplateFormModeFromDraft(template, isBuiltIn),
     templateText: typeof template.text === "string" ? template.text : "",
     templateCard: card.success
       ? JSON.stringify(card.data, null, 2)
       : JSON.stringify(defaultFeishuCardTemplate, null, 2),
+    templatePayload: payload.success
+      ? JSON.stringify(payload.data, null, 2)
+      : defaults.templatePayload,
     templateBindings: JSON.stringify(bindings),
     templateColorEnabled: Boolean(statusColor),
     templateColorSelector: statusColor?.select ?? defaults.templateColorSelector,
     templateColorCases: statusColor ? { ...statusColor.cases } : defaults.templateColorCases,
     templateColorFallback: statusColor?.fallback ?? defaults.templateColorFallback,
   };
+}
+
+/**
+ * Mode for a saved template. Feishu's built-in reference is a card source
+ * rather than a mode, so it maps to the card editor; anything else is read off
+ * `template.mode` and falls back to text when it names a mode the console does
+ * not edit.
+ */
+function destinationTemplateFormModeFromDraft(
+  template: JsonObject,
+  isBuiltIn: boolean,
+): DestinationTemplateFormMode {
+  if (isBuiltIn) {
+    return "feishu_card";
+  }
+
+  return isDestinationTemplateFormMode(template.mode) ? template.mode : "text";
 }
 
 export function templateBindingsJsonFromFormState(
