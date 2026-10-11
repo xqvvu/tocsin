@@ -1,4 +1,4 @@
-import type { SourceProvider } from "@vane/core";
+import type { SourceProvider } from "@tocsin/core";
 import type { z } from "zod";
 
 import type {

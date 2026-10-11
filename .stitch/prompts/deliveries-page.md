@@ -1,6 +1,6 @@
-# Vane Deliveries Operations Page
+# Tocsin Deliveries Operations Page
 
-Design the Deliveries page for Vane, a self-hosted Alert Hub console used by
+Design the Deliveries page for Tocsin, a self-hosted Alert Hub console used by
 SREs to inspect outbound notification jobs, retry failed sends, and understand
 attempt history. This is a compact operational console screen, not a marketing
 dashboard and not an incident management workflow.
@@ -9,7 +9,7 @@ dashboard and not an incident management workflow.
 
 **PAGE STRUCTURE:**
 
-1. **App Shell:** Preserve the existing Vane console shell pattern from the
+1. **App Shell:** Preserve the existing Tocsin console shell pattern from the
    Events screen: compact top bar, section navigation, active Deliveries item,
    dense work area.
 

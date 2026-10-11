@@ -1,4 +1,4 @@
-import { IanaTimeZoneSchema, LocaleSchema } from "@vane/core/presentation";
+import { IanaTimeZoneSchema, LocaleSchema } from "@tocsin/core/presentation";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
 import {

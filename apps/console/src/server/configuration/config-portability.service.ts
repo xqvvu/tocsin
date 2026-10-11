@@ -7,7 +7,7 @@ import {
   type ImportConfigurationResult,
   type ImportConfigurationCommand,
   type ImportConfigurationJsonCommand,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import {
   createPortableConfiguration,

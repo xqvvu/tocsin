@@ -1,6 +1,6 @@
 import { RiCheckboxCircleLine, RiKey2Line } from "@remixicon/react";
 
-import type { ImportConfigurationResult } from "@vane/core";
+import type { ImportConfigurationResult } from "@tocsin/core";
 
 import { CopyableCodeLine } from "#/components/common/copyable-code-line";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";

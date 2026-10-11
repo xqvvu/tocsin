@@ -6,7 +6,7 @@ import {
   DestinationListItemSchema,
   DestinationPreviewResultSchema,
   DestinationTestResultSchema,
-} from "@vane/core";
+} from "@tocsin/core";
 import * as z from "zod";
 
 export const DestinationListOutputSchema = z.array(DestinationListItemSchema);
@@ -22,7 +22,7 @@ export const DestinationTestOutputSchema = DestinationTestResultSchema;
 export const DestinationPreviewOutputSchema = DestinationPreviewResultSchema;
 
 // Adapter capabilities for the console. Declared here rather than imported from
-// "@vane/destinations" so the API package keeps no adapter dependency.
+// "@tocsin/destinations" so the API package keeps no adapter dependency.
 export const DestinationCapabilitiesSchema = z.strictObject({
   preview: z.boolean(),
   test: z.boolean(),

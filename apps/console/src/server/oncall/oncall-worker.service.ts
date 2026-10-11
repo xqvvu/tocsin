@@ -1,4 +1,4 @@
-import { redactText } from "@vane/core";
+import { redactText } from "@tocsin/core";
 
 import type { DeliveryWorkerRunResult } from "#/server/deliveries/delivery-worker.service.types";
 import { OncallExecution, type OncallExecutionOutcome } from "#/server/oncall/oncall-execution";

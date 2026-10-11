@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { createDefaultDestinationRegistry } from "@vane/destinations";
+import { createDefaultDestinationRegistry } from "@tocsin/destinations";
 
 import { openSqliteStore } from "#/infra/sqlite/store";
 import { DeliveryWorker } from "#/server/deliveries/delivery-worker.service";
@@ -307,8 +307,8 @@ describe("delivery worker", () => {
       config: {
         endpointUrl: "https://mail-gateway.example.test/send",
         to: ["sre@example.test"],
-        from: "vane@example.test",
-        subjectPrefix: "[Vane]",
+        from: "tocsin@example.test",
+        subjectPrefix: "[Tocsin]",
       },
     });
     const route = await store.routes.create({
@@ -367,11 +367,11 @@ describe("delivery worker", () => {
     expect(calls[0]?.url).toBe("https://mail-gateway.example.test/send");
     expect(JSON.parse(calls[0]?.init.body as string)).toMatchObject({
       to: ["sre@example.test"],
-      from: "vane@example.test",
-      subject: "[Vane] [Critical Firing] Checkout unavailable",
+      from: "tocsin@example.test",
+      subject: "[Tocsin] [Critical Firing] Checkout unavailable",
     });
     expect(detail?.renderedPayload).toMatchObject({
-      subject: "[Vane] [Critical Firing] Checkout unavailable",
+      subject: "[Tocsin] [Critical Firing] Checkout unavailable",
       metadata: {
         eventId: "event-1",
         destinationId: "destination-1",

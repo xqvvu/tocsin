@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { createDefaultDestinationRegistry } from "@vane/destinations";
+import { createDefaultDestinationRegistry } from "@tocsin/destinations";
 
 import {
   createDestinationDefaults,
@@ -26,9 +26,9 @@ describe("destination form", () => {
   it("switches Feishu templates between text and card modes", () => {
     renderDestinationForm({ kind: "feishu" });
 
-    expect(screen.getByRole("button", { name: "Vane built-in" }).hasAttribute("data-pressed")).toBe(
-      true,
-    );
+    expect(
+      screen.getByRole("button", { name: "Tocsin built-in" }).hasAttribute("data-pressed"),
+    ).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Custom" }));
 
     expect(screen.getByText("Available variables")).toBeTruthy();
@@ -94,9 +94,9 @@ describe("destination form", () => {
     fireEvent.click(screen.getByRole("button", { name: "Restore default card" }));
 
     expect(screen.queryByLabelText("Feishu card JSON")).toBeNull();
-    expect(screen.getByRole("button", { name: "Vane built-in" }).hasAttribute("data-pressed")).toBe(
-      true,
-    );
+    expect(
+      screen.getByRole("button", { name: "Tocsin built-in" }).hasAttribute("data-pressed"),
+    ).toBe(true);
   });
 
   it("applies dynamic status colors to a saved fixed-color card", () => {

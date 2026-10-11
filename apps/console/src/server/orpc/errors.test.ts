@@ -1,7 +1,7 @@
 import { ORPCError } from "@orpc/server";
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { CreateSourceCommandSchema } from "@vane/core";
+import { CreateSourceCommandSchema } from "@tocsin/core";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import { InvalidDeliveryStateError } from "#/infra/sqlite/repositories/delivery/delivery.interface";

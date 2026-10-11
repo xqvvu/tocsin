@@ -1,4 +1,4 @@
-import type { JsonObject } from "@vane/core";
+import type { JsonObject } from "@tocsin/core";
 import { describe, expect, it } from "vite-plus/test";
 
 import { parseFastgptProvider } from "#providers/fastgpt/index";

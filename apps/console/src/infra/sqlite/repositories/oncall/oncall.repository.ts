@@ -1,5 +1,5 @@
-import { redactText } from "@vane/core";
-import type { OncallPing } from "@vane/core";
+import { redactText } from "@tocsin/core";
+import type { OncallPing } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
 import { requireDestination } from "#/infra/sqlite/repositories/destination/destination.helpers";

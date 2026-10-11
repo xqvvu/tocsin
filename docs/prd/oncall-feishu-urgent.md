@@ -4,9 +4,9 @@ Labels: `ready-for-agent`
 
 ## Problem Statement
 
-Vane 的投递能"通知"，但不能"叫醒"。告警进入飞书群或邮箱后，是否被看到取决于人有没有在看消息。夜班与 on-call 场景下这不成立：critical 告警会被静音的群消息淹没，值班人在睡觉，事故在无人响应里恶化。
+Tocsin 的投递能"通知"，但不能"叫醒"。告警进入飞书群或邮箱后，是否被看到取决于人有没有在看消息。夜班与 on-call 场景下这不成立：critical 告警会被静音的群消息淹没，值班人在睡觉，事故在无人响应里恶化。
 
-飞书为自建应用提供加急能力：对一条应用已发送的消息，可以向指定用户发起电话呼叫（`urgent_phone`）、短信（`urgent_sms`）或应用内强提醒（`urgent_app`）。Vane 当前的飞书接入是自定义群机器人 webhook：响应里没有 `message_id`，也没有应用凭证路径，因此完全够不着这个能力。
+飞书为自建应用提供加急能力：对一条应用已发送的消息，可以向指定用户发起电话呼叫（`urgent_phone`）、短信（`urgent_sms`）或应用内强提醒（`urgent_app`）。Tocsin 当前的飞书接入是自定义群机器人 webhook：响应里没有 `message_id`，也没有应用凭证路径，因此完全够不着这个能力。
 
 另外，"应用凭证"本身缺少归宿：一个飞书应用会被多个告警群复用，凭证需要有独立的管理位置，而不是在每个通知目标里重复录入。
 
@@ -15,8 +15,8 @@ Vane 的投递能"通知"，但不能"叫醒"。告警进入飞书群或邮箱�
 三件事，互相独立但组合成完整能力：
 
 1. **飞书应用成为可复用资源。** Operator 在 console 里登记一次应用（`app_id` / `app_secret`），可以测试连通、被多个通知目标引用；凭证按现有 secret 纪律保存，被引用时不能删除。
-2. **飞书通知目标增加"应用发送模式"。** 目标可以引用一个已登记的应用 + 群 `chat_id`，卡片由应用发出，Vane 因此拿到这条消息的 `message_id`。webhook 模式保持原样，老配置零迁移。
-3. **加急成为挂在某次投递上的动作（自动 + 手动）。** 目标上配置加急接收人与 severity 门槛后：命中的投递在发送成功时自动为每个接收人创建一条加急记录（ping），Vane 对这条投递自己的消息发起 `urgent_phone`；操作者也可以在投递详情页对某一次投递手动加急。
+2. **飞书通知目标增加"应用发送模式"。** 目标可以引用一个已登记的应用 + 群 `chat_id`，卡片由应用发出，Tocsin 因此拿到这条消息的 `message_id`。webhook 模式保持原样，老配置零迁移。
+3. **加急成为挂在某次投递上的动作（自动 + 手动）。** 目标上配置加急接收人与 severity 门槛后：命中的投递在发送成功时自动为每个接收人创建一条加急记录（ping），Tocsin 对这条投递自己的消息发起 `urgent_phone`；操作者也可以在投递详情页对某一次投递手动加急。
 
 加急拥有独立的状态机、重试与去重，与卡片投递完全解耦：电话失败只重试电话，不重发群卡片；卡片重试也不会重复打电话。事件详情与投递详情能看到"谁被叫了、成没成"。
 
@@ -41,7 +41,7 @@ Vane 的投递能"通知"，但不能"叫醒"。告警进入飞书群或邮箱�
 15. As an SRE, I want a manual page to record who triggered it and when, so that manual escalations are auditable.
 16. As an SRE, I want a delivery to show whether it can be paged at all and what happened to its pages (state, receiver, attempts, last error), so that I can audit and debug paging without leaving the console.
 17. As an SRE, I want a webhook-mode delivery to explain why it cannot be paged, so that a disabled action is understandable rather than mysterious.
-18. As an SRE, I want Feishu quota and permission rejections reported as non-retryable failures with a readable message, so that Vane does not retry forever and I know what to fix.
+18. As an SRE, I want Feishu quota and permission rejections reported as non-retryable failures with a readable message, so that Tocsin does not retry forever and I know what to fix.
 19. As an SRE, I want a destination that lacks receivers, a valid app, or `chat_id` to be rejected at save time, so that a broken paging configuration never silently sits there.
 20. As an SRE, I want the destinations table to show which Feishu destinations can page, so that I can verify the paging setup at a glance.
 21. As an SRE, I want deleting a referenced Feishu app to be refused with a clear message, so that I cannot silently break paging configurations.
@@ -97,7 +97,7 @@ Vane 的投递能"通知"，但不能"叫醒"。告警进入飞书群或邮箱�
 ## Further Notes
 
 - 门槛核实（见 ADR 0009 步骤 0）已按官方接口文档 + Go/Node SDK 源码完成：凭证换 token 与缓存语义、应用向群发卡片拿 `message_id`、群卡片加急的请求形状与前置条件、错误码可否重试分类、部分成功语义，均已回写 ADR 并据此修正实现。仍需真实企业租户验证的是：端到端真实响铃、响铃时长与无人接听时的行为、发消息 `uuid` 去重键在重复请求时的响应语义（v1 因此不使用该字段）。
-- 电话加急是飞书的有配额/计费能力（管理后台 > 费用中心 > 权益数据 > 短信/电话加急），且需要自建应用开通机器人能力与 `im:message.urgent:phone` 权限、接收人在应用可用范围内、群允许该机器人发起加急；README「飞书加急部署前提」与目标表单提示已写明这些前置条件。单次呼叫的接收人上限 200（Vane 一条 ping 一个接收人，正常运维不会触顶，但保存配置时按平台上限校验）。
+- 电话加急是飞书的有配额/计费能力（管理后台 > 费用中心 > 权益数据 > 短信/电话加急），且需要自建应用开通机器人能力与 `im:message.urgent:phone` 权限、接收人在应用可用范围内、群允许该机器人发起加急；README「飞书加急部署前提」与目标表单提示已写明这些前置条件。单次呼叫的接收人上限 200（Tocsin 一条 ping 一个接收人，正常运维不会触顶，但保存配置时按平台上限校验）。
 - 一个 destination 引用一个应用；应用必须对接收人所在租户可用。
 - 状态机保留 `scheduled` / `suppressed`，使后续"没人确认就升级 / 确认后抑制"能无迁移落地。
 - 本版对 2026-10-08 的初版设计做了修订：初版是"独立加急策略实体 + 单聊载体"，修订为"应用资源 + 通知目标配置 + 投递级动作"。修订理由与被替换方案记录在 ADR 0009 的「不采用的替代方案」。

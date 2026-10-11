@@ -1,4 +1,4 @@
-import type { EventDetailDelivery } from "@vane/core";
+import type { EventDetailDelivery } from "@tocsin/core";
 
 import { deliveryFromRow } from "#/infra/sqlite/repositories/delivery/delivery.helpers";
 import type { DeliveryRow } from "#/infra/sqlite/repositories/delivery/delivery.interface";

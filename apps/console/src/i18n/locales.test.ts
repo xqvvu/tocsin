@@ -27,14 +27,14 @@ describe("locale resolution", () => {
 
 describe("locale cookie", () => {
   it("reads only supported locale cookie values", () => {
-    expect(readLocaleCookie("theme=dark; vane_locale=zh-Hans; other=1")).toBe("zh-Hans");
-    expect(readLocaleCookie("vane_locale=zh-CN")).toBe("zh-Hans");
-    expect(readLocaleCookie("vane_locale=fr-FR")).toBeNull();
+    expect(readLocaleCookie("theme=dark; tocsin_locale=zh-Hans; other=1")).toBe("zh-Hans");
+    expect(readLocaleCookie("tocsin_locale=zh-CN")).toBe("zh-Hans");
+    expect(readLocaleCookie("tocsin_locale=fr-FR")).toBeNull();
   });
 
   it("serializes a long-lived path-wide cookie", () => {
     expect(localeCookieValue("zh-Hans")).toBe(
-      "vane_locale=zh-Hans; Path=/; Max-Age=31536000; SameSite=Lax",
+      "tocsin_locale=zh-Hans; Path=/; Max-Age=31536000; SameSite=Lax",
     );
   });
 });

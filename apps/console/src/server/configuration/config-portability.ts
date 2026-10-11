@@ -17,7 +17,7 @@ import {
   type ConfigSource,
   type Configuration,
   type SecretReferences,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import type { DestinationRuntimeConfig } from "#/infra/sqlite/repositories/destination/destination.interface";
 import type { SourceRuntimeConfig } from "#/infra/sqlite/repositories/source/source.interface";
@@ -92,7 +92,7 @@ export function createPortableConfiguration(
 
 export function serializePortableConfigurationToml(config: PortableConfiguration): string {
   return [
-    "# Vane portable configuration",
+    "# Tocsin portable configuration",
     "# Secrets are omitted by default; secret_refs entries point to environment variables.",
     stringify(configurationToTomlDocument(config)).trimEnd(),
     "",
@@ -242,7 +242,7 @@ function sanitizeFeishuAppConfig(app: FeishuApp): PortableFeishuApp {
 }
 
 function envNameForFeishuAppSecret(app: FeishuApp): string {
-  return `VANE_FEISHU_APP_${slugEnvPart(app.id)}_${slugEnvPart("appSecret")}`;
+  return `TOCSIN_FEISHU_APP_${slugEnvPart(app.id)}_${slugEnvPart("appSecret")}`;
 }
 
 function sanitizeSourceConfig(source: SourceRuntimeConfig): PortableSource {
@@ -402,11 +402,11 @@ function deleteJsonPath(input: JsonObject, path: string): void {
 }
 
 function envNameForSecret(destination: DestinationRuntimeConfig, path: string): string {
-  return `VANE_DEST_${slugEnvPart(destination.id)}_${slugEnvPart(path)}`;
+  return `TOCSIN_DEST_${slugEnvPart(destination.id)}_${slugEnvPart(path)}`;
 }
 
 function envNameForSourceSecret(source: SourceRuntimeConfig, path: string): string {
-  return `VANE_SOURCE_${slugEnvPart(source.id)}_${slugEnvPart(path)}`;
+  return `TOCSIN_SOURCE_${slugEnvPart(source.id)}_${slugEnvPart(path)}`;
 }
 
 function slugEnvPart(value: string): string {

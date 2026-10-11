@@ -1,4 +1,4 @@
-import type { DestinationRegistry, DestinationSendContext } from "@vane/destinations";
+import type { DestinationRegistry, DestinationSendContext } from "@tocsin/destinations";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 import type { DeliveryBackoffOptions } from "#/server/deliveries/delivery-execution";

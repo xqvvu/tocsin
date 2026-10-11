@@ -3,7 +3,7 @@ import {
   DestinationKindSchema,
   DestinationOperationalConfigSchema,
   isSensitiveKey,
-} from "@vane/core";
+} from "@tocsin/core";
 import type {
   DestinationEditorFormDraft,
   DestinationKind,
@@ -11,7 +11,7 @@ import type {
   DestinationOperationalConfig,
   DestinationSummary,
   JsonObject,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import { fromSqliteBoolean } from "#/infra/sqlite/codecs";
 import { RecordNotFoundError } from "#/infra/sqlite/errors";

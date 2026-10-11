@@ -1,5 +1,5 @@
-import type { AlertSeverity, AlertStatus } from "@vane/core";
-import { DEFAULT_LOCALE, DEFAULT_TIME_ZONE } from "@vane/core/presentation";
+import type { AlertSeverity, AlertStatus } from "@tocsin/core";
+import { DEFAULT_LOCALE, DEFAULT_TIME_ZONE } from "@tocsin/core/presentation";
 
 import type { DestinationPresentation } from "#destinations/types";
 

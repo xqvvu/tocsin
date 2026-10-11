@@ -51,20 +51,20 @@ const input: DestinationSendInput<unknown> = {
 };
 
 describe("destination templates", () => {
-  it("interpolates allow-listed event, source, destination, Vane URL, and label fields", () => {
+  it("interpolates allow-listed event, source, destination, Tocsin URL, and label fields", () => {
     const context = DestinationTemplateEngine.createRenderContext(input, {
-      eventUrl: "https://vane.example.test/events/event-1",
+      eventUrl: "https://tocsin.example.test/events/event-1",
     });
 
     expect(
       DestinationTemplateEngine.renderText(
         context,
-        "{{event.severity}} {{event.title}} service={{event.labels.service}} source={{source.name}} url={{vane.eventUrl}}",
+        "{{event.severity}} {{event.title}} service={{event.labels.service}} source={{source.name}} url={{tocsin.eventUrl}}",
       ),
     ).toEqual({
       ok: true,
       value:
-        "critical Checkout API latency high service=checkout source=Grafana prod url=https://vane.example.test/events/event-1",
+        "critical Checkout API latency high service=checkout source=Grafana prod url=https://tocsin.example.test/events/event-1",
       diagnostics: [],
     });
   });

@@ -1,6 +1,6 @@
-# Vane Destinations Configuration Page
+# Tocsin Destinations Configuration Page
 
-Design the Destinations page for Vane, a self-hosted Alert Hub console used by
+Design the Destinations page for Tocsin, a self-hosted Alert Hub console used by
 SREs to configure outbound notification targets such as Feishu, Slack, email,
 and generic webhooks. Destinations receive delivery jobs created by Routes and
 can be tested or previewed without exposing stored secrets.
@@ -9,7 +9,7 @@ can be tested or previewed without exposing stored secrets.
 
 **PAGE STRUCTURE:**
 
-1. **App Shell:** Preserve the Vane console shell pattern from Events,
+1. **App Shell:** Preserve the Tocsin console shell pattern from Events,
    Deliveries, Sources, and Routes: compact top navigation, active Destinations
    item, dense work area, calm operational styling, and no global "Create Alert"
    action.

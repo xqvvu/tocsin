@@ -1,6 +1,6 @@
 # Destination 模板后续模式评审（#16）
 
-Parent: https://github.com/xqvvu/vane/issues/16
+Parent: https://github.com/xqvvu/tocsin/issues/16
 日期: 2026-10-10
 状态: 评审完成，未改动任何实现代码
 
@@ -42,7 +42,7 @@ manifest 侧：只有 `feishu/manifest.ts:96` 的 `type: "template"` 字段声�
 | Slack blocks | 同上（渲染器与诊断完全够用） | **根数组问题**：blocks 必须是数组，而模板字段类型 `JsonObjectSchema` 只接受对象。方案 A：模板存 `{ "blocks": [...] }` 对象，发送时取 `blocks` 字段，核心零改动；方案 B：新增接受 `JsonValue` 根的模板 schema，属核心改动 |
 | Email subject / text / HTML | `interpolateTemplateString`、`TemplateContext v1`、诊断 | 一个 destination 需要**三个模板槽**（subject、text body、html body），而当前模型是"每个 config 一个 `template` 字段、由 mode 决定形态"。subject 恒为文本、不该有 mode 选择器，现有联合类型无法表达 |
 
-`TemplateContext v1` **不需要新增任何字段**：三项需求的变量面（事件、来源、目的地、presentation、`vane.eventUrl`、已脱敏 payload 标量）已被白名单覆盖。
+`TemplateContext v1` **不需要新增任何字段**：三项需求的变量面（事件、来源、目的地、presentation、`tocsin.eventUrl`、已脱敏 payload 标量）已被白名单覆盖。
 
 诊断形状 **不需要改动**：`path` 已经是自由字符串，能表达 `template.card.elements[2].fields[0].text.text` 这类别名路径，扩展到其他模式同样够用。
 
@@ -69,7 +69,7 @@ adapter manifest 元数据 **需要改动**：三个通道都要补 `modes` 声�
 **新增风险（仅 #17 HTML）**：仓库已有一个 HTML 实体转义函数 `escapeHtml`（`packages/destinations/src/email/payload.ts`，转义 `& < > " '`），但目前是模块内私有、且只用于把渲染后的纯文本包进 `<pre>` 自动生成 HTML。它**尚未接入插值链路**。因此 #17b 的阻塞点不是"没有转义能力"，而是"HTML body 模板的转义语义如何定义"：
 
 - 与飞书 card JSON 模板类比——JSON 模板里"结构由运算符编写、变量值插入字符串叶子"已经是被验证的模型。HTML body 模板应沿用同一信任模型：**模板标记本身视为运算符可信内容（按原样输出），但每个插值变量的值默认经 `escapeHtml` 转义后再插入**。这样 `{{event.title}}` 带 `<script>` 不会形成注入，同时运算符仍能自由编写 `<table>` 等结构。
-- 该策略要求把 `escapeHtml` 从 email 私有函数提升为可复用工具（放 `@vane/core` 或 destinations 共享层），并给插值层增加一个"输出语境"参数（text / html），或在 email 侧提供 `renderTextHtmlEscaped` 变体。属于可控的局部改动，不触碰 TemplateContext 白名单。
+- 该策略要求把 `escapeHtml` 从 email 私有函数提升为可复用工具（放 `@tocsin/core` 或 destinations 共享层），并给插值层增加一个"输出语境"参数（text / html），或在 email 侧提供 `renderTextHtmlEscaped` 变体。属于可控的局部改动，不触碰 TemplateContext 白名单。
 - 禁止"可信原文"退出方式（如 `raw.` 前缀）：当前 `raw` 命名空间被明确拒绝，为 HTML 单独开口会破坏安全边界一致性。若运算符确需插入富文本，应改用结构化模板而非原文退出。
 
 结论：#17b 可以在采用"变量值默认转义 + 模板结构可信"这一明确语义后实施，无需再等待额外的安全策略批准；但这层语义必须写进 PRD 与 UI 文案，并在测试中覆盖"变量含 HTML 特殊字符"的用例。
@@ -83,7 +83,7 @@ adapter manifest 元数据 **需要改动**：三个通道都要补 `modes` 声�
 
 ## 未解决项
 
-1. `escapeHtml` 的提升位置——放 `@vane/core`（供其他通道复用）还是 destinations 共享层。实现 #17b 时定，属局部决策，不阻塞评审通过。
+1. `escapeHtml` 的提升位置——放 `@tocsin/core`（供其他通道复用）还是 destinations 共享层。实现 #17b 时定，属局部决策，不阻塞评审通过。
 2. Slack blocks 的根数组方案取舍（#18a 对象包装 vs #18b 放宽核心 schema）——本评审推荐 18a。
 3. 一个 destination 出现多个模板字段时的 preview 呈现方式（#17）——方向可行（诊断按 path 前缀区分），实现时验证。
 

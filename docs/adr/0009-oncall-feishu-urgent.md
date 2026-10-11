@@ -11,7 +11,7 @@
 飞书平台侧的硬约束（2026-10-08 由官方 Go SDK `larksuite/oapi-sdk-go` 的 `im/v1` samples 首次核实；2026-10-10 再对照官方接口文档与 Go/Node 两套 SDK 源码逐条复核，修订见下）：
 
 1. 加急是 `PATCH https://open.feishu.cn/open-apis/im/v1/messages/:message_id/urgent_phone`（同类还有 `urgent_app` 应用内强提醒、`urgent_sms` 短信），**请求体是扁平的 `{ user_id_list: string[] }`**，query 必带 `user_id_type`（`open_id` | `union_id` | `user_id`，默认 `open_id`），`Content-Type` 固定 `application/json; charset=utf-8`。它**作用于一条已存在的 message**，必须先有 `message_id`。（初版误记为 `{ urgent_receivers: { user_id_list } }`：那是 Go SDK 的 body 模型类型名 `UrgentReceivers`，序列化时并不包一层键 —— `service/im/v1/model.go` 把该结构体直接作为 `apiReq.Body`。）
-2. 该调用需要自建应用凭证（`app_id` + `app_secret` → `tenant_access_token`）。Vane 当前 `feishu` destination 用的是自定义群机器人 webhook（`webhookUrl` + 签名密钥），响应里只有 `{code, msg}`，拿不到 `message_id`：**webhook 消息无法被加急，能被加急的只有应用自己发出的消息**。
+2. 该调用需要自建应用凭证（`app_id` + `app_secret` → `tenant_access_token`）。Tocsin 当前 `feishu` destination 用的是自定义群机器人 webhook（`webhookUrl` + 签名密钥），响应里只有 `{code, msg}`，拿不到 `message_id`：**webhook 消息无法被加急，能被加急的只有应用自己发出的消息**。
 3. 应用向群发消息需要机器人已在群内；`chat_id` 由此获得。加急有配额/计费（电话按量）。
 
 2026-10-10 官方文档复核补充（逐条来自接口文档正文，非推断）：
@@ -20,9 +20,9 @@
 - **使用限制**：只能加急当前机器人自己发送的消息；单次 `user_id_list` 长度 ≤ 200；被叫用户未读加急总数 ≤ 200（超出报 230023，需用户读消息）；不支持 `bm_` 开头的批量消息；折叠会话内的加急只做应用内推送。
 - **凭证语义**：`tenant_access_token` 最长 2 h；剩余有效期 ≥ 30 min 时再调换 token 接口返回**同一个** token，< 30 min 才返回新 token。所以按凭证缓存、提前刷新是正确形状，每条消息换一次 token 只会撞频控。
 - **业务错误码与 HTTP 状态**：加急接口把参数、机器人不在群、权限、额度等**全部**以 HTTP 400 + 业务码返回；限流是 HTTP 429（旧接口为 400）+ `code 99991400`，并给出 `x-ogw-ratelimit-reset` 建议等待秒数。也就是说 **HTTP 状态既不能决定可否重试、也不能决定错误类型，必须看业务码**：带业务码的 HTTP 400 是平台拒绝（`target_rejected`），只有解析不出业务码（或响应自称成功却带失败状态）才是真正的 HTTP/传输故障（`http_error`）。配额/权限类（230024、230052、230027、99991672、99991403、230110、232009、230098、230013、230012、230006、230002、230001）重试不可能改变结果；230023 与 99991400/11232/11233 是暂时性的。
-- **部分成功**：请求体里有无效 ID 时接口返回 `code 0` + `data.invalid_user_id_list`，只加急有效 ID；全部无效才 230001。Vane 一条 ping 一个接收人，若该接收人落在 `invalid_user_id_list` 里就是"没打通"，不能记成 `fired`。
+- **部分成功**：请求体里有无效 ID 时接口返回 `code 0` + `data.invalid_user_id_list`，只加急有效 ID；全部无效才 230001。Tocsin 一条 ping 一个接收人，若该接收人落在 `invalid_user_id_list` 里就是"没打通"，不能记成 `fired`。
 - **频控与发送前置**：加急接口频控 1000 次/分钟、50 次/秒（等级 4）；发消息同为 1000/分、50/秒；自定义群机器人 webhook 是单租户单机器人 100 次/分钟、5 次/秒，且官方提示避开 10:00/17:30 等整点半点，否则可能出现 11232 限流导致消息发送失败。
-- **电话内容**：加急概述写明电话播报文案固定为 `[成员名] 给你发了一条加急消息，请打开飞书查看详情`，Vane 无法把标题或正文塞进电话语音；电话只承担叫醒，上下文仍在群里那条卡片上。
+- **电话内容**：加急概述写明电话播报文案固定为 `[成员名] 给你发了一条加急消息，请打开飞书查看详情`，Tocsin 无法把标题或正文塞进电话语音；电话只承担叫醒，上下文仍在群里那条卡片上。
 - **权限**：电话加急需 `im:message.urgent:phone`（或历史版本 `im:message.urgent:phone_send`）；`user_id` 形态的接收人还需 `contact:user.employee_id:readonly`；应用发消息需 `im:message` 或 `im:message:send_as_bot`。文档推荐使用 `open_id`。
 
 对现有代码的关键发现（决定下面的取舍）：
@@ -33,7 +33,7 @@
 
 ## 决定
 
-1. **飞书应用是一等资源。** 新表 `feishu_apps(id, name UNIQUE, app_id, app_secret, created_at, updated_at)`；console 新增「飞书应用」管理页（列表 + 新建/编辑/删除 + 测试）。测试 = 用 `app_id`/`app_secret` 换 `tenant_access_token` 验证凭证有效。凭证沿用现有 secret 纪律：形如 `appSecret` 的路径按 `isSensitiveKey`/redaction helper 脱敏，不回显进 DTO，不进 TOML 明文（导出为 env ref，命名对齐 `VANE_DEST_*`，即 `VANE_FEISHU_APP_<id>_<path>`）；被 destination 引用时拒绝删除，并在错误信息里列出引用方。
+1. **飞书应用是一等资源。** 新表 `feishu_apps(id, name UNIQUE, app_id, app_secret, created_at, updated_at)`；console 新增「飞书应用」管理页（列表 + 新建/编辑/删除 + 测试）。测试 = 用 `app_id`/`app_secret` 换 `tenant_access_token` 验证凭证有效。凭证沿用现有 secret 纪律：形如 `appSecret` 的路径按 `isSensitiveKey`/redaction helper 脱敏，不回显进 DTO，不进 TOML 明文（导出为 env ref，命名对齐 `TOCSIN_DEST_*`，即 `TOCSIN_FEISHU_APP_<id>_<path>`）；被 destination 引用时拒绝删除，并在错误信息里列出引用方。
 
 2. **飞书 destination 增加应用发送模式。** config 增加 `sendMode: "webhook" | "app"`（默认 `webhook`，现有配置零迁移）：app 模式引用 `{ appRef, chatId }`，卡片经 `POST /im/v1/messages` 由应用发出，响应 `message_id` 写入 `providerReference`。预览、测试、模板渲染、webhook 模式全部保持原样共用。运维前提写进表单提示与部署文档：应用机器人必须已加入目标群，`chat_id` 从群信息获得。
 
@@ -78,8 +78,8 @@
 
 ## 后果
 
-- **spike 进度**：②③④的**协议形状**已按官方文档 + Go/Node SDK 源码核实并回写本 ADR（见「背景」的 2026-10-10 复核补充）：token 换取与缓存语义、发消息拿 `message_id`、群卡片加急的请求体与前置条件、错误码可否重试分类、部分成功的 `invalid_user_id_list`。仍需要真实企业凭证才能确认的三件事不阻塞本 ADR，留作运维验证清单：①端到端**真实响铃**（依赖企业已开通加急额度与机器人已入群）；②电话的实际响铃时长与无人接听时的行为（加急概述写死了电话播报文案，但未说明响铃多久、不接听如何结束）；③发消息时 `uuid` 请求去重键的**响应语义**（文档只说明"相同 uuid 1 小时内至多成功发送一条"，未说明重复请求返回的 `code`/`message_id`，因此 Vane v1 不猜测、不发送该字段）。
-- **v1 不使用 `x-ogw-ratelimit-reset` 精确等待**：频控文档建议按该响应头的秒数延迟后重试来解除限频。Vane 的 transport 接口（`FetchLikeResponse`）只暴露 `ok`/`status`/`text()`，且加急退避刻意复用 delivery 的指数退避（30 s 起、15 min 封顶、有限次数），已经覆盖分钟级窗口；把响应头穿透到队列的 `retryAt` 计算需要同时改 transport 接口与 urgency 结果类型，收益不足以在本切片付这笔成本。
+- **spike 进度**：②③④的**协议形状**已按官方文档 + Go/Node SDK 源码核实并回写本 ADR（见「背景」的 2026-10-10 复核补充）：token 换取与缓存语义、发消息拿 `message_id`、群卡片加急的请求体与前置条件、错误码可否重试分类、部分成功的 `invalid_user_id_list`。仍需要真实企业凭证才能确认的三件事不阻塞本 ADR，留作运维验证清单：①端到端**真实响铃**（依赖企业已开通加急额度与机器人已入群）；②电话的实际响铃时长与无人接听时的行为（加急概述写死了电话播报文案，但未说明响铃多久、不接听如何结束）；③发消息时 `uuid` 请求去重键的**响应语义**（文档只说明"相同 uuid 1 小时内至多成功发送一条"，未说明重复请求返回的 `code`/`message_id`，因此 Tocsin v1 不猜测、不发送该字段）。
+- **v1 不使用 `x-ogw-ratelimit-reset` 精确等待**：频控文档建议按该响应头的秒数延迟后重试来解除限频。Tocsin 的 transport 接口（`FetchLikeResponse`）只暴露 `ok`/`status`/`text()`，且加急退避刻意复用 delivery 的指数退避（30 s 起、15 min 封顶、有限次数），已经覆盖分钟级窗口；把响应头穿透到队列的 `retryAt` 计算需要同时改 transport 接口与 urgency 结果类型，收益不足以在本切片付这笔成本。
 - **v1 未使用 `uuid` 去重键**：卡片重复投递由 delivery 自己的状态机与去重键抑制，加急重复由 ping 去重窗口抑制，因此不依赖平台侧去重。若将来需要平台侧兜底，需要先 spike `uuid` 的重复响应形状。
 - 电话加急按量计费、有平台配额；配额/权限错误码解析属于 adapter（映射为不可重试），per-channel 限流仍按 0002 留给 worker 架构议题。
 - 应用机器人必须在目标群内（`chat_id` 前提），群设置还要允许该机器人发起加急，应用还需开通机器人能力与 `im:message.urgent:phone` 权限；这些前置条件和常见错误码（230002 机器人不在群、230006 未启用机器人能力、230052 仅群主/管理员可加急、99991672 未申请权限、230024 额度超限）已写进 README 部署前提、目标表单提示与 adapter 的错误提示。
@@ -97,7 +97,7 @@
 
 **步骤 1：provider reference 地基（决定 5 的前件）—— 已完成（2026-10-08）**
 
-已合并：`packages/core` 的 `ProviderReferenceSchema`、`@vane/destinations` send result 的可选 `providerReference`、`deliveries.provider_ref_type / provider_ref_value` 两列、`markSucceeded` 透传、`DeliveryDetail.providerReference` 与 wire schema。`vp check`、`vp run -r test`、`vp run -r build` 全绿。
+已合并：`packages/core` 的 `ProviderReferenceSchema`、`@tocsin/destinations` send result 的可选 `providerReference`、`deliveries.provider_ref_type / provider_ref_value` 两列、`markSucceeded` 透传、`DeliveryDetail.providerReference` 与 wire schema。`vp check`、`vp run -r test`、`vp run -r build` 全绿。
 
 **步骤 2：飞书应用资源（决定 1、10）—— 已完成（PR #32）**
 
@@ -106,7 +106,7 @@
 - `infra/sqlite/repositories/feishu-app/`（`*.interface.ts` / `*.helpers.ts` / `*.repository.ts`）并接入 `store.ts`
 - `server/integrations/feishu-app.service.ts` + `.types.ts`：CRUD、凭证测试（注入 fetch）、被引用时拒删（引用查询走 destination 配置扫描）
 - `packages/api` 的 `integrations` contract + `server/orpc/features/integrations/router.ts` + `server/orpc/router.ts` 注册
-- `server/configuration/`：portability 的导出/导入与 env ref（`VANE_FEISHU_APP_<id>_<path>`），旧文档导入测试
+- `server/configuration/`：portability 的导出/导入与 env ref（`TOCSIN_FEISHU_APP_<id>_<path>`），旧文档导入测试
 - `features/integrations/`（api / model / ui）：列表、表单、测试按钮；i18n `integrations.*`
 - `AGENTS.md` 的 `features` 目录清单加 `integrations`
 
@@ -132,7 +132,7 @@
 - `infra/sqlite/migrate/schema.ts`：`oncall_pings`、`oncall_ping_dedupe_keys`（含索引）；表类型与迁移测试同步
 - `infra/sqlite/repositories/oncall/`：`enqueueForDelivery`（同事务写去重键，命中窗口返回 `null`）、`reclaimStaleRunning`、`claimNext`（到期即认领）、`markFired`、`markFailed`（由 `retryAt` 是否为 `null` 决定重回队列还是终态）、`listForDelivery`、`get`
 - `server/oncall/oncall.service.ts` + `.types.ts`：自动入队判断（firing + severity 门槛 + providerReference）、执行（解析 appRef → 调 `UrgencyRegistry.ping`）、退避复用 `DeliveryBackoffOptions`；不 throw `ORPCError`
-- `server/oncall/oncall-worker.service.ts` + `.types.ts`；`container.ts` 增 `createOncallService` / `ensureOncallWorkerRunner`；日志 `vane.oncall`
+- `server/oncall/oncall-worker.service.ts` + `.types.ts`；`container.ts` 增 `createOncallService` / `ensureOncallWorkerRunner`；日志 `tocsin.oncall`
 - `server/deliveries/delivery-execution.ts`：成功分支注入 `enqueueUrgentPings`（可选依赖，缺省行为不变）
 - `packages/core` 的 `DeliveryDetail.pings` 投影 + `packages/api` wire schema；`features/deliveries` 详情页 pings 区块
 - `AGENTS.md` 的 `server/` 目录清单加 `oncall`
@@ -146,7 +146,7 @@
 
 **步骤 7：文档收尾 —— 已完成（本 PR）**
 
-已完成（本 PR）：`docs/prd/post-mvp-planning.md` 把该方向从「已认领」移入「已交付增量」并保留删除语义；`docs/architecture/{application-container,sqlite-store,observability,adapter-extensibility}.md` 增补 `feishu_apps`/`oncall_pings`/`oncall_ping_dedupe_keys` 三表与仓储、urgency registry 与 oncall runner、`vane.oncall`/`vane.worker.oncall` category；README 补「飞书加急部署前提」小节（机器人入群与加急权限、`chat_id` 来源、额度/计费与频控）；本 ADR 状态转「接受」并回写步骤 0 结论；`docs/adr/0002` 的 urgency 家族标注为已实现。
+已完成（本 PR）：`docs/prd/post-mvp-planning.md` 把该方向从「已认领」移入「已交付增量」并保留删除语义；`docs/architecture/{application-container,sqlite-store,observability,adapter-extensibility}.md` 增补 `feishu_apps`/`oncall_pings`/`oncall_ping_dedupe_keys` 三表与仓储、urgency registry 与 oncall runner、`tocsin.oncall`/`tocsin.worker.oncall` category；README 补「飞书加急部署前提」小节（机器人入群与加急权限、`chat_id` 来源、额度/计费与频控）；本 ADR 状态转「接受」并回写步骤 0 结论；`docs/adr/0002` 的 urgency 家族标注为已实现。
 
 ## 不采用的替代方案
 

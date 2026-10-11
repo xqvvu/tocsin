@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { RouteDefinition } from "@vane/core";
+import type { RouteDefinition } from "@tocsin/core";
 
 import { destinationRouteCoverage } from "#/features/destinations/model/destination-route-coverage";
 

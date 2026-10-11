@@ -4,8 +4,8 @@ import type {
   JsonValue,
   NormalizedEvent,
   RouteMatchResult,
-} from "@vane/core";
-import type { IsoDateTimeString } from "@vane/core";
+} from "@tocsin/core";
+import type { IsoDateTimeString } from "@tocsin/core";
 
 import type { SqliteJsonText } from "#/infra/sqlite/codecs";
 

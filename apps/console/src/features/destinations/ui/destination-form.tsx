@@ -8,8 +8,12 @@ import {
 import { useForm } from "@tanstack/react-form";
 import * as React from "react";
 
-import type { AdapterConfigHelp, AdapterTemplateConfigField, FeishuAppListItem } from "@vane/core";
-import { defaultFeishuCardTemplate as defaultFeishuCardTemplateObject } from "@vane/destinations/feishu/default-card";
+import type {
+  AdapterConfigHelp,
+  AdapterTemplateConfigField,
+  FeishuAppListItem,
+} from "@tocsin/core";
+import { defaultFeishuCardTemplate as defaultFeishuCardTemplateObject } from "@tocsin/destinations/feishu/default-card";
 
 import { Button } from "#/components/ui/button";
 import {
@@ -534,7 +538,7 @@ export function DestinationForm({
             label: t("destinations.form.from"),
             name: "from",
             type: "email",
-            placeholder: "vane@example.com",
+            placeholder: "tocsin@example.com",
             required: requiresSecrets,
             description: t("destinations.form.fromDescription"),
           })}
@@ -548,7 +552,7 @@ export function DestinationForm({
           {renderTextField({
             label: t("destinations.form.subjectPrefix"),
             name: "subjectPrefix",
-            placeholder: "[Vane]",
+            placeholder: "[Tocsin]",
             description: t("destinations.form.subjectPrefixDescription"),
           })}
           {renderHeaderLinesField()}
@@ -1136,7 +1140,7 @@ const templateVariablePaths = [
   "presentation.labels.severity",
   "presentation.labels.source",
   "presentation.labels.occurredAt",
-  "vane.eventUrl",
+  "tocsin.eventUrl",
 ];
 
 const defaultFeishuCardTemplate = JSON.stringify(defaultFeishuCardTemplateObject, null, 2);

@@ -1,4 +1,4 @@
-import type { JsonObject } from "@vane/core";
+import type { JsonObject } from "@tocsin/core";
 
 export function parseFeishuResult(responseBody: string): JsonObject | null {
   try {

@@ -3,7 +3,7 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import type { ImportConfigurationResult } from "@vane/core";
+import type { ImportConfigurationResult } from "@tocsin/core";
 
 import { useSettingsWorkspace } from "#/features/configuration/ui/use-settings-workspace";
 
@@ -101,7 +101,7 @@ describe("settings workspace", () => {
     });
 
     expect(testState.downloadTextFile).toHaveBeenCalledWith({
-      filename: "vane.toml",
+      filename: "tocsin.toml",
       text: "downloaded\n",
       type: "application/toml;charset=utf-8",
     });

@@ -3,9 +3,9 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import larkIconUrl from "@vane/destinations/assets/destination-icons/lark.svg?url";
-import slackIconUrl from "@vane/destinations/assets/destination-icons/slack.svg?url";
-import webhookIconUrl from "@vane/destinations/assets/destination-icons/webhook.svg?url";
+import larkIconUrl from "@tocsin/destinations/assets/destination-icons/lark.svg?url";
+import slackIconUrl from "@tocsin/destinations/assets/destination-icons/slack.svg?url";
+import webhookIconUrl from "@tocsin/destinations/assets/destination-icons/webhook.svg?url";
 
 import type { DestinationListItem } from "#/features/destinations/ui/destination-ui-types";
 import { DestinationsSection } from "#/features/destinations/ui/destinations-section";

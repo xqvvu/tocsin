@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { ProviderReference } from "@vane/core";
-import type { JsonObject } from "@vane/core";
-import type { UrgencyRegistry } from "@vane/destinations";
+import type { ProviderReference } from "@tocsin/core";
+import type { JsonObject } from "@tocsin/core";
+import type { UrgencyRegistry } from "@tocsin/destinations";
 
 import { openSqliteStore } from "#/infra/sqlite/store";
 import type { DestinationConfigResolver } from "#/server/integrations/destination-config-resolver";

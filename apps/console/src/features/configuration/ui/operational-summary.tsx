@@ -1,4 +1,4 @@
-import type { DestinationSummary, RouteDefinition, SourceSummary } from "@vane/core";
+import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";

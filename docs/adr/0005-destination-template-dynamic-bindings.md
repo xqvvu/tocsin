@@ -56,7 +56,7 @@ resolved 等多份完整模板，会造成结构重复、修改漂移和预览�
    已声明但未使用的 binding 产生 warning。
 8. 不允许 `event.labels.*`、多字段 selector、优先级、布尔表达式、嵌套 binding 或条件块。
 
-binding 引擎是 `@vane/destinations` 的共享模板基础设施。Adapter 可以对平台属性增加更窄的值
+binding 引擎是 `@tocsin/destinations` 的共享模板基础设施。Adapter 可以对平台属性增加更窄的值
 约束，例如 Feishu 颜色控件只接受飞书支持的颜色。第一阶段只有 Feishu `feishu_card` 暴露动态
 属性 UI；其他 Destination 不增加 UI 或默认 binding。
 
@@ -95,7 +95,7 @@ Preview 后显式保存才会生效。
 
 ### 通用条件或表达式语言
 
-`if/else`、管道、函数或脚本会扩大安全和调试面，并使 Vane 向低代码工作流平台漂移。当前需求
+`if/else`、管道、函数或脚本会扩大安全和调试面，并使 Tocsin 向低代码工作流平台漂移。当前需求
 只需要有限的标量映射，不足以证明这类复杂度。
 
 ### 硬编码 `event.statusColor`

@@ -4,7 +4,7 @@ import { COMMON_ERROR_STATUS_MAP, ORPCError, os } from "@orpc/server";
 import { elapsedMs } from "#/lib/utils";
 import { safeErrorProperties } from "#/server/runtime/log-safety";
 
-const orpcLogger = getLogger(["vane", "orpc"]);
+const orpcLogger = getLogger(["tocsin", "orpc"]);
 
 /**
  * Logs failed oRPC procedure calls with the resolved procedure path and code.

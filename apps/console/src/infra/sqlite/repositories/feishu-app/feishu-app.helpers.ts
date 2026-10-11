@@ -1,4 +1,4 @@
-import type { FeishuApp, FeishuAppSummary } from "@vane/core";
+import type { FeishuApp, FeishuAppSummary } from "@tocsin/core";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import type { FeishuAppRow } from "#/infra/sqlite/repositories/feishu-app/feishu-app.interface";

@@ -8,7 +8,7 @@ import {
   type RotateSourceTokenCommand,
   type SourceSummary,
   type UpdateSourceCommand,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 import {

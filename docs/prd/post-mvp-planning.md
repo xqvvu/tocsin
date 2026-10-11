@@ -1,11 +1,11 @@
 # Post-MVP Planning
 
-本文档是 Vane MVP baseline 完成后的下一轮产品讨论入口。它不是承诺列表，也不是 issue
+本文档是 Tocsin MVP baseline 完成后的下一轮产品讨论入口。它不是承诺列表，也不是 issue
 拆分结果；它用于把候选方向收拢到可讨论、可取舍、可产出 PRD 的形态。
 
 ## 背景
 
-Vane 的 MVP 已经建立了自托管 Alert Hub 的基本闭环：
+Tocsin 的 MVP 已经建立了自托管 Alert Hub 的基本闭环：
 
 - 告警源接入与认证。
 - Provider 解析与规范化告警。
@@ -17,7 +17,7 @@ Vane 的 MVP 已经建立了自托管 Alert Hub 的基本闭环：
 - Docker runtime 与 health/readiness endpoint。
 
 下一阶段应该从“继续补 MVP”切换为“选择一个明确产品方向，写新的 PRD，再拆 issue”。每个新
-PRD 都应该保持 Vane 的核心约束：单进程、SQLite-first、自托管、运维工具、非 SaaS、非通用工作流引擎。
+PRD 都应该保持 Tocsin 的核心约束：单进程、SQLite-first、自托管、运维工具、非 SaaS、非通用工作流引擎。
 
 ## 讨论原则
 
@@ -35,10 +35,10 @@ PRD 都应该保持 Vane 的核心约束：单进程、SQLite-first、自托管�
 - FastGPT 模型探测 provider：新增 `fastgpt` Source 解析器，接收 FastGPT 模型状态探测 webhook
   （`model_status_error` / `model_status_recovered`），把 red/yellow/green 探测状态映射为
   critical/warning/info severity 与 firing/resolved status，并以 `modelId` 作为 fingerprint。
-  接入方式沿用告警源接入 Token：FastGPT 侧 `webhookToken` 填 Vane 的接入 Token，
+  接入方式沿用告警源接入 Token：FastGPT 侧 `webhookToken` 填 Tocsin 的接入 Token，
   以 `Authorization: Bearer` 发送。
 - [On-call 加急（飞书电话呼叫）](./oncall-feishu-urgent.md)：飞书自建应用成为可复用资源
-  （登记、测试、被引用时拒删、导出为 `VANE_FEISHU_APP_<id>_APPSECRET` 环境变量引用）；飞书
+  （登记、测试、被引用时拒删、导出为 `TOCSIN_FEISHU_APP_<id>_APPSECRET` 环境变量引用）；飞书
   通知目标新增应用发送模式（引用应用 + 群 `chat_id`，卡片由应用发出并把 `message_id` 记为投递的
   provider reference）与加急配置（severity 门槛、`userIdType`、呼叫对象）；命中的 firing 投递自动
   为每个接收人建一条加急记录，投递详情也可手动加急。加急有独立状态机、指数退避与
@@ -48,7 +48,7 @@ PRD 都应该保持 Vane 的核心约束：单进程、SQLite-first、自托管�
 
 ## 当前内测配置删除策略
 
-在公开发布前，Vane 的本地 SQLite 数据仍视为可重建的内测数据。告警源、路由和通知目标的 UI
+在公开发布前，Tocsin 的本地 SQLite 数据仍视为可重建的内测数据。告警源、路由和通知目标的 UI
 删除操作采用硬删除语义：
 
 - 删除告警源会删除该告警源、它接收到的 Events、相关 Deliveries / attempts / dedupe keys
@@ -197,7 +197,7 @@ PRD 都应该保持 Vane 的核心约束：单进程、SQLite-first、自托管�
 
 - 它直接把 MVP 的文本模板能力收敛到结构化 `template` model。
 - 飞书、Slack、Email、generic webhook 都会从中受益。
-- 它能保持在现有 `@vane/destinations` 和 console feature 边界内，不需要改变部署架构。
+- 它能保持在现有 `@tocsin/destinations` 和 console feature 边界内，不需要改变部署架构。
 - 它会自然产生清晰 issue：core schema、template renderer、Feishu card、Slack blocks、Email HTML、UI preview、TOML、测试。
 
 第二优先级建议是 **Route Authoring 与 Explain**，因为它提升用户对告警路由的信任。

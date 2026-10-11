@@ -9,7 +9,7 @@ import {
   PreviewDestinationUpdateCommandSchema,
   TestDestinationCommandSchema,
   UpdateDestinationCommandSchema,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import { dashboardAuth } from "../errors/dashboard-auth";
 import { resourceErrors } from "../errors/resources";

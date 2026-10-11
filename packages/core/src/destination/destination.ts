@@ -113,7 +113,7 @@ export const DestinationTemplateContextSchema = z.object({
     timeZone: z.string(),
     labels: z.record(z.string(), z.string()),
   }),
-  vane: z.object({
+  tocsin: z.object({
     eventUrl: z.string(),
   }),
   payload: JsonValueSchema,

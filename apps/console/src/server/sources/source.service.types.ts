@@ -1,4 +1,4 @@
-import type { SourceSummary } from "@vane/core";
+import type { SourceSummary } from "@tocsin/core";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 

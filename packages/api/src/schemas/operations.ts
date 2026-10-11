@@ -16,7 +16,7 @@ import {
   RouteDefinitionSchema,
   RouteMatchResultSchema,
   SourceSummarySchema,
-} from "@vane/core";
+} from "@tocsin/core";
 import * as z from "zod";
 
 import { NumberedPageSchema, PageSchema } from "./shared";
@@ -24,7 +24,7 @@ import { NumberedPageSchema, PageSchema } from "./shared";
 /**
  * Event and delivery operations contract.
  *
- * These schemas mirror the read projections in `@vane/core` operations types.
+ * These schemas mirror the read projections in `@tocsin/core` operations types.
  * Every payload stays redaction-safe: raw provider payloads are represented as
  * JSON values, and destination metadata is built from operational config only.
  */

@@ -1,6 +1,6 @@
 # 服务端可观测日志
 
-本文档定义 Vane 服务端结构化日志的运行时形状、安全规则和扩展方式。当前实现使用
+本文档定义 Tocsin 服务端结构化日志的运行时形状、安全规则和扩展方式。当前实现使用
 LogTape，保持单进程、stdout/stderr-first 的自托管部署形态；不要求额外日志服务、数据库表或
 sidecar。
 
@@ -9,8 +9,8 @@ sidecar。
 日志运行时分为三个职责：
 
 1. `apps/console/src/server.ts` 在 server entry 启动时调用
-   `logger()`，随后初始化 SQLite store，并通过 `system-information.ts` 逐项记录 Vane package 版本、
-   Node 版本、操作系统、架构、运行环境、SQLite runtime 版本和 `better-sqlite3` 驱动名称。Vane
+   `logger()`，随后初始化 SQLite store，并通过 `system-information.ts` 逐项记录 Tocsin package 版本、
+   Node 版本、操作系统、架构、运行环境、SQLite runtime 版本和 `better-sqlite3` 驱动名称。Tocsin
    版本从仓库根 `package.json` 静态导入并随 server bundle 打包；SQLite runtime 版本来自实际连接
    执行的 `sqlite_version()`，不是 npm package 版本。应用只配置 LogTape 一次；library 和 adapter
    不调用 `configure()`。
@@ -46,7 +46,7 @@ Console 内的业务模块直接使用 LogTape 原生分类 logger，不新增 `
 
 oRPC procedure 层由 `server/orpc/procedure-logging.ts`（挂在根 `os` 最外层）补充 HTTP 层看不到的
 信息：procedure path、翻译后的 `ORPCError.code` 和 procedure 耗时。它只记录失败——成功的浏览器
-调用已经有 `vane.http` 访问日志（procedure 路径就在 URL 尾部），而 SSR 进程内调用
+调用已经有 `tocsin.http` 访问日志（procedure 路径就在 URL 尾部），而 SSR 进程内调用
 （`createRouterClient`）不经过 HTTP handler，失败时原本完全没有日志。由于 `withContext()` 包住
 整个请求调用链（含 SSR 分支），这些记录自动带上同一个 `requestId`，与 HTTP 行可以关联。
 Severity 跟随错误映射的 HTTP status：4xx 记 `warning`，5xx 与未翻译故障记 `error`。
@@ -57,14 +57,14 @@ Severity 跟随错误映射的 HTTP status：4xx 记 `warning`，5xx 与未翻�
 
 | Category               | 责任                                                      |
 | ---------------------- | --------------------------------------------------------- |
-| `vane.runtime`         | 日志运行时启动、系统信息等进程级事实。                    |
-| `vane.http`            | HTTP 请求完成、失败、status 和 duration。                 |
-| `vane.orpc`            | oRPC procedure 失败：procedure path、oRPC code、耗时。    |
-| `vane.intake`          | Webhook 接入接受/拒绝、parser failure、Event 与投递计数。 |
-| `vane.delivery`        | 单次 Delivery 成功、失败、重试和 destination 稳定结果。   |
-| `vane.worker.delivery` | 后台 delivery worker 批次摘要和基础设施失败。             |
-| `vane.oncall`          | 加急呼叫（ping）触发、入队、派发、fired/failed 与退避重试；含平台错误码与运维提示。 |
-| `vane.worker.oncall`   | 后台加急 worker 批次摘要和基础设施失败。                  |
+| `tocsin.runtime`         | 日志运行时启动、系统信息等进程级事实。                    |
+| `tocsin.http`            | HTTP 请求完成、失败、status 和 duration。                 |
+| `tocsin.orpc`            | oRPC procedure 失败：procedure path、oRPC code、耗时。    |
+| `tocsin.intake`          | Webhook 接入接受/拒绝、parser failure、Event 与投递计数。 |
+| `tocsin.delivery`        | 单次 Delivery 成功、失败、重试和 destination 稳定结果。   |
+| `tocsin.worker.delivery` | 后台 delivery worker 批次摘要和基础设施失败。             |
+| `tocsin.oncall`          | 加急呼叫（ping）触发、入队、派发、fired/failed 与退避重试；含平台错误码与运维提示。 |
+| `tocsin.worker.oncall`   | 后台加急 worker 批次摘要和基础设施失败。                  |
 
 Level 约定：
 
@@ -75,8 +75,8 @@ Level 约定：
 - `error`：请求未捕获异常、worker 基础设施失败、HTTP 5xx。
 - `fatal`：仅用于无法继续运行的进程级失败；当前没有常规调用点。
 
-`VANE_LOG_LEVEL` 接受 `trace`、`debug`、`info`、`warning`、`error`、`fatal`、`off`，默认
-`info`。`VANE_LOG_FORMAT` 接受 `auto`、`json`、`text`；`auto` 在 production 使用 JSON Lines，
+`TOCSIN_LOG_LEVEL` 接受 `trace`、`debug`、`info`、`warning`、`error`、`fatal`、`off`，默认
+`info`。`TOCSIN_LOG_FORMAT` 接受 `auto`、`json`、`text`；`auto` 在 production 使用 JSON Lines，
 development 使用 ANSI 文本。
 
 ## Secret-Safe 规则
@@ -106,13 +106,13 @@ development 使用 ANSI 文本。
 - raw `Error` 对象、stack 和 cause。
 
 `server/runtime/log-safety.ts` 在 sink 前递归处理 structured properties、named placeholder 和
-Error，仅保留安全的 error name/message，并复用 `@vane/core` 的 sensitive-key 与文本脱敏规则。
+Error，仅保留安全的 error name/message，并复用 `@tocsin/core` 的 sensitive-key 与文本脱敏规则。
 业务调用仍必须使用 named placeholder，不使用 template literal 或字符串拼接承载结构化字段。
 
 ## Sink 与扩展
 
 默认只使用同步 console sink：production 输出 JSON Lines，development 输出 ANSI 文本。Docker、
-Kubernetes 或 systemd 应从 stdout/stderr 采集；Vane 不把运行日志写入业务 SQLite，也不默认创建
+Kubernetes 或 systemd 应从 stdout/stderr 采集；Tocsin 不把运行日志写入业务 SQLite，也不默认创建
 本地日志文件。
 
 未来接入 OpenTelemetry、Sentry、CloudWatch 或 syslog 时，在 `logging.ts` 增加 sink，并保持调用点

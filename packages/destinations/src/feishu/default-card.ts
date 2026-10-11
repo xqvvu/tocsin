@@ -1,5 +1,5 @@
-import { JsonObjectSchema } from "@vane/core";
-import type { JsonObject } from "@vane/core";
+import { JsonObjectSchema } from "@tocsin/core";
+import type { JsonObject } from "@tocsin/core";
 
 import type { FeishuCardV2 } from "#destinations/feishu/card.types";
 

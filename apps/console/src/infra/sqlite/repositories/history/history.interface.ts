@@ -5,10 +5,15 @@ import type {
   EventListItem,
   NumberedPage,
   NormalizedEvent,
-} from "@vane/core";
-import type { Page } from "@vane/core";
+} from "@tocsin/core";
+import type { Page } from "@tocsin/core";
 
-export type { DeliveryListItem, EventDetail, EventDetailDelivery, EventListItem } from "@vane/core";
+export type {
+  DeliveryListItem,
+  EventDetail,
+  EventDetailDelivery,
+  EventListItem,
+} from "@tocsin/core";
 
 export interface HistoryRepository {
   listEvents(query?: EventListQuery): Promise<NumberedPage<EventListItem>>;

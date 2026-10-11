@@ -1,8 +1,8 @@
 import { getLogger } from "@logtape/logtape";
 
-import type { OncallPing } from "@vane/core";
-import type { UrgencyChannelKind } from "@vane/destinations";
-import { FeishuConfigSchema } from "@vane/destinations/feishu";
+import type { OncallPing } from "@tocsin/core";
+import type { UrgencyChannelKind } from "@tocsin/destinations";
+import { FeishuConfigSchema } from "@tocsin/destinations/feishu";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import type {
@@ -13,7 +13,7 @@ import type {
 import { DomainValidationError } from "#/server/runtime/domain-errors";
 import { safeErrorProperties } from "#/server/runtime/log-safety";
 
-const oncallLogger = getLogger(["vane", "oncall"]);
+const oncallLogger = getLogger(["tocsin", "oncall"]);
 
 const DEFAULT_DEDUPE_WINDOW_MS = 5 * 60_000;
 const URGENT_CHANNEL: UrgencyChannelKind = "feishu_urgent_phone";

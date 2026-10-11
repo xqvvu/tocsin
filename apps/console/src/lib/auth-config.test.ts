@@ -29,9 +29,9 @@ describe("auth runtime config", () => {
       }),
     ).toThrow("BETTER_AUTH_SECRET must be replaced with a deployment-specific secret");
 
-    expect(requireBetterAuthBaseUrl("https://vane.example.test", { NODE_ENV: "production" })).toBe(
-      "https://vane.example.test",
-    );
+    expect(
+      requireBetterAuthBaseUrl("https://tocsin.example.test", { NODE_ENV: "production" }),
+    ).toBe("https://tocsin.example.test");
     expect(
       requireBetterAuthSecret("0123456789abcdef0123456789abcdef", {
         NODE_ENV: "production",
@@ -42,15 +42,15 @@ describe("auth runtime config", () => {
   it("uses dynamic base URL host allowlists when multiple public hosts are configured", () => {
     expect(
       requireBetterAuthBaseUrl(
-        "https://vane.example.test",
+        "https://tocsin.example.test",
         { NODE_ENV: "production" },
         {
-          allowedHosts: ["localhost:6180", "vane.example.test", "*.preview.example.test"],
+          allowedHosts: ["localhost:6180", "tocsin.example.test", "*.preview.example.test"],
         },
       ),
     ).toEqual({
-      allowedHosts: ["localhost:6180", "vane.example.test", "*.preview.example.test"],
-      fallback: "https://vane.example.test",
+      allowedHosts: ["localhost:6180", "tocsin.example.test", "*.preview.example.test"],
+      fallback: "https://tocsin.example.test",
       protocol: "auto",
     });
 

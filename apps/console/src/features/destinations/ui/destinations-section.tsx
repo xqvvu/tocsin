@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 
-import type { RouteDefinition } from "@vane/core";
+import type { RouteDefinition } from "@tocsin/core";
 
 import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
 import { OperationsTable } from "#/components/common/operations-table";

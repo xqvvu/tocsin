@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import type { JsonObject } from "@vane/core";
-import { createDefaultDestinationRegistry, createDefaultUrgencyRegistry } from "@vane/destinations";
+import type { JsonObject } from "@tocsin/core";
+import {
+  createDefaultDestinationRegistry,
+  createDefaultUrgencyRegistry,
+} from "@tocsin/destinations";
 import {
   createDefaultProviderRegistry,
   type ProviderParseInput,
   type ProviderParseResult,
-} from "@vane/providers";
+} from "@tocsin/providers";
 
 import { openSqliteStore, type SqliteStore } from "#/infra/sqlite/store";
 import { handleSourceWebhookPost } from "#/routes/api/sources/$sourceId/webhook";
@@ -23,7 +26,7 @@ const testState = vi.hoisted(() => ({
     | undefined,
 }));
 
-vi.mock("@vane/providers", () => ({
+vi.mock("@tocsin/providers", () => ({
   createDefaultProviderRegistry: () => ({
     parse: (kind: string, input: ProviderParseInput) => {
       if (!testState.parseProvider) {
@@ -250,12 +253,12 @@ describe("source webhook API route", () => {
     expect(JSON.stringify(deliveryDetail)).not.toContain("downstream-token");
   });
 
-  it("accepts source tokens from the x-vane-source-token header", async () => {
+  it("accepts source tokens from the x-tocsin-source-token header", async () => {
     await configureSourceRouteAndDestination();
 
     const response = await postWebhook({
       headers: {
-        "x-vane-source-token": "source-token",
+        "x-tocsin-source-token": "source-token",
       },
       body: {
         title: "Checkout unavailable",
@@ -273,11 +276,11 @@ describe("source webhook API route", () => {
     expect(
       (await testState.store?.history.getEventDetail("event-1"))?.event.rawHeaders,
     ).toMatchObject({
-      "x-vane-source-token": "[REDACTED]",
+      "x-tocsin-source-token": "[REDACTED]",
     });
   });
 
-  it("accepts configured additional shared secrets without a Vane source token", async () => {
+  it("accepts configured additional shared secrets without a Tocsin source token", async () => {
     await configureSourceRouteAndDestination({
       sourceConfig: {
         signingSecret: "provider-secret",
@@ -286,7 +289,7 @@ describe("source webhook API route", () => {
 
     const response = await postWebhook({
       headers: {
-        "x-vane-provider-secret": "provider-secret",
+        "x-tocsin-provider-secret": "provider-secret",
       },
       body: {
         title: "Checkout unavailable",
@@ -304,7 +307,7 @@ describe("source webhook API route", () => {
     expect(
       (await testState.store?.history.getEventDetail("event-1"))?.event.rawHeaders,
     ).toMatchObject({
-      "x-vane-provider-secret": "[REDACTED]",
+      "x-tocsin-provider-secret": "[REDACTED]",
     });
   });
 
@@ -476,11 +479,14 @@ async function postWebhook(input: {
   return handleSourceWebhookPost({
     sourceId: input.sourceId ?? "source-1",
     container: createTestContainer(),
-    request: new Request(`https://vane.test/api/sources/${input.sourceId ?? "source-1"}/webhook`, {
-      method: "POST",
-      headers: input.headers,
-      body: input.rawBody ?? JSON.stringify(input.body),
-    }),
+    request: new Request(
+      `https://tocsin.test/api/sources/${input.sourceId ?? "source-1"}/webhook`,
+      {
+        method: "POST",
+        headers: input.headers,
+        body: input.rawBody ?? JSON.stringify(input.body),
+      },
+    ),
   });
 }
 

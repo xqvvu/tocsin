@@ -6,7 +6,7 @@
 
 ## 背景
 
-Vane 已通过 Settings 提供 TOML 配置导入导出。运维人员在备份、代码审阅和接入其他工具时，
+Tocsin 已通过 Settings 提供 TOML 配置导入导出。运维人员在备份、代码审阅和接入其他工具时，
 还需要结构化 JSON 配置编辑与迁移能力，但不希望出现第二套配置投影或 secret 处理规则。
 
 ## 产品行为
@@ -17,8 +17,8 @@ Vane 已通过 Settings 提供 TOML 配置导入导出。运维人员在备份�
 - JSON 保留 TOML 外部文档的字段名，例如 `schema_version`、`secret_refs` 和
   `destination_ids`，便于逐字段比对两种格式。
 - JSON 使用与 TOML 对齐的 CodeMirror 编辑器、折叠 gutter、主题、尺寸和确认导入流程。
-- 用户可以编辑并导入 JSON，也可以下载 UTF-8 编码的 `vane.json` 文件。
-- TOML 仍是 Vane 首选的 config-as-code 格式；JSON 是使用相同 schema 的替代可移植格式。
+- 用户可以编辑并导入 JSON，也可以下载 UTF-8 编码的 `tocsin.json` 文件。
+- TOML 仍是 Tocsin 首选的 config-as-code 格式；JSON 是使用相同 schema 的替代可移植格式。
 
 ## 安全边界
 

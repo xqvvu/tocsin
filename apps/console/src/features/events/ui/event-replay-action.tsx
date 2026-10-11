@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { EventReplayPreview } from "@vane/core";
+import type { EventReplayPreview } from "@tocsin/core";
 
 import {
   AlertDialog,

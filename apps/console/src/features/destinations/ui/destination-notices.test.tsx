@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import type { DestinationPreviewResult, DestinationTestResult } from "@vane/core";
+import type { DestinationPreviewResult, DestinationTestResult } from "@tocsin/core";
 
 import { AppIntlProvider } from "#/i18n/provider";
 
@@ -47,7 +47,7 @@ describe("destination notices", () => {
         eventId: "preview-event",
         source: {
           id: "preview-source",
-          name: "Vane preview",
+          name: "Tocsin preview",
           provider: "generic",
           enabled: true,
         },
@@ -82,7 +82,7 @@ describe("destination notices", () => {
         },
         source: {
           id: "preview-source",
-          name: "Vane preview",
+          name: "Tocsin preview",
           provider: "generic",
         },
         destination: {
@@ -97,7 +97,7 @@ describe("destination notices", () => {
             summary: "Alert summary",
           },
         },
-        vane: {
+        tocsin: {
           eventUrl: "",
         },
         payload: {},
@@ -152,7 +152,7 @@ describe("destination notices", () => {
       statusCode: 502,
       error: "Downstream rejected the request",
       responseBody: "bad gateway token=[REDACTED]",
-      renderedPayload: { message: "Vane destination test" },
+      renderedPayload: { message: "Tocsin destination test" },
     };
 
     showDestinationTestToast(notice, t);

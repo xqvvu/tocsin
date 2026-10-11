@@ -15,7 +15,7 @@ describe("grafana provider parser", () => {
         "content-type": "application/json",
       },
       payload: {
-        receiver: "vane",
+        receiver: "tocsin",
         status: "firing",
         title: "[FIRING:1] CheckoutLatencyHigh",
         message: "Checkout latency is above threshold",
@@ -66,7 +66,7 @@ describe("grafana provider parser", () => {
       provider: "grafana",
       parserVersion: 1,
       alertCount: 1,
-      receiver: "vane",
+      receiver: "tocsin",
       groupKey: '{}:{alertname="CheckoutLatencyHigh"}',
       externalURL: "https://grafana.example.test/",
     });

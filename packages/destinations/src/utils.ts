@@ -1,4 +1,4 @@
-import type { DestinationKind, JsonValue } from "@vane/core";
+import type { DestinationKind, JsonValue } from "@tocsin/core";
 import type { z } from "zod";
 
 import type {

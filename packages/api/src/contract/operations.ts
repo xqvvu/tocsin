@@ -1,6 +1,6 @@
 import { oc } from "@orpc/contract";
 import { openapi } from "@orpc/openapi";
-import { ReplayEventCommandSchema } from "@vane/core";
+import { ReplayEventCommandSchema } from "@tocsin/core";
 
 import { dashboardAuth } from "../errors/dashboard-auth";
 import { resourceErrors } from "../errors/resources";

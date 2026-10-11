@@ -41,7 +41,7 @@ Destination render input 增加可选的 provider payload。模板上下文把�
 
 ## 结果
 
-- 用户可以为不同告警源制作信息完整的飞书卡片和文本通知，不需要等待 Vane 为每个字段增加 label。
+- 用户可以为不同告警源制作信息完整的飞书卡片和文本通知，不需要等待 Tocsin 为每个字段增加 label。
 - Provider adapter 只提升路由和通用展示真正需要的稳定字段，避免 normalized labels 变成 payload 镜像。
 - Payload 的结构不稳定性由模板作者显式承担，Preview 提供真实历史样本用于验证。
 - 脱敏 Header 与未脱敏 payload 仍不可达；模板能力没有扩张为脚本或通用表达式语言。

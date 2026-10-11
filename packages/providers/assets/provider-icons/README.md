@@ -15,4 +15,4 @@ Downloaded files:
 - `webhook.svg`
 
 Product names and logos may be trademarks of their respective owners. Use these
-assets only as provider identifiers inside Vane's Sources UI.
+assets only as provider identifiers inside Tocsin's Sources UI.

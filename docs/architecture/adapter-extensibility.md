@@ -1,19 +1,19 @@
 # Provider 与 Destination 适配器扩展性设计
 
-本文档整理 Vane 在 `@vane/providers`、`@vane/destinations` 与 `apps/console`
+本文档整理 Tocsin 在 `@tocsin/providers`、`@tocsin/destinations` 与 `apps/console`
 之间的适配器扩展边界。详细决策背景见
 `docs/adr/0002-curated-adapter-extension-model.md`。
 
 ## 设计目标
 
-Vane 的扩展性优先服务仓库内维护的精选适配器，而不是运行时安装第三方插件。新增一个
+Tocsin 的扩展性优先服务仓库内维护的精选适配器，而不是运行时安装第三方插件。新增一个
 provider 或 destination 应该主要涉及 adapter 实现、schema-backed manifest、fixtures、
 测试、显式 registry 注册，以及必要的 console UI override。
 
 每个第三方 adapter 使用独立目录模块，例如 `packages/destinations/src/feishu/index.ts`
 或 `packages/providers/src/grafana/index.ts`，同目录放置 fixtures 和 adapter 自测。包根
 `index.ts` 只做聚合导出；`package.json` 为每个 adapter 提供子路径导出，例如
-`@vane/destinations/feishu` 和 `@vane/providers/grafana`。
+`@tocsin/destinations/feishu` 和 `@tocsin/providers/grafana`。
 
 集成目录内部也要保持职责拆分，避免把 schema、manifest、解析/发送逻辑和 payload 构造都塞进
 `index.ts`。`index.ts` 只做 barrel export。推荐结构：
@@ -53,7 +53,7 @@ Provider 的 parse input/result 辅助逻辑放在 `ParseInput`、`ParseResult` 
 工具类里；Destination 的发送结果、transport helper 和模板引擎也放在 package-local helper
 里，避免把行为 helper 混进 `*.types.ts`。
 
-共享 manifest primitives 放在 `@vane/core`：
+共享 manifest primitives 放在 `@tocsin/core`：
 
 - 配置字段描述。
 - secret 字段声明。
@@ -66,9 +66,9 @@ React component、RegExp、fetch、parse/send 或 transport context。
 
 完整运行时接口留在对应 package：
 
-- `@vane/providers` 暴露 `ProviderAdapter`。
-- `@vane/destinations` 暴露 `DestinationAdapter`。
-- `@vane/destinations/urgency` 暴露 `UrgencyChannelAdapter` 与 `UrgencyRegistry`（见下文 urgency 边界）。
+- `@tocsin/providers` 暴露 `ProviderAdapter`。
+- `@tocsin/destinations` 暴露 `DestinationAdapter`。
+- `@tocsin/destinations/urgency` 暴露 `UrgencyChannelAdapter` 与 `UrgencyRegistry`（见下文 urgency 边界）。
 
 Provider 和 destination 只共享 manifest primitives，不合并成一个万能
 `IntegrationAdapter`。Provider 的核心动词是 `parse`，destination 的核心动词是
@@ -77,7 +77,7 @@ Provider 和 destination 只共享 manifest primitives，不合并成一个万�
 ## Manifest 与 Console Catalog
 
 Adapter manifest 是 TypeScript 对象，不是 YAML/TOML/JSON 配置文件。它和 Zod schema、
-parse/send 函数、测试同源维护。TOML 与 JSON 使用同一份 Vane 用户配置快照和 schema；TOML
+parse/send 函数、测试同源维护。TOML 与 JSON 使用同一份 Tocsin 用户配置快照和 schema；TOML
 仍是首选 config-as-code 格式。
 
 每个 adapter 必须显式声明 lifecycle status 和 `configVersion`。Lifecycle 不默认 stable；
@@ -260,7 +260,7 @@ Provider metadata 由 adapter 产出，但 console 在入库前统一脱敏兜�
 认证 header、完整敏感 URL 或 raw auth config 放入 metadata。
 
 Labels 表达可路由上下文，优先使用 `service`、`environment`、`cluster`、`namespace`、
-`team` 等稳定短 key。`environment` 是 Vane 的 canonical 环境标签。高基数字段、trace/request
+`team` 等稳定短 key。`environment` 是 Tocsin 的 canonical 环境标签。高基数字段、trace/request
 id、时间戳、完整 URL 和错误堆栈不默认进入 labels。
 
 ## Registry 与测试
@@ -318,7 +318,7 @@ Destination `preview` 和 `send` 共享同一个 render input。`preview` 不接
 
 采用分阶段 tracer bullet：
 
-1. 在 `@vane/core` 建 manifest primitives。
+1. 在 `@tocsin/core` 建 manifest primitives。
 2. 选择一个 destination adapter 打通 `Adapter.define`、字段描述、secret 声明、
    config version、结构化错误、retry hint、transport context 和 registry/catalog 投影测试。
 3. 将每个第三方 adapter 迁移为目录模块，并暴露 package 子路径导出。

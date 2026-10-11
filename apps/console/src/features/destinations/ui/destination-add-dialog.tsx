@@ -2,7 +2,7 @@ import { RiAddLine } from "@remixicon/react";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { FeishuAppListItem } from "@vane/core";
+import type { FeishuAppListItem } from "@tocsin/core";
 
 import { ConfigurationDialogContent } from "#/components/common/configuration-dialog-content";
 import { Button } from "#/components/ui/button";

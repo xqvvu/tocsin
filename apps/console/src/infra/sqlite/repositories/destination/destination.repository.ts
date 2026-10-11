@@ -1,5 +1,5 @@
-import { encodeJsonObject } from "@vane/core";
-import type { DestinationSummary } from "@vane/core";
+import { encodeJsonObject } from "@tocsin/core";
+import type { DestinationSummary } from "@tocsin/core";
 
 import { toSqliteBoolean } from "#/infra/sqlite/codecs";
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";

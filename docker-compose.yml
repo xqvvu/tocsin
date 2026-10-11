@@ -1,14 +1,14 @@
-name: vane
+name: tocsin
 
 services:
   console:
     build:
       context: .
-    image: vane:local
+    image: tocsin:local
     init: true
     restart: unless-stopped
     ports:
-      - "${VANE_HTTP_PORT:-3000}:3000"
+      - "${TOCSIN_HTTP_PORT:-3000}:3000"
     environment:
       NODE_ENV: "production"
       HOST: "0.0.0.0"
@@ -16,13 +16,13 @@ services:
       BETTER_AUTH_URL: "${BETTER_AUTH_URL:-http://localhost:3000}"
       BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-70c18d50d2b212c625494ffb8e5963878cb72447c2ff3a0f97fcfb793f90d444}"
       SERVER_URL: "${SERVER_URL:-http://localhost:3000}"
-      VANE_DATABASE_PATH: "/data/vane.sqlite"
-      VANE_LOG_LEVEL: "${VANE_LOG_LEVEL:-info}"
-      VANE_LOG_FORMAT: "${VANE_LOG_FORMAT:-auto}"
-      VANE_MAX_WEBHOOK_BYTES: "${VANE_MAX_WEBHOOK_BYTES:-1048576}"
-      VANE_WORKER_BATCH_SIZE: "${VANE_WORKER_BATCH_SIZE:-10}"
-      VANE_WORKER_INTERVAL_MS: "${VANE_WORKER_INTERVAL_MS:-5000}"
-      VANE_WORKER_STALE_RUNNING_MS: "${VANE_WORKER_STALE_RUNNING_MS:-300000}"
+      TOCSIN_DATABASE_PATH: "/data/tocsin.sqlite"
+      TOCSIN_LOG_LEVEL: "${TOCSIN_LOG_LEVEL:-info}"
+      TOCSIN_LOG_FORMAT: "${TOCSIN_LOG_FORMAT:-auto}"
+      TOCSIN_MAX_WEBHOOK_BYTES: "${TOCSIN_MAX_WEBHOOK_BYTES:-1048576}"
+      TOCSIN_WORKER_BATCH_SIZE: "${TOCSIN_WORKER_BATCH_SIZE:-10}"
+      TOCSIN_WORKER_INTERVAL_MS: "${TOCSIN_WORKER_INTERVAL_MS:-5000}"
+      TOCSIN_WORKER_STALE_RUNNING_MS: "${TOCSIN_WORKER_STALE_RUNNING_MS:-300000}"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/api/ready || exit 1"]
       interval: 30s
@@ -30,8 +30,8 @@ services:
       retries: 3
       start_period: 20s
     volumes:
-      - vane-data:/data
+      - tocsin-data:/data
 
 volumes:
-  vane-data:
-    name: "vane-data"
+  tocsin-data:
+    name: "tocsin-data"

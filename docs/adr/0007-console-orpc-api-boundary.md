@@ -10,7 +10,7 @@ env-neutral、`server/` 按能力分目录、dynamic import 只作边界适配�
 `*.functions.ts` 各自声明 `.validator(schema)`、挂 `requireDashboardContextMiddleware`、
 在 handler 内取 service。这个形状能用，但边界信息是**分散**的：
 
-- 契约同时存在于 `@vane/core` 的 command schema、server function 的 `.validator()` 和
+- 契约同时存在于 `@tocsin/core` 的 command schema、server function 的 `.validator()` 和
   feature api 的调用点三处，改名或改形状不会有编译期守卫。
 - 每个 server function 手写 middleware 与 handler，公共 RPC 语义（错误映射、请求 id、
   响应头、批量请求、OpenAPI）没有统一位置。
@@ -95,7 +95,7 @@ env-neutral、`server/` 按能力分目录、dynamic import 只作边界适配�
 - **tRPC**：可以解决类型安全，但没有内建 contract-first 的 OpenAPI 生成，缺少
   `createTanstackQueryUtils` 这类直接产出 query/mutation options 的工具，也需要自己补
   procedure middleware 之外的契约层。
-- **把后端拆成独立服务（前后端分离）**：与 Vane "单进程、一个镜像、一个数据卷"的自托管
+- **把后端拆成独立服务（前后端分离）**：与 Tocsin "单进程、一个镜像、一个数据卷"的自托管
   约束冲突，也超出本次重构范围。oRPC 的 handler 只是同一应用内的另一条 HTTP 入口。
 - **直接暴露 OpenAPI surface 给浏览器用**：浏览器需要 RPC 信封来支持批量请求、响应头
   透传和 TanStack Query utils；OpenAPI surface 面向外部调用方与文档。

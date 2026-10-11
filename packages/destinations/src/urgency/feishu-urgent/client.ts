@@ -114,7 +114,7 @@ export async function callFeishuUrgentPhone(
       };
     }
 
-    // Partial success is documented as `code: 0` plus the ids it skipped. Vane
+    // Partial success is documented as `code: 0` plus the ids it skipped. Tocsin
     // pages one receiver per ping, so any skipped id means this ping never rang
     // and must not be recorded as fired. When more than one receiver is in the
     // call, only a skipped id that belongs to this call's receivers is held

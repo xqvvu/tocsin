@@ -1,7 +1,7 @@
 import { RiAddLine } from "@remixicon/react";
 import * as React from "react";
 
-import type { DestinationSummary, RouteDefinition, SourceSummary } from "@vane/core";
+import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { ConfigurationDialogContent } from "#/components/common/configuration-dialog-content";
 import { Button } from "#/components/ui/button";

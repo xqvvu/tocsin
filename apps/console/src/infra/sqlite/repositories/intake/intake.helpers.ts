@@ -5,8 +5,8 @@ import {
   EventRecordSchema,
   NormalizedEventSchema,
   RouteMatchResultsSchema,
-} from "@vane/core";
-import type { EventRecord } from "@vane/core";
+} from "@tocsin/core";
+import type { EventRecord } from "@tocsin/core";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import type { EventRow } from "#/infra/sqlite/repositories/intake/intake.interface";

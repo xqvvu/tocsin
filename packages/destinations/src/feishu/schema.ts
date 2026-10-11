@@ -1,4 +1,4 @@
-import { AlertSeveritySchema } from "@vane/core";
+import { AlertSeveritySchema } from "@tocsin/core";
 import { z } from "zod";
 
 import { defaultFeishuCardBindings, FeishuCardColors } from "#destinations/feishu/appearance";

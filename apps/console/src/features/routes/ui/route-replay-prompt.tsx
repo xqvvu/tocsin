@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { RouteReplayPreview } from "@vane/core";
+import type { RouteReplayPreview } from "@tocsin/core";
 
 import {
   AlertDialog,

@@ -18,20 +18,20 @@ export const env = createEnv({
     BETTER_AUTH_ALLOWED_HOSTS: delimitedListSchema.optional(),
     BETTER_AUTH_TRUSTED_ORIGINS: delimitedListSchema.optional(),
     SERVER_URL: z.url().optional(),
-    VANE_DATABASE_PATH: z.string().min(1).optional(),
-    VANE_LOG_FORMAT: z.enum(["auto", "json", "text"]).default("auto"),
-    VANE_LOG_LEVEL: z
+    TOCSIN_DATABASE_PATH: z.string().min(1).optional(),
+    TOCSIN_LOG_FORMAT: z.enum(["auto", "json", "text"]).default("auto"),
+    TOCSIN_LOG_LEVEL: z
       .enum(["trace", "debug", "info", "warning", "error", "fatal", "off"])
       .default("info"),
-    VANE_MAX_WEBHOOK_BYTES: z.coerce
+    TOCSIN_MAX_WEBHOOK_BYTES: z.coerce
       .number<number>()
       .int()
       .positive()
       .max(10 * 1024 * 1024)
       .default(1024 * 1024),
-    VANE_WORKER_BATCH_SIZE: z.coerce.number().int().positive().max(100).default(10),
-    VANE_WORKER_INTERVAL_MS: z.coerce.number().int().positive().max(60_000).default(5_000),
-    VANE_WORKER_STALE_RUNNING_MS: z.coerce
+    TOCSIN_WORKER_BATCH_SIZE: z.coerce.number().int().positive().max(100).default(10),
+    TOCSIN_WORKER_INTERVAL_MS: z.coerce.number().int().positive().max(60_000).default(5_000),
+    TOCSIN_WORKER_STALE_RUNNING_MS: z.coerce
       .number<number>()
       .int()
       .positive()

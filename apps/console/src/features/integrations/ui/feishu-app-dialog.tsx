@@ -2,7 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { FeishuAppSummary } from "@vane/core";
+import type { FeishuAppSummary } from "@tocsin/core";
 
 import { ConfigurationDialogContent } from "#/components/common/configuration-dialog-content";
 import { Button } from "#/components/ui/button";

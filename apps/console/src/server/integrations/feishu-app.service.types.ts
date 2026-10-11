@@ -1,4 +1,4 @@
-import type { FetchLike } from "@vane/destinations";
+import type { FetchLike } from "@tocsin/destinations";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 

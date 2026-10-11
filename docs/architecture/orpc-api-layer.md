@@ -1,8 +1,8 @@
 # oRPC API 层（contract / router / handler）
 
-本文档定义 Vane 在当前 TanStack Start 单体应用中的客户端 ↔ 服务端调用方式。
+本文档定义 Tocsin 在当前 TanStack Start 单体应用中的客户端 ↔ 服务端调用方式。
 
-结论先说：**Vane 不做前后端分离**。console 仍然是 TanStack Start 全栈应用，路由、SSR、
+结论先说：**Tocsin 不做前后端分离**。console 仍然是 TanStack Start 全栈应用，路由、SSR、
 server entry、SQLite、worker 都在同一个进程、同一个部署单元里。变化只在“浏览器如何调用
 服务端能力”这一层：原来的 TanStack Start server function（`createServerFn`）换成 **oRPC
 contract + router**，让契约集中在一处、类型端到端推导，并顺带得到一个可生成的 OpenAPI 面。
@@ -30,7 +30,7 @@ oRPC 把契约变成一等公民：
 - **TanStack Query 集成是官方的**：`orpc.<ns>.<proc>.queryOptions()` / `mutationOptions()`
   直接产出可用的 query options，feature 层不用自己包一层。
 
-代价是要维护一个 workspace 包和一层 protocol 知识。以 Vane 的 procedure 数量（9 个 namespace）
+代价是要维护一个 workspace 包和一层 protocol 知识。以 Tocsin 的 procedure 数量（9 个 namespace）
 和长期维护目标看，这个代价是划算的。
 
 ## 2. 分层与数据流
@@ -104,7 +104,7 @@ export const sources = {
 
 - **namespace 按业务能力划分**，不按 HTTP method 或文件名划分。当前为 `auth`、`destinations`、
   `health`、`i18n`、`operations`、`portability`、`routes`、`settings`、`sources`。
-- **input / output 一律带 schema**。command schema 直接复用 `@vane/core` 中既有的
+- **input / output 一律带 schema**。command schema 直接复用 `@tocsin/core` 中既有的
   `CreateSourceCommandSchema` 等定义，不在契约层复制。
 - **只在契约层声明 error code**。dashboard 面统一 `.errors(dashboardAuth.error)`，声明
   `UNAUTHORIZED` / `FORBIDDEN`；客户端的错误处理因此可以只认这几个 code。
@@ -117,7 +117,7 @@ export const sources = {
 - **output 必须是 safe DTO**。契约是类型层的“返回什么”，不要在 output schema 里放 token hash、
   destination secret、raw sensitive payload。
 
-`src/schemas/*` 放当前能力独有的 output DTO；能被多个能力复用的 schema 仍然回到 `@vane/core`。
+`src/schemas/*` 放当前能力独有的 output DTO；能被多个能力复用的 schema 仍然回到 `@tocsin/core`。
 
 ## 4. 实现层（`apps/console/src/server/orpc`）
 
@@ -127,7 +127,7 @@ export const sources = {
 
 ```ts
 export const os = implement(contract)
-  .use(procedureLogging()) // 失败 procedure -> vane.orpc 结构化日志
+  .use(procedureLogging()) // 失败 procedure -> tocsin.orpc 结构化日志
   .use(translateErrors) // 领域错误 -> oRPC 类型化错误
   .use(requestId()); // context.requestId + x-request-id
 ```

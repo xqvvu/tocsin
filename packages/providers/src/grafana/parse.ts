@@ -1,5 +1,10 @@
-import { NormalizedEventSchema, createStableHash, isJsonObject, stableStringify } from "@vane/core";
-import type { JsonObject, Labels } from "@vane/core";
+import {
+  NormalizedEventSchema,
+  createStableHash,
+  isJsonObject,
+  stableStringify,
+} from "@tocsin/core";
+import type { JsonObject, Labels } from "@tocsin/core";
 
 import type { GrafanaProviderConfig } from "#providers/grafana/schema";
 import { normalizeSeverity, normalizeStatus } from "#providers/shared/normalization";

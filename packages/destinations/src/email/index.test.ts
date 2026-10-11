@@ -33,8 +33,8 @@ const input: DestinationSendInput<EmailConfig> = {
   config: {
     endpointUrl: "https://mail-gateway.example.test/send",
     to: ["sre@example.test"],
-    from: "vane@example.test",
-    subjectPrefix: "[Vane]",
+    from: "tocsin@example.test",
+    subjectPrefix: "[Tocsin]",
     headers: {
       Authorization: "Bearer test-token",
     },
@@ -72,8 +72,8 @@ describe("email sender", () => {
       metadata: Record<string, string>;
     };
     expect(body.to).toEqual(["sre@example.test"]);
-    expect(body.from).toBe("vane@example.test");
-    expect(body.subject).toBe("[Vane] [Critical Firing] Checkout API unavailable");
+    expect(body.from).toBe("tocsin@example.test");
+    expect(body.subject).toBe("[Tocsin] [Critical Firing] Checkout API unavailable");
     expect(body.text).toContain("health check failed");
     expect(body.text).toContain("Labels: service=checkout");
     expect(body.html).toContain("Checkout API unavailable");
@@ -84,7 +84,7 @@ describe("email sender", () => {
       status: "firing",
     });
     expect(result.renderedPayload).toMatchObject({
-      subject: "[Vane] [Critical Firing] Checkout API unavailable",
+      subject: "[Tocsin] [Critical Firing] Checkout API unavailable",
     });
     expect(result.renderedPayload).not.toHaveProperty("to");
     expect(result.renderedPayload).not.toHaveProperty("from");

@@ -1,6 +1,6 @@
 import { sql } from "kysely";
 
-import type { IsoDateTimeString } from "@vane/core";
+import type { IsoDateTimeString } from "@tocsin/core";
 
 import { createSqliteDatabase } from "#/infra/sqlite/connection";
 import { SqliteRepositoryContext } from "#/infra/sqlite/context";

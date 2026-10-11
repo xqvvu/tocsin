@@ -1,5 +1,5 @@
 {
-  "name": "@vane/providers",
+  "name": "@tocsin/providers",
   "private": true,
   "type": "module",
   "imports": {
@@ -22,7 +22,7 @@
     "fmt:check": "vp fmt --check"
   },
   "dependencies": {
-    "@vane/core": "workspace:*",
+    "@tocsin/core": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

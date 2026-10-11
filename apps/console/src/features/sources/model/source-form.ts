@@ -3,7 +3,7 @@ import {
   nonEmptyObject,
   type JsonObject,
   type SourceProvider,
-} from "@vane/core";
+} from "@tocsin/core";
 
 export function formSourceProvider(data: FormData): SourceProvider {
   return formSourceProviderValue(data.get("provider"));

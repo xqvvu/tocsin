@@ -33,8 +33,8 @@ export async function logger(): Promise<void> {
 }
 
 async function configureLogging(): Promise<void> {
-  const format = resolveLogFormat(env.VANE_LOG_FORMAT, import.meta.env.PROD);
-  const level = resolveLogLevel(env.VANE_LOG_LEVEL);
+  const format = resolveLogFormat(env.TOCSIN_LOG_FORMAT, import.meta.env.PROD);
+  const level = resolveLogLevel(env.TOCSIN_LOG_LEVEL);
   const formatter =
     format === "json" ? getJsonLinesFormatter() : getAnsiColorFormatter({ timestamp: "rfc3339" });
   const consoleSink = withLogRedaction(getConsoleSink({ formatter }));
@@ -45,7 +45,7 @@ async function configureLogging(): Promise<void> {
     },
     loggers: [
       {
-        category: ["vane"],
+        category: ["tocsin"],
         sinks: ["console"],
         lowestLevel: level,
       },
@@ -59,13 +59,13 @@ async function configureLogging(): Promise<void> {
     contextLocalStorage: new AsyncLocalStorage<Record<string, unknown>>(),
   });
 
-  getLogger(["vane", "runtime"]).info("Logging initialized with {format} output at {level}", {
+  getLogger(["tocsin", "runtime"]).info("Logging initialized with {format} output at {level}", {
     format,
     level: level ?? "off",
   });
 }
 
-function resolveLogFormat(format: typeof env.VANE_LOG_FORMAT, production: boolean): LogFormat {
+function resolveLogFormat(format: typeof env.TOCSIN_LOG_FORMAT, production: boolean): LogFormat {
   if (format === "auto") {
     return production ? "json" : "text";
   }
@@ -73,6 +73,6 @@ function resolveLogFormat(format: typeof env.VANE_LOG_FORMAT, production: boolea
   return format;
 }
 
-function resolveLogLevel(level: typeof env.VANE_LOG_LEVEL): LogLevel | null {
+function resolveLogLevel(level: typeof env.TOCSIN_LOG_LEVEL): LogLevel | null {
   return level === "off" ? null : level;
 }

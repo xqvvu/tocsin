@@ -1,6 +1,6 @@
 import type { LogRecord, Sink } from "@logtape/logtape";
 
-import { REDACTED_VALUE, isSensitiveKey, redactText } from "@vane/core";
+import { REDACTED_VALUE, isSensitiveKey, redactText } from "@tocsin/core";
 
 const MAX_LOG_VALUE_DEPTH = 8;
 const PLACEHOLDER_PATTERN = /\{([^{}]+)\}/g;

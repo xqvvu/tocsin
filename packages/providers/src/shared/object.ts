@@ -1,5 +1,5 @@
-import { isJsonObject } from "@vane/core";
-import type { JsonObject, Labels } from "@vane/core";
+import { isJsonObject } from "@tocsin/core";
+import type { JsonObject, Labels } from "@tocsin/core";
 
 export function labelsFromObject(value: JsonObject | undefined): Labels {
   const labels: Labels = {};

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { createDefaultProviderRegistry } from "@vane/providers";
+import { createDefaultProviderRegistry } from "@tocsin/providers";
 
 import { openSqliteStore } from "#/infra/sqlite/store";
 import {
@@ -331,7 +331,7 @@ describe("webhook intake service", () => {
     await store.close();
   });
 
-  it("accepts configured additional shared secrets without a Vane source token", async () => {
+  it("accepts configured additional shared secrets without a Tocsin source token", async () => {
     const store = await createStore();
     const service = new WebhookIntakeService({
       store,
@@ -352,7 +352,7 @@ describe("webhook intake service", () => {
     const result = await service.acceptWebhook({
       sourceId: "source-1",
       headers: {
-        "x-vane-provider-secret": "provider-secret",
+        "x-tocsin-provider-secret": "provider-secret",
       },
       payload: {
         title: "Provider signed alert",
@@ -362,7 +362,7 @@ describe("webhook intake service", () => {
 
     expect(result.accepted).toBe(true);
     expect((await store.history.getEventDetail(result.eventId))?.event.rawHeaders).toEqual({
-      "x-vane-provider-secret": "[REDACTED]",
+      "x-tocsin-provider-secret": "[REDACTED]",
     });
 
     await store.close();
@@ -695,12 +695,12 @@ describe("webhook intake service", () => {
       token: "source-token",
       headers: {},
       payload: {
-        msg: "[Vane API] is down",
+        msg: "[Tocsin API] is down",
         monitor: {
           id: 42,
-          name: "Vane API",
+          name: "Tocsin API",
           type: "http",
-          url: "https://vane.example.test/health",
+          url: "https://tocsin.example.test/health",
         },
         heartbeat: {
           status: 0,
@@ -716,7 +716,7 @@ describe("webhook intake service", () => {
     const detail = await store.history.getEventDetail(result.eventId);
 
     expect(detail?.event.normalized).toMatchObject({
-      title: "Vane API is firing",
+      title: "Tocsin API is firing",
       severity: "critical",
       status: "firing",
       fingerprint: "uptime_kuma:42",

@@ -1,4 +1,4 @@
-import type { JsonValue } from "@vane/core";
+import type { JsonValue } from "@tocsin/core";
 
 import type { GenericWebhookConfig } from "#destinations/generic-webhook/schema";
 import { DestinationTemplateEngine } from "#destinations/template";

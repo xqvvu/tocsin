@@ -16,7 +16,7 @@ import {
   type RouteReplayCandidate,
   type RouteReplayPreview,
   type RouteReplayResult,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import type { EnqueueDeliveriesResult } from "#/infra/sqlite/repositories/delivery/delivery.interface";
 import type { SqliteStoreUnitOfWork } from "#/infra/sqlite/store";

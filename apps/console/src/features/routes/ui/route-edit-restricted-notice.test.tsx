@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import type { RouteDefinition } from "@vane/core";
+import type { RouteDefinition } from "@tocsin/core";
 
 import { RouteEditRestrictedNotice } from "#/features/routes/ui/route-edit-restricted-notice";
 import { AppIntlProvider } from "#/i18n/provider";

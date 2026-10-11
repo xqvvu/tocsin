@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { FeishuApp } from "@vane/core";
+import type { FeishuApp } from "@tocsin/core";
 
 import {
   createPortableConfiguration,
@@ -11,7 +11,7 @@ import {
 import { DomainValidationError } from "#/server/runtime/domain-errors";
 
 const NOW = "2026-10-08T10:00:00.000Z";
-const APP_ENV = "VANE_FEISHU_APP_APP_1_APPSECRET";
+const APP_ENV = "TOCSIN_FEISHU_APP_APP_1_APPSECRET";
 const settings = {
   locale: "zh-Hans" as const,
   timeZone: "Asia/Shanghai",
@@ -81,7 +81,7 @@ describe("Feishu app portability", () => {
   it("still imports documents without the feishu_apps block", () => {
     const toml = [
       "[settings]",
-      'schema_version = "vane.config.v1"',
+      'schema_version = "tocsin.config.v1"',
       "include_secrets = false",
       'locale = "en-US"',
       'time_zone = "UTC"',

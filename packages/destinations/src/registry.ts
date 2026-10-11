@@ -1,4 +1,4 @@
-import type { DestinationKind } from "@vane/core";
+import type { DestinationKind } from "@tocsin/core";
 
 import { emailAdapter } from "#destinations/email/index";
 import { feishuAdapter } from "#destinations/feishu/index";

@@ -5,7 +5,7 @@ import { assignOwnerRoleBeforeUserCreate } from "#/lib/auth-owner-bootstrap";
 
 const user = {
   id: "user-1",
-  name: "Vane Owner",
+  name: "Tocsin Owner",
   email: "owner@example.test",
 };
 

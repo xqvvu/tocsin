@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { randomUUID } from "node:crypto";
 
-import type { IsoDateTimeString } from "@vane/core";
+import type { IsoDateTimeString } from "@tocsin/core";
 
 import type { SqliteExecutor, SqliteTransaction } from "#/infra/sqlite/schema";
 import { transaction } from "#/infra/sqlite/transaction";

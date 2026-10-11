@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { FeishuAppListItem } from "@vane/core";
+import type { FeishuAppListItem } from "@tocsin/core";
 
 import { ConfigurationDialogContent } from "#/components/common/configuration-dialog-content";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";

@@ -3,7 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import type { AppSettings } from "@vane/core";
+import type { AppSettings } from "@tocsin/core";
 
 import { Button } from "#/components/ui/button";
 import {

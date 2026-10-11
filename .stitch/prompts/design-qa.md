@@ -1,4 +1,4 @@
-# Vane Stitch Design QA Checklist
+# Tocsin Stitch Design QA Checklist
 
 Use this checklist after each Stitch generation and before implementing UI in
 `apps/console`.
@@ -7,7 +7,7 @@ Use this checklist after each Stitch generation and before implementing UI in
 
 - The screen looks like a self-hosted operations console, not a marketing page.
 - The first viewport is immediately useful for SRE work.
-- The page language uses Vane domain terms: Sources, Routes, Destinations,
+- The page language uses Tocsin domain terms: Sources, Routes, Destinations,
   Events, Deliveries, Retry, History, TOML, JSON.
 - There are no SaaS tenancy, billing, org invitation, incident lifecycle,
   escalation policy, or on-call schedule concepts.

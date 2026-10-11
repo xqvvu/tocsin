@@ -38,7 +38,7 @@ export async function handleSourceWebhookPost(input: {
 
   try {
     payload = await readWebhookJsonPayload(input.request, {
-      maxBytes: env.VANE_MAX_WEBHOOK_BYTES,
+      maxBytes: env.TOCSIN_MAX_WEBHOOK_BYTES,
     });
   } catch (error) {
     if (error instanceof WebhookPayloadTooLargeError) {

@@ -1,4 +1,4 @@
-import type { FeishuApp } from "@vane/core";
+import type { FeishuApp } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
 import {

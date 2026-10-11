@@ -1,6 +1,6 @@
 {
   "projectId": "14367431876163121064",
-  "title": "Vane Console UI",
+  "title": "Tocsin Console UI",
   "createdAt": "2026-07-23",
   "sourceDocs": [
     "AGENTS.md",
@@ -18,7 +18,7 @@
     {
       "id": "17aab16449e1422e9b5388cf95e86c8f",
       "name": "projects/14367431876163121064/screens/17aab16449e1422e9b5388cf95e86c8f",
-      "title": "Vane Events Console",
+      "title": "Tocsin Events Console",
       "localScreenshot": ".stitch/designs/events-operations-page.png",
       "status": "filter-ux-redesign-2026-07-23",
       "qaNotes": [
@@ -30,7 +30,7 @@
     {
       "id": "adcc7fea12724eb182540fe6eb09c950",
       "name": "projects/14367431876163121064/screens/adcc7fea12724eb182540fe6eb09c950",
-      "title": "Vane Deliveries Console",
+      "title": "Tocsin Deliveries Console",
       "localScreenshot": ".stitch/designs/deliveries-operations-page.png",
       "status": "filter-ux-redesign-2026-07-23",
       "qaNotes": [

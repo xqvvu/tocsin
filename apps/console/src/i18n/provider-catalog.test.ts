@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { createDefaultProviderRegistry } from "@vane/providers";
+import { createDefaultProviderRegistry } from "@tocsin/providers";
 
 import enUsMessages from "#/i18n/messages/en-US.json";
 

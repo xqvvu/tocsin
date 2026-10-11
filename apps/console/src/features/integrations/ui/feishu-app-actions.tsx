@@ -1,7 +1,7 @@
 import { RiDeleteBinLine, RiEditLine, RiPlayLine } from "@remixicon/react";
 import * as React from "react";
 
-import type { FeishuAppListItem } from "@vane/core";
+import type { FeishuAppListItem } from "@tocsin/core";
 
 import { IconTooltip } from "#/components/common/icon-tooltip";
 import {

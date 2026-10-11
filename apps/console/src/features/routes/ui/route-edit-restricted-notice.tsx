@@ -1,6 +1,6 @@
 import { RiInformationLine } from "@remixicon/react";
 
-import type { RouteDefinition } from "@vane/core";
+import type { RouteDefinition } from "@tocsin/core";
 
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import {

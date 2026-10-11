@@ -1,4 +1,4 @@
-import type { DestinationRegistry } from "@vane/destinations";
+import type { DestinationRegistry } from "@tocsin/destinations";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
 

@@ -3,9 +3,9 @@ import { mapValues } from "es-toolkit/object";
 import type { JsonObject, JsonValue } from "#core/json";
 
 const SENSITIVE_KEY_SOURCE =
-  "authorization|cookie|set-cookie|x-api-key|api-key|apikey|apiKey|x-vane-source-token|x-vane-provider-secret|token|access-token|accessToken|refresh-token|refreshToken|secret|password|passwd|webhook_url|webhook-url|webhookUrl|signing_secret|signing-secret|signingSecret|signSecret";
+  "authorization|cookie|set-cookie|x-api-key|api-key|apikey|apiKey|x-tocsin-source-token|x-tocsin-provider-secret|token|access-token|accessToken|refresh-token|refreshToken|secret|password|passwd|webhook_url|webhook-url|webhookUrl|signing_secret|signing-secret|signingSecret|signSecret";
 const SENSITIVE_KEY_PATTERN =
-  /^(authorization|cookie|set-cookie|x-api-key|api-key|apikey|apiKey|x-vane-source-token|x-vane-provider-secret|token|access-token|accessToken|refresh-token|refreshToken|secret|password|passwd|webhook_url|webhook-url|webhookUrl|signing_secret|signing-secret|signingSecret|signSecret)$/i;
+  /^(authorization|cookie|set-cookie|x-api-key|api-key|apikey|apiKey|x-tocsin-source-token|x-tocsin-provider-secret|token|access-token|accessToken|refresh-token|refreshToken|secret|password|passwd|webhook_url|webhook-url|webhookUrl|signing_secret|signing-secret|signingSecret|signSecret)$/i;
 const SENSITIVE_TEXT_ASSIGNMENT_PATTERN = new RegExp(
   `\\b(${SENSITIVE_KEY_SOURCE})\\b(\\s*[:=]\\s*)(.*?)(?=\\s+(?:${SENSITIVE_KEY_SOURCE})\\b\\s*[:=]|[,;\\n\\r]|$)`,
   "gi",

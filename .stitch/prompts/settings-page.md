@@ -1,7 +1,7 @@
-# Vane Settings Tabbed Workspace
+# Tocsin Settings Tabbed Workspace
 
-Targeted edit for the existing Vane Console Settings screen. Preserve the
-shared 48px top navigation shell, active Settings item, Vane Console design
+Targeted edit for the existing Tocsin Console Settings screen. Preserve the
+shared 48px top navigation shell, active Settings item, Tocsin Console design
 system, compact shadcn/base-lyra operational style, neutral light theme,
 restrained typography, flat 1px bordered panels, and Remix Icon-like icon
 language.
@@ -18,7 +18,7 @@ workflow software.
 
 ## Page Structure
 
-1. **App Shell:** Keep the existing compact top header with Vane brand,
+1. **App Shell:** Keep the existing compact top header with Tocsin brand,
    horizontal navigation, active Settings nav item, initials/user menu, and no
    left sidebar.
 

@@ -28,7 +28,7 @@ release. Add a tool name to select part of the graph. For example, run
 
 # AGENTS.md
 
-This file is the working contract for agents changing Vane. Keep it focused on
+This file is the working contract for agents changing Tocsin. Keep it focused on
 how to work in this repository: ownership boundaries, architecture rules,
 tooling, validation, and skill usage. Product scope, user stories, and detailed
 architecture decisions live in `docs`.
@@ -52,10 +52,10 @@ changes, update the appropriate document under `docs` instead.
 - After creating or updating docs, use the `obsidian-vault` skill to sync them
   into Obsidian.
 - Do not hard-code the Obsidian vault path. Before syncing, discover the local
-  vault location from the Obsidian configuration, then locate the existing Vane
+  vault location from the Obsidian configuration, then locate the existing Tocsin
   notes within that vault.
-- Inspect the previously synced Vane notes, keep the same note naming/linking
-  style, and migrate the project docs into the discovered Vane notes location.
+- Inspect the previously synced Tocsin notes, keep the same note naming/linking
+  style, and migrate the project docs into the discovered Tocsin notes location.
 - If the `obsidian-vault` skill is unavailable, say that the sync was skipped
   and continue with the repository change.
 
@@ -79,7 +79,7 @@ JSON-safe manifest, adapter wiring, payload rendering, and parse logic into
 sibling files. Shared parsing or normalization helpers belong in a package-level
 `shared/` module instead of being imported through another concrete integration.
 Package roots aggregate these modules, and package manifests expose adapter
-subpaths such as `@vane/providers/grafana` and `@vane/destinations/feishu`.
+subpaths such as `@tocsin/providers/grafana` and `@tocsin/destinations/feishu`.
 
 Keep reusable integration code in packages. Keep console runtime concerns in
 `apps/console`. Do not introduce new deployable services, required middleware,
@@ -87,7 +87,7 @@ or distributed runtime assumptions without an explicit architecture document.
 
 ## Architecture Direction
 
-Vane is a SQLite-first, single-process, self-hosted Alert Hub. Architecture work
+Tocsin is a SQLite-first, single-process, self-hosted Alert Hub. Architecture work
 should reinforce that shape instead of drifting toward SaaS, microservices, or
 general workflow automation.
 
@@ -146,7 +146,7 @@ Dashboard auth and webhook auth are separate paths:
 - Dashboard routes, loaders, oRPC procedures, and API routes that touch
   user-owned data or runtime configuration must verify dashboard auth on the
   server.
-- Webhook intake endpoints authenticate with Source tokens or Vane-side additional shared secrets,
+- Webhook intake endpoints authenticate with Source tokens or Tocsin-side additional shared secrets,
   not browser dashboard sessions.
 
 ### Frontend Architecture
@@ -158,7 +158,7 @@ Recommended shape inside `apps/console/src`:
 
 ```txt
 shell               dashboard layout, sidebar, header, user menu
-components/ui       shadcn primitives only; no Vane domain knowledge
+components/ui       shadcn primitives only; no Tocsin domain knowledge
 components/common   reusable console UI, no feature ownership or server state
 features            Sources, Routes, Destinations, Events, Deliveries, Integrations, Settings
 routes              file routes, layouts, validateSearch, loaders, thin screens
@@ -168,7 +168,7 @@ lib                 small shared helpers; split same-name .server/.client pairs 
 ```
 
 Shared client/server contracts (command schemas, DTOs, result/projection types)
-live in the `@vane/core` package, not a console-level folder. Server-only types
+live in the `@tocsin/core` package, not a console-level folder. Server-only types
 that only the backend consumes stay next to the code that uses them, such as the
 dashboard session types in `server/runtime/`.
 
@@ -202,7 +202,7 @@ acceptable only for truly route-local helpers. Promote reusable domain code to
 Use `components/common` for reusable console-level UI that is shared across
 features but is not a shadcn primitive: operational table shells, pagination,
 copyable code lines, generic form/content panels, tooltips, and generic
-enabled/disabled badges. These components may encode Vane console density and
+enabled/disabled badges. These components may encode Tocsin console density and
 layout conventions, but they must not own Source/Destination/Event/Delivery
 business rules, call oRPC procedures, read query state, or import server-only
 modules. Feature-specific cells, actions, empty states, provider/destination
@@ -275,11 +275,11 @@ The oRPC contract + router is the client/server boundary for console data.
 - `*.schema.ts`, `*.types.ts`, and `*.model.ts` stay shared as long as their own
   imports remain environment-neutral.
 - Keep command schemas, input validators, DTO types, and other client-safe
-  contracts in the `@vane/core` package, the `@vane/api` contract package, or
+  contracts in the `@tocsin/core` package, the `@tocsin/api` contract package, or
   feature `model/*` files when they are reused outside a server-only
   implementation. Console-level command schemas and operation DTOs live in
-  `@vane/core`.
-- `@vane/core` and feature `model/*` contracts must stay environment-neutral.
+  `@tocsin/core`.
+- `@tocsin/core` and feature `model/*` contracts must stay environment-neutral.
   They must not import `node:*`, `#/infra/*`, `#/server/*`,
   `#/lib/auth.server.ts`, modules marked with TanStack Start import protection,
   or modules with `.server` / `.client` suffixes.
@@ -327,7 +327,7 @@ Use the TanStack stack deliberately:
 
 ## TanStack Suite
 
-Vane's console is a TanStack Start app. Treat Router, Query, Form, Table, and
+Tocsin's console is a TanStack Start app. Treat Router, Query, Form, Table, and
 Start as one integrated stack.
 
 - Use TanStack Router file routes for navigable console screens and layouts.
@@ -371,7 +371,7 @@ Use the matching TanStack skills before changing these areas:
 
 ## UI Direction
 
-Vane is an operational SRE tool. Favor dense, calm, repeat-use interfaces:
+Tocsin is an operational SRE tool. Favor dense, calm, repeat-use interfaces:
 tables, filters, detail pages, drawers/sheets, explicit enabled/disabled
 controls, and test actions for Sources and Destinations. Avoid marketing-style
 layouts, oversized hero sections, decorative dashboards, and visual novelty.
@@ -389,7 +389,7 @@ Keep the visual system compact and utilitarian:
 - Destinations tables should surface operator-visible facts first: target
   identity, adapter kind, enabled/disabled status, enabled route coverage,
   operational configuration (endpoint URL, method, recipients, template mode),
-  and explicit test/preview/edit/toggle actions. Vane is a private self-hosted
+  and explicit test/preview/edit/toggle actions. Tocsin is a private self-hosted
   product: authenticated dashboard operators should see the config they need to
   run on-call workflows. Still never return signing secrets, passwords, Source
   tokens, token hashes, or sensitive header values into list/query data. Recent
@@ -451,7 +451,7 @@ Use shadcn for shared UI primitives and app composition.
 
 ## Security And Data Exposure
 
-Vane is self-hosted, not multi-tenant SaaS. Prefer operational visibility for
+Tocsin is self-hosted, not multi-tenant SaaS. Prefer operational visibility for
 authenticated dashboard operators; only true secrets stay out of browser state.
 
 - Keep Source tokens, token hashes, additional shared secrets, destination
@@ -504,8 +504,8 @@ authenticated dashboard operators; only true secrets stay out of browser state.
 - Use relative imports only for same-directory package internals, generated
   route-tree files, or colocated tests where an alias would make ownership less
   clear.
-- Import workspace packages through their package names, such as `@vane/core`,
-  `@vane/providers`, and `@vane/destinations`.
+- Import workspace packages through their package names, such as `@tocsin/core`,
+  `@tocsin/providers`, and `@tocsin/destinations`.
 - Inside workspace packages, use the package-specific internal aliases
   `#core/*`, `#providers/*`, and `#destinations/*`; reserve `#/*` for the
   console so aliases remain unambiguous when TypeScript follows workspace
@@ -559,7 +559,7 @@ hook runs `vp staged` from `.vite-hooks/`.
 ## Local Browser Preview
 
 - Before starting a dev server for browser preview or frontend verification,
-  inspect the currently listening ports and reuse an existing Vane console dev
+  inspect the currently listening ports and reuse an existing Tocsin console dev
   server when one is already running.
 - Reuse the existing server's exact port. For example, if the console is
   already available on port `6180`, use that server instead of starting another
@@ -569,7 +569,7 @@ hook runs `vp staged` from `.vite-hooks/`.
 - Browser, Computer Use, Browser MCP, and Chrome DevTools MCP navigation must
   use `http://localhost:<port>`, never `http://127.0.0.1:<port>`.
 - Do not treat an occupied port as a reason to start a second server until you
-  have verified that the existing listener is not a usable Vane console dev
+  have verified that the existing listener is not a usable Tocsin console dev
   server.
 
 ## Browser Test Credentials

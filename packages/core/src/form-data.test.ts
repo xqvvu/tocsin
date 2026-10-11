@@ -12,12 +12,12 @@ import {
 describe("form data helpers", () => {
   it("reads strings without depending on DOM FormData types", () => {
     const data = reader({
-      name: " Vane ",
+      name: " Tocsin ",
       file: new Blob(),
     });
 
-    expect(formString(data, "name")).toBe(" Vane ");
-    expect(formTrimmedString(data, "name")).toBe("Vane");
+    expect(formString(data, "name")).toBe(" Tocsin ");
+    expect(formTrimmedString(data, "name")).toBe("Tocsin");
     expect(formString(data, "file")).toBe("");
     expect(formString(data, "missing")).toBe("");
   });

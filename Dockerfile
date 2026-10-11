@@ -21,7 +21,7 @@ COPY --parents --chown=vp:vp package.json pnpm-lock.yaml pnpm-workspace.yaml .no
 
 # Provision the pinned Node.js runtime, then install dependencies.
 # `vp env install` reads .node-version, so the runtime never drifts from it.
-RUN --mount=type=cache,id=vane-pnpm-store,target=/root/.local/share/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=tocsin-pnpm-store,target=/root/.local/share/pnpm/store,sharing=locked \
     vp env install \
  && vp install --frozen-lockfile
 
@@ -39,7 +39,7 @@ FROM debian:trixie-slim AS runtime
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
-ENV VANE_DATABASE_PATH=/data/vane.sqlite
+ENV TOCSIN_DATABASE_PATH=/data/tocsin.sqlite
 
 WORKDIR /app
 

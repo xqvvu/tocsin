@@ -1,8 +1,8 @@
-# Vane Console Design System
+# Tocsin Console Design System
 
 ## 1. Product Frame
 
-Vane is a self-hosted Alert Hub for SRE and operations teams. The UI is not a
+Tocsin is a self-hosted Alert Hub for SRE and operations teams. The UI is not a
 marketing site, incident-management suite, or SaaS analytics dashboard. It is a
 compact control console for proving what was received, how it normalized, why it
 routed, what was delivered, and what needs retry.

@@ -11,9 +11,9 @@ import {
   redactJsonValue,
   redactText,
   toJsonValue,
-} from "@vane/core";
-import type { JsonValue } from "@vane/core";
-import type { ProviderParseFailure, ProviderParseSuccess } from "@vane/providers";
+} from "@tocsin/core";
+import type { JsonValue } from "@tocsin/core";
+import type { ProviderParseFailure, ProviderParseSuccess } from "@tocsin/providers";
 
 import type { SourceRuntimeConfig } from "#/infra/sqlite/repositories/source/source.interface";
 import type {
@@ -25,7 +25,7 @@ import type {
   WebhookIntakeServiceOptions,
 } from "#/server/intake/intake.service.types";
 
-const intakeLogger = getLogger(["vane", "intake"]);
+const intakeLogger = getLogger(["tocsin", "intake"]);
 
 export class WebhookIntakeError extends Error {
   readonly eventId: string | null;
@@ -336,7 +336,7 @@ function verifyProviderSecret(
   return (
     typeof expected === "string" &&
     expected.length > 0 &&
-    timingSafeStringEqual(headerValue(headers, "x-vane-provider-secret"), expected)
+    timingSafeStringEqual(headerValue(headers, "x-tocsin-provider-secret"), expected)
   );
 }
 

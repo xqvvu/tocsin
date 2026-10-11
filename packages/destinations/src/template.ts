@@ -1,4 +1,4 @@
-import { JsonObjectSchema, redactJsonValue } from "@vane/core";
+import { JsonObjectSchema, redactJsonValue } from "@tocsin/core";
 import type {
   DestinationSummary,
   DestinationTemplateContext,
@@ -6,7 +6,7 @@ import type {
   JsonValue,
   SourceSummary,
   TemplateDiagnostic as CoreTemplateDiagnostic,
-} from "@vane/core";
+} from "@tocsin/core";
 import { z } from "zod";
 
 import {
@@ -100,7 +100,7 @@ type TemplateStaticPath =
   | "presentation.labels.monitorPath"
   | "presentation.labels.checkUrl"
   | "presentation.labels.lastFailure"
-  | "vane.eventUrl";
+  | "tocsin.eventUrl";
 
 type TemplateStaticPathResolver = (context: TemplateContext) => string;
 
@@ -147,7 +147,7 @@ const TemplateStaticPathResolvers = {
   "presentation.labels.monitorPath": (context) => context.presentation.labels.monitorPath,
   "presentation.labels.checkUrl": (context) => context.presentation.labels.checkUrl,
   "presentation.labels.lastFailure": (context) => context.presentation.labels.lastFailure,
-  "vane.eventUrl": (context) => context.vane.eventUrl,
+  "tocsin.eventUrl": (context) => context.tocsin.eventUrl,
 } satisfies Record<TemplateStaticPath, TemplateStaticPathResolver>;
 
 const AllowedTemplatePaths: ReadonlySet<TemplateStaticPath> = new Set(
@@ -326,7 +326,7 @@ export class DestinationTemplateEngine {
         ...presentation,
         labels: destinationCopy(presentation).labels,
       },
-      vane: {
+      tocsin: {
         eventUrl: options.eventUrl ?? "",
       },
       payload: redactJsonValue(input.payload ?? {}),

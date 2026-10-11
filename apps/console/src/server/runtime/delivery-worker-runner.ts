@@ -1,4 +1,4 @@
-import { redactText } from "@vane/core";
+import { redactText } from "@tocsin/core";
 
 import type {
   DeliveryWorkerRunOptions,

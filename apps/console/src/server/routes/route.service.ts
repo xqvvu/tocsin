@@ -6,7 +6,7 @@ import {
   type DeleteRouteCommand,
   type RouteDefinition,
   type UpdateRouteCommand,
-} from "@vane/core";
+} from "@tocsin/core";
 
 import {
   requireExistingDestinationIds,

@@ -3,7 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { FeishuAppListItem } from "@vane/core";
+import type { FeishuAppListItem } from "@tocsin/core";
 
 import { PageToolbar } from "#/components/common/page-toolbar";
 import { Button } from "#/components/ui/button";

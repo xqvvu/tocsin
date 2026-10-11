@@ -1,4 +1,4 @@
-import { formString, formTrimmedString, type RouteRule } from "@vane/core";
+import { formString, formTrimmedString, type RouteRule } from "@tocsin/core";
 
 export function routeRuleFromForm(data: FormData): RouteRule {
   return routeRuleFromValues(routeFormValuesFromForm(data));

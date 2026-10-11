@@ -1,4 +1,4 @@
-import { IanaTimeZoneSchema, LocaleSchema } from "@vane/core";
+import { IanaTimeZoneSchema, LocaleSchema } from "@tocsin/core";
 import * as z from "zod";
 
 /** Console runtime settings owned by the dashboard operator. */

@@ -8,7 +8,7 @@ import {
 import { useForm } from "@tanstack/react-form";
 import * as React from "react";
 
-import type { DestinationSummary, RouteDefinition, SourceSummary } from "@vane/core";
+import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { FormPanel } from "#/components/common/content-panel";
 import { Badge } from "#/components/ui/badge";

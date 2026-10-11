@@ -1,6 +1,6 @@
 import { RiCloseLine, RiFilter3Line, RiSearchLine } from "@remixicon/react";
 
-import type { DestinationSummary, SourceSummary } from "@vane/core";
+import type { DestinationSummary, SourceSummary } from "@tocsin/core";
 
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";

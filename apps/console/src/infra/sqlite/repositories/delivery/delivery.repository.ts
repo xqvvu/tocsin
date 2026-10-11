@@ -1,7 +1,7 @@
 import { sql } from "kysely";
 
-import { encodeJson, redactText } from "@vane/core";
-import type { DeliveryAttempt, DeliveryDetail, DeliveryJob } from "@vane/core";
+import { encodeJson, redactText } from "@tocsin/core";
+import type { DeliveryAttempt, DeliveryDetail, DeliveryJob } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
 import {

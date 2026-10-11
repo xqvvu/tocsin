@@ -96,7 +96,7 @@ describe("dashboard user menu", () => {
     const session = {
       user: {
         id: "user-1",
-        name: "Vane Owner",
+        name: "Tocsin Owner",
         email: "owner@example.test",
         image: null,
         role: "owner",
@@ -139,7 +139,7 @@ describe("dashboard user menu", () => {
     const session = {
       user: {
         id: "user-1",
-        name: "Vane Owner",
+        name: "Tocsin Owner",
         email: "owner@example.test",
         image: null,
         role: "owner",
