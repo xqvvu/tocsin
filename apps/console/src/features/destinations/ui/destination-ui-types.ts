@@ -29,6 +29,9 @@ export type DestinationFormValues = DestinationTemplateFormState & {
   from: string;
   replyTo: string;
   subjectPrefix: string;
+  /** Email template slots that sit next to `template` rather than being a mode. */
+  subjectTemplate: string;
+  htmlTemplate: string;
   headers: string;
   url: string;
   webhookUrl: string;

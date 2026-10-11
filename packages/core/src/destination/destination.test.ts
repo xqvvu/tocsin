@@ -151,6 +151,8 @@ describe("destination dashboard DTOs", () => {
         from: "",
         replyTo: "",
         subjectPrefix: "",
+        subjectTemplate: "",
+        htmlTemplate: "",
         headers: "",
         url: "",
         webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/abc",

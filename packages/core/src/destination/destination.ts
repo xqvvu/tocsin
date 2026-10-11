@@ -174,6 +174,13 @@ export const DestinationEditorFormDraftSchema = z.object({
   from: z.string(),
   replyTo: z.string(),
   subjectPrefix: z.string(),
+  /**
+   * Email template slots that live next to `template` instead of being a
+   * template mode. They are operator-authored content (not secrets), so the
+   * edit form can round-trip them the same way it does `subjectPrefix`.
+   */
+  subjectTemplate: z.string(),
+  htmlTemplate: z.string(),
   /** Header lines as `Name: value`; sensitive values become empty strings. */
   headers: z.string(),
   url: z.string(),

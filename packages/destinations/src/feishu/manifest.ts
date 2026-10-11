@@ -101,10 +101,14 @@ export const feishuManifest = {
         {
           mode: "text",
           labelKey: "destinations.form.templateModeText",
+          // Feishu spells out its own two-mode hint instead of the console's
+          // generic per-mode copy, so the card editor reads exactly as before.
+          descriptionKey: "destinations.form.templateModeDescription",
         },
         {
           mode: "feishu_card",
           labelKey: "destinations.form.templateModeFeishuCard",
+          descriptionKey: "destinations.form.templateModeDescription",
           help: {
             labelKey: "destinations.form.feishuCardTemplateHelpLabel",
             descriptionKey: "destinations.form.feishuCardTemplateHelp",

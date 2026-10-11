@@ -8,11 +8,7 @@ import {
 import { useForm } from "@tanstack/react-form";
 import * as React from "react";
 
-import type {
-  AdapterConfigHelp,
-  AdapterTemplateConfigField,
-  FeishuAppListItem,
-} from "@tocsin/core";
+import type { AdapterConfigHelp, FeishuAppListItem } from "@tocsin/core";
 import { defaultFeishuCardTemplate as defaultFeishuCardTemplateObject } from "@tocsin/destinations/feishu/default-card";
 
 import { Button } from "#/components/ui/button";
@@ -43,9 +39,19 @@ import {
   applyDynamicStatusColor,
   canApplyDynamicStatusColor,
   createDefaultDestinationTemplateFormState,
+  destinationTemplateBodyCopy,
+  destinationTemplateBodyFormField,
+  destinationTemplateBodyStarter,
+  destinationTemplateModeDescriptionKey,
+  destinationTemplateModeHelp,
+  destinationTemplateModes,
+  isDestinationTemplateBodyDraft,
+  isDestinationTemplateJsonMode,
+  resolveDestinationTemplateFormMode,
   templateBindingsJsonFromFormState,
   type DestinationTemplateFormMode,
   type DestinationTemplateFormSource,
+  type DestinationTemplateModeOption,
   type DestinationFormKind,
 } from "#/features/destinations/model/destination-form";
 import type {
@@ -104,7 +110,14 @@ export function DestinationForm({
     defaultValues,
     onSubmit: async ({ value }) => {
       const selectedKind = value.kind;
-      const data = destinationValuesToFormData(value);
+      // The manifest decides which modes this kind offers, so a mode drafted
+      // for another kind can never be submitted as a template its adapter
+      // would reject.
+      const templateMode = resolveDestinationTemplateFormMode(
+        value.templateMode,
+        destinationTemplateModes(destinationCatalog, selectedKind),
+      );
+      const data = destinationValuesToFormData({ ...value, templateMode });
       const input: DestinationFormSubmitInput = {
         name: value.name,
         kind: selectedKind,
@@ -225,54 +238,75 @@ export function DestinationForm({
     });
 
   const renderTemplateFields = (kind: DestinationFormKind) => {
-    if (kind !== "feishu") {
-      return renderTextTemplateField(kind);
-    }
+    // Which modes this kind offers — and what each one is called — comes from
+    // the adapter manifest, so a destination never exposes an editor for a mode
+    // its adapter would reject.
+    const modeOptions = destinationTemplateModes(destinationCatalog, kind);
 
     return (
       <>
-        <form.Field name="templateSource">
-          {(field) => (
-            <UiField>
-              <FieldLabel>{t("destinations.form.templateSource")}</FieldLabel>
-              <ToggleGroup
-                value={[String(field.state.value)]}
-                variant="outline"
-                size="sm"
-                onValueChange={(value) => {
-                  const next = value[0] as DestinationTemplateFormSource | undefined;
+        {kind === "feishu" ? (
+          <form.Field name="templateSource">
+            {(field) => (
+              <UiField>
+                <FieldLabel>{t("destinations.form.templateSource")}</FieldLabel>
+                <ToggleGroup
+                  value={[String(field.state.value)]}
+                  variant="outline"
+                  size="sm"
+                  onValueChange={(value) => {
+                    const next = value[0] as DestinationTemplateFormSource | undefined;
 
-                  if (next) {
-                    field.handleChange(next);
-                    form.setFieldValue("templateMode", "feishu_card");
-                  }
-                }}
-              >
-                <ToggleGroupItem
-                  value="builtin"
-                  aria-label={t("destinations.form.templateSourceBuiltin")}
+                    if (next) {
+                      field.handleChange(next);
+                      form.setFieldValue("templateMode", "feishu_card");
+                    }
+                  }}
                 >
-                  {t("destinations.form.templateSourceBuiltin")}
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="custom"
-                  aria-label={t("destinations.form.templateSourceCustom")}
-                >
-                  {t("destinations.form.templateSourceCustom")}
-                </ToggleGroupItem>
-              </ToggleGroup>
-              <FieldDescription>
-                {field.state.value === "builtin"
-                  ? t("destinations.form.templateSourceBuiltinDescription")
-                  : t("destinations.form.templateSourceCustomDescription")}
-              </FieldDescription>
-            </UiField>
-          )}
-        </form.Field>
-        <form.Subscribe selector={(state) => state.values.templateSource}>
-          {(templateSource) =>
-            templateSource === "custom" ? renderCustomFeishuTemplateFields() : null
-          }
+                  <ToggleGroupItem
+                    value="builtin"
+                    aria-label={t("destinations.form.templateSourceBuiltin")}
+                  >
+                    {t("destinations.form.templateSourceBuiltin")}
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="custom"
+                    aria-label={t("destinations.form.templateSourceCustom")}
+                  >
+                    {t("destinations.form.templateSourceCustom")}
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <FieldDescription>
+                  {field.state.value === "builtin"
+                    ? t("destinations.form.templateSourceBuiltinDescription")
+                    : t("destinations.form.templateSourceCustomDescription")}
+                </FieldDescription>
+              </UiField>
+            )}
+          </form.Field>
+        ) : null}
+        <form.Subscribe
+          selector={(state) => ({
+            source: state.values.templateSource,
+            mode: state.values.templateMode,
+          })}
+        >
+          {({ source: templateSource, mode: draftedMode }) => {
+            const templateMode = resolveDestinationTemplateFormMode(draftedMode, modeOptions);
+            // The built-in Feishu reference has no editable body of its own.
+            const editingCustomTemplate = kind !== "feishu" || templateSource === "custom";
+
+            if (!editingCustomTemplate) {
+              return null;
+            }
+
+            return (
+              <>
+                {modeOptions.length > 1 ? renderTemplateModeSelector(modeOptions) : null}
+                {renderTemplateBodyField(kind, templateMode)}
+              </>
+            );
+          }}
         </form.Subscribe>
         <form.Subscribe
           selector={(state) => ({
@@ -296,7 +330,8 @@ export function DestinationForm({
             fallback,
             previewStatus,
           }) =>
-            templateSource === "builtin" || templateMode === "feishu_card" ? (
+            kind === "feishu" &&
+            (templateSource === "builtin" || templateMode === "feishu_card") ? (
               <FeishuDynamicPropertiesField
                 enabled={enabled}
                 canApply={canApplyDynamicStatusColor(card)}
@@ -328,66 +363,100 @@ export function DestinationForm({
             ) : null
           }
         </form.Subscribe>
-        <form.Subscribe selector={(state) => state.values.templateSource}>
-          {(templateSource) =>
-            templateSource === "custom" ? renderTemplateVariableReference() : null
-          }
-        </form.Subscribe>
+        {kind !== "feishu" ? renderTemplateVariableReference(modeOptions) : null}
+        {kind === "feishu" ? (
+          <form.Subscribe selector={(state) => state.values.templateSource}>
+            {(templateSource) =>
+              templateSource === "custom" ? renderTemplateVariableReference(modeOptions) : null
+            }
+          </form.Subscribe>
+        ) : null}
       </>
     );
   };
 
-  const renderCustomFeishuTemplateFields = () => (
-    <>
-      <form.Field name="templateMode">
-        {(field) => (
+  /**
+   * Template type control. One item per mode the manifest declares for this
+   * kind, labelled from the manifest too, so manifests stay the single source
+   * of what is selectable.
+   *
+   * Drafts are kept per body field: switching away from a mode preserves what
+   * was drafted for it, and switching to an empty JSON mode seeds that mode's
+   * starter document instead of an editor the operator must fill from scratch.
+   */
+  const renderTemplateModeSelector = (modeOptions: DestinationTemplateModeOption[]) => (
+    <form.Field name="templateMode">
+      {(field) => {
+        const templateMode = resolveDestinationTemplateFormMode(field.state.value, modeOptions);
+
+        return (
           <UiField>
             <FieldLabel>{t("destinations.form.templateMode")}</FieldLabel>
             <ToggleGroup
-              value={[String(field.state.value)]}
+              value={[templateMode]}
               variant="outline"
               size="sm"
               onValueChange={(value) => {
                 const next = value[0] as DestinationTemplateFormMode | undefined;
 
-                if (next) {
-                  field.handleChange(next);
+                if (!next) {
+                  return;
+                }
+
+                field.handleChange(next);
+
+                if (isDestinationTemplateJsonMode(next)) {
+                  const bodyField = destinationTemplateBodyFormField(next);
+
+                  if (!String(form.getFieldValue(bodyField)).trim()) {
+                    form.setFieldValue(bodyField, destinationTemplateBodyStarter(next));
+                  }
                 }
               }}
             >
-              <ToggleGroupItem value="text" aria-label={t("destinations.form.templateModeText")}>
-                {t("destinations.form.templateModeText")}
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="feishu_card"
-                aria-label={t("destinations.form.templateModeFeishuCard")}
-              >
-                {t("destinations.form.templateModeFeishuCard")}
-              </ToggleGroupItem>
+              {modeOptions.map((option) => (
+                <ToggleGroupItem
+                  key={option.mode}
+                  value={option.mode}
+                  aria-label={t(option.labelKey)}
+                >
+                  {t(option.labelKey)}
+                </ToggleGroupItem>
+              ))}
             </ToggleGroup>
-            <FieldDescription>{t("destinations.form.templateModeDescription")}</FieldDescription>
+            <FieldDescription>
+              {t(destinationTemplateModeDescriptionKey(modeOptions, templateMode))}
+            </FieldDescription>
           </UiField>
-        )}
-      </form.Field>
-      <form.Subscribe selector={(state) => state.values.templateMode}>
-        {(templateMode) =>
-          templateMode === "feishu_card"
-            ? renderFeishuCardTemplateField()
-            : renderTextTemplateField("feishu")
-        }
-      </form.Subscribe>
-    </>
+        );
+      }}
+    </form.Field>
   );
 
-  const renderTextTemplateField = (kind: DestinationFormKind) =>
-    renderTextareaField({
-      label: t("destinations.form.template"),
-      name: "templateText",
+  /** Body editor for the selected mode: one text area, one JSON editor. */
+  const renderTemplateBodyField = (
+    kind: DestinationFormKind,
+    templateMode: DestinationTemplateFormMode,
+  ) =>
+    isDestinationTemplateJsonMode(templateMode)
+      ? renderJsonTemplateField(kind, templateMode)
+      : renderTextTemplateField(kind, templateMode);
+
+  const renderTextTemplateField = (
+    kind: DestinationFormKind,
+    templateMode: DestinationTemplateFormMode,
+  ) => {
+    const copy = destinationTemplateBodyCopy(templateMode);
+
+    return renderTextareaField({
+      label: t(copy.labelKey),
+      name: destinationTemplateBodyFormField(templateMode),
       id: `message-template-${kind}`,
       className: "min-h-20 max-h-40 resize-y overflow-auto font-mono text-[11px]",
       placeholder: "{{event.title}} on {{source.name}}",
-      description: t("destinations.form.templateDescription"),
+      description: t(copy.descriptionKey),
     });
+  };
 
   const renderConfigHelp = (help: AdapterConfigHelp | null) => {
     if (!help) {
@@ -424,92 +493,126 @@ export function DestinationForm({
     );
   };
 
-  const renderFeishuCardTemplateField = () => (
-    <form.Field name="templateCard">
-      {(field) => (
-        <UiField>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-1">
-              <FieldLabel htmlFor="feishu-card-template">
-                {t("destinations.form.feishuCardTemplate")}
-              </FieldLabel>
-              {renderConfigHelp(
-                destinationTemplateModeHelp(destinationCatalog, "feishu", "feishu_card"),
-              )}
+  /**
+   * JSON body editor. Feishu cards, generic webhook payloads, and Slack blocks
+   * are all one JSON object drafted as text, so they share this editor and only
+   * differ in the copy and in the mode help the manifest carries.
+   */
+  const renderJsonTemplateField = (
+    kind: DestinationFormKind,
+    templateMode: DestinationTemplateFormMode,
+  ) => {
+    const copy = destinationTemplateBodyCopy(templateMode);
+    const isFeishuCard = kind === "feishu" && templateMode === "feishu_card";
+
+    return (
+      <form.Field
+        name={destinationTemplateBodyFormField(templateMode)}
+        validators={{
+          // Caught at submit so a half-written document reports on the field
+          // instead of throwing out of the config builder.
+          onSubmit: ({ value }) =>
+            isDestinationTemplateBodyDraft(value)
+              ? undefined
+              : t("destinations.form.templateBodyInvalidJson"),
+        }}
+      >
+        {(field) => (
+          <UiField data-invalid={field.state.meta.errors.length > 0}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-1">
+                <FieldLabel htmlFor={`json-template-${kind}`}>{t(copy.labelKey)}</FieldLabel>
+                {renderConfigHelp(
+                  destinationTemplateModeHelp(destinationCatalog, kind, templateMode),
+                )}
+              </div>
+              {isFeishuCard ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  onClick={() => {
+                    const defaults = createDefaultDestinationTemplateFormState();
+
+                    form.setFieldValue("templateSource", "builtin");
+                    form.setFieldValue("templateMode", "feishu_card");
+                    form.setFieldValue("templateBindings", defaults.templateBindings);
+                    form.setFieldValue("templateColorEnabled", defaults.templateColorEnabled);
+                    form.setFieldValue("templateColorSelector", defaults.templateColorSelector);
+                    form.setFieldValue("templateColorCases", defaults.templateColorCases);
+                    form.setFieldValue("templateColorFallback", defaults.templateColorFallback);
+                  }}
+                >
+                  <RiResetLeftLine data-icon="inline-start" aria-hidden />
+                  {t("destinations.form.restoreDefaultCard")}
+                </Button>
+              ) : null}
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              onClick={() => {
-                const defaults = createDefaultDestinationTemplateFormState();
+            <Textarea
+              id={`json-template-${kind}`}
+              name={field.name}
+              className="max-h-[min(42dvh,28rem)] min-h-56 resize-y overflow-auto font-mono text-[11px]"
+              placeholder={destinationTemplateBodyStarter(templateMode)}
+              value={String(field.state.value)}
+              onBlur={field.handleBlur}
+              onChange={(event) => field.handleChange(event.currentTarget.value)}
+            />
+            <FieldDescription>{t(copy.descriptionKey)}</FieldDescription>
+            <FieldError
+              errors={field.state.meta.errors.map((error) => ({
+                message: String(error),
+              }))}
+            />
+          </UiField>
+        )}
+      </form.Field>
+    );
+  };
 
-                form.setFieldValue("templateSource", "builtin");
-                form.setFieldValue("templateMode", "feishu_card");
-                form.setFieldValue("templateBindings", defaults.templateBindings);
-                form.setFieldValue("templateColorEnabled", defaults.templateColorEnabled);
-                form.setFieldValue("templateColorSelector", defaults.templateColorSelector);
-                form.setFieldValue("templateColorCases", defaults.templateColorCases);
-                form.setFieldValue("templateColorFallback", defaults.templateColorFallback);
-              }}
-            >
-              <RiResetLeftLine data-icon="inline-start" aria-hidden />
-              {t("destinations.form.restoreDefaultCard")}
-            </Button>
-          </div>
-          <Textarea
-            id="feishu-card-template"
-            name={field.name}
-            className="max-h-[min(42dvh,28rem)] min-h-56 resize-y overflow-auto font-mono text-[11px]"
-            placeholder={feishuCardTemplatePlaceholder}
-            value={String(field.state.value)}
-            onBlur={field.handleBlur}
-            onChange={(event) => field.handleChange(event.currentTarget.value)}
-          />
-          <FieldDescription>
-            {t("destinations.form.feishuCardTemplateDescription")}
-          </FieldDescription>
-        </UiField>
-      )}
-    </form.Field>
-  );
-
-  const renderTemplateVariableReference = () => (
+  const renderTemplateVariableReference = (modeOptions: DestinationTemplateModeOption[]) => (
     <form.Subscribe
       selector={(state) => ({
         mode: state.values.templateMode,
         text: state.values.templateText,
         card: state.values.templateCard,
+        payload: state.values.templatePayload,
       })}
     >
-      {({ mode: templateMode, text, card }) => (
-        <UiField>
-          <FieldLabel>{t("destinations.form.variables")}</FieldLabel>
-          <div className="flex flex-wrap gap-1">
-            {templateVariablePaths.map((path) => (
-              <Button
-                key={path}
-                type="button"
-                variant="outline"
-                size="xs"
-                onClick={() => {
-                  const variable = `{{${path}}}`;
+      {({ mode: draftedMode, text, card, payload }) => {
+        // Insert into whichever body the selected mode actually edits, so a
+        // card, payload, or text draft gets the variable and the others do not.
+        const templateMode = resolveDestinationTemplateFormMode(draftedMode, modeOptions);
+        const bodyField = destinationTemplateBodyFormField(templateMode);
+        return (
+          <UiField>
+            <FieldLabel>{t("destinations.form.variables")}</FieldLabel>
+            <div className="flex flex-wrap gap-1">
+              {templateVariablePaths.map((path) => (
+                <Button
+                  key={path}
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  onClick={() => {
+                    const variable = `{{${path}}}`;
+                    const current =
+                      bodyField === "templateText"
+                        ? text
+                        : bodyField === "templateCard"
+                          ? card
+                          : payload;
 
-                  if (templateMode === "feishu_card") {
-                    form.setFieldValue("templateCard", appendTemplateVariable(card, variable));
-                    return;
-                  }
-
-                  form.setFieldValue("templateText", appendTemplateVariable(text, variable));
-                }}
-              >
-                {path}
-              </Button>
-            ))}
-          </div>
-          <FieldDescription>{t("destinations.form.variablesDescription")}</FieldDescription>
-        </UiField>
-      )}
+                    form.setFieldValue(bodyField, appendTemplateVariable(current, variable));
+                  }}
+                >
+                  {path}
+                </Button>
+              ))}
+            </div>
+            <FieldDescription>{t("destinations.form.variablesDescription")}</FieldDescription>
+          </UiField>
+        );
+      }}
     </form.Subscribe>
   );
 
@@ -554,6 +657,20 @@ export function DestinationForm({
             name: "subjectPrefix",
             placeholder: "[Tocsin]",
             description: t("destinations.form.subjectPrefixDescription"),
+          })}
+          {renderTextField({
+            label: t("destinations.form.subjectTemplate"),
+            name: "subjectTemplate",
+            placeholder: "[{{event.severity}}] {{event.title}}",
+            description: t("destinations.form.subjectTemplateDescription"),
+          })}
+          {renderTextareaField({
+            label: t("destinations.form.htmlTemplate"),
+            name: "htmlTemplate",
+            id: "html-template",
+            className: "min-h-20 max-h-40 resize-y overflow-auto font-mono text-[11px]",
+            placeholder: "<h1>{{event.title}}</h1><p>{{event.message}}</p>",
+            description: t("destinations.form.htmlTemplateDescription"),
           })}
           {renderHeaderLinesField()}
         </>
@@ -918,7 +1035,21 @@ export function DestinationForm({
                         name={field.name}
                         items={destinationKindItems}
                         value={field.state.value}
-                        onValueChange={(value) => field.handleChange(value as DestinationFormKind)}
+                        onValueChange={(value) => {
+                          const nextKind = value as DestinationFormKind;
+
+                          field.handleChange(nextKind);
+                          // Each kind offers its own template modes, so a mode drafted
+                          // for the previous kind is clamped to what the new kind
+                          // actually declares.
+                          form.setFieldValue(
+                            "templateMode",
+                            resolveDestinationTemplateFormMode(
+                              form.getFieldValue("templateMode"),
+                              destinationTemplateModes(destinationCatalog, nextKind),
+                            ),
+                          );
+                        }}
                       >
                         <SelectTrigger className="w-full" onBlur={field.handleBlur}>
                           <SelectValue />
@@ -1051,6 +1182,8 @@ export function createDestinationDefaults(): DestinationFormValues {
     from: "",
     replyTo: "",
     subjectPrefix: "",
+    subjectTemplate: "",
+    htmlTemplate: "",
     headers: "",
     url: "",
     webhookUrl: "",
@@ -1095,33 +1228,6 @@ function appendTemplateVariable(currentValue: string, variable: string): string 
   return currentValue.trimEnd() ? `${currentValue} ${variable}` : variable;
 }
 
-function destinationTemplateModeHelp(
-  catalog: DestinationCatalog,
-  kind: DestinationFormKind,
-  mode: DestinationTemplateFormMode,
-): AdapterConfigHelp | null {
-  const field = catalog
-    .find((item) => item.kind === kind)
-    ?.configFields.find(isTemplateConfigField);
-  const modeDefinition = field?.modes?.find((definition) => definition.mode === mode);
-
-  if (modeDefinition?.help) {
-    return visibleConfigHelp(modeDefinition.help);
-  }
-
-  return visibleConfigHelp(field?.help);
-}
-
-function isTemplateConfigField(
-  field: DestinationCatalog[number]["configFields"][number],
-): field is AdapterTemplateConfigField {
-  return field.type === "template";
-}
-
-function visibleConfigHelp(help: AdapterConfigHelp | undefined): AdapterConfigHelp | null {
-  return help && help.show !== false ? help : null;
-}
-
 const templateVariablePaths = [
   "event.title",
   "event.message",
@@ -1144,5 +1250,3 @@ const templateVariablePaths = [
 ];
 
 const defaultFeishuCardTemplate = JSON.stringify(defaultFeishuCardTemplateObject, null, 2);
-
-const feishuCardTemplatePlaceholder = defaultFeishuCardTemplate;

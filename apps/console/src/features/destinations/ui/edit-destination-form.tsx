@@ -75,6 +75,8 @@ export function EditDestinationForm({
           from: editorDraft.form.from,
           replyTo: editorDraft.form.replyTo,
           subjectPrefix: editorDraft.form.subjectPrefix,
+          subjectTemplate: editorDraft.form.subjectTemplate,
+          htmlTemplate: editorDraft.form.htmlTemplate,
           headers: editorDraft.form.headers,
           url: editorDraft.form.url,
           webhookUrl: editorDraft.form.webhookUrl,
