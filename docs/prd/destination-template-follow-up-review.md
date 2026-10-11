@@ -2,7 +2,8 @@
 
 Parent: https://github.com/xqvvu/tocsin/issues/16
 日期: 2026-10-10
-状态: 评审完成，未改动任何实现代码
+状态: 评审完成，未改动任何实现代码。**（2026-10-11 更新）本评审建议的 #19 / 18a / 17a / 17b 已全部实现并
+合入 main，18b 作废**，见文末「落地情况」。评审结论本身按当时的代码状态保留，不回改正文。
 
 ## 结论先行
 
@@ -86,6 +87,39 @@ adapter manifest 元数据 **需要改动**：三个通道都要补 `modes` 声�
 1. `escapeHtml` 的提升位置——放 `@tocsin/core`（供其他通道复用）还是 destinations 共享层。实现 #17b 时定，属局部决策，不阻塞评审通过。
 2. Slack blocks 的根数组方案取舍（#18a 对象包装 vs #18b 放宽核心 schema）——本评审推荐 18a。
 3. 一个 destination 出现多个模板字段时的 preview 呈现方式（#17）——方向可行（诊断按 path 前缀区分），实现时验证。
+
+## 落地情况（2026-10-11）
+
+本评审交付后，#19 / 18a / 17a / 17b 四片按建议的拆分实现并合入 main。当前实现共四种模板模式，
+完整清单见 `docs/prd/destination-template-engine.md` 的「模板模式全貌」；评审建议记录的四条决策的
+取舍见 `docs/adr/0010-destination-template-object-root-payload-and-html-escaping.md`。
+
+| 切片 | 结果 | 落地形状 |
+| --- | --- | --- |
+| #19 generic webhook JSON payload | ✅ 已完成（PR #42） | `mode: "json_payload"`，模板字段 `payload`（对象根）；`GenericWebhookTemplateSchema` 收窄为 text / json_payload |
+| #18a Slack blocks（对象包装） | ✅ 已完成（PR #43，守卫 PR #46） | `mode: "slack_blocks"`，模板字段 `payload`，blocks 放 `payload.blocks`；核心 schema 未放宽 |
+| #18b 根数组 JSON 模板 | ❌ 已作废 | 对象包装方案（18a）取代；没有需求再驱动放宽 `JsonObjectSchema` 的数组根 |
+| #17a Email subject + text 模板 | ✅ 已完成（PR #48） | `subjectTemplate` 平级字段（设置后 `subjectPrefix` 失效）；text body 沿用既有 `template` |
+| #17b Email HTML body 模板 | ✅ 已完成（PR #48） | `htmlTemplate` 平级字段；采用本评审推荐的「变量值经 `escapeHtml` 转义、模板标记按原样输出」语义，未提供 raw 退出 |
+
+前置项与本评审的三条未解决项：
+
+- **模式分派**：未按建议做成表驱动，改为穷尽 `switch`（`diagnoseDestinationTemplate`）。第三种模式若忘记
+  登记会在编译期失败，而不是被 else 分支接到 `.card`。理由与代价记入 ADR 0010。
+- **未解决项 1（`escapeHtml` 提升位置）**：按最小面处理——共享层只增加 `escape` 钩子（
+  `TemplateRenderOptions`），实体表留在 `packages/destinations/src/email/payload.ts`，`@tocsin/core` 未改动。
+- **未解决项 2（18a vs 18b）**：采纳 18a，18b 作废。
+- **未解决项 3（多模板槽的 preview 呈现）**：按 path 前缀区分的方向成立。`subjectTemplate` /
+  `htmlTemplate` 经 `EmailConfigSchema` 的 `superRefine` 产出以字段名为前缀的诊断，与
+  `template.text` 共用同一条 diagnostics 聚合路径。
+
+仍然没有做的部分（不是评审遗漏，是实现范围）：console 表单尚未提供 `slack_blocks` / `json_payload`
+的模式选择器，也没有 Email 两个新字段的输入项；这些模式与字段经 config JSON / API / TOML 可用。
+缺口由 https://github.com/xqvvu/vane/issues/47 跟踪。因此本评审「三片实现都必须各自携带……表单双向映射」
+这一条只完成了 Feishu 以外的 schema / 渲染 / preview / manifest / i18n / 测试部分。
+
+#16 / #17 / #18 / #19 已在 GitHub 关闭；父 issue #15（`Follow-up destination template modes`）仍为 open，
+上述表单缺口是它剩下的主要事项。
 
 ## 对 #15 门禁的答复
 
