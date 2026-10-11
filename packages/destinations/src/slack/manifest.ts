@@ -22,6 +22,16 @@ export const slackManifest = {
       path: "template",
       labelKey: "destinations.form.template",
       descriptionKey: "destinations.form.templateDescription",
+      modes: [
+        {
+          mode: "text",
+          labelKey: "destinations.form.templateModeText",
+        },
+        {
+          mode: "slack_blocks",
+          labelKey: "destinations.form.templateModeSlackBlocks",
+        },
+      ],
     },
   ],
   secretFields: [
