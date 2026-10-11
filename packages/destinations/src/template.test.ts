@@ -4,6 +4,7 @@ import { feishuSender } from "#destinations/feishu/index";
 import {
   DestinationTemplateEngine,
   DestinationTemplateSchema,
+  type DestinationTemplate,
   type TemplateBindings,
 } from "#destinations/template";
 import type { DestinationSendInput } from "#destinations/types";
@@ -309,5 +310,144 @@ describe("destination templates", () => {
         text: "Checkout API latency high",
       },
     });
+  });
+});
+
+describe("template render escape hook", () => {
+  const context = () => DestinationTemplateEngine.createRenderContext(input);
+
+  // Escape the characters that matter for HTML, so a value that came from an
+  // event can never close a tag the template author wrote.
+  const escapeHtml = (value: string) =>
+    value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
+  it("escapes interpolated values while leaving the template's own markup intact", () => {
+    // The invariant: escape runs inside the replaceAll replacer, so it only
+    // ever sees a resolved variable — never the template's literal text.
+    const withMarkup: DestinationSendInput<unknown> = {
+      ...input,
+      normalizedEvent: {
+        ...input.normalizedEvent,
+        title: '<script>alert("xss")</script>',
+      },
+    };
+
+    const rendered = DestinationTemplateEngine.renderText(
+      DestinationTemplateEngine.createRenderContext(withMarkup),
+      "<b>{{event.title}}</b>",
+      "text",
+      {},
+      { escape: escapeHtml },
+    );
+
+    expect(rendered.ok).toBe(true);
+    expect(rendered.value).toBe('<b>&lt;script&gt;alert("xss")&lt;/script&gt;</b>');
+  });
+
+  it("leaves rendering unchanged when no escape hook is supplied", () => {
+    const rendered = DestinationTemplateEngine.renderText(context(), "<b>{{event.title}}</b>");
+
+    expect(rendered.value).toBe("<b>Checkout API latency high</b>");
+  });
+
+  it("calls the escape hook only for variable values, never for literal text", () => {
+    const seen: string[] = [];
+    const spy = (value: string) => {
+      seen.push(value);
+      return value;
+    };
+
+    DestinationTemplateEngine.renderText(
+      context(),
+      "literal {{event.severity}} more literal {{event.title}}",
+      "text",
+      {},
+      { escape: spy },
+    );
+
+    expect(seen).toEqual(["critical", "Checkout API latency high"]);
+  });
+
+  it("escapes every interpolated value independently", () => {
+    const rendered = DestinationTemplateEngine.renderText(
+      context(),
+      "<i>{{event.severity}}</i>|<i>{{source.name}}</i>",
+      "text",
+      {},
+      { escape: (value) => `[${value}]` },
+    );
+
+    expect(rendered.value).toBe("<i>[critical]</i>|<i>[Grafana prod]</i>");
+  });
+
+  it("does not apply an escape hook to JSON template rendering", () => {
+    // JSON body templates are a different output context; the engine exposes
+    // no escape option there on purpose.
+    const rendered = DestinationTemplateEngine.renderJson(context(), { title: "{{event.title}}" });
+
+    expect(rendered.value).toEqual({ title: "Checkout API latency high" });
+  });
+});
+
+describe("template mode dispatch", () => {
+  const unknownVariableDiagnostics = (
+    template: DestinationTemplate,
+  ): Array<{ path: string | undefined }> =>
+    DestinationTemplateEngine.diagnoseDestinationTemplate(template).map((diagnostic) => ({
+      path: diagnostic.path,
+    }));
+
+  it("points each mode's diagnostics at that mode's own body field", () => {
+    // A regression guard: the old `mode === "text" ? ... : ...` dispatch sent
+    // every non-text mode to `.card`, so json_payload and slack_blocks would
+    // have reported paths under a field their schema does not even have.
+    expect(unknownVariableDiagnostics({ mode: "text", text: "{{event.nope}}" })).toEqual([
+      { path: "template.text" },
+    ]);
+
+    expect(
+      unknownVariableDiagnostics({ mode: "feishu_card", card: { v: "{{event.nope}}" } }),
+    ).toEqual([{ path: "template.card.v" }]);
+
+    expect(
+      unknownVariableDiagnostics({ mode: "json_payload", payload: { v: "{{event.nope}}" } }),
+    ).toEqual([{ path: "template.payload.v" }]);
+
+    expect(
+      unknownVariableDiagnostics({ mode: "slack_blocks", payload: { v: "{{event.nope}}" } }),
+    ).toEqual([{ path: "template.payload.v" }]);
+  });
+
+  it("addresses nested arrays in a JSON mode's diagnostic path", () => {
+    expect(
+      unknownVariableDiagnostics({
+        mode: "json_payload",
+        payload: { alert: [{ text: "{{event.nope}}" }] },
+      }),
+    ).toEqual([{ path: "template.payload.alert.0.text" }]);
+  });
+
+  it("returns no diagnostics from diagnoseConfig when the schema already rejects the template", () => {
+    const template: DestinationTemplate = {
+      mode: "slack_blocks",
+      payload: { blocks: [{ text: "{{event.nope}}" }] },
+    };
+
+    // Direct dispatch reports the offending variable and its path.
+    expect(DestinationTemplateEngine.diagnoseDestinationTemplate(template)).toEqual([
+      {
+        severity: "error",
+        path: "template.payload.blocks.0.text",
+        variable: "event.nope",
+        message: "Destination template contains unknown variable: event.nope",
+      },
+    ]);
+
+    // diagnoseConfig parses first; the mode schema's superRefine already fails
+    // on that variable, so the parse failure short-circuits to an empty array
+    // and the specific diagnostic is lost. A caller holding only a config
+    // object (the console preview path) therefore gets nothing to show.
+    // Pinned as current behaviour; reported as a finding, not fixed here.
+    expect(DestinationTemplateEngine.diagnoseConfig({ template })).toEqual([]);
   });
 });
