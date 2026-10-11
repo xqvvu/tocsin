@@ -1,9 +1,9 @@
 import type { JsonValue } from "@tocsin/core";
-import type { z } from "zod";
 
 import { emailManifest } from "#destinations/email/manifest";
 import { renderEmailPayload, renderEmailRequestPayload } from "#destinations/email/payload";
 import { EmailConfigSchema } from "#destinations/email/schema";
+import { zodTemplateDiagnostics } from "#destinations/shared/template-diagnostics";
 import { DestinationTemplateEngine } from "#destinations/template";
 import { Adapter, R, Send } from "#destinations/utils";
 
@@ -96,22 +96,3 @@ export const emailAdapter = Adapter.define({
 });
 
 export const emailSender = emailAdapter;
-
-/**
- * Flattens a zod config failure into the same diagnostic shape the template
- * engine emits, so the console renders template errors through one path.
- */
-function zodTemplateDiagnostics(error: z.ZodError) {
-  return error.issues.map((issue) => ({
-    severity: "error" as const,
-    path: issue.path.join(".") || null,
-    variable: variableFromTemplateIssue(issue.message),
-    message: issue.message,
-  }));
-}
-
-function variableFromTemplateIssue(message: string): string | null {
-  const match = /^Destination template contains unknown variable: (.+)$/.exec(message);
-
-  return match?.[1] ?? null;
-}

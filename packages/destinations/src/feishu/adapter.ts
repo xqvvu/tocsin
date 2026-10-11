@@ -1,5 +1,4 @@
 import type { JsonValue } from "@tocsin/core";
-import { z } from "zod";
 
 import { feishuManifest } from "#destinations/feishu/manifest";
 import {
@@ -25,6 +24,7 @@ import {
   isFeishuSuccess,
   parseFeishuResult,
 } from "#destinations/shared/feishu-result";
+import { zodTemplateDiagnostics } from "#destinations/shared/template-diagnostics";
 import { DestinationTemplateEngine } from "#destinations/template";
 import type {
   DestinationSendInput,
@@ -289,19 +289,4 @@ async function sendViaApp(
   } catch (error) {
     return Send.transportFailureResult({ error, renderedPayload });
   }
-}
-
-function zodTemplateDiagnostics(error: z.ZodError) {
-  return error.issues.map((issue) => ({
-    severity: "error",
-    path: issue.path.join(".") || null,
-    variable: variableFromTemplateIssue(issue.message),
-    message: issue.message,
-  }));
-}
-
-function variableFromTemplateIssue(message: string): string | null {
-  const match = /^Destination template contains unknown variable: (.+)$/.exec(message);
-
-  return match?.[1] ?? null;
 }

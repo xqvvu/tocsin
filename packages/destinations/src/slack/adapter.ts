@@ -1,6 +1,6 @@
 import type { JsonValue } from "@tocsin/core";
-import type { z } from "zod";
 
+import { zodTemplateDiagnostics } from "#destinations/shared/template-diagnostics";
 import { slackManifest } from "#destinations/slack/manifest";
 import { renderSlackPayload } from "#destinations/slack/payload";
 import { SlackConfigSchema } from "#destinations/slack/schema";
@@ -98,22 +98,3 @@ export const slackAdapter = Adapter.define({
 });
 
 export const slackSender = slackAdapter;
-
-/**
- * Flattens a zod config failure into the same diagnostic shape the template
- * engine emits, so the console renders template errors through one path.
- */
-function zodTemplateDiagnostics(error: z.ZodError) {
-  return error.issues.map((issue) => ({
-    severity: "error" as const,
-    path: issue.path.join(".") || null,
-    variable: variableFromTemplateIssue(issue.message),
-    message: issue.message,
-  }));
-}
-
-function variableFromTemplateIssue(message: string): string | null {
-  const match = /^Destination template contains unknown variable: (.+)$/.exec(message);
-
-  return match?.[1] ?? null;
-}
