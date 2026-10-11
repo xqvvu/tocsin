@@ -537,6 +537,7 @@
   "destinations.form.templateModeText": "文本",
   "destinations.form.templateModeFeishuCard": "飞书卡片",
   "destinations.form.templateModeJsonPayload": "JSON 负载",
+  "destinations.form.templateModeSlackBlocks": "Slack 区块",
   "destinations.form.templateModeDescription": "飞书支持普通文本和交互式卡片，卡片使用飞书原生 JSON",
   "destinations.form.feishuCardTemplate": "飞书卡片 JSON",
   "destinations.form.feishuCardTemplateHelpLabel": "如何配置飞书卡片 JSON",

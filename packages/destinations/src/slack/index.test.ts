@@ -137,4 +137,153 @@ describe("slack sender", () => {
 
     expect(adapter.manifest.kind).toBe("slack");
   });
+
+  describe("slack_blocks template mode", () => {
+    it("replaces the default blocks payload and interpolates nested string fields", async () => {
+      const calls: Array<{ url: string; init: RequestInit }> = [];
+      const fetcher: FetchLike = async (url, init) => {
+        calls.push({ url, init });
+        return { ok: true, status: 200, text: async () => "ok" };
+      };
+
+      const result = await slackSender.send(
+        {
+          ...input,
+          config: {
+            webhookUrl: input.config.webhookUrl,
+            template: {
+              mode: "slack_blocks",
+              payload: {
+                text: "[{{event.severityDisplay}}] {{event.title}}",
+                blocks: [
+                  {
+                    type: "section",
+                    text: { type: "mrkdwn", text: "service={{event.labels.service}}" },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        { fetch: fetcher },
+      );
+
+      const body = JSON.parse(calls[0]?.init.body as string) as {
+        text: string;
+        blocks: Array<{ text?: { text: string } }>;
+      };
+
+      expect(result.ok).toBe(true);
+      expect(body.text).toContain("Checkout API latency high");
+      expect(body.blocks[0]?.text?.text).toBe("service=checkout");
+      // The template owns the body: no default header/fields blocks are added.
+      expect(body.blocks).toHaveLength(1);
+    });
+
+    it("renders missing allow-listed labels as empty strings", () => {
+      const preview = slackSender.preview({
+        ...input,
+        config: {
+          webhookUrl: input.config.webhookUrl,
+          template: {
+            mode: "slack_blocks",
+            payload: { text: "{{event.labels.not_set}}" },
+          },
+        },
+      });
+
+      expect(preview).toMatchObject({ text: "" });
+    });
+
+    it("reports unknown variables with path-level diagnostics and does not send", async () => {
+      const calls: Array<unknown> = [];
+      const fetcher: FetchLike = async () => {
+        calls.push(1);
+        return { ok: true, status: 200, text: async () => "ok" };
+      };
+
+      const result = await slackSender.send(
+        {
+          ...input,
+          config: {
+            webhookUrl: input.config.webhookUrl,
+            template: {
+              mode: "slack_blocks",
+              payload: {
+                blocks: [{ type: "section", text: { text: "{{event.nope}}" } }],
+              },
+            },
+          },
+        },
+        { fetch: fetcher },
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result).toMatchObject({
+        errorKind: "configuration_error",
+        retryHint: "not_retryable",
+      });
+      expect(calls).toHaveLength(0);
+      expect(result.renderedPayload).toMatchObject({
+        templateError: {
+          diagnostics: [
+            {
+              path: "template.payload.blocks.0.text.text",
+              variable: "event.nope",
+            },
+          ],
+        },
+      });
+    });
+
+    it("never leaks the webhook url into the rendered payload", async () => {
+      const calls: Array<{ init: RequestInit }> = [];
+      const fetcher: FetchLike = async (url, init) => {
+        calls.push({ init });
+        return { ok: true, status: 200, text: async () => "ok" };
+      };
+      const webhookUrl = "https://hooks.slack.com/services/T000/B000/super-secret";
+
+      const result = await slackSender.send(
+        {
+          ...input,
+          config: {
+            webhookUrl,
+            template: { mode: "slack_blocks", payload: { text: "{{event.title}}" } },
+          },
+        },
+        { fetch: fetcher },
+      );
+
+      expect(result.ok).toBe(true);
+      expect(JSON.stringify(result.renderedPayload)).not.toContain("super-secret");
+      expect(JSON.stringify(calls[0]?.init.body)).not.toContain("super-secret");
+    });
+
+    it("keeps the plain text template compatible", async () => {
+      const calls: Array<{ init: RequestInit }> = [];
+      const fetcher: FetchLike = async (url, init) => {
+        calls.push({ init });
+        return { ok: true, status: 200, text: async () => "ok" };
+      };
+
+      const result = await slackSender.send(
+        {
+          ...input,
+          config: {
+            webhookUrl: input.config.webhookUrl,
+            template: { mode: "text", text: "{{event.title}}" },
+          },
+        },
+        { fetch: fetcher },
+      );
+      const body = JSON.parse(calls[0]?.init.body as string) as {
+        blocks: Array<{ type: string; text?: { text: string } }>;
+      };
+
+      expect(result.ok).toBe(true);
+      // Default block-kit layout is retained in text mode.
+      expect(body.blocks.some((block) => block.type === "header")).toBe(true);
+    });
+  });
 });

@@ -229,18 +229,49 @@ export const JsonPayloadDestinationTemplateSchema = z
     }
   });
 
-// Union of every mode the shared engine knows how to diagnose. Feishu narrows
-// this to its own supported modes (see FeishuDestinationTemplateSchema) so a
-// destination never offers a mode it cannot render.
+export const SlackBlocksDestinationTemplateSchema = z
+  .strictObject({
+    source: z.literal("custom").optional(),
+    mode: z.literal("slack_blocks"),
+    // Object root, not a bare array: Slack's webhook body is an object
+    // ({ text?, blocks: [...] }), so the blocks array lives under a key and the
+    // shared JSON schema stays object-rooted.
+    payload: JsonObjectSchema,
+    bindings: TemplateBindingsSchema.optional(),
+  })
+  .superRefine((template, context) => {
+    for (const diagnostic of DestinationTemplateEngine.diagnoseJsonTemplate(
+      template.payload,
+      "template.payload",
+      template.bindings,
+    )) {
+      if (diagnostic.severity !== "error") {
+        continue;
+      }
+
+      context.addIssue({
+        code: "custom",
+        path: diagnostic.path?.replace(/^template\./, "").split(".") ?? ["payload"],
+        message: diagnostic.message,
+      });
+    }
+  });
+
+// Union of every mode the shared engine knows how to diagnose. Each destination
+// narrows this to the modes it actually renders (see feishu / slack / generic
+// webhook schemas) so a destination never offers a mode it cannot render.
 export const DestinationTemplateSchema = z.discriminatedUnion("mode", [
   TextDestinationTemplateSchema,
   FeishuCardDestinationTemplateSchema,
   JsonPayloadDestinationTemplateSchema,
+  SlackBlocksDestinationTemplateSchema,
 ]);
 
 export const TextOnlyDestinationTemplateSchema = TextDestinationTemplateSchema;
 
 export const JsonPayloadOnlyDestinationTemplateSchema = JsonPayloadDestinationTemplateSchema;
+
+export const SlackBlocksOnlyDestinationTemplateSchema = SlackBlocksDestinationTemplateSchema;
 
 export type TextDestinationTemplate = z.infer<typeof TextDestinationTemplateSchema>;
 export type FeishuCardDestinationTemplate = z.infer<typeof FeishuCardDestinationTemplateSchema>;
@@ -323,6 +354,7 @@ export class DestinationTemplateEngine {
       case "feishu_card":
         return this.diagnoseJsonTemplate(template.card, `${path}.card`, template.bindings);
       case "json_payload":
+      case "slack_blocks":
         return this.diagnoseJsonTemplate(template.payload, `${path}.payload`, template.bindings);
     }
   }

@@ -14,13 +14,27 @@ export function renderSlackPayload(input: DestinationSendInput<SlackConfig>): Js
   const event = input.normalizedEvent;
   const labels = destinationCopy(input.presentation).labels;
   const severity = displaySeverity(event.severity, input.presentation);
+  const template = input.config.template;
+
+  // A blocks template replaces the whole Slack payload: the operator owns the
+  // body ({ text?, blocks: [...] }). Only string leaves are interpolated and
+  // only allow-listed variables resolve, so the webhook URL never leaks in.
+  if (template?.mode === "slack_blocks") {
+    return DestinationTemplateEngine.renderJsonOrThrow(
+      DestinationTemplateEngine.createRenderContext(input),
+      template.payload,
+      "template.payload",
+      template.bindings,
+    );
+  }
+
   const message =
-    input.config.template?.mode === "text"
+    template?.mode === "text"
       ? DestinationTemplateEngine.renderTextOrThrow(
           DestinationTemplateEngine.createRenderContext(input),
-          input.config.template.text,
+          template.text,
           "template.text",
-          input.config.template.bindings,
+          template.bindings,
         )
       : event.message;
   const labelText = Object.entries(event.labels)
