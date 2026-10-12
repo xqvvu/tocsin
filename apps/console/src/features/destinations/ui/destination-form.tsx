@@ -9,7 +9,6 @@ import { useForm } from "@tanstack/react-form";
 import * as React from "react";
 
 import type { AdapterConfigHelp, FeishuAppListItem } from "@tocsin/core";
-import { TemplateVariablePaths, TemplateVariablePrefixes } from "@tocsin/destinations";
 import { defaultFeishuCardTemplate as defaultFeishuCardTemplateObject } from "@tocsin/destinations/feishu/default-card";
 
 import { Button } from "#/components/ui/button";
@@ -64,6 +63,7 @@ import type {
   DestinationSubmitHandler,
 } from "#/features/destinations/ui/destination-ui-types";
 import { FeishuDynamicPropertiesField } from "#/features/destinations/ui/feishu-dynamic-properties-field";
+import { TemplateVariablePanel } from "#/features/destinations/ui/template-variable-panel";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
 
@@ -585,33 +585,14 @@ export function DestinationForm({
         const templateMode = resolveDestinationTemplateFormMode(draftedMode, modeOptions);
         const bodyField = destinationTemplateBodyFormField(templateMode);
         return (
-          <UiField>
-            <FieldLabel>{t("destinations.form.variables")}</FieldLabel>
-            <div className="flex flex-wrap gap-1">
-              {templateVariablePaths.map((path) => (
-                <Button
-                  key={path}
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={() => {
-                    const variable = `{{${path}}}`;
-                    const current =
-                      bodyField === "templateText"
-                        ? text
-                        : bodyField === "templateCard"
-                          ? card
-                          : payload;
+          <TemplateVariablePanel
+            onInsert={(variable) => {
+              const current =
+                bodyField === "templateText" ? text : bodyField === "templateCard" ? card : payload;
 
-                    form.setFieldValue(bodyField, appendTemplateVariable(current, variable));
-                  }}
-                >
-                  {path}
-                </Button>
-              ))}
-            </div>
-            <FieldDescription>{t("destinations.form.variablesDescription")}</FieldDescription>
-          </UiField>
+              form.setFieldValue(bodyField, appendTemplateVariable(current, variable));
+            }}
+          />
         );
       }}
     </form.Subscribe>
@@ -1228,22 +1209,5 @@ function destinationValuesToFormData(values: DestinationFormValues): FormData {
 function appendTemplateVariable(currentValue: string, variable: string): string {
   return currentValue.trimEnd() ? `${currentValue} ${variable}` : variable;
 }
-
-/**
- * Variables offered in the reference panel.
- *
- * Read from the engine rather than maintained here: this list used to be a
- * hand-written subset of 18, while the engine allowed 45 — so the panel hid
- * most of what actually works, and pinned two specific label names
- * (`event.labels.service` / `.environment`) as if labels were a fixed set when
- * any label key resolves.
- *
- * Dynamic prefixes are shown as patterns, since their values are not knowable
- * ahead of time.
- */
-const templateVariablePaths: string[] = [
-  ...TemplateVariablePaths,
-  ...TemplateVariablePrefixes.map((prefix) => `${prefix}<name>`),
-];
 
 const defaultFeishuCardTemplate = JSON.stringify(defaultFeishuCardTemplateObject, null, 2);

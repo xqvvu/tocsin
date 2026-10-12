@@ -75,6 +75,9 @@ describe("destination form", () => {
         value: '{"content": "base"}',
       },
     });
+    // source.name is not a pinned common variable, so it lives under the
+    // "Source" group — which must be opened before it can be clicked.
+    fireEvent.click(screen.getByRole("button", { name: /Source/ }));
     fireEvent.click(screen.getByRole("button", { name: "source.name" }));
 
     expect((screen.getByLabelText("Feishu card JSON") as HTMLTextAreaElement).value).toBe(
@@ -225,20 +228,87 @@ describe("template variable reference (#55)", () => {
   it("offers every variable the engine allows, plus the dynamic prefixes", async () => {
     const { TemplateVariablePaths, TemplateVariablePrefixes } =
       await import("@tocsin/destinations");
+    const { layoutTemplateVariables, templateVariablePattern } =
+      await import("#/features/destinations/ui/template-variable-panel");
 
     // The panel used to be a hand-written subset of 18 while the engine allowed
     // 45, so most working variables were invisible to the operator.
     expect(TemplateVariablePaths.length).toBeGreaterThan(18);
 
-    renderDestinationForm({ kind: "slack" });
+    const layout = layoutTemplateVariables();
+    const offered = [
+      ...layout.common,
+      ...layout.groups.flatMap((group) => group.paths),
+      ...layout.groups.flatMap((group) =>
+        group.labelKeys.map((key) => `presentation.labels.${key}`),
+      ),
+    ];
 
+    // Grouping must not drop a variable the engine accepts.
     for (const path of TemplateVariablePaths) {
-      expect(screen.getByRole("button", { name: path })).toBeTruthy();
+      expect(offered).toContain(path);
+      expect(offered.filter((entry) => entry === path)).toHaveLength(1);
     }
 
-    // Dynamic prefixes surface as patterns rather than as fabricated values.
+    // Dynamic prefixes surface as syntax hints rather than as fabricated values.
     for (const prefix of TemplateVariablePrefixes) {
-      expect(screen.getByRole("button", { name: `${prefix}<name>` })).toBeTruthy();
+      expect(layout.patterns).toContain(templateVariablePattern(prefix));
     }
+  });
+
+  it("inserts the variable chosen from the grouped panel", () => {
+    renderDestinationForm({ kind: "feishu" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Custom" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
+
+    fireEvent.change(screen.getByLabelText("Filter variables"), {
+      target: { value: "event.severity" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "event.severity" }));
+
+    expect((screen.getByLabelText("Message template") as HTMLTextAreaElement).value).toBe(
+      "{{event.severity}}",
+    );
+  });
+});
+
+describe("template variable panel layout", () => {
+  it("pins common variables once, folds the label keys, and hides groups it empties", async () => {
+    const { layoutTemplateVariables, templateVariablePattern } =
+      await import("#/features/destinations/ui/template-variable-panel");
+
+    const layout = layoutTemplateVariables();
+
+    // A pinned common variable is removed from its group, so it is not offered twice.
+    for (const path of layout.common) {
+      expect(layout.groups.flatMap((group) => group.paths)).not.toContain(path);
+    }
+
+    expect(layout.common).toContain("event.title");
+    expect(layout.common).toContain("tocsin.eventUrl");
+
+    // No empty group is rendered.
+    expect(
+      layout.groups.every((group) => group.paths.length > 0 || group.labelKeys.length > 0),
+    ).toBe(true);
+
+    // `tocsin` only ever held `tocsin.eventUrl`, which is now pinned as common.
+    expect(layout.groups.map((group) => group.id)).not.toContain("tocsin");
+
+    // The engine's 26 presentation paths collapse to two entries plus the label
+    // key list, instead of 24 flat label buttons.
+    const presentation = layout.groups.find((group) => group.id === "presentation");
+    expect(presentation?.paths).toEqual(["presentation.locale", "presentation.timeZone"]);
+    expect(presentation?.labelKeys.length).toBeGreaterThan(20);
+
+    const visible = [...layout.common, ...layout.groups.flatMap((group) => group.paths)];
+    expect(visible.length).toBeLessThan(25);
+
+    // The payload prefix is shown as the syntax the engine actually accepts: a
+    // bare `payload.<name>` is rejected by `isAllowedTemplatePath`, so the old
+    // `<name>` spelling advertised an insertion that produced a diagnostic.
+    expect(templateVariablePattern("payload.")).toBe("payload.<key>");
+    expect(templateVariablePattern("event.labels.")).toBe("event.labels.<name>");
   });
 });
