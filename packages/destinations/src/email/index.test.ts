@@ -1,35 +1,19 @@
+import { destinationSendInput, fakeFetch } from "@tocsin/destinations/test-kit";
 import { describe, expect, it } from "vite-plus/test";
 
 import { emailSender, EmailConfigSchema, renderEmailPayload } from "#destinations/email/index";
 import type { EmailConfig } from "#destinations/email/index";
 import { createDefaultDestinationRegistry } from "#destinations/registry";
 import { DestinationTemplateEngine } from "#destinations/template";
-import type { DestinationSendInput, FetchLike } from "#destinations/types";
+import type { DestinationSendInput } from "#destinations/types";
 
-const input: DestinationSendInput<EmailConfig> = {
-  eventId: "event-1",
-  source: {
-    id: "source-1",
-    name: "Uptime Kuma prod",
-    provider: "uptime_kuma",
-    enabled: true,
-  },
-  destination: {
-    id: "dest-1",
-    name: "Email SRE",
-    kind: "email",
-    enabled: true,
-  },
+const input = destinationSendInput<EmailConfig>({
+  destination: { kind: "email", name: "Email SRE" },
+  source: { name: "Uptime Kuma prod", provider: "uptime_kuma" },
   normalizedEvent: {
     title: "Checkout API unavailable",
     message: "health check failed",
-    severity: "critical",
-    status: "firing",
     fingerprint: "checkout-api",
-    labels: {
-      service: "checkout",
-    },
-    occurredAt: "2026-06-07T08:00:00.000Z",
   },
   config: {
     endpointUrl: "https://mail-gateway.example.test/send",
@@ -40,31 +24,23 @@ const input: DestinationSendInput<EmailConfig> = {
       Authorization: "Bearer test-token",
     },
   },
-};
+});
 
 describe("email sender", () => {
   it("sends rendered email payloads through an injected transport", async () => {
-    const calls: Array<{ url: string; init: RequestInit }> = [];
-    const fetcher: FetchLike = async (url, init) => {
-      calls.push({ url, init });
-      return {
-        ok: true,
-        status: 202,
-        text: async () => "queued",
-      };
-    };
+    const fetcher = fakeFetch(() => ({ status: 202, body: "queued" }));
 
     const result = await emailSender.send(input, { fetch: fetcher });
 
     expect(result.ok).toBe(true);
     expect(result.statusCode).toBe(202);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]?.url).toBe("https://mail-gateway.example.test/send");
-    expect(calls[0]?.init.headers).toEqual({
+    expect(fetcher.calls).toHaveLength(1);
+    expect(fetcher.calls[0]?.url).toBe("https://mail-gateway.example.test/send");
+    expect(fetcher.calls[0]?.init.headers).toEqual({
       "Content-Type": "application/json",
       Authorization: "Bearer test-token",
     });
-    const body = JSON.parse(calls[0]?.init.body as string) as {
+    const body = JSON.parse(fetcher.calls[0]?.init.body as string) as {
       to: string[];
       from: string;
       subject: string;
@@ -93,11 +69,7 @@ describe("email sender", () => {
   });
 
   it("reports non-2xx email gateway responses as delivery failures", async () => {
-    const fetcher: FetchLike = async () => ({
-      ok: false,
-      status: 502,
-      text: async () => "bad gateway",
-    });
+    const fetcher = fakeFetch(() => ({ ok: false, status: 502, body: "bad gateway" }));
 
     const result = await emailSender.send(input, { fetch: fetcher });
 
@@ -168,7 +140,7 @@ describe("email subject template", () => {
   });
 
   it("rejects unknown and unsafe subject variables without calling the gateway", async () => {
-    const calls: Array<unknown> = [];
+    const fetcher = fakeFetch(() => ({ status: 202, body: "queued" }));
     const result = await emailSender.send(
       {
         ...input,
@@ -177,7 +149,7 @@ describe("email subject template", () => {
           subjectTemplate: "{{event.nope}} {{raw.title}} {{headers.authorization}}",
         },
       },
-      { fetch: recordingFetcher(calls) },
+      { fetch: fetcher },
     );
 
     expect(result.ok).toBe(false);
@@ -185,7 +157,7 @@ describe("email subject template", () => {
       errorKind: "configuration_error",
       retryHint: "not_retryable",
     });
-    expect(calls).toHaveLength(0);
+    expect(fetcher.calls).toHaveLength(0);
     expect(diagnosticVariables(result.renderedPayload)).toEqual([
       "event.nope",
       "raw.title",
@@ -243,7 +215,7 @@ describe("email html template", () => {
   });
 
   it("rejects unknown and unsafe html variables without calling the gateway", async () => {
-    const calls: Array<unknown> = [];
+    const fetcher = fakeFetch(() => ({ status: 202, body: "queued" }));
     const result = await emailSender.send(
       {
         ...input,
@@ -253,7 +225,7 @@ describe("email html template", () => {
             "{{event.nope}} {{raw.title}} {{headers.authorization}} {{config.endpointUrl}}",
         },
       },
-      { fetch: recordingFetcher(calls) },
+      { fetch: fetcher },
     );
 
     expect(result.ok).toBe(false);
@@ -261,7 +233,7 @@ describe("email html template", () => {
       errorKind: "configuration_error",
       retryHint: "not_retryable",
     });
-    expect(calls).toHaveLength(0);
+    expect(fetcher.calls).toHaveLength(0);
     expect(diagnosticVariables(result.renderedPayload)).toEqual([
       "event.nope",
       "raw.title",
@@ -313,10 +285,10 @@ describe("email template config guard", () => {
 
     expect(DestinationTemplateEngine.isValidationError(renderError)).toBe(true);
 
-    const calls: Array<unknown> = [];
+    const fetcher = fakeFetch(() => ({ status: 202, body: "queued" }));
     const result = await emailSender.send(
       { ...input, config: unvalidatedConfig },
-      { fetch: recordingFetcher(calls) },
+      { fetch: fetcher },
     );
 
     expect(result.ok).toBe(false);
@@ -324,7 +296,7 @@ describe("email template config guard", () => {
       errorKind: "configuration_error",
       retryHint: "not_retryable",
     });
-    expect(calls).toHaveLength(0);
+    expect(fetcher.calls).toHaveLength(0);
   });
 });
 
@@ -337,7 +309,9 @@ describe("email secret safety", () => {
     expect(preview).not.toHaveProperty("headers");
     expect(preview).not.toHaveProperty("endpointUrl");
 
-    const result = await emailSender.send(input, { fetch: okFetcher });
+    const result = await emailSender.send(input, {
+      fetch: fakeFetch(() => ({ status: 202, body: "queued" })),
+    });
 
     expect(result.ok).toBe(true);
     expect(JSON.stringify(result.renderedPayload)).not.toContain("mail-gateway.example.test");
@@ -349,42 +323,24 @@ async function sendBody(
   configOverrides: Partial<EmailConfig>,
   eventOverrides: Partial<DestinationSendInput<EmailConfig>["normalizedEvent"]> = {},
 ): Promise<{ subject: string; text: string; html: string }> {
-  const calls: Array<{ init: RequestInit }> = [];
+  const fetcher = fakeFetch(() => ({ status: 202, body: "queued" }));
   const result = await emailSender.send(
     {
       ...input,
       normalizedEvent: { ...input.normalizedEvent, ...eventOverrides },
       config: { ...input.config, ...configOverrides },
     },
-    {
-      fetch: async (url, init) => {
-        calls.push({ init });
-        return { ok: true, status: 202, text: async () => "queued" };
-      },
-    },
+    { fetch: fetcher },
   );
 
   expect(result.ok).toBe(true);
 
-  return JSON.parse(calls[0]?.init.body as string) as {
+  return JSON.parse(fetcher.calls[0]?.init.body as string) as {
     subject: string;
     text: string;
     html: string;
   };
 }
-
-function recordingFetcher(calls: Array<unknown>): FetchLike {
-  return async (url, init) => {
-    calls.push({ url, init });
-    return { ok: true, status: 202, text: async () => "queued" };
-  };
-}
-
-const okFetcher: FetchLike = async () => ({
-  ok: true,
-  status: 202,
-  text: async () => "queued",
-});
 
 function diagnosticVariables(renderedPayload: unknown): string[] {
   const payload = renderedPayload as {
