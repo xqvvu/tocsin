@@ -4,6 +4,7 @@ import { createDefaultDestinationRegistry } from "@tocsin/destinations";
 
 import { openSqliteStore } from "#/infra/sqlite/store";
 import { DeliveryWorker } from "#/server/deliveries/delivery-worker.service";
+import { OncallService } from "#/server/oncall/oncall.service";
 
 const now = "2026-06-09T08:00:00.000Z";
 
@@ -628,6 +629,139 @@ describe("delivery worker", () => {
         error: "Delivery attempt timed out before completion",
       },
     ]);
+
+    await store.close();
+  });
+
+  it("never sends or pages for a delivery suppressed at claim time, while its sibling pages normally", async () => {
+    const windowStart = "2026-06-09T09:00:00.000Z";
+    const windowEnd = "2026-06-09T11:00:00.000Z";
+    const claimInsideWindow = "2026-06-09T10:00:00.000Z";
+    const store = await createStore();
+
+    await store.sources.create({
+      id: "source-1",
+      name: "Prometheus source",
+      provider: "generic",
+      tokenHash: "token-hash",
+    });
+    await store.destinations.create({
+      id: "destination-1",
+      name: "Feishu SRE",
+      kind: "feishu",
+      config: {
+        sendMode: "app",
+        app: { appRef: "app-1", chatId: "oc_group", appId: "cli_sre", appSecret: "secret-1" },
+        urgent: {
+          autoEnabled: true,
+          severities: ["critical"],
+          userIdType: "open_id",
+          receivers: ["ou_1", "ou_2"],
+        },
+      },
+    });
+    const route = await store.routes.create({
+      id: "route-1",
+      name: "All alerts",
+      destinationIds: ["destination-1"],
+    });
+    const deliveries = [];
+
+    for (const fingerprint of ["checkout:unavailable", "disk:full"]) {
+      const event = await store.intake.recordEvent({
+        sourceId: "source-1",
+        idempotencyKey: `request-${fingerprint}`,
+        normalized: {
+          title: "Checkout unavailable",
+          message: "checkout returned 503",
+          severity: "critical",
+          status: "firing",
+          fingerprint,
+          labels: { service: "checkout" },
+          occurredAt: now,
+        },
+        rawPayload: {},
+      });
+      const enqueue = await store.deliveries.enqueueForEvent({
+        event,
+        matches: [{ routeId: route.id, destinationIds: route.destinationIds }],
+        dedupeWindowStartsAt: "2026-06-09T07:55:00.000Z",
+        now,
+      });
+
+      deliveries.push(enqueue.created[0]!);
+    }
+
+    const [paged, silenced] = deliveries;
+
+    // Both were enqueued while the window was still closed: the silencing is
+    // entirely the claim-time revalidation (PRD 2.4).
+    expect(paged?.state).toBe("pending");
+    expect(silenced?.state).toBe("pending");
+    await store.suppressions.create({
+      id: "suppression-1",
+      name: "October database migration",
+      kind: "maintenance_window",
+      matcher: { fingerprints: ["disk:full"] },
+      startsAt: windowStart,
+      endsAt: windowEnd,
+    });
+
+    const fetchCalls: string[] = [];
+    const oncall = new OncallService({ store });
+    const worker = new DeliveryWorker({
+      store,
+      destinations: createDefaultDestinationRegistry(),
+      now: () => claimInsideWindow,
+      sendContext: {
+        fetch: async (url) => {
+          fetchCalls.push(url);
+          return {
+            ok: true,
+            status: 200,
+            text: async () =>
+              url.includes("tenant_access_token")
+                ? JSON.stringify({ code: 0, msg: "ok", tenant_access_token: "t-1", expire: 7200 })
+                : JSON.stringify({ code: 0, msg: "success", data: { message_id: "om_1" } }),
+          };
+        },
+      },
+      triggerPings: (input) => oncall.triggerPingsForDelivery(input),
+    });
+
+    const result = await worker.runOnce();
+    const pagedDetail = await store.deliveries.get(paged!.id);
+    const silencedDetail = await store.deliveries.get(silenced!.id);
+
+    expect(result).toEqual({
+      claimed: 1,
+      reclaimed: 0,
+      succeeded: 1,
+      failed: 0,
+      retrying: 0,
+      startedAt: claimInsideWindow,
+      finishedAt: claimInsideWindow,
+    });
+    // Control arm: this fixture really does page when the delivery executes.
+    expect(pagedDetail?.job.state).toBe("succeeded");
+    expect(fetchCalls).toHaveLength(2);
+    expect((await store.oncall.listForDelivery(paged!.id)).map((ping) => ping.receiver)).toEqual([
+      "ou_1",
+      "ou_2",
+    ]);
+
+    // Suppressed arm: no send, no attempt, no ping.
+    expect(silencedDetail?.job).toMatchObject({
+      state: "suppressed",
+      suppressionId: "suppression-1",
+      suppressedAt: claimInsideWindow,
+      suppressReason:
+        "Maintenance window 「October database migration」 matched fingerprint disk:full",
+      attemptCount: 0,
+    });
+    expect(silencedDetail?.attempts).toEqual([]);
+    expect(silencedDetail?.providerReference).toBeNull();
+    expect(await store.oncall.listForDelivery(silenced!.id)).toEqual([]);
 
     await store.close();
   });
