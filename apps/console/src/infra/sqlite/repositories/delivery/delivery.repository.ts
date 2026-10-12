@@ -1,7 +1,19 @@
 import { sql } from "kysely";
 
-import { encodeJson, redactText } from "@tocsin/core";
-import type { DeliveryAttempt, DeliveryDetail, DeliveryJob } from "@tocsin/core";
+import {
+  encodeJson,
+  formatSuppressionReason,
+  redactText,
+  selectSuppressionForDelivery,
+  suppressionIsActive,
+} from "@tocsin/core";
+import type {
+  DeliveryAttempt,
+  DeliveryDetail,
+  DeliveryJob,
+  Suppression,
+  SuppressionMatchInput,
+} from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
 import {
@@ -50,6 +62,8 @@ import {
 } from "#/infra/sqlite/repositories/source/source.helpers";
 import type { SourceRepository } from "#/infra/sqlite/repositories/source/source.interface";
 import { SqliteSourceRepository } from "#/infra/sqlite/repositories/source/source.repository";
+import type { SuppressionRepository } from "#/infra/sqlite/repositories/suppression/suppression.interface";
+import { SqliteSuppressionRepository } from "#/infra/sqlite/repositories/suppression/suppression.repository";
 
 export class SqliteDeliveryRepository implements DeliveryRepository {
   constructor(
@@ -57,6 +71,7 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
     private readonly sources: SourceRepository,
     private readonly destinations: DestinationRepository,
     private readonly routes: RouteRepository,
+    private readonly suppressions: SuppressionRepository,
     private readonly intake: SqliteIntakeRepository,
     private readonly oncall: OncallRepository,
   ) {}
@@ -72,6 +87,10 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
       const existingTargets = input.skipExistingForEvent
         ? await listExistingTargetsForEvent(context, input.event.id)
         : new Map<string, ExistingDeliveryTarget>();
+      // One read decides every `(route, destination)` pair in this enqueue, and
+      // the whole enqueue is one transaction, so the suppression set cannot
+      // drift between pairs.
+      const suppressions = await repository.suppressions.list();
 
       await pruneDedupeKeys(context.db, input.dedupeWindowStartsAt);
 
@@ -109,6 +128,18 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
           }
 
           const id = this.context.ids.delivery();
+          // Deliveries created inside an active suppression window are born
+          // `suppressed`: the audit snapshot is written here so it survives the
+          // rule (PRD 2.5), and the row can never be claimed.
+          const suppression = selectDeliverySuppression(
+            suppressions,
+            {
+              sourceId: input.event.sourceId,
+              destinationId,
+              event: input.event.normalized,
+            },
+            now,
+          );
           await context.db
             .insertInto("deliveries")
             .values({
@@ -116,7 +147,7 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
               event_id: input.event.id,
               destination_id: destinationId,
               route_id: match.routeId,
-              state: "pending",
+              state: suppression ? "suppressed" : "pending",
               attempt_count: 0,
               max_attempts: maxAttempts,
               next_attempt_at: null,
@@ -124,9 +155,12 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
               rendered_payload_json: null,
               provider_ref_type: null,
               provider_ref_value: null,
+              suppression_id: suppression?.id ?? null,
+              suppressed_at: suppression ? now : null,
+              suppress_reason: suppression ? formatSuppressionReason(suppression) : null,
               created_at: now,
               updated_at: now,
-              finished_at: null,
+              finished_at: suppression ? now : null,
             })
             .execute();
 
@@ -202,8 +236,50 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
         .limit(input.limit)
         .execute();
       const claimed: ClaimedDelivery[] = [];
+      // Execution-time revalidation (PRD 2.4). The window can open while a
+      // delivery waits for its first attempt or for retry backoff, so the
+      // enqueue-time decision cannot be trusted here. Only rules active *now*
+      // are loaded; with none configured this costs one indexed scan and no
+      // per-row work.
+      const activeSuppressions = (await repository.suppressions.list()).filter((suppression) =>
+        suppressionIsActive(suppression, now),
+      );
 
       for (const row of rows) {
+        if (activeSuppressions.length > 0) {
+          const event = requireEvent(await repository.intake.get(row.event_id));
+          const suppression = selectDeliverySuppression(
+            activeSuppressions,
+            {
+              sourceId: event.sourceId,
+              destinationId: row.destination_id,
+              event: event.normalized,
+            },
+            now,
+          );
+
+          if (suppression) {
+            // Terminal, like an enqueue-time suppression: no attempt row, no
+            // send, no provider reference — and therefore no on-call ping.
+            await context.db
+              .updateTable("deliveries")
+              .set({
+                state: "suppressed",
+                suppression_id: suppression.id,
+                suppressed_at: now,
+                suppress_reason: formatSuppressionReason(suppression),
+                next_attempt_at: null,
+                updated_at: now,
+                finished_at: now,
+              })
+              .where("id", "=", row.id)
+              .where("state", "=", "pending")
+              .executeTakeFirst();
+
+            continue;
+          }
+        }
+
         const attemptNumber = row.attempt_count + 1;
         const attemptId = this.context.ids.attempt();
 
@@ -429,11 +505,40 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
     const sources = new SqliteSourceRepository(context);
     const destinations = new SqliteDestinationRepository(context);
     const routes = new SqliteRouteRepository(context);
+    const suppressions = new SqliteSuppressionRepository(context);
     const intake = new SqliteIntakeRepositoryImpl(context);
     const oncall = new SqliteOncallRepository(context, destinations, intake);
 
-    return new SqliteDeliveryRepository(context, sources, destinations, routes, intake, oncall);
+    return new SqliteDeliveryRepository(
+      context,
+      sources,
+      destinations,
+      routes,
+      suppressions,
+      intake,
+      oncall,
+    );
   }
+}
+
+/**
+ * Decide whether one `(event, destination)` delivery is silenced by any of the
+ * given rules, using the shared core matcher and the same `startsAt`/`id`
+ * ordering as the domain model. Returns the rule itself (not just the result)
+ * so callers can snapshot its name and kind into `suppress_reason`.
+ */
+function selectDeliverySuppression(
+  suppressions: Suppression[],
+  input: SuppressionMatchInput,
+  now: string,
+): Suppression | null {
+  const result = selectSuppressionForDelivery(suppressions, input, now);
+
+  if (!result) {
+    return null;
+  }
+
+  return suppressions.find((candidate) => candidate.id === result.suppressionId) ?? null;
 }
 
 async function listExistingTargetsForEvent(

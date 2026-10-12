@@ -81,6 +81,7 @@ export function createSqliteRepositories(context: SqliteRepositoryContext): Sqli
     sources,
     destinations,
     routes,
+    suppressions,
     intake,
     oncall,
   );
