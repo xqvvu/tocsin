@@ -7,13 +7,13 @@ export const authQueryKeys = {
 };
 
 export function dashboardSessionQueryOptions() {
-  return orpc.auth.getDashboardSession.queryOptions({
+  return orpc.session.getDashboardSession.queryOptions({
     queryKey: authQueryKeys.dashboardSession(),
   });
 }
 
 export function authBootstrapQueryOptions() {
-  return orpc.auth.getAuthBootstrap.queryOptions({
+  return orpc.session.getAuthBootstrap.queryOptions({
     queryKey: authQueryKeys.bootstrap(),
   });
 }
