@@ -1,9 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 
-import { HistoryPagination } from "#/components/common/history-pagination";
 import { OperationsTable } from "#/components/common/operations-table";
 import type { ConsoleTableFeatures } from "#/components/common/table-features";
+import { TablePagination } from "#/components/common/table-pagination";
 import { DeliveriesEmptyState } from "#/features/deliveries/ui/deliveries-empty-state";
 import {
   deliveriesColumnClassName,
@@ -22,18 +22,21 @@ export function DeliveriesTable({
   deliveries,
   nextCursor,
   pending,
+  canPrevious,
   onInspect,
   onRetry,
   onOlder,
-  onLatest,
+  onPrevious,
 }: {
   deliveries: Operations["deliveries"]["items"];
   nextCursor: string | null;
   pending: boolean;
+  /** Whether any earlier page was visited; cursor paging cannot infer this. */
+  canPrevious: boolean;
   onInspect: (deliveryId: string) => void;
   onRetry: (deliveryId: string) => void;
   onOlder: (cursor: string) => void;
-  onLatest: () => void;
+  onPrevious: () => void;
 }) {
   const t = useTranslations();
   const data = React.useMemo(() => deliveries, [deliveries]);
@@ -47,6 +50,7 @@ export function DeliveriesTable({
         cell: ({ row }) => (
           <DeliveryTargetCell
             destinationName={row.original.destinationName}
+            destinationKind={row.original.destinationKind}
             routeName={row.original.routeName}
           />
         ),
@@ -127,15 +131,19 @@ export function DeliveriesTable({
         nextLabel={t("deliveries.table.next")}
       />
 
-      <HistoryPagination
-        latestLabel={t("operations.history.latest")}
-        olderLabel={t("operations.history.older")}
-        showLatestLabel={t("operations.history.showLatest")}
-        showOlderLabel={t("operations.history.showOlder")}
-        hasOlder={nextCursor !== null}
-        pending={pending}
-        onOlder={nextCursor ? () => onOlder(nextCursor) : undefined}
-        onLatest={onLatest}
+      <TablePagination
+        mode="cursor"
+        previousLabel={t("deliveries.table.previous")}
+        nextLabel={t("deliveries.table.next")}
+        canPrevious={canPrevious && !pending}
+        // `nextCursor === null` means this is the oldest page reached, so there
+        // is nothing further to go to — never a "jump to latest" in disguise.
+        canNext={nextCursor !== null && !pending}
+        onPrevious={onPrevious}
+        onNext={() => {
+          if (nextCursor === null) return;
+          onOlder(nextCursor);
+        }}
       />
     </section>
   );

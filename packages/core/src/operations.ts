@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { DeliveryJob, DeliveryState, ProviderReference } from "#core/delivery/delivery";
-import type { DestinationSummary } from "#core/destination/destination";
+import type { DestinationKind, DestinationSummary } from "#core/destination/destination";
 import type { EventRecord } from "#core/event/event";
 import type { NormalizedEvent } from "#core/event/normalized-event";
 import type { JsonObject, JsonValue } from "#core/json";
@@ -75,6 +75,12 @@ export interface DeliveryListItem {
   eventId: string;
   sourceName: string;
   destinationName: string;
+  /**
+   * Discriminates the destination's icon. Optional so a persisted snapshot
+   * written before this field existed still parses; the UI falls back to a
+   * generic glyph rather than rendering nothing.
+   */
+  destinationKind?: DestinationKind;
   routeName: string | null;
   state: DeliveryState;
   attemptCount: number;
