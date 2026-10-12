@@ -3,6 +3,7 @@ import {
   AlertStatusSchema,
   DeliveryJobSchema,
   DeliveryStateSchema,
+  DestinationKindSchema,
   DestinationSummarySchema,
   EventRecordSchema,
   IsoDateTimeSchema,
@@ -47,6 +48,9 @@ export const EventListItemSchema = z.object({
 
 export const EventDetailDeliverySchema = DeliveryJobSchema.extend({
   destinationName: z.string().min(1),
+  // Optional for the same reason as the core interface: snapshots persisted
+  // before this field existed must still parse.
+  destinationKind: DestinationKindSchema.optional(),
   routeName: z.string().min(1).nullable(),
 });
 
@@ -69,6 +73,9 @@ export const DeliveryListItemSchema = z.object({
   eventId: z.string().min(1),
   sourceName: z.string().min(1),
   destinationName: z.string().min(1),
+  // Optional for the same reason as the core interface: rows read back from
+  // snapshots written before this field existed must still parse.
+  destinationKind: DestinationKindSchema.optional(),
   routeName: z.string().min(1).nullable(),
   state: DeliveryStateSchema,
   attemptCount: z.number().int().min(0),

@@ -35,4 +35,76 @@ describe("table pagination", () => {
 
     expect(onPageIndexChange).toHaveBeenCalledWith(9);
   });
+  it("cursor mode offers the same Previous/Next language as page mode", () => {
+    render(
+      <TablePagination
+        mode="cursor"
+        previousLabel="Previous"
+        nextLabel="Next"
+        canPrevious
+        canNext
+        onPrevious={vi.fn()}
+        onNext={vi.fn()}
+      />,
+    );
+
+    // The point of the change: a cursor list reads as Previous/Next, not as a
+    // differently-worded "Latest/Older" control of its own.
+    expect(screen.getByRole("button", { name: "Previous" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Next" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "1" })).toBeNull();
+  });
+
+  it("cursor mode disables Previous at the start and Next at the end", () => {
+    const onPrevious = vi.fn();
+    const onNext = vi.fn();
+
+    render(
+      <TablePagination
+        mode="cursor"
+        previousLabel="Previous"
+        nextLabel="Next"
+        canPrevious={false}
+        canNext={false}
+        onPrevious={onPrevious}
+        onNext={onNext}
+      />,
+    );
+
+    const previous = screen.getByRole("button", { name: "Previous" });
+    const next = screen.getByRole("button", { name: "Next" });
+
+    expect(previous.getAttribute("aria-disabled")).toBe("true");
+    expect(next.getAttribute("aria-disabled")).toBe("true");
+
+    fireEvent.click(previous);
+    fireEvent.click(next);
+
+    // A disabled control must not act, not merely look disabled.
+    expect(onPrevious).not.toHaveBeenCalled();
+    expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it("cursor mode fires its handlers when enabled", () => {
+    const onPrevious = vi.fn();
+    const onNext = vi.fn();
+
+    render(
+      <TablePagination
+        mode="cursor"
+        previousLabel="Previous"
+        nextLabel="Next"
+        canPrevious
+        canNext
+        onPrevious={onPrevious}
+        onNext={onNext}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+
+    expect(onPrevious).toHaveBeenCalledTimes(1);
+    expect(onNext).toHaveBeenCalledTimes(1);
+  });
 });
