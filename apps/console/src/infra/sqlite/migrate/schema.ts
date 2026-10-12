@@ -108,6 +108,22 @@ export async function createAppTables(db: Kysely<SqliteDatabaseSchema>): Promise
     .execute();
 
   await db.schema
+    .createTable("suppressions")
+    .addColumn("id", "text", (column) => column.primaryKey())
+    .addColumn("name", "text", (column) => column.notNull().unique())
+    .addColumn("kind", "text", (column) => column.notNull())
+    .addColumn("enabled", "integer", (column) => column.notNull().defaultTo(1))
+    .addColumn("reason", "text")
+    .addColumn("matcher_json", "text", (column) => column.notNull())
+    .addColumn("starts_at", "text", (column) => column.notNull())
+    .addColumn("ends_at", "text", (column) => column.notNull())
+    .addColumn("created_by", "text")
+    .addColumn("created_at", "text", (column) => column.notNull())
+    .addColumn("updated_at", "text", (column) => column.notNull())
+    .addCheckConstraint("suppressions_enabled_bool_check", sql`enabled IN (0, 1)`)
+    .execute();
+
+  await db.schema
     .createTable("deliveries")
     .addColumn("id", "text", (column) => column.primaryKey())
     .addColumn("event_id", "text", (column) =>
@@ -125,12 +141,17 @@ export async function createAppTables(db: Kysely<SqliteDatabaseSchema>): Promise
     .addColumn("rendered_payload_json", "text")
     .addColumn("provider_ref_type", "text")
     .addColumn("provider_ref_value", "text")
+    .addColumn("suppression_id", "text", (column) =>
+      column.references("suppressions.id").onDelete("set null"),
+    )
+    .addColumn("suppressed_at", "text")
+    .addColumn("suppress_reason", "text")
     .addColumn("created_at", "text", (column) => column.notNull())
     .addColumn("updated_at", "text", (column) => column.notNull())
     .addColumn("finished_at", "text")
     .addCheckConstraint(
       "deliveries_state_check",
-      sql`state IN ('pending', 'running', 'succeeded', 'failed')`,
+      sql`state IN ('pending', 'running', 'succeeded', 'failed', 'suppressed')`,
     )
     .addCheckConstraint("deliveries_attempt_count_check", sql`attempt_count >= 0`)
     .addCheckConstraint("deliveries_max_attempts_check", sql`max_attempts > 0`)

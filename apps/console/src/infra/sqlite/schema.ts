@@ -8,6 +8,7 @@ import type {
   DestinationKind,
   OncallPing,
   SourceProvider,
+  Suppression,
 } from "@tocsin/core";
 
 import type { SqliteBoolean, SqliteJsonText } from "#/infra/sqlite/codecs";
@@ -29,6 +30,7 @@ export interface SqliteDatabaseSchema {
   session: BetterAuthSessionTable;
   settings: SettingsTable;
   sources: SourcesTable;
+  suppressions: SuppressionsTable;
   user: BetterAuthUserTable;
   verification: BetterAuthVerificationTable;
 }
@@ -117,9 +119,26 @@ export interface DeliveriesTable {
   rendered_payload_json: string | null;
   provider_ref_type: string | null;
   provider_ref_value: string | null;
+  suppression_id: string | null;
+  suppressed_at: string | null;
+  suppress_reason: string | null;
   created_at: string;
   updated_at: string;
   finished_at: string | null;
+}
+
+export interface SuppressionsTable {
+  id: string;
+  name: string;
+  kind: Suppression["kind"];
+  enabled: SqliteGenerated<SqliteBoolean>;
+  reason: string | null;
+  matcher_json: SqliteJsonText;
+  starts_at: string;
+  ends_at: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DeliveryAttemptsTable {
