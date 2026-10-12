@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
+import type { DestinationPreviewResult, TemplateDiagnostic } from "@tocsin/core";
 import { createDefaultDestinationRegistry } from "@tocsin/destinations";
 
 import {
@@ -224,6 +225,76 @@ function destinationCatalogWithHiddenFeishuCardHelp(): DestinationCatalog {
   );
 }
 
+/** Minimal preview result the form only reads `diagnostics` from. */
+function previewNotice(diagnostics: TemplateDiagnostic[]): DestinationPreviewResult {
+  return {
+    destination: {
+      id: "destination-1",
+      name: "Ops Webhook",
+      kind: "generic_webhook",
+      enabled: true,
+    },
+    renderedPayload: { message: "Tocsin destination test" },
+    sample: {
+      kind: "built_in",
+      eventId: "preview-event",
+      source: {
+        id: "preview-source",
+        name: "Tocsin preview",
+        provider: "generic",
+        enabled: true,
+      },
+      receivedAt: null,
+    },
+    normalizedEvent: {
+      title: "Tocsin destination test",
+      message: "This is a test alert generated from Tocsin Console",
+      severity: "info",
+      status: "firing",
+      fingerprint: "preview",
+      occurredAt: "2026-01-01T00:00:00.000Z",
+      labels: {},
+    },
+    context: {
+      event: {
+        id: "preview-event",
+        title: "Tocsin destination test",
+        message: "This is a test alert generated from Tocsin Console",
+        severity: "info",
+        severityDisplay: "Info",
+        status: "firing",
+        statusDisplay: "Firing",
+        fingerprint: "preview",
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        occurredAtDisplay: "Jan 1, 2026",
+        labels: {},
+      },
+      source: {
+        id: "preview-source",
+        name: "Tocsin preview",
+        provider: "generic",
+      },
+      destination: {
+        id: "destination-1",
+        name: "Ops Webhook",
+        kind: "generic_webhook",
+      },
+      presentation: {
+        locale: "en-US",
+        timeZone: "UTC",
+        labels: {},
+      },
+      tocsin: {
+        eventUrl: "",
+      },
+      payload: {},
+      bindings: {},
+    },
+    diagnostics,
+    rawPayloadReference: null,
+  };
+}
+
 describe("template variable reference (#55)", () => {
   it("offers every variable the engine allows, plus the dynamic prefixes", async () => {
     const { TemplateVariablePaths, TemplateVariablePrefixes } =
@@ -310,5 +381,106 @@ describe("template variable panel layout", () => {
     // `<name>` spelling advertised an insertion that produced a diagnostic.
     expect(templateVariablePattern("payload.")).toBe("payload.<key>");
     expect(templateVariablePattern("event.labels.")).toBe("event.labels.<name>");
+  });
+});
+
+describe("template diagnostics in the editor", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("names the line and column of a JSON syntax error while typing", () => {
+    renderDestinationForm({ kind: "generic_webhook", templateMode: "json_payload" });
+
+    const editor = screen.getByLabelText("JSON payload template");
+
+    // A trailing comma: the parser stops on the closing brace on line 3.
+    fireEvent.change(editor, { target: { value: '{\n  "text": "hi",\n}' } });
+
+    expect(screen.getByText("Template JSON syntax error at line 3, column 1")).toBeTruthy();
+
+    // The error disappears the moment the document parses again.
+    fireEvent.change(editor, { target: { value: '{"text": "hi"}' } });
+
+    expect(screen.queryByText("Template JSON syntax error at line 3, column 1")).toBeNull();
+  });
+
+  it("reports valid JSON that is not an object as the field's own error", () => {
+    renderDestinationForm({ kind: "generic_webhook", templateMode: "json_payload" });
+
+    fireEvent.change(screen.getByLabelText("JSON payload template"), {
+      target: { value: "[1, 2]" },
+    });
+
+    expect(screen.getByText("Template JSON must be a valid JSON object")).toBeTruthy();
+  });
+
+  it("shows the diagnostics returned by the last preview", async () => {
+    const diagnostics: TemplateDiagnostic[] = [
+      {
+        severity: "error",
+        path: "template.payload.url",
+        variable: "config.webhookUrl",
+        message:
+          "Destination template contains unknown variable: config.webhookUrl (did you mean tocsin.eventUrl?)",
+      },
+    ];
+
+    renderDestinationForm(
+      {
+        name: "Ops Webhook",
+        kind: "generic_webhook",
+        webhookUrl: "https://example.test/hook",
+        templateMode: "json_payload",
+        templatePayload: '{"url": "{{config.webhookUrl}}"}',
+      },
+      {
+        onPreview: vi.fn<(input: DestinationFormPreviewInput) => DestinationSubmitResult>(() =>
+          previewNotice(diagnostics),
+        ),
+      },
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Template diagnostics")).toBeTruthy();
+    });
+    expect(screen.getByText("template.payload.url")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Destination template contains unknown variable: config.webhookUrl (did you mean tocsin.eventUrl?)",
+      ),
+    ).toBeTruthy();
+
+    // Editing the body invalidates the snapshot instead of leaving a verdict
+    // for a document that no longer exists.
+    fireEvent.change(screen.getByLabelText("JSON payload template"), {
+      target: { value: '{"url": "static"}' },
+    });
+
+    expect(screen.queryByText("template.payload.url")).toBeNull();
+  });
+
+  it("confirms when the last preview found no diagnostics", async () => {
+    renderDestinationForm(
+      {
+        name: "Ops Webhook",
+        kind: "generic_webhook",
+        webhookUrl: "https://example.test/hook",
+        templateMode: "json_payload",
+      },
+      {
+        onPreview: vi.fn<(input: DestinationFormPreviewInput) => DestinationSubmitResult>(() =>
+          previewNotice([]),
+        ),
+      },
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("No diagnostics found")).toBeTruthy();
+    });
   });
 });

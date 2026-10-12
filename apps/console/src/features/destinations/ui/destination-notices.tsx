@@ -1,6 +1,8 @@
 import * as React from "react";
 import { toast } from "sonner";
 
+import type { TemplateDiagnostic } from "@tocsin/core";
+
 import {
   CodeBlock,
   CodeBlockActions,
@@ -21,6 +23,7 @@ import type {
   DestinationPreviewNotice,
   DestinationTestNotice,
 } from "#/features/destinations/model/destination-types";
+import { TemplateDiagnosticsList } from "#/features/destinations/ui/template-diagnostics-list";
 import { useTranslations } from "#/i18n/use-i18n";
 
 type TranslationFn = ReturnType<typeof useTranslations>;
@@ -85,12 +88,7 @@ export function DestinationPreviewDialog({
             </TabsList>
             {previewTabs.map((tab) => (
               <TabsContent key={tab.value} value={tab.value} className="min-h-0">
-                <PreviewJsonBlock
-                  filename={tab.filename}
-                  value={tab.valueJson}
-                  copyLabel={t("destinations.notice.copyPreviewPayload")}
-                  t={t}
-                />
+                {tab.content}
               </TabsContent>
             ))}
           </Tabs>
@@ -100,59 +98,96 @@ export function DestinationPreviewDialog({
   );
 }
 
-function createPreviewTabs(notice: DestinationPreviewNotice | null, t: TranslationFn) {
+type PreviewTab = {
+  value: string;
+  label: string;
+  content: React.ReactNode;
+};
+
+function createPreviewTabs(
+  notice: DestinationPreviewNotice | null,
+  t: TranslationFn,
+): PreviewTab[] {
   if (!notice) {
     return [];
   }
 
+  const jsonTab = (
+    value: string,
+    label: string,
+    filename: string,
+    valueJson: unknown,
+  ): PreviewTab => ({
+    value,
+    label,
+    content: (
+      <PreviewJsonBlock
+        filename={filename}
+        value={valueJson}
+        copyLabel={t("destinations.notice.copyPreviewPayload")}
+        t={t}
+      />
+    ),
+  });
+
   return [
-    {
-      value: "payload",
-      label: t("destinations.notice.previewTabs.payload"),
-      filename: t("destinations.notice.previewPayloadFilename"),
-      valueJson: notice.renderedPayload,
-    },
+    jsonTab(
+      "payload",
+      t("destinations.notice.previewTabs.payload"),
+      t("destinations.notice.previewPayloadFilename"),
+      notice.renderedPayload,
+    ),
     ...(notice.normalizedEvent
       ? [
-          {
-            value: "normalized",
-            label: t("destinations.notice.previewTabs.normalized"),
-            filename: t("destinations.notice.previewNormalizedFilename"),
-            valueJson: notice.normalizedEvent,
-          },
+          jsonTab(
+            "normalized",
+            t("destinations.notice.previewTabs.normalized"),
+            t("destinations.notice.previewNormalizedFilename"),
+            notice.normalizedEvent,
+          ),
         ]
       : []),
     ...(notice.context
       ? [
-          {
-            value: "context",
-            label: t("destinations.notice.previewTabs.context"),
-            filename: t("destinations.notice.previewContextFilename"),
-            valueJson: notice.context,
-          },
+          jsonTab(
+            "context",
+            t("destinations.notice.previewTabs.context"),
+            t("destinations.notice.previewContextFilename"),
+            notice.context,
+          ),
         ]
       : []),
     ...(notice.rawPayloadReference
       ? [
-          {
-            value: "raw",
-            label: t("destinations.notice.previewTabs.raw"),
-            filename: t("destinations.notice.previewRawFilename"),
-            valueJson: notice.rawPayloadReference,
-          },
+          jsonTab(
+            "raw",
+            t("destinations.notice.previewTabs.raw"),
+            t("destinations.notice.previewRawFilename"),
+            notice.rawPayloadReference,
+          ),
         ]
       : []),
-    ...(notice.diagnostics
-      ? [
-          {
-            value: "diagnostics",
-            label: t("destinations.notice.previewTabs.diagnostics"),
-            filename: t("destinations.notice.previewDiagnosticsFilename"),
-            valueJson: notice.diagnostics,
-          },
-        ]
-      : []),
+    {
+      value: "diagnostics",
+      label: t("destinations.notice.previewTabs.diagnostics"),
+      content: <PreviewDiagnosticsPanel diagnostics={notice.diagnostics} />,
+    },
   ];
+}
+
+/** Diagnostics as a list an operator can read, never as a raw JSON blob. */
+function PreviewDiagnosticsPanel({ diagnostics }: { diagnostics: readonly TemplateDiagnostic[] }) {
+  const t = useTranslations();
+
+  return (
+    <div className="border-border max-h-[min(490px,calc(100dvh-16rem))] overflow-auto border p-3">
+      {diagnostics.length === 0 ? (
+        <p className="text-muted-foreground text-xs">{t("destinations.diagnostics.empty")}</p>
+      ) : (
+        <TemplateDiagnosticsList diagnostics={diagnostics} />
+      )}
+    </div>
+  );
 }
 
 function PreviewJsonBlock({

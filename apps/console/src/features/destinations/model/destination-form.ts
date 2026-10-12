@@ -180,24 +180,105 @@ export function destinationTemplateBodyStarter(mode: DestinationTemplateFormMode
   return DESTINATION_TEMPLATE_BODY_FIELDS[mode].starter;
 }
 
-/**
- * True when drafted JSON body text is ready to save: empty (no template) or a
- * JSON object, which is what every JSON mode's schema requires. Checked at the
- * form boundary so a half-written document reports a field error instead of
- * throwing out of submit.
- */
-export function isDestinationTemplateBodyDraft(value: string): boolean {
-  const trimmed = value.trim();
+/** 1-based position of a JSON syntax error inside the drafted body text. */
+export interface DestinationTemplateBodyDraftLocation {
+  line: number;
+  column: number;
+}
 
-  if (!trimmed) {
-    return true;
+/**
+ * Result of checking drafted JSON body text, so the editor can say *what* is
+ * wrong instead of one generic sentence:
+ *
+ * - `valid`: empty (no template) or a JSON object, ready to save.
+ * - `not-object`: parseable JSON whose root is not an object, which every JSON
+ *   mode's schema requires.
+ * - `syntax`: `JSON.parse` rejected the text; `location` is the 1-based
+ *   line/column where the parser stopped, or null on engines that report no
+ *   position at all.
+ *
+ * Checked at the form boundary so a half-written document reports a field
+ * error instead of throwing out of submit, and rendered live so the operator
+ * sees it while typing.
+ */
+export type DestinationTemplateBodyDraftCheck =
+  | { valid: true }
+  | { valid: false; reason: "not-object" }
+  | { valid: false; reason: "syntax"; location: DestinationTemplateBodyDraftLocation | null };
+
+export function isDestinationTemplateBodyDraft(value: string): DestinationTemplateBodyDraftCheck {
+  if (!value.trim()) {
+    return { valid: true };
   }
+
+  let parsed: unknown;
 
   try {
-    return JsonObjectSchema.safeParse(JSON.parse(trimmed) as unknown).success;
-  } catch {
-    return false;
+    // Parsed untrimmed so a reported position indexes the text the operator
+    // sees, including any leading blank lines.
+    parsed = JSON.parse(value) as unknown;
+  } catch (error) {
+    return { valid: false, reason: "syntax", location: syntaxErrorLocation(value, error) };
   }
+
+  return JsonObjectSchema.safeParse(parsed).success
+    ? { valid: true }
+    : { valid: false, reason: "not-object" };
+}
+
+/**
+ * Where `JSON.parse` stopped. V8 no longer exposes `SyntaxError.position`
+ * (checked on the pinned Node), but it names the offset in the message
+ * (`... in JSON at position 12 (line 3 column 1)`); older V8/Chrome and
+ * Firefox-style engines report either the raw position or a line/column. When
+ * nothing is reported the check still reports a syntax error, just without a
+ * location.
+ */
+function syntaxErrorLocation(
+  source: string,
+  error: unknown,
+): DestinationTemplateBodyDraftLocation | null {
+  const message =
+    typeof error === "object" && error !== null && "message" in error
+      ? (error as { message?: unknown }).message
+      : undefined;
+
+  if (typeof message === "string") {
+    // V8: `... in JSON at position 12 (line 3 column 1)` — the offset is
+    // relative to the parsed text, so count the lines ourselves.
+    const position = /at position (\d+)/.exec(message);
+
+    if (position) {
+      return locationFromPosition(source, Number(position[1]));
+    }
+
+    // Firefox: `JSON.parse: unexpected character at line 3 column 1`.
+    const reported = /line (\d+) column (\d+)/.exec(message);
+
+    if (reported) {
+      return { line: Number(reported[1]), column: Number(reported[2]) };
+    }
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const { position } = error as { position?: unknown };
+
+    if (typeof position === "number" && Number.isInteger(position) && position >= 0) {
+      return locationFromPosition(source, position);
+    }
+  }
+
+  return null;
+}
+
+function locationFromPosition(
+  source: string,
+  position: number,
+): DestinationTemplateBodyDraftLocation {
+  const before = source.slice(0, Math.min(position, source.length));
+  const lines = before.split("\n");
+
+  return { line: lines.length, column: (lines.at(-1)?.length ?? 0) + 1 };
 }
 
 function isTemplateConfigField(

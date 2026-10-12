@@ -8,7 +8,12 @@ import {
 import { useForm } from "@tanstack/react-form";
 import * as React from "react";
 
-import type { AdapterConfigHelp, FeishuAppListItem } from "@tocsin/core";
+import type {
+  AdapterConfigHelp,
+  DestinationPreviewResult,
+  FeishuAppListItem,
+  TemplateDiagnostic,
+} from "@tocsin/core";
 import { defaultFeishuCardTemplate as defaultFeishuCardTemplateObject } from "@tocsin/destinations/feishu/default-card";
 
 import { Button } from "#/components/ui/button";
@@ -49,6 +54,7 @@ import {
   isDestinationTemplateJsonMode,
   resolveDestinationTemplateFormMode,
   templateBindingsJsonFromFormState,
+  type DestinationTemplateBodyDraftCheck,
   type DestinationTemplateFormMode,
   type DestinationTemplateFormSource,
   type DestinationTemplateModeOption,
@@ -61,8 +67,10 @@ import type {
   DestinationFormSubmitInput,
   DestinationFormValues,
   DestinationSubmitHandler,
+  DestinationSubmitResult,
 } from "#/features/destinations/ui/destination-ui-types";
 import { FeishuDynamicPropertiesField } from "#/features/destinations/ui/feishu-dynamic-properties-field";
+import { TemplateDiagnosticsList } from "#/features/destinations/ui/template-diagnostics-list";
 import { TemplateVariablePanel } from "#/features/destinations/ui/template-variable-panel";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
@@ -93,6 +101,13 @@ export function DestinationForm({
   const isDialogLayout = layout === "dialog";
 
   const submitIntent = React.useRef<"preview" | "submit">("submit");
+  /**
+   * Diagnostics from the last preview, kept with the drafted body they were
+   * computed from: editing that body (or switching modes) drops the snapshot
+   * instead of showing a stale verdict next to new JSON.
+   */
+  const [previewDiagnostics, setPreviewDiagnostics] =
+    React.useState<PreviewDiagnosticsSnapshot | null>(null);
   const secretFieldDescription =
     mode === "create"
       ? t("destinations.form.secretDescriptionCreate")
@@ -127,10 +142,21 @@ export function DestinationForm({
             ? destinationConfigFromForm(selectedKind, data)
             : destinationConfigPatchFromForm(selectedKind, data),
       };
+      const intent = submitIntent.current;
       const result =
-        submitIntent.current === "preview"
+        intent === "preview"
           ? await onPreview({ ...input, sampleStatus: value.templatePreviewStatus })
           : await onSubmit(input);
+
+      if (intent === "preview" && isDestinationPreviewResult(result)) {
+        const bodyField = destinationTemplateBodyFormField(templateMode);
+
+        setPreviewDiagnostics({
+          mode: templateMode,
+          body: String(value[bodyField]),
+          diagnostics: result.diagnostics,
+        });
+      }
 
       if (mode === "create" && submitIntent.current === "submit" && result !== false) {
         form.reset();
@@ -513,59 +539,82 @@ export function DestinationForm({
           // Caught at submit so a half-written document reports on the field
           // instead of throwing out of the config builder.
           onSubmit: ({ value }) =>
-            isDestinationTemplateBodyDraft(value)
-              ? undefined
-              : t("destinations.form.templateBodyInvalidJson"),
+            destinationTemplateBodyDraftError(isDestinationTemplateBodyDraft(value), t) ??
+            undefined,
         }}
       >
-        {(field) => (
-          <UiField data-invalid={field.state.meta.errors.length > 0}>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-1">
-                <FieldLabel htmlFor={`json-template-${kind}`}>{t(copy.labelKey)}</FieldLabel>
-                {renderConfigHelp(
-                  destinationTemplateModeHelp(destinationCatalog, kind, templateMode),
-                )}
-              </div>
-              {isFeishuCard ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={() => {
-                    const defaults = createDefaultDestinationTemplateFormState();
+        {(field) => {
+          const body = String(field.state.value);
+          // Live check: the operator sees a broken document (and where the
+          // parser stopped) while typing, not only after a submitted preview.
+          const draftError = destinationTemplateBodyDraftError(
+            isDestinationTemplateBodyDraft(body),
+            t,
+          );
+          const diagnostics =
+            previewDiagnostics?.mode === templateMode && previewDiagnostics.body === body
+              ? previewDiagnostics.diagnostics
+              : null;
 
-                    form.setFieldValue("templateSource", "builtin");
-                    form.setFieldValue("templateMode", "feishu_card");
-                    form.setFieldValue("templateBindings", defaults.templateBindings);
-                    form.setFieldValue("templateColorEnabled", defaults.templateColorEnabled);
-                    form.setFieldValue("templateColorSelector", defaults.templateColorSelector);
-                    form.setFieldValue("templateColorCases", defaults.templateColorCases);
-                    form.setFieldValue("templateColorFallback", defaults.templateColorFallback);
-                  }}
-                >
-                  <RiResetLeftLine data-icon="inline-start" aria-hidden />
-                  {t("destinations.form.restoreDefaultCard")}
-                </Button>
+          return (
+            <UiField data-invalid={draftError !== null}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-1">
+                  <FieldLabel htmlFor={`json-template-${kind}`}>{t(copy.labelKey)}</FieldLabel>
+                  {renderConfigHelp(
+                    destinationTemplateModeHelp(destinationCatalog, kind, templateMode),
+                  )}
+                </div>
+                {isFeishuCard ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={() => {
+                      const defaults = createDefaultDestinationTemplateFormState();
+
+                      form.setFieldValue("templateSource", "builtin");
+                      form.setFieldValue("templateMode", "feishu_card");
+                      form.setFieldValue("templateBindings", defaults.templateBindings);
+                      form.setFieldValue("templateColorEnabled", defaults.templateColorEnabled);
+                      form.setFieldValue("templateColorSelector", defaults.templateColorSelector);
+                      form.setFieldValue("templateColorCases", defaults.templateColorCases);
+                      form.setFieldValue("templateColorFallback", defaults.templateColorFallback);
+                    }}
+                  >
+                    <RiResetLeftLine data-icon="inline-start" aria-hidden />
+                    {t("destinations.form.restoreDefaultCard")}
+                  </Button>
+                ) : null}
+              </div>
+              <Textarea
+                id={`json-template-${kind}`}
+                name={field.name}
+                className="max-h-[min(42dvh,28rem)] min-h-56 resize-y overflow-auto font-mono text-[11px]"
+                placeholder={destinationTemplateBodyStarter(templateMode)}
+                value={body}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.currentTarget.value)}
+              />
+              <FieldDescription>{t(copy.descriptionKey)}</FieldDescription>
+              {/* The submit validator returns this same message, so the live
+                  check is the single source and can never lag a keystroke. */}
+              <FieldError errors={draftError ? [{ message: draftError }] : []} />
+              {diagnostics ? (
+                <section className="border-border bg-muted/30 flex flex-col gap-1.5 border p-2">
+                  <h4 className="text-xs font-medium">{t("destinations.diagnostics.title")}</h4>
+                  {diagnostics.length === 0 ? (
+                    <p className="text-muted-foreground text-xs">
+                      {t("destinations.diagnostics.empty")}
+                    </p>
+                  ) : (
+                    <TemplateDiagnosticsList diagnostics={diagnostics} />
+                  )}
+                </section>
               ) : null}
-            </div>
-            <Textarea
-              id={`json-template-${kind}`}
-              name={field.name}
-              className="max-h-[min(42dvh,28rem)] min-h-56 resize-y overflow-auto font-mono text-[11px]"
-              placeholder={destinationTemplateBodyStarter(templateMode)}
-              value={String(field.state.value)}
-              onBlur={field.handleBlur}
-              onChange={(event) => field.handleChange(event.currentTarget.value)}
-            />
-            <FieldDescription>{t(copy.descriptionKey)}</FieldDescription>
-            <FieldError
-              errors={field.state.meta.errors.map((error) => ({
-                message: String(error),
-              }))}
-            />
-          </UiField>
-        )}
+            </UiField>
+          );
+        }}
       </form.Field>
     );
   };
@@ -1208,6 +1257,55 @@ function destinationValuesToFormData(values: DestinationFormValues): FormData {
 
 function appendTemplateVariable(currentValue: string, variable: string): string {
   return currentValue.trimEnd() ? `${currentValue} ${variable}` : variable;
+}
+
+/** Diagnostics from one preview, paired with the draft they were computed on. */
+type PreviewDiagnosticsSnapshot = {
+  mode: DestinationTemplateFormMode;
+  body: string;
+  diagnostics: TemplateDiagnostic[];
+};
+
+/**
+ * The preview result ("what the engine found") is returned by `onPreview`;
+ * the test/edit mutations return other shapes. Only the preview carries
+ * `diagnostics`, so narrow on that instead of on the whole DTO.
+ */
+function isDestinationPreviewResult(
+  result: DestinationSubmitResult,
+): result is DestinationPreviewResult {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "diagnostics" in result &&
+    Array.isArray(result.diagnostics)
+  );
+}
+
+/**
+ * Localized field error for a drafted JSON body, or null when it is ready to
+ * save. A syntax error names the line and column the parser stopped at; the
+ * engine's own diagnostics never pass through here — they are shown verbatim
+ * under the editor.
+ */
+function destinationTemplateBodyDraftError(
+  check: DestinationTemplateBodyDraftCheck,
+  t: ReturnType<typeof useTranslations>,
+): string | null {
+  if (check.valid) {
+    return null;
+  }
+
+  if (check.reason === "not-object") {
+    return t("destinations.form.templateBodyInvalidJson");
+  }
+
+  return check.location
+    ? t("destinations.form.templateBodySyntaxErrorAt", {
+        line: check.location.line,
+        column: check.location.column,
+      })
+    : t("destinations.form.templateBodySyntaxError");
 }
 
 const defaultFeishuCardTemplate = JSON.stringify(defaultFeishuCardTemplateObject, null, 2);
