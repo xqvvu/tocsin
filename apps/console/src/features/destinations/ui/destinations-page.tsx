@@ -164,6 +164,7 @@ export function DestinationsPage() {
           />
           <DestinationsSection
             destinations={destinations}
+            destinationCatalog={destinationCatalog}
             routes={routes}
             pending={pending}
             onTest={(destination) =>

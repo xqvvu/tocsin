@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { DeliveriesPage } from "#/features/deliveries/ui/deliveries-page";
-import { destinationsQueryOptions } from "#/features/destinations/api/destination.queries";
+import {
+  destinationCatalogQueryOptions,
+  destinationsQueryOptions,
+} from "#/features/destinations/api/destination.queries";
 import { operationsQueryOptions } from "#/features/operations/api/operations.queries";
 import {
   DashboardOperationSearchSchema,
@@ -20,6 +23,7 @@ export const Route = createFileRoute("/_dashboard/deliveries")({
     await Promise.all([
       context.queryClient.ensureQueryData(sourcesQueryOptions()),
       context.queryClient.ensureQueryData(destinationsQueryOptions()),
+      context.queryClient.ensureQueryData(destinationCatalogQueryOptions()),
       context.queryClient.ensureQueryData(operationsQueryOptions(filters)),
     ]);
 

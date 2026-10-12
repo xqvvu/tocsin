@@ -13,13 +13,17 @@ import {
 import { DeliveryActions } from "#/features/deliveries/ui/delivery-actions";
 import { DeliveryEventCell } from "#/features/deliveries/ui/delivery-event-cell";
 import { DeliveryStateBadge } from "#/features/deliveries/ui/delivery-state-badge";
-import { DeliveryTargetCell } from "#/features/deliveries/ui/delivery-target-cell";
+import {
+  DeliveryTargetCell,
+  type DeliveryDestinationIconName,
+} from "#/features/deliveries/ui/delivery-target-cell";
 import type { Operations } from "#/features/operations/model/operation-types";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function DeliveriesTable({
   deliveries,
+  destinationIconNames,
   nextCursor,
   pending,
   canPrevious,
@@ -29,6 +33,8 @@ export function DeliveriesTable({
   onPrevious,
 }: {
   deliveries: Operations["deliveries"]["items"];
+  /** Client-safe destination catalog projected to kind → manifest `iconName`. */
+  destinationIconNames: ReadonlyMap<string, string | undefined>;
   nextCursor: string | null;
   pending: boolean;
   /** Whether any earlier page was visited; cursor paging cannot infer this. */
@@ -50,7 +56,10 @@ export function DeliveriesTable({
         cell: ({ row }) => (
           <DeliveryTargetCell
             destinationName={row.original.destinationName}
-            destinationKind={row.original.destinationKind}
+            destinationIconName={deliveryDestinationIconName(
+              row.original.destinationKind,
+              destinationIconNames,
+            )}
             routeName={row.original.routeName}
           />
         ),
@@ -109,7 +118,7 @@ export function DeliveriesTable({
         ),
       },
     ],
-    [onInspect, onRetry, pending, t],
+    [destinationIconNames, onInspect, onRetry, pending, t],
   );
 
   return (
@@ -147,4 +156,21 @@ export function DeliveriesTable({
       />
     </section>
   );
+}
+
+/**
+ * Resolves a delivery row's icon through the client-safe catalog rather than a
+ * console-side list of known kinds: a row read back from an older snapshot has
+ * no kind at all, and a row can outlive a kind that no longer exists — both
+ * come back as `null` so the cell degrades deliberately.
+ */
+function deliveryDestinationIconName(
+  destinationKind: string | undefined,
+  iconNames: ReadonlyMap<string, string | undefined>,
+): DeliveryDestinationIconName {
+  if (destinationKind === undefined || !iconNames.has(destinationKind)) {
+    return null;
+  }
+
+  return iconNames.get(destinationKind);
 }

@@ -4,6 +4,8 @@ import { cleanup, render as renderRaw, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
+import larkIconUrl from "@tocsin/destinations/assets/destination-icons/lark.svg?url";
+
 import { DeliveryTargetCell } from "#/features/deliveries/ui/delivery-target-cell";
 import { AppIntlProvider } from "#/i18n/provider";
 
@@ -22,7 +24,7 @@ describe("delivery target cell", () => {
     const { container } = render(
       <DeliveryTargetCell
         destinationName="SRE pager"
-        destinationKind="feishu"
+        destinationIconName="feishu"
         routeName="Critical alerts"
       />,
     );
@@ -31,7 +33,7 @@ describe("delivery target cell", () => {
     // text assertion, so assert the image itself.
     const image = container.querySelector("img");
     expect(image, "no icon rendered in the target cell").not.toBeNull();
-    expect(image!.getAttribute("src")).toContain("lark");
+    expect(image!.getAttribute("src")).toBe(larkIconUrl);
     expect(screen.getByText("SRE pager")).toBeTruthy();
   });
 
@@ -39,7 +41,7 @@ describe("delivery target cell", () => {
     const { container } = render(
       <DeliveryTargetCell
         destinationName="On-call inbox"
-        destinationKind="email"
+        destinationIconName="mail"
         routeName={null}
       />,
     );
@@ -49,11 +51,11 @@ describe("delivery target cell", () => {
     expect(container.querySelector("svg")).not.toBeNull();
   });
 
-  it("falls back to a neutral glyph when the kind is unknown", () => {
+  it("falls back to a neutral glyph when the catalog does not know the kind", () => {
     const { container } = render(
       <DeliveryTargetCell
         destinationName="Legacy target"
-        destinationKind={undefined}
+        destinationIconName={null}
         routeName={null}
       />,
     );
@@ -67,9 +69,28 @@ describe("delivery target cell", () => {
     expect(glyph!.getAttribute("aria-hidden")).toBe("true");
   });
 
+  it("renders a neutral glyph for a kind without an icon name", () => {
+    // A kind can be registered and still declare no `iconName`; the cell shows
+    // the icon's generic fallback, not the "unknown kind" treatment.
+    const { container } = render(
+      <DeliveryTargetCell
+        destinationName="Icon-free target"
+        destinationIconName={undefined}
+        routeName={null}
+      />,
+    );
+
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
+
   it("shows the manual label when there is no route", () => {
     render(
-      <DeliveryTargetCell destinationName="Direct send" destinationKind="slack" routeName={null} />,
+      <DeliveryTargetCell
+        destinationName="Direct send"
+        destinationIconName="slack"
+        routeName={null}
+      />,
     );
 
     expect(screen.getByText("Manual")).toBeTruthy();

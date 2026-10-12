@@ -2,13 +2,20 @@ import { DestinationKindIcon } from "#/features/destinations/ui/destination-kind
 import type { DestinationListItem } from "#/features/destinations/ui/destination-ui-types";
 import { useTranslations } from "#/i18n/use-i18n";
 
-export function DestinationIdentityCell({ destination }: { destination: DestinationListItem }) {
+export function DestinationIdentityCell({
+  destination,
+  iconName,
+}: {
+  destination: DestinationListItem;
+  /** The `iconName` the destination's catalog entry declares. */
+  iconName: string | undefined;
+}) {
   const t = useTranslations();
 
   return (
     <div className="flex min-w-0 items-center gap-3">
       <div className="border-border bg-muted/70 flex size-8 shrink-0 items-center justify-center border">
-        <DestinationKindIcon kind={destination.kind} />
+        <DestinationKindIcon iconName={iconName} />
       </div>
       <div className="min-w-0">
         <div className="truncate text-sm font-semibold" title={destination.name}>

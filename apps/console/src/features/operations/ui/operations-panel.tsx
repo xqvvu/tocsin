@@ -21,6 +21,8 @@ export interface OperationsPanelProps {
     sources: SourceSummary[];
     destinations: DestinationSummary[];
   };
+  /** Client-safe destination catalog projected to kind → manifest `iconName`. */
+  destinationIconNames: ReadonlyMap<string, string | undefined>;
   operations: Operations;
   search: DashboardOperationSearch;
   eventDetail: EventDetail | null;
@@ -39,6 +41,7 @@ export interface OperationsPanelProps {
 
 export function OperationsPanel({
   configuration,
+  destinationIconNames,
   operations,
   search,
   eventDetail,
@@ -85,6 +88,7 @@ export function OperationsPanel({
         />
         <DeliveriesTable
           deliveries={operations.deliveries.items}
+          destinationIconNames={destinationIconNames}
           nextCursor={operations.deliveries.nextCursor}
           pending={pending}
           onInspect={onInspectDelivery}
