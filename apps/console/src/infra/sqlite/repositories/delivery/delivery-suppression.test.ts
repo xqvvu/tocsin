@@ -388,28 +388,34 @@ describe("delivery suppression at the delivery layer", () => {
     const { event, enqueue } = await enqueueDelivery(repositories, { idempotencyKey: "request-1" });
     const deliveryId = enqueue.created[0]!.id;
 
-    // A page already fired for this alert before the window opened. The on-call
-    // path has its own tests; what this pins is that suppression never cancels,
-    // rewrites, or dedupes an in-flight ping.
+    // Pages already fired and in flight for this alert before the window
+    // opened. The on-call path has its own tests; what this pins is that
+    // suppression never cancels, rewrites, or dedupes an in-flight ping.
+    const pingRow = (id: string, receiver: string, state: "fired" | "running") => ({
+      id,
+      delivery_id: deliveryId,
+      destination_id: "destination-1",
+      event_id: event.id,
+      fingerprint: "disk:full",
+      receiver,
+      channel: "feishu_urgent_phone",
+      state,
+      provider_ref_type: "feishu_message_id",
+      provider_ref_value: `om_${receiver}`,
+      trigger: "auto" as const,
+      initiated_by: null,
+      created_at: ENQUEUE_AT,
+      updated_at: ENQUEUE_AT,
+      fired_at: state === "fired" ? ENQUEUE_AT : null,
+    });
+
     await db
       .insertInto("oncall_pings")
-      .values({
-        id: "ping-1",
-        delivery_id: deliveryId,
-        destination_id: "destination-1",
-        event_id: event.id,
-        fingerprint: "disk:full",
-        receiver: "ou_1",
-        channel: "feishu_urgent_phone",
-        state: "fired",
-        provider_ref_type: "feishu_message_id",
-        provider_ref_value: "om_123",
-        trigger: "auto",
-        initiated_by: null,
-        created_at: ENQUEUE_AT,
-        updated_at: ENQUEUE_AT,
-        fired_at: ENQUEUE_AT,
-      })
+      .values(pingRow("ping-1", "ou_1", "fired"))
+      .execute();
+    await db
+      .insertInto("oncall_pings")
+      .values(pingRow("ping-2", "ou_2", "running"))
       .execute();
     await db
       .insertInto("oncall_ping_dedupe_keys")
@@ -435,15 +441,13 @@ describe("delivery suppression at the delivery layer", () => {
     const dedupeKeys = await db.selectFrom("oncall_ping_dedupe_keys").selectAll().execute();
     const detail = await repositories.deliveries.get(deliveryId);
 
-    expect(pings).toHaveLength(1);
-    expect(pings[0]).toMatchObject({
-      id: "ping-1",
-      state: "fired",
-      providerReference: { type: "feishu_message_id", value: "om_123" },
-      createdAt: ENQUEUE_AT,
-      updatedAt: ENQUEUE_AT,
-      firedAt: ENQUEUE_AT,
-    });
+    expect(pings).toHaveLength(2);
+    expect(pings.map((ping) => [ping.id, ping.state, ping.firedAt])).toEqual([
+      ["ping-1", "fired", ENQUEUE_AT],
+      ["ping-2", "running", null],
+    ]);
+    expect(pings.map((ping) => ping.updatedAt)).toEqual([ENQUEUE_AT, ENQUEUE_AT]);
+    expect(pings.map((ping) => ping.providerReference?.value)).toEqual(["om_ou_1", "om_ou_2"]);
     expect(dedupeKeys).toHaveLength(1);
     // The delivery itself is suppressed from this claim on, so the paging hook
     // (which only runs on a successful send) cannot fire for it again.
