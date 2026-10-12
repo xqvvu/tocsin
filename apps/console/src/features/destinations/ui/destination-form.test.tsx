@@ -220,3 +220,25 @@ function destinationCatalogWithHiddenFeishuCardHelp(): DestinationCatalog {
       : item,
   );
 }
+
+describe("template variable reference (#55)", () => {
+  it("offers every variable the engine allows, plus the dynamic prefixes", async () => {
+    const { TemplateVariablePaths, TemplateVariablePrefixes } =
+      await import("@tocsin/destinations");
+
+    // The panel used to be a hand-written subset of 18 while the engine allowed
+    // 45, so most working variables were invisible to the operator.
+    expect(TemplateVariablePaths.length).toBeGreaterThan(18);
+
+    renderDestinationForm({ kind: "slack" });
+
+    for (const path of TemplateVariablePaths) {
+      expect(screen.getByRole("button", { name: path })).toBeTruthy();
+    }
+
+    // Dynamic prefixes surface as patterns rather than as fabricated values.
+    for (const prefix of TemplateVariablePrefixes) {
+      expect(screen.getByRole("button", { name: `${prefix}<name>` })).toBeTruthy();
+    }
+  });
+});

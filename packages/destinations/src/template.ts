@@ -69,7 +69,7 @@ export type TemplateBindingSelector = z.infer<typeof TemplateBindingSelectorSche
 export type TemplateBinding = z.infer<typeof TemplateBindingSchema>;
 export type TemplateBindings = z.infer<typeof TemplateBindingsSchema>;
 
-type TemplateStaticPath =
+export type TemplateStaticPath =
   | "event.id"
   | "event.title"
   | "event.message"
@@ -165,6 +165,26 @@ const TemplateStaticPathResolvers = {
 const AllowedTemplatePaths: ReadonlySet<TemplateStaticPath> = new Set(
   Object.keys(TemplateStaticPathResolvers) as TemplateStaticPath[],
 );
+
+/**
+ * Every static path a template may reference, in the order the resolvers
+ * declare them.
+ *
+ * Exported so the console can offer the real list instead of maintaining its
+ * own copy: it previously hard-coded 18 of these while the engine allowed 45,
+ * so an operator saw a variable reference panel missing most of what actually
+ * works. A hand-maintained subset of a machine-checkable set drifts.
+ */
+export const TemplateVariablePaths: readonly TemplateStaticPath[] = Object.freeze(
+  Object.keys(TemplateStaticPathResolvers) as TemplateStaticPath[],
+);
+
+/**
+ * Prefixes that resolve dynamically rather than from a fixed list, so the
+ * console can show them as patterns (`event.labels.<name>`) rather than
+ * enumerating values it cannot know.
+ */
+export const TemplateVariablePrefixes = Object.freeze(["event.labels.", "payload."] as const);
 
 export const TextDestinationTemplateSchema = z
   .strictObject({

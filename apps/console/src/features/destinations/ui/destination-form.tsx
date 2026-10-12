@@ -9,6 +9,7 @@ import { useForm } from "@tanstack/react-form";
 import * as React from "react";
 
 import type { AdapterConfigHelp, FeishuAppListItem } from "@tocsin/core";
+import { TemplateVariablePaths, TemplateVariablePrefixes } from "@tocsin/destinations";
 import { defaultFeishuCardTemplate as defaultFeishuCardTemplateObject } from "@tocsin/destinations/feishu/default-card";
 
 import { Button } from "#/components/ui/button";
@@ -1228,25 +1229,21 @@ function appendTemplateVariable(currentValue: string, variable: string): string 
   return currentValue.trimEnd() ? `${currentValue} ${variable}` : variable;
 }
 
-const templateVariablePaths = [
-  "event.title",
-  "event.message",
-  "event.severity",
-  "event.severityDisplay",
-  "event.status",
-  "event.statusDisplay",
-  "event.occurredAtDisplay",
-  "event.fingerprint",
-  "event.labels.service",
-  "event.labels.environment",
-  "source.name",
-  "destination.name",
-  "presentation.labels.summary",
-  "presentation.labels.status",
-  "presentation.labels.severity",
-  "presentation.labels.source",
-  "presentation.labels.occurredAt",
-  "tocsin.eventUrl",
+/**
+ * Variables offered in the reference panel.
+ *
+ * Read from the engine rather than maintained here: this list used to be a
+ * hand-written subset of 18, while the engine allowed 45 — so the panel hid
+ * most of what actually works, and pinned two specific label names
+ * (`event.labels.service` / `.environment`) as if labels were a fixed set when
+ * any label key resolves.
+ *
+ * Dynamic prefixes are shown as patterns, since their values are not knowable
+ * ahead of time.
+ */
+const templateVariablePaths: string[] = [
+  ...TemplateVariablePaths,
+  ...TemplateVariablePrefixes.map((prefix) => `${prefix}<name>`),
 ];
 
 const defaultFeishuCardTemplate = JSON.stringify(defaultFeishuCardTemplateObject, null, 2);
