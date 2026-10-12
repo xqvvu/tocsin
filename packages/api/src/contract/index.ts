@@ -1,4 +1,3 @@
-import { auth } from "./auth";
 import { destinations } from "./destinations";
 import { health } from "./health";
 import { i18n } from "./i18n";
@@ -6,10 +5,11 @@ import { integrations } from "./integrations";
 import { operations } from "./operations";
 import { portability } from "./portability";
 import { routes } from "./routes";
+import { session } from "./session";
 import { settings } from "./settings";
 import { sources } from "./sources";
 
-export { auth } from "./auth";
+export { session } from "./session";
 export { destinations } from "./destinations";
 export { health } from "./health";
 export { i18n } from "./i18n";
@@ -27,7 +27,7 @@ export { sources } from "./sources";
  * `os.router(...)`, so the router and the contract cannot drift apart.
  */
 export const contract = {
-  auth,
+  session,
   destinations,
   health,
   i18n,

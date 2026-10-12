@@ -9,8 +9,8 @@ import { getApplicationContainer } from "#/server/runtime/container";
  * before it knows whether one exists, so a missing session returns `null`
  * instead of an UNAUTHORIZED error the client would have to catch.
  */
-export const authRouter = os.auth.router({
-  getDashboardSession: os.auth.getDashboardSession.handler(async ({ context }) => {
+export const sessionRouter = os.session.router({
+  getDashboardSession: os.session.getDashboardSession.handler(async ({ context }) => {
     const dashboardRequest = await findDashboardContext({ reqHeaders: context.reqHeaders });
 
     if (!dashboardRequest) {
@@ -28,7 +28,7 @@ export const authRouter = os.auth.router({
     };
   }),
 
-  getAuthBootstrap: os.auth.getAuthBootstrap.handler(async () => {
+  getAuthBootstrap: os.session.getAuthBootstrap.handler(async () => {
     return {
       setupRequired: !(await getApplicationContainer().hasRegisteredUsers()),
     };

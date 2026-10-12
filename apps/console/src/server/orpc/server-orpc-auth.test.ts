@@ -78,7 +78,9 @@ const expectedProcedures: Record<
   string,
   { public: readonly string[]; private: readonly string[] }
 > = {
-  auth: { public: ["getDashboardSession", "getAuthBootstrap"], private: [] },
+  // Keyed by feature DIRECTORY name, which is `session` — named for what it
+  // exposes, and deliberately not `auth`, which better-auth owns at /api/auth/*.
+  session: { public: ["getDashboardSession", "getAuthBootstrap"], private: [] },
   destinations: {
     public: [],
     private: [
@@ -276,8 +278,8 @@ describe("dashboard oRPC auth gates", () => {
     expect(dashboardRoute).toContain(
       "const session = await context.queryClient.ensureQueryData(dashboardSessionQueryOptions())",
     );
-    expect(authQueries).toContain("orpc.auth.getDashboardSession.queryOptions");
-    expect(authQueries).toContain("orpc.auth.getAuthBootstrap.queryOptions");
+    expect(authQueries).toContain("orpc.session.getDashboardSession.queryOptions");
+    expect(authQueries).toContain("orpc.session.getAuthBootstrap.queryOptions");
     expect(dashboardRoute).toContain("throw redirect({");
     expect(dashboardRoute).toContain('to: "/login"');
     expect(loginRoute).toContain("authBootstrapQueryOptions()");
