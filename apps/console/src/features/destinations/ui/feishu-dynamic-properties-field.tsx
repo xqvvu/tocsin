@@ -193,6 +193,7 @@ export function FeishuDynamicPropertiesField({
             value={[previewStatus]}
             variant="outline"
             size="sm"
+            aria-label={t("destinations.form.dynamic.previewStatus")}
             onValueChange={(values) => {
               const status = values[0] as AlertStatus | undefined;
 

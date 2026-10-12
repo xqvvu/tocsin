@@ -71,19 +71,69 @@ describe("destination form", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Feishu card" }));
-    fireEvent.change(screen.getByLabelText("Feishu card JSON"), {
+
+    const editor = screen.getByLabelText("Feishu card JSON") as HTMLTextAreaElement;
+
+    fireEvent.change(editor, {
       target: {
         value: '{"content": "base"}',
       },
     });
+    // The operator's caret sits inside the string, where the variable belongs.
+    // Inserting at the end of the body instead produced
+    // `{"content": "base"} {{source.name}}` — valid-looking text that no JSON
+    // parser accepts.
+    editor.focus();
+    editor.setSelectionRange(17, 17);
     // source.name is not a pinned common variable, so it lives under the
     // "Source" group — which must be opened before it can be clicked.
     fireEvent.click(screen.getByRole("button", { name: /Source/ }));
     fireEvent.click(screen.getByRole("button", { name: "source.name" }));
 
-    expect((screen.getByLabelText("Feishu card JSON") as HTMLTextAreaElement).value).toBe(
-      '{"content": "base"} {{source.name}}',
+    expect(editor.value).toBe('{"content": "base{{source.name}}"}');
+  });
+
+  it("inserts at the caret in the middle of a JSON body and leaves the caret after it", () => {
+    renderDestinationForm({ kind: "generic_webhook", templateMode: "json_payload" });
+
+    const editor = screen.getByLabelText("JSON payload template") as HTMLTextAreaElement;
+
+    fireEvent.change(editor, { target: { value: '{"text": "hi"}' } });
+    editor.focus();
+    editor.setSelectionRange(12, 12);
+
+    fireEvent.click(screen.getByRole("button", { name: "event.title" }));
+
+    // The variable landed inside the string, so the body is still valid JSON.
+    expect(editor.value).toBe('{"text": "hi{{event.title}}"}');
+    expect(JSON.parse(editor.value)).toEqual({ text: "hi{{event.title}}" });
+    // The caret sits right after it, ready for the next variable.
+    expect(editor.selectionStart).toBe(27);
+    expect(editor.selectionEnd).toBe(27);
+  });
+
+  it("appends the variable when no template body field holds a caret", () => {
+    renderDestinationForm({ kind: "feishu" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Custom" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
+    fireEvent.change(screen.getByLabelText("Message template"), { target: { value: "hello" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "event.title" }));
+
+    expect((screen.getByLabelText("Message template") as HTMLTextAreaElement).value).toBe(
+      "hello {{event.title}}",
     );
+  });
+
+  it("names the template toggle groups", () => {
+    renderDestinationForm({ kind: "feishu" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Custom" }));
+
+    expect(screen.getByRole("group", { name: "Template source" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Template type" })).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Preview status" })).toBeTruthy();
   });
 
   it("restores the default Feishu card template", () => {
@@ -413,6 +463,24 @@ describe("template diagnostics in the editor", () => {
     });
 
     expect(screen.getByText("Template JSON must be a valid JSON object")).toBeTruthy();
+  });
+
+  it("associates the template body editor with its own error text", () => {
+    renderDestinationForm({ kind: "generic_webhook", templateMode: "json_payload" });
+
+    const editor = screen.getByLabelText("JSON payload template") as HTMLTextAreaElement;
+
+    fireEvent.change(editor, { target: { value: "[1, 2]" } });
+
+    // A screen reader follows `aria-describedby` to the message, so the error
+    // reaches the field it belongs to instead of only the alert region.
+    const errorId = editor.getAttribute("aria-describedby");
+
+    expect(errorId).toBeTruthy();
+    expect(document.getElementById(errorId as string)?.textContent).toBe(
+      "Template JSON must be a valid JSON object",
+    );
+    expect(editor.getAttribute("aria-invalid")).toBe("true");
   });
 
   it("shows the diagnostics returned by the last preview", async () => {
