@@ -7,6 +7,7 @@ import {
 } from "@remixicon/react";
 import { useForm } from "@tanstack/react-form";
 import * as React from "react";
+import { flushSync } from "react-dom";
 
 import type {
   AdapterConfigHelp,
@@ -75,6 +76,9 @@ import { TemplateVariablePanel } from "#/features/destinations/ui/template-varia
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
 
+/** Form state key that stores the body of the mode being edited. */
+type TemplateBodyFormField = ReturnType<typeof destinationTemplateBodyFormField>;
+
 export function DestinationForm({
   mode,
   layout = "panel",
@@ -108,6 +112,16 @@ export function DestinationForm({
    */
   const [previewDiagnostics, setPreviewDiagnostics] =
     React.useState<PreviewDiagnosticsSnapshot | null>(null);
+  /**
+   * Template body editor the operator last put a caret in. Clicking a variable
+   * button moves focus to the button, so the insertion point cannot be read
+   * from the focused element at click time: remember the editor and read its
+   * live `selectionStart`/`selectionEnd` back off it instead.
+   */
+  const templateBodyEditor = React.useRef<{
+    field: TemplateBodyFormField;
+    element: HTMLTextAreaElement;
+  } | null>(null);
   const secretFieldDescription =
     mode === "create"
       ? t("destinations.form.secretDescriptionCreate")
@@ -163,6 +177,15 @@ export function DestinationForm({
       }
     },
   });
+
+  /**
+   * Remember the editor whenever the operator puts a caret in it, so a later
+   * variable click can insert where they were typing.
+   */
+  const trackTemplateCaret =
+    (field: TemplateBodyFormField) => (event: React.FocusEvent<HTMLTextAreaElement>) => {
+      templateBodyEditor.current = { field, element: event.currentTarget };
+    };
 
   const requiresSecrets = mode === "create";
   const feishuAppItems = feishuApps.map((app) => ({ value: app.id, label: app.name }));
@@ -225,6 +248,7 @@ export function DestinationForm({
     placeholder,
     required,
     description,
+    onFocus,
   }: {
     label: string;
     name: keyof DestinationFormValues;
@@ -233,6 +257,7 @@ export function DestinationForm({
     placeholder: string;
     required?: boolean;
     description?: string;
+    onFocus?: React.FocusEventHandler<HTMLTextAreaElement>;
   }) => (
     <form.Field name={name}>
       {(field) => (
@@ -245,6 +270,7 @@ export function DestinationForm({
             placeholder={placeholder}
             required={required}
             value={field.state.value as string}
+            onFocus={onFocus}
             onBlur={field.handleBlur}
             onChange={(event) => field.handleChange(event.currentTarget.value)}
           />
@@ -281,6 +307,7 @@ export function DestinationForm({
                   value={[String(field.state.value)]}
                   variant="outline"
                   size="sm"
+                  aria-label={t("destinations.form.templateSource")}
                   onValueChange={(value) => {
                     const next = value[0] as DestinationTemplateFormSource | undefined;
 
@@ -423,6 +450,7 @@ export function DestinationForm({
               value={[templateMode]}
               variant="outline"
               size="sm"
+              aria-label={t("destinations.form.templateMode")}
               onValueChange={(value) => {
                 const next = value[0] as DestinationTemplateFormMode | undefined;
 
@@ -474,14 +502,16 @@ export function DestinationForm({
     templateMode: DestinationTemplateFormMode,
   ) => {
     const copy = destinationTemplateBodyCopy(templateMode);
+    const bodyField = destinationTemplateBodyFormField(templateMode);
 
     return renderTextareaField({
       label: t(copy.labelKey),
-      name: destinationTemplateBodyFormField(templateMode),
+      name: bodyField,
       id: `message-template-${kind}`,
       className: "min-h-20 max-h-40 resize-y overflow-auto font-mono text-[11px]",
       placeholder: "{{event.title}} on {{source.name}}",
       description: t(copy.descriptionKey),
+      onFocus: trackTemplateCaret(bodyField),
     });
   };
 
@@ -530,11 +560,12 @@ export function DestinationForm({
     templateMode: DestinationTemplateFormMode,
   ) => {
     const copy = destinationTemplateBodyCopy(templateMode);
+    const bodyField = destinationTemplateBodyFormField(templateMode);
     const isFeishuCard = kind === "feishu" && templateMode === "feishu_card";
 
     return (
       <form.Field
-        name={destinationTemplateBodyFormField(templateMode)}
+        name={bodyField}
         validators={{
           // Caught at submit so a half-written document reports on the field
           // instead of throwing out of the config builder.
@@ -593,6 +624,8 @@ export function DestinationForm({
                 className="max-h-[min(42dvh,28rem)] min-h-56 resize-y overflow-auto font-mono text-[11px]"
                 placeholder={destinationTemplateBodyStarter(templateMode)}
                 value={body}
+                aria-invalid={draftError !== null}
+                onFocus={trackTemplateCaret(bodyField)}
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.currentTarget.value)}
               />
@@ -638,8 +671,27 @@ export function DestinationForm({
             onInsert={(variable) => {
               const current =
                 bodyField === "templateText" ? text : bodyField === "templateCard" ? card : payload;
+              const editor = templateBodyEditor.current;
+              // A remembered editor for this body is a caret to insert at; the
+              // detached case is a mode switch, where the old selection no
+              // longer describes the editor on screen.
+              const selection =
+                editor && editor.field === bodyField && editor.element.isConnected
+                  ? { start: editor.element.selectionStart, end: editor.element.selectionEnd }
+                  : null;
+              const insertion = insertTemplateVariable(current, variable, selection);
 
-              form.setFieldValue(bodyField, appendTemplateVariable(current, variable));
+              if (insertion.caret === null || !editor) {
+                form.setFieldValue(bodyField, insertion.value);
+
+                return;
+              }
+
+              // Committed synchronously so the caret can be placed in the
+              // editor the operator is working in, right after the variable.
+              flushSync(() => form.setFieldValue(bodyField, insertion.value));
+              editor.element.focus();
+              editor.element.setSelectionRange(insertion.caret, insertion.caret);
             }}
           />
         );
@@ -801,6 +853,7 @@ export function DestinationForm({
                               value={[String(field.state.value)]}
                               variant="outline"
                               size="sm"
+                              aria-label={t("destinations.form.feishuUrgentAutoEnabled")}
                               onValueChange={(value) => {
                                 const next = value[0];
 
@@ -837,6 +890,7 @@ export function DestinationForm({
                               value={field.state.value}
                               variant="outline"
                               size="sm"
+                              aria-label={t("destinations.form.feishuUrgentSeverities")}
                               onValueChange={(value) => field.handleChange(value)}
                             >
                               {urgentSeverityItems.map((item) => (
@@ -1253,6 +1307,32 @@ function destinationValuesToFormData(values: DestinationFormValues): FormData {
   );
 
   return data;
+}
+
+/**
+ * Insert a variable into a template body. With the caret the operator left in
+ * the editor the text lands where they were typing and the returned caret sits
+ * after it, so several variables can be inserted in a row; appending instead
+ * put JSON variables after the closing brace and produced invalid documents.
+ * Without a caret — a programmatic insert, or an editor nobody has focused —
+ * the variable is appended, which is the long-standing behaviour.
+ */
+function insertTemplateVariable(
+  currentValue: string,
+  variable: string,
+  selection: { start: number; end: number } | null,
+): { value: string; caret: number | null } {
+  if (!selection) {
+    return { value: appendTemplateVariable(currentValue, variable), caret: null };
+  }
+
+  const start = Math.max(0, Math.min(selection.start, currentValue.length));
+  const end = Math.max(start, Math.min(selection.end, currentValue.length));
+
+  return {
+    value: `${currentValue.slice(0, start)}${variable}${currentValue.slice(end)}`,
+    caret: start + variable.length,
+  };
 }
 
 function appendTemplateVariable(currentValue: string, variable: string): string {

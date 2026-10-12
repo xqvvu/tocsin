@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
-import { useMemo } from "react";
+import * as React from "react";
 
 import { Label } from "#/components/ui/label";
 import { Separator } from "#/components/ui/separator";
@@ -64,19 +64,46 @@ const fieldVariants = cva("group/field flex w-full gap-2 data-[invalid=true]:tex
   },
 });
 
+/**
+ * The error text rendered inside a `Field` is the control's description, so
+ * the control has to know its id. `FieldError` registers the id it rendered
+ * and controls read it back through `useFieldDescribedBy` — the alternative is
+ * every call site threading ids by hand, which is how the association went
+ * missing in the first place.
+ */
+const FieldContext = React.createContext<{
+  errorId: string | undefined;
+  registerError: (id: string) => void;
+  unregisterError: (id: string) => void;
+} | null>(null);
+
 function Field({
   className,
   orientation = "vertical",
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>) {
+  const [errorId, setErrorId] = React.useState<string | undefined>(undefined);
+  // Only one error element is rendered per field in this codebase; the last
+  // one to register owns the id.
+  const registerError = React.useCallback((id: string) => setErrorId(id), []);
+  const unregisterError = React.useCallback((id: string) => {
+    setErrorId((current) => (current === id ? undefined : current));
+  }, []);
+  const contextValue = React.useMemo(
+    () => ({ errorId, registerError, unregisterError }),
+    [errorId, registerError, unregisterError],
+  );
+
   return (
-    <div
-      role="group"
-      data-slot="field"
-      data-orientation={orientation}
-      className={cn(fieldVariants({ orientation }), className)}
-      {...props}
-    />
+    <FieldContext.Provider value={contextValue}>
+      <div
+        role="group"
+        data-slot="field"
+        data-orientation={orientation}
+        className={cn(fieldVariants({ orientation }), className)}
+        {...props}
+      />
+    </FieldContext.Provider>
   );
 }
 
@@ -166,11 +193,19 @@ function FieldError({
   className,
   children,
   errors,
+  id,
   ...props
 }: React.ComponentProps<"div"> & {
   errors?: Array<{ message?: string } | undefined>;
 }) {
-  const content = useMemo(() => {
+  const field = React.useContext(FieldContext);
+  const generatedId = React.useId();
+  const errorId = id ?? generatedId;
+  // Destructured so the effect below only reacts to the message's presence,
+  // not to the context object being rebuilt when the id changes.
+  const registerError = field?.registerError;
+  const unregisterError = field?.unregisterError;
+  const content = React.useMemo(() => {
     if (children) {
       return children;
     }
@@ -191,6 +226,19 @@ function FieldError({
       </ul>
     );
   }, [children, errors]);
+  const hasContent = Boolean(content);
+
+  // Registered from an effect rather than during render so the control is
+  // re-rendered with its `aria-describedby` once the message actually exists.
+  React.useEffect(() => {
+    if (!hasContent) {
+      return;
+    }
+
+    registerError?.(errorId);
+
+    return () => unregisterError?.(errorId);
+  }, [errorId, hasContent, registerError, unregisterError]);
 
   if (!content) {
     return null;
@@ -198,6 +246,7 @@ function FieldError({
 
   return (
     <div
+      id={errorId}
       role="alert"
       data-slot="field-error"
       className={cn("text-xs font-normal text-destructive", className)}
@@ -206,6 +255,18 @@ function FieldError({
       {content}
     </div>
   );
+}
+
+/**
+ * `aria-describedby` for a control inside a `Field`: the id of that field's
+ * error text (once it is rendered) merged with any ids the caller already
+ * points at. Returns `undefined` when there is nothing to describe.
+ */
+function useFieldDescribedBy(own?: string): string | undefined {
+  const field = React.useContext(FieldContext);
+  const ids = [field?.errorId, own].filter((id): id is string => Boolean(id));
+
+  return ids.length > 0 ? ids.join(" ") : undefined;
 }
 
 export {
@@ -219,4 +280,5 @@ export {
   FieldSet,
   FieldContent,
   FieldTitle,
+  useFieldDescribedBy,
 };
