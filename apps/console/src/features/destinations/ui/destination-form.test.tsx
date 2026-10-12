@@ -126,6 +126,24 @@ describe("destination form", () => {
     );
   });
 
+  it("inserts at the caret in the middle of a text body", () => {
+    renderDestinationForm({ kind: "feishu" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Custom" }));
+    fireEvent.click(screen.getByRole("button", { name: "Text" }));
+
+    const editor = screen.getByLabelText("Message template") as HTMLTextAreaElement;
+
+    fireEvent.change(editor, { target: { value: "a b" } });
+    editor.focus();
+    editor.setSelectionRange(2, 2);
+
+    fireEvent.click(screen.getByRole("button", { name: "event.title" }));
+
+    expect(editor.value).toBe("a {{event.title}}b");
+    expect(editor.selectionStart).toBe(17);
+  });
+
   it("names the template toggle groups", () => {
     renderDestinationForm({ kind: "feishu" });
 
