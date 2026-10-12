@@ -53,6 +53,7 @@ describe("events table", () => {
                 running: 0,
                 succeeded: 0,
                 failed: 0,
+                suppressed: 0,
               },
             },
           ]}
@@ -86,6 +87,7 @@ function eventFixture(id: string): Operations["events"]["items"][number] {
       running: 0,
       succeeded: 1,
       failed: 0,
+      suppressed: 0,
     },
   };
 }

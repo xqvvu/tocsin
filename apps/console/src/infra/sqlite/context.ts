@@ -18,6 +18,7 @@ export interface SqliteRepositoryContextOptions {
     attempt: () => string;
     feishuApp: () => string;
     oncallPing: () => string;
+    suppression: () => string;
   }>;
 }
 
@@ -33,6 +34,7 @@ export class SqliteRepositoryContext {
     attempt: () => string;
     feishuApp: () => string;
     oncallPing: () => string;
+    suppression: () => string;
   };
 
   constructor(options: SqliteRepositoryContextOptions) {
@@ -47,6 +49,7 @@ export class SqliteRepositoryContext {
       attempt: options.ids?.attempt ?? randomUUID,
       feishuApp: options.ids?.feishuApp ?? randomUUID,
       oncallPing: options.ids?.oncallPing ?? randomUUID,
+      suppression: options.ids?.suppression ?? randomUUID,
     };
   }
 

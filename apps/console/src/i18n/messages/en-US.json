@@ -54,6 +54,7 @@
   "common.deliveryState.running": "Running",
   "common.deliveryState.succeeded": "Succeeded",
   "common.deliveryState.failed": "Failed",
+  "common.deliveryState.suppressed": "Suppressed",
   "common.actions.tryAgain": "Try again",
   "common.actions.reloadPage": "Reload page",
   "common.actions.refresh": "Refresh",

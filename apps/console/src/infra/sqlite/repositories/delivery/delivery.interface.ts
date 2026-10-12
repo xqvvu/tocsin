@@ -29,6 +29,9 @@ export interface DeliveryRow {
   rendered_payload_json: SqliteJsonText | null;
   provider_ref_type: string | null;
   provider_ref_value: string | null;
+  suppression_id: string | null;
+  suppressed_at: IsoDateTimeString | null;
+  suppress_reason: string | null;
   created_at: IsoDateTimeString;
   updated_at: IsoDateTimeString;
   finished_at: IsoDateTimeString | null;
