@@ -12,7 +12,7 @@ import { router } from "#/server/orpc/router";
 
 /**
  * RPC-protocol handler used by the browser client (`RPCLink` in
- * `#/lib/orpc.ts`) and exposed on `/api/rpc`.
+ * `#/lib/orpc.ts`) and exposed on `/api`.
  *
  * The RPC protocol is what makes `orpc.*.queryOptions()` / `mutationOptions()`
  * work from the client without generating a typed client per procedure.

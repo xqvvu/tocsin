@@ -46,12 +46,12 @@ async function callProcedure(
   input: unknown,
 ): Promise<{ status: number; body: { code?: string; message?: string } }> {
   const { response } = await rpcHandler.handle(
-    new Request(`http://localhost/api/rpc/${path}`, {
+    new Request(`http://localhost/api/${path}`, {
       method: "POST",
       headers: authenticatedHeaders,
       body: JSON.stringify({ json: input }),
     }),
-    { prefix: "/api/rpc" },
+    { prefix: "/api" },
   );
 
   const payload = (await response!.json()) as { json: { code?: string; message?: string } };

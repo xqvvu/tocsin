@@ -20,13 +20,13 @@ import { Route as DashboardIntegrationsRouteImport } from "./routes/_dashboard.i
 import { Route as DashboardRoutesRouteImport } from "./routes/_dashboard.routes";
 import { Route as DashboardSettingsRouteImport } from "./routes/_dashboard.settings";
 import { Route as DashboardSourcesRouteImport } from "./routes/_dashboard.sources";
+import { Route as ApiSplatRouteImport } from "./routes/api/$";
 import { Route as ApiHealthRouteImport } from "./routes/api/health";
 import { Route as ApiReadyRouteImport } from "./routes/api/ready";
 import { Route as DashboardDeliveriesDeliveryIdRouteImport } from "./routes/_dashboard.deliveries_.$deliveryId";
 import { Route as DashboardEventsEventIdRouteImport } from "./routes/_dashboard.events_.$eventId";
 import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth/$";
 import { Route as ApiOpenapiSplatRouteImport } from "./routes/api/openapi/$";
-import { Route as ApiRpcSplatRouteImport } from "./routes/api/rpc/$";
 import { Route as ApiSourcesSourceIdWebhookRouteImport } from "./routes/api/sources/$sourceId/webhook";
 
 const IndexRoute = IndexRouteImport.update({
@@ -83,6 +83,11 @@ const DashboardSourcesRoute = DashboardSourcesRouteImport.update({
   path: "/sources",
   getParentRoute: () => DashboardRoute,
 } as any);
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: "/api/$",
+  path: "/api/$",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: "/api/health",
   path: "/api/health",
@@ -114,11 +119,6 @@ const ApiOpenapiSplatRoute = ApiOpenapiSplatRouteImport.update({
   path: "/api/openapi/$",
   getParentRoute: () => rootRouteImport,
 } as any);
-const ApiRpcSplatRoute = ApiRpcSplatRouteImport.update({
-  id: "/api/rpc/$",
-  path: "/api/rpc/$",
-  getParentRoute: () => rootRouteImport,
-} as any);
 const ApiSourcesSourceIdWebhookRoute =
   ApiSourcesSourceIdWebhookRouteImport.update({
     id: "/api/sources/$sourceId/webhook",
@@ -137,13 +137,13 @@ export interface FileRoutesByFullPath {
   "/routes": typeof DashboardRoutesRoute;
   "/settings": typeof DashboardSettingsRoute;
   "/sources": typeof DashboardSourcesRoute;
+  "/api/$": typeof ApiSplatRoute;
   "/api/health": typeof ApiHealthRoute;
   "/api/ready": typeof ApiReadyRoute;
   "/deliveries/$deliveryId": typeof DashboardDeliveriesDeliveryIdRoute;
   "/events/$eventId": typeof DashboardEventsEventIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/openapi/$": typeof ApiOpenapiSplatRoute;
-  "/api/rpc/$": typeof ApiRpcSplatRoute;
   "/api/sources/$sourceId/webhook": typeof ApiSourcesSourceIdWebhookRoute;
 }
 export interface FileRoutesByTo {
@@ -157,13 +157,13 @@ export interface FileRoutesByTo {
   "/routes": typeof DashboardRoutesRoute;
   "/settings": typeof DashboardSettingsRoute;
   "/sources": typeof DashboardSourcesRoute;
+  "/api/$": typeof ApiSplatRoute;
   "/api/health": typeof ApiHealthRoute;
   "/api/ready": typeof ApiReadyRoute;
   "/deliveries/$deliveryId": typeof DashboardDeliveriesDeliveryIdRoute;
   "/events/$eventId": typeof DashboardEventsEventIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/openapi/$": typeof ApiOpenapiSplatRoute;
-  "/api/rpc/$": typeof ApiRpcSplatRoute;
   "/api/sources/$sourceId/webhook": typeof ApiSourcesSourceIdWebhookRoute;
 }
 export interface FileRoutesById {
@@ -179,13 +179,13 @@ export interface FileRoutesById {
   "/_dashboard/routes": typeof DashboardRoutesRoute;
   "/_dashboard/settings": typeof DashboardSettingsRoute;
   "/_dashboard/sources": typeof DashboardSourcesRoute;
+  "/api/$": typeof ApiSplatRoute;
   "/api/health": typeof ApiHealthRoute;
   "/api/ready": typeof ApiReadyRoute;
   "/_dashboard/deliveries_/$deliveryId": typeof DashboardDeliveriesDeliveryIdRoute;
   "/_dashboard/events_/$eventId": typeof DashboardEventsEventIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/openapi/$": typeof ApiOpenapiSplatRoute;
-  "/api/rpc/$": typeof ApiRpcSplatRoute;
   "/api/sources/$sourceId/webhook": typeof ApiSourcesSourceIdWebhookRoute;
 }
 export interface FileRouteTypes {
@@ -201,13 +201,13 @@ export interface FileRouteTypes {
     | "/routes"
     | "/settings"
     | "/sources"
+    | "/api/$"
     | "/api/health"
     | "/api/ready"
     | "/deliveries/$deliveryId"
     | "/events/$eventId"
     | "/api/auth/$"
     | "/api/openapi/$"
-    | "/api/rpc/$"
     | "/api/sources/$sourceId/webhook";
   fileRoutesByTo: FileRoutesByTo;
   to:
@@ -221,13 +221,13 @@ export interface FileRouteTypes {
     | "/routes"
     | "/settings"
     | "/sources"
+    | "/api/$"
     | "/api/health"
     | "/api/ready"
     | "/deliveries/$deliveryId"
     | "/events/$eventId"
     | "/api/auth/$"
     | "/api/openapi/$"
-    | "/api/rpc/$"
     | "/api/sources/$sourceId/webhook";
   id:
     | "__root__"
@@ -242,13 +242,13 @@ export interface FileRouteTypes {
     | "/_dashboard/routes"
     | "/_dashboard/settings"
     | "/_dashboard/sources"
+    | "/api/$"
     | "/api/health"
     | "/api/ready"
     | "/_dashboard/deliveries_/$deliveryId"
     | "/_dashboard/events_/$eventId"
     | "/api/auth/$"
     | "/api/openapi/$"
-    | "/api/rpc/$"
     | "/api/sources/$sourceId/webhook";
   fileRoutesById: FileRoutesById;
 }
@@ -257,11 +257,11 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren;
   LoginRoute: typeof LoginRoute;
   SetupRoute: typeof SetupRoute;
+  ApiSplatRoute: typeof ApiSplatRoute;
   ApiHealthRoute: typeof ApiHealthRoute;
   ApiReadyRoute: typeof ApiReadyRoute;
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute;
   ApiOpenapiSplatRoute: typeof ApiOpenapiSplatRoute;
-  ApiRpcSplatRoute: typeof ApiRpcSplatRoute;
   ApiSourcesSourceIdWebhookRoute: typeof ApiSourcesSourceIdWebhookRoute;
 }
 
@@ -344,6 +344,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof DashboardSourcesRouteImport;
       parentRoute: typeof DashboardRoute;
     };
+    "/api/$": {
+      id: "/api/$";
+      path: "/api/$";
+      fullPath: "/api/$";
+      preLoaderRoute: typeof ApiSplatRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/api/health": {
       id: "/api/health";
       path: "/api/health";
@@ -384,13 +391,6 @@ declare module "@tanstack/react-router" {
       path: "/api/openapi/$";
       fullPath: "/api/openapi/$";
       preLoaderRoute: typeof ApiOpenapiSplatRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/rpc/$": {
-      id: "/api/rpc/$";
-      path: "/api/rpc/$";
-      fullPath: "/api/rpc/$";
-      preLoaderRoute: typeof ApiRpcSplatRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/api/sources/$sourceId/webhook": {
@@ -436,11 +436,11 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   SetupRoute: SetupRoute,
+  ApiSplatRoute: ApiSplatRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiReadyRoute: ApiReadyRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiOpenapiSplatRoute: ApiOpenapiSplatRoute,
-  ApiRpcSplatRoute: ApiRpcSplatRoute,
   ApiSourcesSourceIdWebhookRoute: ApiSourcesSourceIdWebhookRoute,
 };
 export const routeTree = rootRouteImport
