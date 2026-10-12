@@ -136,7 +136,7 @@ export type ReplayEventCommand = z.infer<typeof ReplayEventCommandSchema>;
 
 export const PreviewRouteReplayCommandSchema = z.object({
   routeId: z.string().min(1),
-  limit: z.number().int().min(1).max(100).default(20),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 export type PreviewRouteReplayCommand = z.infer<typeof PreviewRouteReplayCommandSchema>;
 
