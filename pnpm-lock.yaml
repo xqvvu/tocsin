@@ -697,6 +697,9 @@ importers:
         specifier: 'catalog:'
         version: 4.6.5
     devDependencies:
+      '@types/node':
+        specifier: catalog:toolchain
+        version: 26.6.4
       typescript:
         specifier: catalog:toolchain
         version: 7.0.2
