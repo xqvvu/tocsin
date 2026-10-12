@@ -286,13 +286,32 @@ deliveries + (
 - [ ] 抑制详情能看到该规则命中的投递列表；Event 详情的投递列表中 `suppressed` 与 `failed` 视觉可区分。
 - [ ] 创建/启用抑制前，UI 展示命中的 source/severity/status 范围，以及范围内**开启了自动加急的目标数量**。
 - [ ] `DeliveryStateSchema` 扩展 `suppressed` 后，`pending` / `running` / `succeeded` / `failed` 的既有语义、worker 行为与重试退避**零回归**。
+- [ ] `suppressed` 的连带面一并覆盖，不只是枚举本身：`deliveryCounts` 投影、`EventDeliveryCountsCell` 的合计（`apps/console/src/features/events/ui/event-delivery-counts-cell.tsx:15`，四状态**显式求和、无穷尽性守卫**，漏计是编译不报的静默回归）、以及中英 i18n 键。
 - [ ] 抑制规则可被 retention setting 清理（形状对齐 `rawPayloadRetentionDays`），且清理不影响投递上的抑制快照。
 - [ ] 新增 `suppressions` oRPC namespace；所有过程走 dashboard 鉴权，领域错误由既有边界翻译。
 - [ ] 抑制功能在现有单进程 + 现有 delivery worker 模型内运行，不新增进程或基础设施。
 - [ ] 新界面字符串有中英双语。
 - [ ] `vp check`、`vp run -r test`、`vp run -r build` 全绿。
 
-## Open Questions
+## Decisions（已拍板 2026-10-12）
+
+三条 Open Question 已由 owner 拍板，**不再是开放项**。完整取舍分析见 `docs/prd/alert-suppression-decisions.md`。
+
+| # | 问题 | 拍板结果 |
+|---|---|---|
+| 1 | 加急电话是否允许绕过抑制 | **不绕过**，v1 不留开关、不做显式逃逸口。 |
+| 2 | `endsAt` 是否允许为空 | **不允许为空**，`ends_at text not null`。 |
+| 3 | 窗口结束是否发摘要通知 | **只做 UI 汇总**，不主动发通知。 |
+
+三条的直接后果（实现时必须遵守）：
+
+1. **`suppressed` 是终态。** 被抑制的投递永不执行 → 永不产生 `providerReference` → **既不会自动加急，也不能被手动呼叫**（`buzzDelivery` 同样要求该句柄，`apps/console/src/server/oncall/oncall.service.ts:62-67`）。因此 2.3 节的范围预览文案必须写清「这一段里这些目标的告警**无法用任何 Tocsin 手段叫醒**」，而不是「不会打电话」。
+2. **建表用 `ends_at text not null`**（已与 2.6 草案一致）。因 MVP 只有单条 baseline 且迁移器按版本号跳过已应用步骤（`apps/console/src/infra/sqlite/migrate/runner.ts:26-30` + `AGENTS.md:488-490`），**此字段一旦落地，已部署实例再改就要清库**——故它在本表中是「已冻结」，不是「待定」。
+3. **窗口结束无通知**，故 2.5 节的审计证据必须自足：运维唯一的检索入口是 UI，`suppress_reason` 快照必须在不依赖规则本体的情况下读懂。不做摘要 = 不做跨投递聚合切片。
+
+---
+
+## Open Questions（历史记录，均已拍板，见上）
 
 1. **是否需要"逃逸口"（bypass）让加急电话无视抑制？** 本 PRD 默认回答"不"（理由见 2.3：被抑制的卡片不存在，绕过抑制会打出一条没有上下文的电话）。但 P0 事故是否应该有一条"即使维护窗口开着也叫醒人"的逃生通道，属于安全边界决策，需要人拍板。若需要，它必须是显式、默认关闭、单独权限、且自身留下审计记录的动作。
 2. **`endsAt` 允许为空吗？** 强制有期限使静默永远自愈，但真实运维里存在"暂时不知道多久"的长期静默。若允许无终点，就需要更强的"别忘了它"的提示（例如列表置顶 + 定期提醒），否则会变成被遗忘的静默黑洞。请拍板：是强制有期限，还是允许无期限但配强提醒。
