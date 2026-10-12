@@ -55,7 +55,7 @@ describe("RouteEditRestrictedNotice", () => {
     expect(screen.getByText("Conditions outside the current configuration")).toBeTruthy();
     expect(
       screen.getByText(
-        "This route references values that are no longer configured — they stay exactly as stored and can only be removed, not re-picked",
+        "This route references values that are no longer configured — they stay exactly as stored and have to be removed here before the route can be saved",
       ),
     ).toBeTruthy();
     expect(screen.getByText("Sources: source-retired")).toBeTruthy();

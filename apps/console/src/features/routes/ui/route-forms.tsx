@@ -256,7 +256,17 @@ function RouteForm({
           </UiField>
         )}
       </form.Field>
-      <form.Field name="rule.sourceIds">
+      <form.Field
+        name="rule.sourceIds"
+        validators={{
+          // The API rejects rules that point at unknown sources, so refuse the
+          // save here instead of dropping the condition or failing after a trip.
+          onSubmit: ({ value }) =>
+            value.some((sourceId) => !sources.some((source) => source.id === sourceId))
+              ? t("routing.form.validation.sourceConditionUnavailable")
+              : undefined,
+        }}
+      >
         {(field) => {
           const selectedSourceIds = field.state.value;
           const nextSourceId = sources.find((source) => !selectedSourceIds.includes(source.id))?.id;
@@ -319,6 +329,11 @@ function RouteForm({
                   </Select>
                 </ConditionRow>
               ))}
+              <FieldError
+                errors={field.state.meta.errors.map((error) => ({
+                  message: String(error),
+                }))}
+              />
             </ConditionList>
           );
         }}
