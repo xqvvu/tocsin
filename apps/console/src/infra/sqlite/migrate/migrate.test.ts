@@ -64,6 +64,7 @@ describe("sqlite schema plan", () => {
         "session",
         "settings",
         "sources",
+        "suppressions",
         "user",
         "verification",
       ]);
