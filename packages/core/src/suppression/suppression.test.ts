@@ -5,15 +5,18 @@ import {
   SuppressionMatchResultSchema,
   SuppressionSchema,
   evaluateSuppressionMatch,
+  formatSuppressionReason,
   selectSuppressionForDelivery,
   suppressionIsActive,
   suppressionStateAt,
 } from "#core/suppression/suppression";
-import type { Suppression } from "#core/suppression/suppression";
+import type { Suppression, SuppressionMatcherInput } from "#core/suppression/suppression";
 
 const now = "2026-10-12T12:00:00.000Z";
 
-function suppression(overrides: Partial<Suppression> = {}): Suppression {
+function suppression(
+  overrides: Partial<Omit<Suppression, "matcher">> & { matcher?: SuppressionMatcherInput } = {},
+): Suppression {
   return SuppressionSchema.parse({
     id: "suppression-1",
     name: "Checkout maintenance",
@@ -230,6 +233,45 @@ describe("picking the one suppression that silences a delivery", () => {
     expect(selectSuppressionForDelivery([beta, alpha], matchInput(), now)?.suppressionId).toBe(
       "s-alpha",
     );
+  });
+});
+
+describe("suppression audit snapshot", () => {
+  it("names the rule and lists the conditions that decided the match", () => {
+    const reason = formatSuppressionReason(
+      suppression({
+        name: "October database migration",
+        matcher: {
+          destinationIds: ["destination-1"],
+          labels: [
+            { key: "env", value: "prod" },
+            { key: "service", operator: "contains", value: "checkout" },
+          ],
+        },
+      }),
+    );
+
+    expect(reason).toBe(
+      "Maintenance window 「October database migration」 matched destination in [destination-1], label env=prod, label service contains checkout",
+    );
+  });
+
+  it("reads as unconditional when the matcher carries no conditions", () => {
+    expect(formatSuppressionReason(suppression({ kind: "silence", name: "Everything" }))).toBe(
+      "Silence 「Everything」 matched no conditions (silences everything)",
+    );
+  });
+
+  it("snapshots name and kind as text rather than pointing at the rule", () => {
+    const reason = formatSuppressionReason(
+      suppression({ id: "s-1", name: "Noisy host", matcher: { fingerprints: ["disk:full"] } }),
+    );
+
+    // The rule's id must never be the way a reader identifies what happened:
+    // the rule can be deleted, the snapshot cannot.
+    expect(reason).toContain("Noisy host");
+    expect(reason).not.toContain("s-1");
+    expect(reason).toContain("fingerprint disk:full");
   });
 });
 
