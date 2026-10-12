@@ -24,6 +24,19 @@ const RE_LABEL_PATH = /^event\.labels\.([a-zA-Z0-9_.-]+)$/;
 const RE_BINDING_PATH = /^bindings\.([a-zA-Z][a-zA-Z0-9_-]{0,63})$/;
 const RE_TEMPLATE_BINDING_NAME = /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/;
 
+/**
+ * Limits on one template, and where each number comes from.
+ *
+ * The platform limits are wildly looser than these (Feishu rejects a card only
+ * past 30 KB — see feishu-errors' 230025; Slack allows 3000 chars of mrkdwn).
+ * These are Vane's own ceilings: high enough that any hand-written notification
+ * fits, low enough that a runaway generator cannot post a megabyte per alert.
+ * They are not derived from a provider spec, and should not be presented as if
+ * they were — a template that passes here can still be rejected upstream.
+ */
+export const TEMPLATE_TEXT_MAX_LENGTH = 4000;
+const TEMPLATE_MAX_BINDINGS = 32;
+const TEMPLATE_BINDING_NAME_MAX_LENGTH = 128;
 const TEMPLATE_BINDING_VALUE_MAX_LENGTH = 256;
 
 /**
@@ -47,7 +60,10 @@ export const TemplateBindingSelectorSchema = z.enum([
 export const TemplateBindingSchema = z.strictObject({
   select: TemplateBindingSelectorSchema,
   cases: z
-    .record(z.string().min(1).max(128), z.string().max(TEMPLATE_BINDING_VALUE_MAX_LENGTH))
+    .record(
+      z.string().min(1).max(TEMPLATE_BINDING_NAME_MAX_LENGTH),
+      z.string().max(TEMPLATE_BINDING_VALUE_MAX_LENGTH),
+    )
     .refine((cases) => Object.keys(cases).length > 0, {
       message: "Destination template binding cases must not be empty",
     }),
@@ -61,8 +77,8 @@ export const TemplateBindingsSchema = z
     }),
     TemplateBindingSchema,
   )
-  .refine((bindings) => Object.keys(bindings).length <= 32, {
-    message: "Destination template supports at most 32 bindings",
+  .refine((bindings) => Object.keys(bindings).length <= TEMPLATE_MAX_BINDINGS, {
+    message: `Destination template supports at most ${TEMPLATE_MAX_BINDINGS} bindings`,
   });
 
 export type TemplateBindingSelector = z.infer<typeof TemplateBindingSelectorSchema>;
@@ -190,7 +206,7 @@ export const TextDestinationTemplateSchema = z
   .strictObject({
     source: z.literal("custom").optional(),
     mode: z.literal("text"),
-    text: z.string().trim().min(1).max(4000),
+    text: z.string().trim().min(1).max(TEMPLATE_TEXT_MAX_LENGTH),
     bindings: TemplateBindingsSchema.optional(),
   })
   .superRefine((template, context) => {
