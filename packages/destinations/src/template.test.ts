@@ -497,3 +497,39 @@ describe("unknown variable suggestions", () => {
     expect(messageFor("payload.some.path")).not.toContain("did you mean");
   });
 });
+
+describe("payload path grammar", () => {
+  const rejects = (path: string): boolean =>
+    DestinationTemplateEngine.diagnoseConfig({
+      template: { mode: "text", text: `{{${path}}}` },
+    }).length > 0;
+
+  it("accepts the three documented segment forms", () => {
+    // dot property, array index, and a quoted key — the grammar the payload
+    // reference panel teaches.
+    expect(rejects("payload.monitor.name")).toBe(false);
+    expect(rejects("payload.incidents[0].message")).toBe(false);
+    expect(rejects('payload.commonLabels["threshold.name"]')).toBe(false);
+  });
+
+  it("accepts arbitrary depth", () => {
+    expect(rejects("payload.a.b.c.d.e.f.g")).toBe(false);
+  });
+
+  it("rejects malformed paths instead of guessing what was meant", () => {
+    // Being strict is the point: a lenient parser would have to decide whether
+    // `payload[ 0 ]` means index 0, and two spellings of one path with
+    // different behaviour is worse than one spelling that is rejected.
+    expect(rejects("payload[ 0 ]")).toBe(true); // spaces inside brackets
+    expect(rejects("payload[]")).toBe(true); // no index
+    expect(rejects("payload.")).toBe(true); // trailing dot
+    expect(rejects("payload")).toBe(true); // the container itself is not a value
+    expect(rejects("payload.items[-1]")).toBe(true); // negative index
+  });
+
+  it("does not accept a bare prefix match as a payload path", () => {
+    // `payloadFoo` starts with "payload" but is not a payload path; treating it
+    // as one would resolve a variable that was never allow-listed.
+    expect(rejects("payloadFoo")).toBe(true);
+  });
+});
