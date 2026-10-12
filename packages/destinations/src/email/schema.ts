@@ -2,11 +2,14 @@ import { z } from "zod";
 
 import {
   DestinationTemplateEngine,
+  TEMPLATE_TEXT_MAX_LENGTH,
   TextOnlyDestinationTemplateSchema,
   type TemplateBindings,
 } from "#destinations/template";
 
-const EmailTemplateTextSchema = z.string().trim().min(1).max(4000);
+// Same ceiling as the body template: one subject/HTML field should not get a
+// different budget from the text it accompanies.
+const EmailTemplateTextSchema = z.string().trim().min(1).max(TEMPLATE_TEXT_MAX_LENGTH);
 
 // subjectTemplate and htmlTemplate are extra template slots next to `template`
 // (the text body): the subject owns the whole header, the html body replaces the
