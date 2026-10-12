@@ -14,9 +14,11 @@ import { useTranslations } from "#/i18n/use-i18n";
 export function EventDetailRouteMatchesTable({
   matches,
   matchedRouteCount,
+  provenance,
 }: {
   matches: EventDetailData["routeMatches"];
   matchedRouteCount: number;
+  provenance: EventDetailData["routeMatchesProvenance"];
 }) {
   const t = useTranslations();
 
@@ -29,6 +31,16 @@ export function EventDetailRouteMatchesTable({
           total: matches.length,
         })}
       />
+      {/*
+        Provenance is not decoration: an intake snapshot is immutable evidence of
+        what the rules said at the time, while a recomputed result reflects the
+        rules as they are now. Rendering them identically hid that distinction.
+      */}
+      <p className="text-muted-foreground text-xs" data-provenance={provenance}>
+        {provenance === "intake_snapshot"
+          ? t("events.detail.routeMatchesProvenance.snapshot")
+          : t("events.detail.routeMatchesProvenance.recomputed")}
+      </p>
       <div className="border-border bg-background min-h-0 flex-1 overflow-auto border">
         <Table className="min-w-180 table-fixed">
           <TableHeader className="bg-muted/50 text-muted-foreground sticky top-0 z-10">
@@ -100,7 +112,67 @@ function RouteCheckBadge({
       title={check.detail}
     >
       <span className="font-medium">{t(`events.detail.routeCheckFields.${check.field}`)}</span>
-      <span className="text-muted-foreground truncate">{check.detail}</span>
+      <span className="text-muted-foreground truncate">{describeRouteCheck(check, t)}</span>
     </Badge>
   );
+}
+
+/**
+ * Render a check's evidence in the operator's language.
+ *
+ * `detail` is built in core as an English string, and for the label / title /
+ * message conditions it only ever carried the rule's *expected* value — so
+ * "why did this miss?" forced a trip to the normalized tab to find out what the
+ * event actually said. Checks written before `condition` existed have no
+ * structured form; those snapshots are immutable, so they fall back to the raw
+ * detail rather than being rewritten.
+ */
+function describeRouteCheck(
+  check: EventDetailData["routeMatches"][number]["checks"][number],
+  t: ReturnType<typeof useTranslations>,
+): string {
+  const actual = check.actual;
+  const enumerable =
+    (check.field === "severity" || check.field === "status") && actual !== undefined;
+  const expected =
+    check.expected === undefined || check.expected.length === 0 ? undefined : check.expected;
+  const localized = expected?.map((value) => {
+    if (check.field === "severity") {
+      return t(`common.severity.${value}`);
+    }
+
+    if (check.field === "status") {
+      return t(`common.alertStatus.${value}`);
+    }
+
+    return value;
+  });
+
+  if (check.condition === "none") {
+    return t("events.detail.routeCheck.none");
+  }
+
+  if (check.condition === "compare" && localized) {
+    const wanted = localized.join(", ");
+
+    if (check.field === "label") {
+      return actual === undefined
+        ? t("events.detail.routeCheck.labelMissing", { key: check.labelKey ?? "", value: wanted })
+        : t("events.detail.routeCheck.label", {
+            key: check.labelKey ?? "",
+            value: wanted,
+            actual,
+          });
+    }
+
+    if (!enumerable) {
+      return actual === undefined
+        ? t("events.detail.routeCheck.expectedOnly", { value: wanted })
+        : t("events.detail.routeCheck.contains", { value: wanted, actual });
+    }
+
+    return t("events.detail.routeCheck.received", { value: wanted, actual });
+  }
+
+  return check.detail;
 }

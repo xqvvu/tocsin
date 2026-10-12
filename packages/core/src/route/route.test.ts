@@ -4,6 +4,7 @@ import type { NormalizedEvent } from "#core/event/normalized-event";
 import type { RouteDefinitionInput } from "#core/route/route";
 import {
   RouteDefinitionSchema,
+  RouteMatchResultsSchema,
   evaluateRouteMatch,
   findMatchingRoutes,
   routeMatchesEvent,
@@ -192,5 +193,97 @@ describe("route matching", () => {
         },
       }),
     ).toThrow("Too small");
+  });
+});
+
+describe("route match evidence", () => {
+  it("records the event value each condition was applied to", () => {
+    const result = evaluateRouteMatch(route, { sourceId: "source-grafana", event });
+
+    const byField = (field: string) => result.checks.find((check) => check.field === field);
+
+    // The console localizes these, so the raw expected/actual pair has to be
+    // structured rather than only baked into the English `detail` string.
+    expect(byField("severity")).toMatchObject({
+      condition: "compare",
+      expected: ["critical"],
+      actual: "critical",
+    });
+    expect(byField("source")).toMatchObject({
+      condition: "compare",
+      expected: ["source-grafana"],
+      actual: "source-grafana",
+    });
+    expect(byField("label")).toMatchObject({
+      condition: "compare",
+      expected: ["checkout"],
+      actual: "checkout",
+      labelKey: "service",
+    });
+    // title/message conditions carry the whole haystack, which is the value the
+    // operator was previously forced to go find on the normalized tab.
+    expect(byField("title")).toMatchObject({
+      condition: "compare",
+      expected: ["latency"],
+      actual: event.title,
+    });
+    expect(byField("message")).toMatchObject({
+      condition: "compare",
+      expected: ["prod"],
+      actual: event.message,
+    });
+  });
+
+  it("omits the actual value when the event has no such label", () => {
+    const result = evaluateRouteMatch(
+      {
+        ...route,
+        rule: { ...route.rule, labels: [{ key: "absent", operator: "equals", value: "x" }] },
+      },
+      { sourceId: "source-grafana", event },
+    );
+
+    const labelCheck = result.checks.find((check) => check.field === "label");
+
+    // An absent label must stay distinguishable from a label that is present
+    // and different — that is the commonest reason a label condition misses.
+    expect(labelCheck).toMatchObject({ matched: false, condition: "compare", expected: ["x"] });
+    expect(labelCheck?.actual).toBeUndefined();
+    expect(labelCheck?.labelKey).toBe("absent");
+  });
+
+  it("marks fields the rule does not constrain", () => {
+    const result = evaluateRouteMatch(
+      {
+        id: "route-open",
+        name: "Open route",
+        enabled: true,
+        destinationIds: ["dest-sre"],
+        rule: {},
+      },
+      { sourceId: "source-grafana", event },
+    );
+
+    for (const check of result.checks) {
+      expect(check.condition).toBe("none");
+      expect(check.expected).toBeUndefined();
+      expect(check.actual).toBeUndefined();
+    }
+  });
+
+  it("keeps the structured fields out of the encoded snapshot schema", () => {
+    // The snapshot is persisted, so the new fields are optional by construction:
+    // checks written before them must still parse.
+    const legacy = RouteMatchResultsSchema.parse([
+      {
+        routeId: "route-1",
+        routeName: "Legacy",
+        matched: true,
+        destinationIds: ["dest-sre"],
+        checks: [{ field: "enabled", matched: true, detail: "Route is enabled" }],
+      },
+    ]);
+
+    expect(legacy[0]?.checks[0]?.condition).toBeUndefined();
   });
 });

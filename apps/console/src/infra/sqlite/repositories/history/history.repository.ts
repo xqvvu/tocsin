@@ -2,6 +2,7 @@ import { sql } from "kysely";
 
 import type { DeliveryListItem, EventDetail, EventListItem, NumberedPage } from "@tocsin/core";
 import { decodeSchemaJson, evaluateRouteMatch, RouteMatchResultsSchema } from "@tocsin/core";
+import type { RouteMatchProvenance } from "@tocsin/core";
 import type { Page } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
@@ -127,6 +128,13 @@ export class SqliteHistoryRepository implements HistoryRepository {
     }
 
     const source = sourceSummaryFromRuntime(requireSource(await this.sources.get(event.sourceId)));
+    // Two kinds of event reach here: those ingested with an intake snapshot, and
+    // those written directly (replay fixtures, parser-failure audit records)
+    // which carry none. Recomputing against the *current* route definitions is a
+    // perfectly good fallback, but it is not the same claim as "this is what the
+    // rules said at the time" — so the caller is told which one it got.
+    const routeMatchesProvenance: RouteMatchProvenance =
+      event.routeMatches === null ? "recomputed" : "intake_snapshot";
     const routeMatches =
       event.routeMatches ??
       (await this.routes.list()).map((route) =>
@@ -147,7 +155,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
         .execute()
     ).map((row) => eventDetailDeliveryFromRow(row as EventDetailDeliveryRow));
 
-    return { event, source, routeMatches, deliveries };
+    return { event, source, routeMatches, routeMatchesProvenance, deliveries };
   }
 
   async listDeliveries(query: DeliveryListQuery = {}): Promise<Page<DeliveryListItem>> {

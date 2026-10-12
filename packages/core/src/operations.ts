@@ -6,7 +6,7 @@ import type { EventRecord } from "#core/event/event";
 import type { NormalizedEvent } from "#core/event/normalized-event";
 import type { JsonObject, JsonValue } from "#core/json";
 import type { OncallPing } from "#core/oncall/oncall";
-import type { RouteDefinition, RouteMatchResult } from "#core/route/route";
+import type { RouteDefinition, RouteMatchProvenance, RouteMatchResult } from "#core/route/route";
 import type { SourceSummary } from "#core/source/source";
 
 export type IsoDateTimeString = string;
@@ -45,6 +45,12 @@ export interface EventDetail {
   event: EventRecord;
   source: SourceSummary;
   routeMatches: RouteMatchResult[];
+  /**
+   * Whether `routeMatches` is the snapshot recorded at intake time or the result
+   * of evaluating the *current* route definitions on read. Without it the two are
+   * indistinguishable in the UI — see `docs/research/route-authoring-current-state.md` §4.2.
+   */
+  routeMatchesProvenance: RouteMatchProvenance;
   deliveries: EventDetailDelivery[];
 }
 

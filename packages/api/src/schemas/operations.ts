@@ -14,6 +14,7 @@ import {
   ReplayEventCommandSchema,
   ReplayRouteEventsCommandSchema,
   RouteDefinitionSchema,
+  RouteMatchProvenanceSchema,
   RouteMatchResultSchema,
   SourceSummarySchema,
 } from "@tocsin/core";
@@ -52,6 +53,7 @@ export const EventDetailSchema = z.object({
   event: EventRecordSchema,
   source: SourceSummarySchema,
   routeMatches: z.array(RouteMatchResultSchema),
+  routeMatchesProvenance: RouteMatchProvenanceSchema,
   deliveries: z.array(EventDetailDeliverySchema),
 });
 
