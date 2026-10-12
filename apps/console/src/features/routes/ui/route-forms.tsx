@@ -31,14 +31,21 @@ import {
   SelectValue,
 } from "#/components/ui/select";
 import {
+  createEmptyLabelCondition,
+  isIncompleteLabelCondition,
   routeFormDefaultsFromRule,
   routeRuleFromValues,
-  routeRulePatchFromValues,
+  type RouteLabelCondition,
   type RouteRuleFormValues,
+  type RouteSeverityCondition,
+  type RouteStatusCondition,
 } from "#/features/routes/model/route-form";
 import { RouteEditRestrictedNotice } from "#/features/routes/ui/route-edit-restricted-notice";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
+
+const routeSeverityValues: RouteSeverityCondition[] = ["critical", "warning", "info", "unknown"];
+const routeStatusValues: RouteStatusCondition[] = ["firing", "resolved", "unknown"];
 
 export function CreateRouteForm({
   showHeader = true,
@@ -69,14 +76,12 @@ export function CreateRouteForm({
       defaultValues={{
         name: "",
         rule: {
-          sourceId: "",
-          severity: "critical",
-          status: "any",
-          labelKey: "",
-          labelOperator: "equals",
-          labelValue: "",
-          titleContains: "",
-          messageContains: "",
+          sourceIds: [],
+          severities: ["critical"],
+          statuses: [],
+          labels: [],
+          titleContains: [],
+          messageContains: [],
         },
         destinationIds: [],
       }}
@@ -139,7 +144,7 @@ export function EditRouteForm({
       <p className="text-muted-foreground mt-1 mb-3 text-xs">
         {t("routing.form.edit.description")}
       </p>
-      <RouteEditRestrictedNotice rule={route.rule} />
+      <RouteEditRestrictedNotice rule={route.rule} sources={sources} />
       <RouteForm
         sources={sources}
         destinations={destinations}
@@ -155,7 +160,7 @@ export function EditRouteForm({
           onSubmit({
             id: route.id,
             name: values.name.trim(),
-            rule: routeRulePatchFromValues(route.rule, values.rule),
+            rule: routeRuleFromValues(values.rule),
             destinationIds: values.destinationIds,
           })
         }
@@ -197,23 +202,14 @@ function RouteForm({
   const t = useTranslations();
   const isDialogLayout = layout === "dialog";
 
-  const sourceItems = [
-    { value: null, label: t("routing.form.anySource") },
-    ...sources.map((source) => ({ value: source.id, label: source.name })),
-  ];
-  const routeSeverityItems = [
-    { value: "any", label: t("routing.form.severityAny") },
-    { value: "critical", label: t("common.severity.critical") },
-    { value: "warning", label: t("common.severity.warning") },
-    { value: "info", label: t("common.severity.info") },
-    { value: "unknown", label: t("common.severity.unknown") },
-  ];
-  const routeStatusItems = [
-    { value: "any", label: t("routing.form.statusAny") },
-    { value: "firing", label: t("common.alertStatus.firing") },
-    { value: "resolved", label: t("common.alertStatus.resolved") },
-    { value: "unknown", label: t("common.alertStatus.unknown") },
-  ];
+  const routeSeverityItems = routeSeverityValues.map((severity) => ({
+    value: severity,
+    label: t(`common.severity.${severity}`),
+  }));
+  const routeStatusItems = routeStatusValues.map((status) => ({
+    value: status,
+    label: t(`common.alertStatus.${status}`),
+  }));
   const labelOperatorItems = [
     { value: "equals", label: t("routing.form.operatorEquals") },
     { value: "contains", label: t("routing.form.operatorContains") },
@@ -260,184 +256,355 @@ function RouteForm({
           </UiField>
         )}
       </form.Field>
-      <form.Field name="rule.sourceId">
-        {(field) => (
-          <UiField data-disabled={sources.length === 0}>
-            <FieldLabel htmlFor={field.name}>{t("routing.form.sourceLabel")}</FieldLabel>
-            <Select
-              id={field.name}
-              name={field.name}
-              items={sourceItems}
-              disabled={sources.length === 0}
-              value={field.state.value || null}
-              onValueChange={(value) => field.handleChange(value ?? "")}
-            >
-              <SelectTrigger className="w-full" onBlur={field.handleBlur}>
-                <SelectValue placeholder={t("routing.form.anySource")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value={null}>{t("routing.form.anySource")}</SelectItem>
-                  {sources.map((source) => (
-                    <SelectItem key={source.id} value={source.id}>
-                      {source.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <FieldDescription>{t("routing.form.sourceDescription")}</FieldDescription>
-          </UiField>
-        )}
-      </form.Field>
-      <form.Field name="rule.severity">
-        {(field) => (
-          <UiField>
-            <FieldLabel htmlFor={field.name}>{t("routing.form.severityLabel")}</FieldLabel>
-            <Select
-              id={field.name}
-              name={field.name}
-              items={routeSeverityItems}
-              value={field.state.value}
-              onValueChange={(value) =>
-                field.handleChange(value as RouteRuleFormValues["severity"])
-              }
-            >
-              <SelectTrigger className="w-full" onBlur={field.handleBlur}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="any">{t("routing.form.severityAny")}</SelectItem>
-                  <SelectItem value="critical">{t("common.severity.critical")}</SelectItem>
-                  <SelectItem value="warning">{t("common.severity.warning")}</SelectItem>
-                  <SelectItem value="info">{t("common.severity.info")}</SelectItem>
-                  <SelectItem value="unknown">{t("common.severity.unknown")}</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <FieldDescription>{t("routing.form.severityDescription")}</FieldDescription>
-          </UiField>
-        )}
-      </form.Field>
-      <form.Field name="rule.status">
-        {(field) => (
-          <UiField>
-            <FieldLabel htmlFor={field.name}>{t("routing.form.statusLabel")}</FieldLabel>
-            <Select
-              id={field.name}
-              name={field.name}
-              items={routeStatusItems}
-              value={field.state.value}
-              onValueChange={(value) => field.handleChange(value as RouteRuleFormValues["status"])}
-            >
-              <SelectTrigger className="w-full" onBlur={field.handleBlur}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="any">{t("routing.form.statusAny")}</SelectItem>
-                  <SelectItem value="firing">{t("common.alertStatus.firing")}</SelectItem>
-                  <SelectItem value="resolved">{t("common.alertStatus.resolved")}</SelectItem>
-                  <SelectItem value="unknown">{t("common.alertStatus.unknown")}</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <FieldDescription>{t("routing.form.statusDescription")}</FieldDescription>
-          </UiField>
-        )}
-      </form.Field>
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_116px_minmax(0,1fr)]">
-        <form.Field name="rule.labelKey">
-          {(field) => (
-            <UiField>
-              <FieldLabel htmlFor={field.name}>{t("routing.form.labelKeyLabel")}</FieldLabel>
-              <Input
-                id={field.name}
-                name={field.name}
-                placeholder="service"
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.currentTarget.value)}
-              />
-              <FieldDescription>{t("routing.form.labelKeyDescription")}</FieldDescription>
-            </UiField>
-          )}
-        </form.Field>
-        <form.Field name="rule.labelOperator">
-          {(field) => (
-            <UiField>
-              <FieldLabel htmlFor={field.name}>{t("routing.form.operatorLabel")}</FieldLabel>
-              <Select
-                id={field.name}
-                name={field.name}
-                items={labelOperatorItems}
-                value={field.state.value}
-                onValueChange={(value) =>
-                  field.handleChange(value as RouteRuleFormValues["labelOperator"])
+      <form.Field name="rule.sourceIds">
+        {(field) => {
+          const selectedSourceIds = field.state.value;
+          const nextSourceId = sources.find((source) => !selectedSourceIds.includes(source.id))?.id;
+          // Stored ids that the source list no longer contains stay selectable so
+          // they remain visible, editable into a live source, and never dropped.
+          const sourceItems = [
+            ...sources.map((source) => ({ value: source.id, label: source.name })),
+            ...selectedSourceIds
+              .filter((sourceId) => !sources.some((source) => source.id === sourceId))
+              .map((sourceId) => ({
+                value: sourceId,
+                label: `${sourceId} (${t("routing.form.sourceMissing")})`,
+              })),
+          ];
+
+          return (
+            <ConditionList
+              label={t("routing.form.sourceLabel")}
+              description={t("routing.form.sourceDescription")}
+              addDisabled={nextSourceId === undefined}
+              onAdd={() => {
+                if (nextSourceId !== undefined) {
+                  field.handleChange([...selectedSourceIds, nextSourceId]);
                 }
+              }}
+            >
+              {selectedSourceIds.map((sourceId, index) => (
+                <ConditionRow
+                  key={index}
+                  label={t("routing.form.sourceLabel")}
+                  index={index}
+                  onRemove={() => field.handleChange(removeConditionAt(selectedSourceIds, index))}
+                >
+                  <Select
+                    id={`${field.name}-${index}`}
+                    name={`${field.name}-${index}`}
+                    items={sourceItems}
+                    disabled={sources.length === 0}
+                    value={sourceId}
+                    onValueChange={(value) =>
+                      field.handleChange(replaceConditionAt(selectedSourceIds, index, value ?? ""))
+                    }
+                  >
+                    <SelectTrigger
+                      className="w-full"
+                      onBlur={field.handleBlur}
+                      aria-label={`${t("routing.form.sourceLabel")} ${index + 1}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {sourceItems.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </ConditionRow>
+              ))}
+            </ConditionList>
+          );
+        }}
+      </form.Field>
+      <form.Field name="rule.severities">
+        {(field) => {
+          const selectedSeverities = field.state.value;
+          const nextSeverity = routeSeverityValues.find(
+            (severity) => !selectedSeverities.includes(severity),
+          );
+
+          return (
+            <ConditionList
+              label={t("routing.form.severityLabel")}
+              description={t("routing.form.severityDescription")}
+              addDisabled={nextSeverity === undefined}
+              onAdd={() => {
+                if (nextSeverity !== undefined) {
+                  field.handleChange([...selectedSeverities, nextSeverity]);
+                }
+              }}
+            >
+              {selectedSeverities.map((severity, index) => (
+                <ConditionRow
+                  key={index}
+                  label={t("routing.form.severityLabel")}
+                  index={index}
+                  onRemove={() => field.handleChange(removeConditionAt(selectedSeverities, index))}
+                >
+                  <Select
+                    id={`${field.name}-${index}`}
+                    name={`${field.name}-${index}`}
+                    items={routeSeverityItems}
+                    value={severity}
+                    onValueChange={(value) =>
+                      field.handleChange(
+                        replaceConditionAt(
+                          selectedSeverities,
+                          index,
+                          value as RouteSeverityCondition,
+                        ),
+                      )
+                    }
+                  >
+                    <SelectTrigger
+                      className="w-full"
+                      onBlur={field.handleBlur}
+                      aria-label={`${t("routing.form.severityLabel")} ${index + 1}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {routeSeverityItems.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </ConditionRow>
+              ))}
+            </ConditionList>
+          );
+        }}
+      </form.Field>
+      <form.Field name="rule.statuses">
+        {(field) => {
+          const selectedStatuses = field.state.value;
+          const nextStatus = routeStatusValues.find((status) => !selectedStatuses.includes(status));
+
+          return (
+            <ConditionList
+              label={t("routing.form.statusLabel")}
+              description={t("routing.form.statusDescription")}
+              addDisabled={nextStatus === undefined}
+              onAdd={() => {
+                if (nextStatus !== undefined) {
+                  field.handleChange([...selectedStatuses, nextStatus]);
+                }
+              }}
+            >
+              {selectedStatuses.map((status, index) => (
+                <ConditionRow
+                  key={index}
+                  label={t("routing.form.statusLabel")}
+                  index={index}
+                  onRemove={() => field.handleChange(removeConditionAt(selectedStatuses, index))}
+                >
+                  <Select
+                    id={`${field.name}-${index}`}
+                    name={`${field.name}-${index}`}
+                    items={routeStatusItems}
+                    value={status}
+                    onValueChange={(value) =>
+                      field.handleChange(
+                        replaceConditionAt(selectedStatuses, index, value as RouteStatusCondition),
+                      )
+                    }
+                  >
+                    <SelectTrigger
+                      className="w-full"
+                      onBlur={field.handleBlur}
+                      aria-label={`${t("routing.form.statusLabel")} ${index + 1}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {routeStatusItems.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </ConditionRow>
+              ))}
+            </ConditionList>
+          );
+        }}
+      </form.Field>
+      <form.Field
+        name="rule.labels"
+        validators={{
+          onSubmit: ({ value }) =>
+            value.some((condition) => isIncompleteLabelCondition(condition))
+              ? t("routing.form.validation.labelConditionIncomplete")
+              : undefined,
+        }}
+      >
+        {(field) => (
+          <ConditionList
+            label={t("routing.form.labelsLabel")}
+            description={t("routing.form.labelsDescription")}
+            addDisabled={false}
+            onAdd={() => field.handleChange([...field.state.value, createEmptyLabelCondition()])}
+          >
+            {field.state.value.map((condition, index) => (
+              <ConditionRow
+                key={index}
+                label={t("routing.form.labelsLabel")}
+                index={index}
+                onRemove={() => field.handleChange(removeConditionAt(field.state.value, index))}
               >
-                <SelectTrigger className="w-full" onBlur={field.handleBlur}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="equals">{t("routing.form.operatorEquals")}</SelectItem>
-                    <SelectItem value="contains">{t("routing.form.operatorContains")}</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              <FieldDescription>{t("routing.form.operatorDescription")}</FieldDescription>
-            </UiField>
-          )}
-        </form.Field>
-        <form.Field name="rule.labelValue">
-          {(field) => (
-            <UiField>
-              <FieldLabel htmlFor={field.name}>{t("routing.form.labelValueLabel")}</FieldLabel>
-              <Input
-                id={field.name}
-                name={field.name}
-                placeholder="checkout"
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.currentTarget.value)}
-              />
-              <FieldDescription>{t("routing.form.labelValueDescription")}</FieldDescription>
-            </UiField>
-          )}
-        </form.Field>
-      </div>
+                <div className="grid w-full gap-1 sm:grid-cols-[minmax(0,1fr)_116px_minmax(0,1fr)]">
+                  <Input
+                    id={`${field.name}-key-${index}`}
+                    name={`${field.name}-key-${index}`}
+                    placeholder="service"
+                    aria-label={`${t("routing.form.labelKeyLabel")} ${index + 1}`}
+                    value={condition.key}
+                    onBlur={field.handleBlur}
+                    onChange={(event) =>
+                      field.handleChange(
+                        replaceConditionAt(field.state.value, index, {
+                          ...condition,
+                          key: event.currentTarget.value,
+                        }),
+                      )
+                    }
+                  />
+                  <Select
+                    id={`${field.name}-operator-${index}`}
+                    name={`${field.name}-operator-${index}`}
+                    items={labelOperatorItems}
+                    value={condition.operator}
+                    onValueChange={(value) =>
+                      field.handleChange(
+                        replaceConditionAt(field.state.value, index, {
+                          ...condition,
+                          operator: value as RouteLabelCondition["operator"],
+                        }),
+                      )
+                    }
+                  >
+                    <SelectTrigger
+                      className="w-full"
+                      onBlur={field.handleBlur}
+                      aria-label={`${t("routing.form.operatorLabel")} ${index + 1}`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {labelOperatorItems.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    id={`${field.name}-value-${index}`}
+                    name={`${field.name}-value-${index}`}
+                    placeholder="checkout"
+                    aria-label={`${t("routing.form.labelValueLabel")} ${index + 1}`}
+                    value={condition.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) =>
+                      field.handleChange(
+                        replaceConditionAt(field.state.value, index, {
+                          ...condition,
+                          value: event.currentTarget.value,
+                        }),
+                      )
+                    }
+                  />
+                </div>
+              </ConditionRow>
+            ))}
+            <FieldError
+              errors={field.state.meta.errors.map((error) => ({
+                message: String(error),
+              }))}
+            />
+          </ConditionList>
+        )}
+      </form.Field>
       <form.Field name="rule.titleContains">
         {(field) => (
-          <UiField>
-            <FieldLabel htmlFor={field.name}>{t("routing.form.titleContainsLabel")}</FieldLabel>
-            <Input
-              id={field.name}
-              name={field.name}
-              placeholder="LatencyHigh"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(event) => field.handleChange(event.currentTarget.value)}
-            />
-            <FieldDescription>{t("routing.form.titleContainsDescription")}</FieldDescription>
-          </UiField>
+          <ConditionList
+            label={t("routing.form.titleContainsLabel")}
+            description={t("routing.form.titleContainsDescription")}
+            addDisabled={false}
+            onAdd={() => field.handleChange([...field.state.value, ""])}
+          >
+            {field.state.value.map((value, index) => (
+              <ConditionRow
+                key={index}
+                label={t("routing.form.titleContainsLabel")}
+                index={index}
+                onRemove={() => field.handleChange(removeConditionAt(field.state.value, index))}
+              >
+                <Input
+                  id={`${field.name}-${index}`}
+                  name={`${field.name}-${index}`}
+                  placeholder="LatencyHigh"
+                  aria-label={`${t("routing.form.titleContainsLabel")} ${index + 1}`}
+                  value={value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) =>
+                    field.handleChange(
+                      replaceConditionAt(field.state.value, index, event.currentTarget.value),
+                    )
+                  }
+                />
+              </ConditionRow>
+            ))}
+          </ConditionList>
         )}
       </form.Field>
       <form.Field name="rule.messageContains">
         {(field) => (
-          <UiField>
-            <FieldLabel htmlFor={field.name}>{t("routing.form.messageContainsLabel")}</FieldLabel>
-            <Input
-              id={field.name}
-              name={field.name}
-              placeholder="timeout"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(event) => field.handleChange(event.currentTarget.value)}
-            />
-            <FieldDescription>{t("routing.form.messageContainsDescription")}</FieldDescription>
-          </UiField>
+          <ConditionList
+            label={t("routing.form.messageContainsLabel")}
+            description={t("routing.form.messageContainsDescription")}
+            addDisabled={false}
+            onAdd={() => field.handleChange([...field.state.value, ""])}
+          >
+            {field.state.value.map((value, index) => (
+              <ConditionRow
+                key={index}
+                label={t("routing.form.messageContainsLabel")}
+                index={index}
+                onRemove={() => field.handleChange(removeConditionAt(field.state.value, index))}
+              >
+                <Input
+                  id={`${field.name}-${index}`}
+                  name={`${field.name}-${index}`}
+                  placeholder="timeout"
+                  aria-label={`${t("routing.form.messageContainsLabel")} ${index + 1}`}
+                  value={value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) =>
+                    field.handleChange(
+                      replaceConditionAt(field.state.value, index, event.currentTarget.value),
+                    )
+                  }
+                />
+              </ConditionRow>
+            ))}
+          </ConditionList>
         )}
       </form.Field>
       <form.Field name="destinationIds">
@@ -505,6 +672,82 @@ function RouteForm({
       </div>
     </form>
   );
+}
+
+/** One repeatable condition class: its rows, an add button, and its help text. */
+function ConditionList({
+  label,
+  description,
+  addDisabled,
+  onAdd,
+  children,
+}: {
+  label: string;
+  description: string;
+  addDisabled: boolean;
+  onAdd: () => void;
+  children: React.ReactNode;
+}) {
+  const t = useTranslations();
+
+  return (
+    <UiField>
+      <FieldLabel>{label}</FieldLabel>
+      <div className="flex w-full flex-col gap-1">{children}</div>
+      <Button
+        type="button"
+        variant="outline"
+        size="xs"
+        className="w-fit"
+        disabled={addDisabled}
+        aria-label={`${t("routing.form.addCondition")}: ${label}`}
+        onClick={onAdd}
+      >
+        <RiAddLine data-icon="inline-start" aria-hidden />
+        {t("routing.form.addCondition")}
+      </Button>
+      <FieldDescription>{description}</FieldDescription>
+    </UiField>
+  );
+}
+
+/** A single condition entry with its own remove affordance. */
+function ConditionRow({
+  label,
+  index,
+  onRemove,
+  children,
+}: {
+  label: string;
+  index: number;
+  onRemove: () => void;
+  children: React.ReactNode;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="flex w-full items-start gap-1">
+      <div className="min-w-0 flex-1">{children}</div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="text-muted-foreground shrink-0"
+        aria-label={`${t("routing.form.removeCondition")}: ${label} ${index + 1}`}
+        onClick={onRemove}
+      >
+        <RiCloseLine aria-hidden />
+      </Button>
+    </div>
+  );
+}
+
+function replaceConditionAt<T>(values: T[], index: number, next: T): T[] {
+  return values.map((value, currentIndex) => (currentIndex === index ? next : value));
+}
+
+function removeConditionAt<T>(values: T[], index: number): T[] {
+  return values.filter((_, currentIndex) => currentIndex !== index);
 }
 
 function DestinationMultiSelect({

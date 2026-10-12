@@ -1,44 +1,84 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  createEmptyLabelCondition,
   getRouteRuleFormRestrictions,
+  isIncompleteLabelCondition,
   routeFormDefaultsFromRule,
-  routeRuleFromForm,
   routeRuleFromValues,
-  routeRulePatchFromForm,
-  routeRulePatchFromValues,
+  type RouteRuleFormValues,
 } from "#/features/routes/model/route-form";
 
+/** Two entries in every condition class: the shape only import/TOML/API can produce. */
+function multiConditionRule(): RouteRuleFormValues {
+  return {
+    sourceIds: ["source-grafana", "source-alertmanager"],
+    severities: ["critical", "warning"],
+    statuses: ["firing", "unknown"],
+    labels: [
+      { key: "team", operator: "equals", value: "sre" },
+      { key: "cluster", operator: "contains", value: "prod" },
+    ],
+    titleContains: ["DiskFull", "VolumeFull"],
+    messageContains: ["volume", "filesystem"],
+  };
+}
+
+function formValues(overrides: Partial<RouteRuleFormValues> = {}): RouteRuleFormValues {
+  return {
+    sourceIds: [],
+    severities: [],
+    statuses: [],
+    labels: [],
+    titleContains: [],
+    messageContains: [],
+    ...overrides,
+  };
+}
+
 describe("route form helpers", () => {
-  it("maps route form fields into an inspectable route rule", () => {
-    const data = new FormData();
-
-    data.set("sourceId", "source-grafana");
-    data.set("severity", "critical");
-    data.set("status", "firing");
-    data.set("labelKey", "service");
-    data.set("labelOperator", "contains");
-    data.set("labelValue", "checkout");
-    data.set("titleContains", "LatencyHigh");
-    data.set("messageContains", "timeout");
-
-    expect(routeRuleFromForm(data)).toEqual({
-      sourceIds: ["source-grafana"],
-      severities: ["critical"],
+  it("maps every condition row into an inspectable route rule", () => {
+    expect(
+      routeRuleFromValues(
+        formValues({
+          sourceIds: ["source-grafana", "source-alertmanager"],
+          severities: ["critical", "warning"],
+          statuses: ["firing"],
+          labels: [
+            { key: "service", operator: "contains", value: "checkout" },
+            { key: "team", operator: "equals", value: "sre" },
+          ],
+          titleContains: ["LatencyHigh", "DiskFull"],
+          messageContains: ["timeout"],
+        }),
+      ),
+    ).toEqual({
+      sourceIds: ["source-grafana", "source-alertmanager"],
+      severities: ["critical", "warning"],
       statuses: ["firing"],
-      labels: [{ key: "service", operator: "contains", value: "checkout" }],
-      titleContains: ["LatencyHigh"],
+      labels: [
+        { key: "service", operator: "contains", value: "checkout" },
+        { key: "team", operator: "equals", value: "sre" },
+      ],
+      titleContains: ["LatencyHigh", "DiskFull"],
       messageContains: ["timeout"],
     });
   });
 
-  it("treats any source, severity, and status as empty route conditions", () => {
-    const data = new FormData();
-
-    data.set("severity", "any");
-    data.set("status", "any");
-
-    expect(routeRuleFromForm(data)).toEqual({
+  it("treats empty condition rows as absent conditions", () => {
+    expect(
+      routeRuleFromValues(
+        formValues({
+          sourceIds: ["", "  "],
+          titleContains: ["   "],
+          labels: [
+            createEmptyLabelCondition(),
+            { key: "team", operator: "equals", value: "   " },
+            { key: "  ", operator: "equals", value: "sre" },
+          ],
+        }),
+      ),
+    ).toEqual({
       sourceIds: [],
       severities: [],
       statuses: [],
@@ -48,163 +88,67 @@ describe("route form helpers", () => {
     });
   });
 
-  it("maps TanStack form values into an inspectable route rule", () => {
+  it("trims condition rows before storing them", () => {
     expect(
-      routeRuleFromValues({
-        sourceId: "source-grafana",
-        severity: "warning",
-        status: "resolved",
-        labelKey: "team",
-        labelOperator: "equals",
-        labelValue: "sre",
-        titleContains: "DiskFull",
-        messageContains: "volume",
-      }),
+      routeRuleFromValues(
+        formValues({
+          sourceIds: ["  source-grafana  "],
+          labels: [{ key: " team ", operator: "equals", value: " sre " }],
+          titleContains: [" DiskFull "],
+          messageContains: [" volume "],
+        }),
+      ),
     ).toEqual({
       sourceIds: ["source-grafana"],
-      severities: ["warning"],
-      statuses: ["resolved"],
+      severities: [],
+      statuses: [],
       labels: [{ key: "team", operator: "equals", value: "sre" }],
       titleContains: ["DiskFull"],
       messageContains: ["volume"],
     });
   });
 
-  it("derives editable defaults from the first value of each simple rule condition", () => {
-    expect(
-      routeFormDefaultsFromRule({
-        sourceIds: ["source-grafana", "source-alertmanager"],
-        severities: ["warning"],
-        statuses: ["resolved"],
-        labels: [{ key: "team", operator: "equals", value: "sre" }],
-        titleContains: ["DiskFull"],
-        messageContains: ["volume"],
-      }),
-    ).toEqual({
-      sourceId: "source-grafana",
-      severity: "warning",
-      status: "resolved",
-      labelKey: "team",
-      labelOperator: "equals",
-      labelValue: "sre",
-      titleContains: "DiskFull",
-      messageContains: "volume",
-    });
+  it("derives one editable row for every stored condition", () => {
+    const rule = multiConditionRule();
+    const values = routeFormDefaultsFromRule(rule);
+
+    expect(values).toEqual(rule);
+    // The defaults are editable copies, not aliases of the stored arrays.
+    expect(values.sourceIds).not.toBe(rule.sourceIds);
+    expect(values.labels).not.toBe(rule.labels);
+    expect(values.labels[0]).not.toBe(rule.labels[0]);
   });
 
-  it("patches the first editable condition while preserving extra route conditions", () => {
-    const data = new FormData();
+  it("round-trips a multi-condition rule the operator did not change", () => {
+    const rule = multiConditionRule();
 
-    data.set("sourceId", "source-grafana-prod");
-    data.set("severity", "critical");
-    data.set("status", "firing");
-    data.set("labelKey", "service");
-    data.set("labelOperator", "contains");
-    data.set("labelValue", "api");
-    data.set("titleContains", "LatencyHigh");
-    data.set("messageContains", "timeout");
+    expect(routeRuleFromValues(routeFormDefaultsFromRule(rule))).toEqual(rule);
+  });
+
+  it("flags label rows that carry only half of the condition", () => {
+    expect(isIncompleteLabelCondition({ key: "team", operator: "equals", value: "" })).toBe(true);
+    expect(isIncompleteLabelCondition({ key: "", operator: "equals", value: "sre" })).toBe(true);
+    expect(isIncompleteLabelCondition({ key: "team", operator: "equals", value: "sre" })).toBe(
+      false,
+    );
+    expect(isIncompleteLabelCondition(createEmptyLabelCondition())).toBe(false);
+  });
+
+  it("reports stored source conditions the source picker cannot offer", () => {
+    expect(
+      getRouteRuleFormRestrictions(multiConditionRule(), {
+        knownSourceIds: ["source-grafana", "source-alertmanager"],
+      }),
+    ).toEqual({ restricted: false, fields: [] });
 
     expect(
-      routeRulePatchFromForm(
-        {
-          sourceIds: ["source-grafana", "source-alertmanager"],
-          severities: ["warning", "unknown"],
-          statuses: ["resolved", "unknown"],
-          labels: [
-            { key: "team", operator: "equals", value: "sre" },
-            { key: "cluster", operator: "contains", value: "prod" },
-          ],
-          titleContains: ["DiskFull", "VolumeFull"],
-          messageContains: ["volume", "filesystem"],
-        },
-        data,
+      getRouteRuleFormRestrictions(
+        { ...multiConditionRule(), sourceIds: ["source-grafana", "source-retired"] },
+        { knownSourceIds: ["source-grafana"] },
       ),
-    ).toEqual({
-      sourceIds: ["source-grafana-prod", "source-alertmanager"],
-      severities: ["critical", "unknown"],
-      statuses: ["firing", "unknown"],
-      labels: [
-        { key: "service", operator: "contains", value: "api" },
-        { key: "cluster", operator: "contains", value: "prod" },
-      ],
-      titleContains: ["LatencyHigh", "VolumeFull"],
-      messageContains: ["timeout", "filesystem"],
-    });
-  });
-
-  it("patches the first editable condition from TanStack form values", () => {
-    expect(
-      routeRulePatchFromValues(
-        {
-          sourceIds: ["source-grafana", "source-alertmanager"],
-          severities: ["warning", "unknown"],
-          statuses: ["resolved", "unknown"],
-          labels: [
-            { key: "team", operator: "equals", value: "sre" },
-            { key: "cluster", operator: "contains", value: "prod" },
-          ],
-          titleContains: ["DiskFull", "VolumeFull"],
-          messageContains: ["volume", "filesystem"],
-        },
-        {
-          sourceId: "source-grafana-prod",
-          severity: "critical",
-          status: "firing",
-          labelKey: "service",
-          labelOperator: "contains",
-          labelValue: "api",
-          titleContains: "LatencyHigh",
-          messageContains: "timeout",
-        },
-      ),
-    ).toEqual({
-      sourceIds: ["source-grafana-prod", "source-alertmanager"],
-      severities: ["critical", "unknown"],
-      statuses: ["firing", "unknown"],
-      labels: [
-        { key: "service", operator: "contains", value: "api" },
-        { key: "cluster", operator: "contains", value: "prod" },
-      ],
-      titleContains: ["LatencyHigh", "VolumeFull"],
-      messageContains: ["timeout", "filesystem"],
-    });
-  });
-
-  it("detects multi-value conditions that the visual editor cannot fully edit", () => {
-    expect(
-      getRouteRuleFormRestrictions({
-        sourceIds: ["source-grafana"],
-        severities: ["critical"],
-        statuses: [],
-        labels: [],
-        titleContains: [],
-        messageContains: [],
-      }),
-    ).toEqual({
-      restricted: false,
-      fields: [],
-    });
-
-    expect(
-      getRouteRuleFormRestrictions({
-        sourceIds: ["source-grafana", "source-alertmanager"],
-        severities: ["warning", "critical"],
-        statuses: ["firing"],
-        labels: [
-          { key: "team", operator: "equals", value: "sre" },
-          { key: "cluster", operator: "contains", value: "prod" },
-        ],
-        titleContains: ["DiskFull"],
-        messageContains: ["volume", "filesystem"],
-      }),
     ).toEqual({
       restricted: true,
-      fields: [
-        { field: "sourceIds", total: 2, preserved: 1 },
-        { field: "severities", total: 2, preserved: 1 },
-        { field: "labels", total: 2, preserved: 1 },
-        { field: "messageContains", total: 2, preserved: 1 },
-      ],
+      fields: [{ field: "sourceIds", values: ["source-retired"] }],
     });
   });
 });

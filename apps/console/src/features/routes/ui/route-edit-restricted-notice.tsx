@@ -1,6 +1,6 @@
 import { RiInformationLine } from "@remixicon/react";
 
-import type { RouteDefinition } from "@tocsin/core";
+import type { RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import {
@@ -9,9 +9,17 @@ import {
 } from "#/features/routes/model/route-form";
 import { useTranslations } from "#/i18n/use-i18n";
 
-export function RouteEditRestrictedNotice({ rule }: { rule: RouteDefinition["rule"] }) {
+export function RouteEditRestrictedNotice({
+  rule,
+  sources,
+}: {
+  rule: RouteDefinition["rule"];
+  sources: SourceSummary[];
+}) {
   const t = useTranslations();
-  const restrictions = getRouteRuleFormRestrictions(rule);
+  const restrictions = getRouteRuleFormRestrictions(rule, {
+    knownSourceIds: sources.map((source) => source.id),
+  });
 
   if (!restrictions.restricted) {
     return null;
@@ -28,8 +36,7 @@ export function RouteEditRestrictedNotice({ rule }: { rule: RouteDefinition["rul
             <li key={field.field}>
               {t("routing.form.edit.restrictedFieldSummary", {
                 field: t(routeRestrictionFieldLabelKey(field.field)),
-                total: field.total,
-                preserved: field.preserved,
+                value: field.values.join(", "),
               })}
             </li>
           ))}
