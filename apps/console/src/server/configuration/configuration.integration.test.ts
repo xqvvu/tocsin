@@ -1,6 +1,7 @@
 import { parse as parseToml } from "smol-toml";
 import { describe, expect, it } from "vite-plus/test";
 
+import type { DestinationKind, JsonObject, TomlDocument } from "@tocsin/core";
 import { createDefaultDestinationRegistry } from "@tocsin/destinations";
 import type { DestinationSendContext } from "@tocsin/destinations";
 
@@ -13,6 +14,79 @@ import { RouteService } from "#/server/routes/route.service";
 import { SourceService } from "#/server/sources/source.service";
 
 const now = "2026-06-09T08:00:00.000Z";
+
+const registeredDestinationKinds: DestinationKind[] = createDefaultDestinationRegistry().list.map(
+  (adapter) => adapter.manifest.kind,
+);
+
+/**
+ * One secret-bearing config per destination kind, keyed by kind so that adding
+ * a kind without adding a fixture here fails typecheck as well as the
+ * parameterized redaction test below. `secretValues` are the plaintext values
+ * that must never reach an exported document, `secretPaths` the config paths
+ * that must be replaced by environment references.
+ */
+const destinationSecretCases: Record<
+  DestinationKind,
+  { config: JsonObject; preserved: JsonObject; secretValues: string[]; secretPaths: string[] }
+> = {
+  generic_webhook: {
+    config: {
+      url: "https://relay.example.test/generic-webhook-secret",
+      method: "PATCH",
+      headers: {
+        Authorization: "Bearer generic-webhook-header-secret",
+      },
+    },
+    preserved: { method: "PATCH" },
+    secretValues: [
+      "https://relay.example.test/generic-webhook-secret",
+      "Bearer generic-webhook-header-secret",
+    ],
+    secretPaths: ["url", "headers.Authorization"],
+  },
+  feishu: {
+    config: {
+      sendMode: "webhook",
+      webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/feishu-secret",
+      signSecret: "feishu-sign-secret",
+    },
+    preserved: { sendMode: "webhook" },
+    secretValues: [
+      "https://open.feishu.cn/open-apis/bot/v2/hook/feishu-secret",
+      "feishu-sign-secret",
+    ],
+    secretPaths: ["webhookUrl", "signSecret"],
+  },
+  slack: {
+    config: {
+      webhookUrl: "https://hooks.slack.com/services/slack-secret",
+      template: {
+        mode: "text",
+        text: "{{event.title}}",
+      },
+    },
+    preserved: { template: { mode: "text", text: "{{event.title}}" } },
+    secretValues: ["https://hooks.slack.com/services/slack-secret"],
+    secretPaths: ["webhookUrl"],
+  },
+  email: {
+    config: {
+      endpointUrl: "https://mail-gateway.example.test/email-gateway-secret",
+      to: ["sre@example.test"],
+      from: "tocsin@example.test",
+      headers: {
+        "X-Api-Key": "email-gateway-header-secret",
+      },
+    },
+    preserved: { to: ["sre@example.test"], from: "tocsin@example.test" },
+    secretValues: [
+      "https://mail-gateway.example.test/email-gateway-secret",
+      "email-gateway-header-secret",
+    ],
+    secretPaths: ["endpointUrl", "headers.X-Api-Key"],
+  },
+};
 
 async function createStore() {
   return openSqliteStore({
@@ -1095,6 +1169,46 @@ describe("configuration capabilities", () => {
 
     await store.close();
   });
+
+  it.each(registeredDestinationKinds)(
+    "omits secret fields of every %s destination from exported configuration",
+    async (kind) => {
+      const { store, services } = await createTestContext();
+      const fixture = destinationSecretCases[kind];
+      const destination = await services.destinations.createDestination({
+        name: `${kind} destination`,
+        kind,
+        config: fixture.config,
+      });
+
+      const toml = await services.portability.exportToml({
+        now: () => now,
+      });
+      const json = await services.portability.exportJson({
+        now: () => now,
+      });
+      const document = JSON.parse(json) as TomlDocument;
+      const exported = document.destinations.find((entry) => entry.id === destination.id);
+
+      expect(exported).toMatchObject({
+        kind,
+        config: fixture.preserved,
+        secret_refs: Object.fromEntries(
+          fixture.secretPaths.map((path) => [
+            path,
+            { env: expect.stringContaining("TOCSIN_DEST_") },
+          ]),
+        ),
+      });
+
+      for (const secret of fixture.secretValues) {
+        expect(toml).not.toContain(secret);
+        expect(json).not.toContain(secret);
+      }
+
+      await store.close();
+    },
+  );
 
   it("round-trips sources, routes, destinations, and settings through TOML", async () => {
     const first = await createTestContext();
