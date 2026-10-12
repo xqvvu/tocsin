@@ -24,6 +24,8 @@ import type { SettingsRepository } from "#/infra/sqlite/repositories/settings/se
 import { SqliteSettingsRepository } from "#/infra/sqlite/repositories/settings/settings.repository";
 import type { SourceRepository } from "#/infra/sqlite/repositories/source/source.interface";
 import { SqliteSourceRepository } from "#/infra/sqlite/repositories/source/source.repository";
+import type { SuppressionRepository } from "#/infra/sqlite/repositories/suppression/suppression.interface";
+import { SqliteSuppressionRepository } from "#/infra/sqlite/repositories/suppression/suppression.repository";
 import type { SqliteKysely } from "#/infra/sqlite/schema";
 
 export interface OpenSqliteStoreOptions {
@@ -40,6 +42,7 @@ export interface OpenSqliteStoreOptions {
     attempt: () => string;
     feishuApp: () => string;
     oncallPing: () => string;
+    suppression: () => string;
   }>;
 }
 
@@ -47,6 +50,7 @@ export interface SqliteStoreUnitOfWork {
   readonly sources: SourceRepository;
   readonly destinations: DestinationRepository;
   readonly routes: RouteRepository;
+  readonly suppressions: SuppressionRepository;
   readonly intake: IntakeRepository;
   readonly deliveries: DeliveryRepository;
   readonly feishuApps: FeishuAppRepository;
@@ -69,6 +73,7 @@ export function createSqliteRepositories(context: SqliteRepositoryContext): Sqli
   const sources = new SqliteSourceRepository(context);
   const destinations = new SqliteDestinationRepository(context);
   const routes = new SqliteRouteRepository(context);
+  const suppressions = new SqliteSuppressionRepository(context);
   const intake = new SqliteIntakeRepository(context);
   const oncall = new SqliteOncallRepository(context, destinations, intake);
   const deliveries = new SqliteDeliveryRepository(
@@ -94,6 +99,7 @@ export function createSqliteRepositories(context: SqliteRepositoryContext): Sqli
     sources,
     destinations,
     routes,
+    suppressions,
     intake,
     deliveries,
     feishuApps,
@@ -142,6 +148,10 @@ export class OpenedSqliteStore implements SqliteStore {
 
   get routes() {
     return this.repositories.routes;
+  }
+
+  get suppressions() {
+    return this.repositories.suppressions;
   }
 
   get intake() {

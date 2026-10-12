@@ -324,6 +324,7 @@ function OperationFiltersPanel({
             { value: "running", label: t("common.deliveryState.running") },
             { value: "succeeded", label: t("common.deliveryState.succeeded") },
             { value: "failed", label: t("common.deliveryState.failed") },
+            { value: "suppressed", label: t("common.deliveryState.suppressed") },
           ]}
           value={search.deliveryState || null}
           disabled={pending}
@@ -343,6 +344,7 @@ function OperationFiltersPanel({
               <SelectItem value="running">{t("common.deliveryState.running")}</SelectItem>
               <SelectItem value="succeeded">{t("common.deliveryState.succeeded")}</SelectItem>
               <SelectItem value="failed">{t("common.deliveryState.failed")}</SelectItem>
+              <SelectItem value="suppressed">{t("common.deliveryState.suppressed")}</SelectItem>
             </SelectGroup>
           </SelectContent>
         </Select>

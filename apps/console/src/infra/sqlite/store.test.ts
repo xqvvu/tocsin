@@ -325,12 +325,14 @@ describe("sqlite store", () => {
       running: 0,
       succeeded: 0,
       failed: 0,
+      suppressed: 0,
     });
     expect(firstEventItem?.deliveryCounts).toEqual({
       pending: 1,
       running: 0,
       succeeded: 0,
       failed: 0,
+      suppressed: 0,
     });
 
     await store.close();

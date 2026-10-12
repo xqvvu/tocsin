@@ -2,7 +2,13 @@ import { z } from "zod";
 
 import { IsoDateTimeSchema } from "#core/event/normalized-event";
 
-export const DeliveryStateSchema = z.enum(["pending", "running", "succeeded", "failed"]);
+export const DeliveryStateSchema = z.enum([
+  "pending",
+  "running",
+  "succeeded",
+  "failed",
+  "suppressed",
+]);
 export type DeliveryState = z.infer<typeof DeliveryStateSchema>;
 
 export const DeliveryJobSchema = z.object({
@@ -15,6 +21,14 @@ export const DeliveryJobSchema = z.object({
   maxAttempts: z.number().int().min(1),
   nextAttemptAt: IsoDateTimeSchema.nullable(),
   lastError: z.string().nullable(),
+  /**
+   * Audit evidence for a `suppressed` delivery: the rule that silenced it, when,
+   * and a human-readable reason snapshot. All three stay readable after the rule
+   * is deleted (`suppression_id` is nulled by the FK, the snapshot is not).
+   */
+  suppressionId: z.string().min(1).nullable(),
+  suppressedAt: IsoDateTimeSchema.nullable(),
+  suppressReason: z.string().nullable(),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
   finishedAt: IsoDateTimeSchema.nullable(),

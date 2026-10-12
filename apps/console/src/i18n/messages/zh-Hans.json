@@ -54,6 +54,7 @@
   "common.deliveryState.running": "运行中",
   "common.deliveryState.succeeded": "成功",
   "common.deliveryState.failed": "失败",
+  "common.deliveryState.suppressed": "已抑制",
   "common.actions.tryAgain": "重试",
   "common.actions.reloadPage": "重新加载页面",
   "common.actions.refresh": "刷新",

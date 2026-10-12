@@ -73,6 +73,9 @@ export class SqliteHistoryRepository implements HistoryRepository {
         sql<number>`SUM(CASE WHEN deliveries.state = 'failed' THEN 1 ELSE 0 END)`.as(
           "failed_count",
         ),
+        sql<number>`SUM(CASE WHEN deliveries.state = 'suppressed' THEN 1 ELSE 0 END)`.as(
+          "suppressed_count",
+        ),
       ])
       .groupBy("events.id")
       .orderBy("events.received_at", "desc")
@@ -118,6 +121,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
           running: row.running_count ?? 0,
           succeeded: row.succeeded_count ?? 0,
           failed: row.failed_count ?? 0,
+          suppressed: row.suppressed_count ?? 0,
         },
       })),
       total,

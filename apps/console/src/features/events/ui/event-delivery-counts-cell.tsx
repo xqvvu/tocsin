@@ -3,6 +3,26 @@ import type { Operations } from "#/features/operations/model/operation-types";
 import { useTranslations } from "#/i18n/use-i18n";
 
 type EventDeliveryCounts = Operations["events"]["items"][number]["deliveryCounts"];
+type EventDeliveryState = keyof EventDeliveryCounts;
+
+/**
+ * Badge order, and the exhaustiveness guard for `deliveryCounts`.
+ *
+ * A `Record<EventDeliveryState, number>` refuses to compile when
+ * `DeliveryState` gains a state that is not listed here, so a new state can
+ * never be silently dropped from the total or from the badges.
+ */
+const DELIVERY_STATE_ORDER: Record<EventDeliveryState, number> = {
+  failed: 0,
+  running: 1,
+  pending: 2,
+  succeeded: 3,
+  suppressed: 4,
+};
+
+const DELIVERY_STATES = (Object.keys(DELIVERY_STATE_ORDER) as EventDeliveryState[]).sort(
+  (left, right) => DELIVERY_STATE_ORDER[left] - DELIVERY_STATE_ORDER[right],
+);
 
 export function EventDeliveryCountsCell({
   counts,
@@ -12,7 +32,7 @@ export function EventDeliveryCountsCell({
   routeMatchCount: number;
 }) {
   const t = useTranslations();
-  const total = counts.pending + counts.running + counts.succeeded + counts.failed;
+  const total = DELIVERY_STATES.reduce((sum, state) => sum + counts[state], 0);
 
   if (total === 0 && routeMatchCount === 0) {
     return (
@@ -36,21 +56,14 @@ export function EventDeliveryCountsCell({
 
   return (
     <div className="flex min-w-0 flex-wrap justify-center gap-1">
-      <EventDeliveryStateCount state="failed" value={counts.failed} />
-      <EventDeliveryStateCount state="running" value={counts.running} />
-      <EventDeliveryStateCount state="pending" value={counts.pending} />
-      <EventDeliveryStateCount state="succeeded" value={counts.succeeded} />
+      {DELIVERY_STATES.map((state) => (
+        <EventDeliveryStateCount key={state} state={state} value={counts[state]} />
+      ))}
     </div>
   );
 }
 
-function EventDeliveryStateCount({
-  state,
-  value,
-}: {
-  state: keyof EventDeliveryCounts;
-  value: number;
-}) {
+function EventDeliveryStateCount({ state, value }: { state: EventDeliveryState; value: number }) {
   const t = useTranslations();
 
   if (value === 0) {
@@ -70,7 +83,7 @@ function EventDeliveryStateCount({
 }
 
 function deliveryCountVariant(
-  state: keyof EventDeliveryCounts,
+  state: EventDeliveryState,
 ): "default" | "secondary" | "destructive" | "outline" {
   return state === "failed" ? "destructive" : state === "succeeded" ? "default" : "outline";
 }
