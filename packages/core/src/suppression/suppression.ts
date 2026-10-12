@@ -264,3 +264,71 @@ export function selectSuppressionForDelivery(
 
   return candidates[0]?.result ?? null;
 }
+
+const SUPPRESSION_KIND_LABEL: Record<SuppressionKind, string> = {
+  silence: "Silence",
+  maintenance_window: "Maintenance window",
+};
+
+/**
+ * Render the audit snapshot written to `deliveries.suppress_reason` (PRD 2.5).
+ *
+ * The snapshot must stay readable after the rule is deleted or pruned, so it
+ * carries the rule's name and kind as *text* plus the conditions that decided
+ * the match — never a reference the reader would have to resolve. Conditions
+ * the rule does not carry are omitted, so an unconditional rule reads as such
+ * instead of listing seven empty dimensions.
+ */
+export function formatSuppressionReason(
+  suppression: Pick<Suppression, "name" | "kind" | "matcher">,
+): string {
+  const conditions = suppressionConditions(suppression.matcher);
+  const scope =
+    conditions.length === 0
+      ? "matched no conditions (silences everything)"
+      : `matched ${conditions.join(", ")}`;
+
+  return `${SUPPRESSION_KIND_LABEL[suppression.kind]} 「${suppression.name}」 ${scope}`;
+}
+
+function suppressionConditions(matcher: SuppressionMatcher): string[] {
+  const conditions: string[] = [];
+
+  if (matcher.sourceIds.length > 0) {
+    conditions.push(`source in [${matcher.sourceIds.join(", ")}]`);
+  }
+
+  if (matcher.destinationIds.length > 0) {
+    conditions.push(`destination in [${matcher.destinationIds.join(", ")}]`);
+  }
+
+  if (matcher.severities.length > 0) {
+    conditions.push(`severity in [${matcher.severities.join(", ")}]`);
+  }
+
+  if (matcher.statuses.length > 0) {
+    conditions.push(`status in [${matcher.statuses.join(", ")}]`);
+  }
+
+  for (const fingerprint of matcher.fingerprints) {
+    conditions.push(`fingerprint ${fingerprint}`);
+  }
+
+  for (const label of matcher.labels) {
+    conditions.push(
+      label.operator === "equals"
+        ? `label ${label.key}=${label.value}`
+        : `label ${label.key} contains ${label.value}`,
+    );
+  }
+
+  for (const needle of matcher.titleContains) {
+    conditions.push(`title contains "${needle}"`);
+  }
+
+  for (const needle of matcher.messageContains) {
+    conditions.push(`message contains "${needle}"`);
+  }
+
+  return conditions;
+}
