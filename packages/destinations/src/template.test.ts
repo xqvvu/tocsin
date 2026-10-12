@@ -464,3 +464,36 @@ describe("template mode dispatch", () => {
     expect(DestinationTemplateEngine.diagnoseConfig({})).toEqual([]);
   });
 });
+
+describe("unknown variable suggestions", () => {
+  const messageFor = (variable: string): string =>
+    DestinationTemplateEngine.diagnoseConfig({
+      template: { mode: "text", text: `{{${variable}}}` },
+    })[0]?.message ?? "";
+
+  it("suggests the intended path when a static variable is a near miss", () => {
+    // A typo in one character is the common case; the engine knows every valid
+    // path, so it can say which one was meant instead of only that this is wrong.
+    expect(messageFor("event.titel")).toBe(
+      "Destination template contains unknown variable: event.titel (did you mean event.title?)",
+    );
+    expect(messageFor("event.sverity")).toContain("did you mean event.severity?");
+  });
+
+  it("stays quiet when nothing is close enough to suggest", () => {
+    // A confident wrong suggestion is worse than none.
+    expect(messageFor("process.env.SECRET")).toBe(
+      "Destination template contains unknown variable: process.env.SECRET",
+    );
+    expect(messageFor("raw.secret")).toBe(
+      "Destination template contains unknown variable: raw.secret",
+    );
+  });
+
+  it("never invents a suggestion for dynamic namespaces", () => {
+    // event.labels.* and payload.* resolve dynamically, so there is no fixed
+    // list to compare against and no suggestion should be fabricated.
+    expect(messageFor("event.labels.anything")).not.toContain("did you mean");
+    expect(messageFor("payload.some.path")).not.toContain("did you mean");
+  });
+});

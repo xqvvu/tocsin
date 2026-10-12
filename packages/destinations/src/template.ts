@@ -633,7 +633,7 @@ function diagnosticsForTemplateEntries(
           severity: "error",
           path: entry.path,
           variable,
-          message: `Destination template contains unknown variable: ${variable}`,
+          message: `Destination template contains unknown variable: ${variable}${suggestionFor(variable)}`,
         });
       }
     }
@@ -721,6 +721,67 @@ function isAllowedTemplatePath(path: string, bindingNames: ReadonlySet<string>):
   const bindingMatch = RE_BINDING_PATH.exec(path);
 
   return Boolean(bindingMatch && bindingNames.has(bindingMatch[1]!));
+}
+
+/**
+ * A "did you mean" suffix for a mistyped static path, or an empty string when
+ * nothing is close enough to be worth suggesting.
+ *
+ * Only static paths are considered: labels, payload paths and bindings resolve
+ * dynamically, so there is no fixed list to compare against — suggesting one
+ * would be worse than staying quiet.
+ */
+function suggestionFor(variable: string): string {
+  if (variable.includes("{{") || variable.trim() !== variable) {
+    return "";
+  }
+
+  const nearest = nearestTemplatePath(variable);
+
+  return nearest ? ` (did you mean ${nearest}?)` : "";
+}
+
+/** Closest static path within a small edit distance, if any. */
+function nearestTemplatePath(variable: string): string | null {
+  // Scaled to the identifier's length: one slip in a short name is a typo, in
+  // a long one it is usually a different variable entirely.
+  const limit = variable.length <= 8 ? 1 : variable.length <= 16 ? 2 : 3;
+  let best: string | null = null;
+  let bestDistance = limit + 1;
+
+  for (const candidate of AllowedTemplatePaths) {
+    const distance = editDistance(variable.toLowerCase(), candidate.toLowerCase());
+
+    if (distance < bestDistance) {
+      best = candidate;
+      bestDistance = distance;
+    }
+  }
+
+  return bestDistance <= limit ? best : null;
+}
+
+/** Levenshtein distance, iterative with a single rolling row. */
+function editDistance(left: string, right: string): number {
+  if (left === right) {
+    return 0;
+  }
+
+  let previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+  for (let i = 1; i <= left.length; i += 1) {
+    const current = [i];
+
+    for (let j = 1; j <= right.length; j += 1) {
+      const substitution = previous[j - 1]! + (left[i - 1] === right[j - 1] ? 0 : 1);
+
+      current[j] = Math.min(current[j - 1]! + 1, previous[j]! + 1, substitution);
+    }
+
+    previous = current;
+  }
+
+  return previous[right.length]!;
 }
 
 function payloadTemplateValue(payload: JsonValue, segments: string[]): string {
