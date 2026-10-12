@@ -165,7 +165,7 @@ describe("edit route form", () => {
     ]);
   });
 
-  it("reports stored source conditions the picker cannot offer and keeps them on save", async () => {
+  it("reports a stored source the picker cannot offer instead of dropping it silently", async () => {
     const base = multiConditionRoute();
     const route: RouteDefinition = {
       ...base,
@@ -174,9 +174,10 @@ describe("edit route form", () => {
 
     const { onSubmit } = renderEditForm(route);
 
+    // The notice names the exact stored value instead of only counting it.
     expect(
       screen.getByText(
-        "This route references values that are no longer configured — they stay exactly as stored and can only be removed, not re-picked",
+        "This route references values that are no longer configured — they stay exactly as stored and have to be removed here before the route can be saved",
       ),
     ).toBeTruthy();
     expect(screen.getByText("Sources: source-retired")).toBeTruthy();
@@ -184,15 +185,26 @@ describe("edit route form", () => {
       "source-retired",
     );
 
+    // The API rejects rules pointing at unknown sources, so the form refuses the
+    // save and says what to do instead of dropping the condition behind the
+    // operator's back.
+    saveRoute();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Remove source conditions that no longer exist before saving"),
+      ).toBeTruthy();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    // Removing that condition is the explicit fix, and nothing else moves.
+    fireEvent.click(screen.getByRole("button", { name: "Remove condition: Source 2" }));
     saveRoute();
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
-    expect(onSubmit.mock.calls[0]?.[0].rule.sourceIds).toEqual([
-      "source-grafana",
-      "source-retired",
-    ]);
+    expect(onSubmit.mock.calls[0]?.[0].rule.sourceIds).toEqual(["source-grafana"]);
   });
 
   it("refuses to save a label condition that is missing half of its value", async () => {
