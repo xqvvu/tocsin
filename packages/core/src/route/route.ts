@@ -5,7 +5,7 @@ import {
   AlertStatusSchema,
   NormalizedEventSchema,
 } from "#core/event/normalized-event";
-import type { NormalizedEvent } from "#core/event/normalized-event";
+import type { Labels, NormalizedEvent } from "#core/event/normalized-event";
 
 export const LabelMatchOperatorSchema = z.enum(["equals", "contains"]);
 const NonEmptyRouteStringSchema = z.string().trim().min(1);
@@ -53,7 +53,19 @@ export const RouteMatchInputSchema = z.object({
 });
 
 export const RouteMatchCheckSchema = z.object({
-  field: z.enum(["enabled", "source", "severity", "status", "label", "title", "message"]),
+  field: z.enum([
+    "enabled",
+    "source",
+    "severity",
+    "status",
+    "label",
+    "title",
+    "message",
+    // Suppression-only dimensions. They share this schema because a suppression
+    // renders its evidence with the same component as a route match.
+    "destination",
+    "fingerprint",
+  ]),
   matched: z.boolean(),
   detail: z.string(),
   /**
@@ -155,7 +167,7 @@ function resultFor(route: RouteDefinition, checks: RouteMatchCheck[]): RouteMatc
   };
 }
 
-function evaluateSource(
+export function evaluateSource(
   expectedSourceIds: string[],
   actualSourceId: string,
   checks: RouteMatchCheck[],
@@ -180,7 +192,7 @@ function evaluateSource(
   });
 }
 
-function evaluateOneOf(
+export function evaluateOneOf(
   field: "severity" | "status",
   expected: string[],
   actual: string,
@@ -201,9 +213,15 @@ function evaluateOneOf(
   });
 }
 
-function evaluateLabels(
+/**
+ * Only `labels` is read, so the parameter is narrowed to that: a suppression
+ * evaluates the same comparison against a partial event view (it has no
+ * `occurredAt` at delivery claim time), and widening the type to NormalizedEvent
+ * would force an unsafe cast at that call site.
+ */
+export function evaluateLabels(
   matchers: LabelMatcher[],
-  event: NormalizedEvent,
+  event: { labels: Labels },
   checks: RouteMatchCheck[],
 ): void {
   if (matchers.length === 0) {
@@ -232,7 +250,7 @@ function evaluateLabels(
   }
 }
 
-function evaluateContainsAll(
+export function evaluateContainsAll(
   field: "title" | "message",
   expectedNeedles: string[],
   actualHaystack: string,
