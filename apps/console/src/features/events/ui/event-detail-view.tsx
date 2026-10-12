@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import { EventDetailDeliveriesTable } from "#/features/events/ui/event-detail-deliveries-table";
+import { EventDetailRouteGaps } from "#/features/events/ui/event-detail-route-gaps";
 import { EventDetailRouteMatchesTable } from "#/features/events/ui/event-detail-route-matches-table";
 import { getEventDeliveryStats } from "#/features/events/ui/event-detail-stats";
 import { EventDetailSummary } from "#/features/events/ui/event-detail-summary";
@@ -42,11 +43,21 @@ export function EventDetailView({ detail }: { detail: EventDetailData }) {
         </TabsContent>
 
         <TabsContent value="matches" className="min-h-0 overflow-hidden p-3">
-          <EventDetailRouteMatchesTable
-            matches={detail.routeMatches}
-            matchedRouteCount={matchedRouteCount}
-            provenance={detail.routeMatchesProvenance}
-          />
+          {/*
+            Both live in one tab on purpose: "did it match" and "then what
+            happened" are one question to an operator, and splitting them
+            across tabs forces them to cross-reference by memory.
+          */}
+          <div className="flex h-full min-h-0 flex-col gap-4 overflow-auto">
+            <EventDetailRouteMatchesTable
+              matches={detail.routeMatches}
+              matchedRouteCount={matchedRouteCount}
+              provenance={detail.routeMatchesProvenance}
+            />
+            {detail.routeMatchGaps.length > 0 ? (
+              <EventDetailRouteGaps gaps={detail.routeMatchGaps} />
+            ) : null}
+          </div>
         </TabsContent>
 
         <TabsContent value="deliveries" className="min-h-0 overflow-hidden p-3">

@@ -86,6 +86,67 @@ export const RouteMatchCheckSchema = z.object({
  */
 export const RouteMatchProvenanceSchema = z.enum(["intake_snapshot", "recomputed"]);
 
+/**
+ * Why a route that the snapshot says matched has no delivery.
+ *
+ * Every member is recoverable from records Tocsin already keeps, so the detail
+ * view can explain the gap rather than leaving "it matched but nothing was
+ * sent" hanging. Two are deliberately distinct:
+ *
+ * - `duplicate_within_window` — the dedupe window is pruned after minutes, so
+ *   past that point the reason is genuinely gone and the UI must say so.
+ * - `unknown` — exists so an unexplainable gap is *stated* as unexplainable,
+ *   never rendered as one of the confident answers.
+ *
+ * Suppression is intentionally absent: it has no deliveries to explain yet, and
+ * its own display contract will be defined when it lands rather than guessed
+ * at here.
+ *
+ * `unknown` exists so a gap with no recoverable reason is stated as such —
+ * never rendered as one of the confident answers.
+ */
+export const RouteMatchGapReasonSchema = z.enum([
+  /** Route exists but is disabled. */
+  "route_disabled",
+  /** The destination is disabled. */
+  "destination_disabled",
+  /** The destination no longer exists. */
+  "destination_missing",
+  /** The route was deleted; its deliveries cascade away with it. */
+  "route_deleted",
+  /** Deduped against an identical alert — only explainable inside the window. */
+  "duplicate_within_window",
+  /** No recoverable reason: the records needed have been pruned. */
+  "unknown",
+]);
+
+/**
+ * A route that matched but produced no delivery.
+ *
+ * Route-level reasons (`route_deleted`, `route_disabled`) condemn the whole
+ * route, so they are reported once with `destinationId: null` rather than
+ * repeated for every target it selected. Everything else names the specific
+ * target, because one route commonly has a healthy destination next to a
+ * disabled one.
+ */
+export const RouteMatchGapSchema = z.object({
+  routeId: NonEmptyRouteStringSchema,
+  routeName: z.string(),
+  /** Null for a route-level reason. */
+  destinationId: z.string().nullable(),
+  /** Null for a route-level reason, or when the destination no longer exists. */
+  destinationName: z.string().nullable(),
+  reason: RouteMatchGapReasonSchema,
+  /**
+   * For `duplicate_within_window`: the event that was delivered instead. Null
+   * in every other case, and null when the dedupe row is gone.
+   */
+  firstEventId: z.string().nullable(),
+});
+
+export type RouteMatchGap = z.infer<typeof RouteMatchGapSchema>;
+export type RouteMatchGapReason = z.infer<typeof RouteMatchGapReasonSchema>;
+
 export const RouteMatchResultSchema = z.object({
   routeId: NonEmptyRouteStringSchema,
   routeName: z.string().trim().min(1),

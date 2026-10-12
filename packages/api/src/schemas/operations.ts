@@ -15,6 +15,7 @@ import {
   ReplayRouteEventsCommandSchema,
   RouteDefinitionSchema,
   RouteMatchProvenanceSchema,
+  RouteMatchGapSchema,
   RouteMatchResultSchema,
   SourceSummarySchema,
 } from "@tocsin/core";
@@ -54,6 +55,12 @@ export const EventDetailSchema = z.object({
   source: SourceSummarySchema,
   routeMatches: z.array(RouteMatchResultSchema),
   routeMatchesProvenance: RouteMatchProvenanceSchema,
+  /**
+   * Pairs the snapshot says matched but which produced no delivery, each with
+   * the reason recoverable from records — or `unknown` when the records needed
+   * have been pruned. Empty is the normal, healthy case.
+   */
+  routeMatchGaps: z.array(RouteMatchGapSchema),
   deliveries: z.array(EventDetailDeliverySchema),
 });
 
