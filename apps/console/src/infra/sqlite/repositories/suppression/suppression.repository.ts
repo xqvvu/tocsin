@@ -83,7 +83,8 @@ export class SqliteSuppressionRepository implements SuppressionRepository {
       name: input.name ?? current.name,
       kind: input.kind ?? current.kind,
       enabled: input.enabled ?? current.enabled,
-      reason: input.reason ?? current.reason,
+      // `null` is an explicit "clear the note", so only `undefined` means keep.
+      reason: input.reason === undefined ? current.reason : input.reason,
       matcher: input.matcher ?? current.matcher,
       startsAt: input.startsAt ?? current.startsAt,
       endsAt: input.endsAt ?? current.endsAt,

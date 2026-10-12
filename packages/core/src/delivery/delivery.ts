@@ -26,9 +26,13 @@ export const DeliveryJobSchema = z.object({
    * and a human-readable reason snapshot. All three stay readable after the rule
    * is deleted (`suppression_id` is nulled by the FK, the snapshot is not).
    */
-  suppressionId: z.string().min(1).nullable(),
-  suppressedAt: IsoDateTimeSchema.nullable(),
-  suppressReason: z.string().nullable(),
+  // Defaulted rather than merely nullable: a delivery row or snapshot written
+  // before these columns existed parses to "no suppression evidence" instead of
+  // failing, the same way `DeliveryListItem.destinationKind` tolerates its own
+  // addition.
+  suppressionId: z.string().min(1).nullable().default(null),
+  suppressedAt: IsoDateTimeSchema.nullable().default(null),
+  suppressReason: z.string().nullable().default(null),
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
   finishedAt: IsoDateTimeSchema.nullable(),
