@@ -88,6 +88,43 @@ describe("route rule summary", () => {
     );
   });
 
+  it("shows every stored entry of every condition class, not just the first", () => {
+    const everyEntryRule: RouteRule = {
+      sourceIds: ["source-grafana", "source-am"],
+      severities: ["critical", "warning"],
+      statuses: ["firing", "unknown"],
+      labels: [
+        { key: "team", operator: "equals", value: "sre" },
+        { key: "service", operator: "contains", value: "api" },
+      ],
+      titleContains: ["LatencyHigh", "DiskFull"],
+      messageContains: ["timeout", "volume"],
+    };
+
+    const chips = buildRouteRuleChips(
+      everyEntryRule,
+      (id) => (id === "source-grafana" ? "Grafana" : id),
+      enOpsCopy,
+    );
+
+    // The rule summary is the read-only counterpart of the edit form, so it has
+    // to account for every entry the form now shows.
+    expect(chips).toEqual([
+      "Source: Grafana",
+      "Source: source-am",
+      "Severity: Critical",
+      "Severity: Warning",
+      "Status: Firing",
+      "Status: Unknown",
+      "team=sre",
+      "service~api",
+      "Title: LatencyHigh",
+      "Title: DiskFull",
+      "Message: timeout",
+      "Message: volume",
+    ]);
+  });
+
   it("falls back to all-events copy for empty catch-all rules", () => {
     expect(
       describeRouteRule(

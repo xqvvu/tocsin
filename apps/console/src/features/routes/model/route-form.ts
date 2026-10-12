@@ -1,80 +1,69 @@
-import { formString, formTrimmedString, type RouteRule } from "@tocsin/core";
+import type { RouteRule } from "@tocsin/core";
 
-export function routeRuleFromForm(data: FormData): RouteRule {
-  return routeRuleFromValues(routeFormValuesFromForm(data));
-}
-
-export function routeRuleFromValues(values: RouteRuleFormValues): RouteRule {
-  const sourceId = values.sourceId.trim();
-  const severity = values.severity;
-  const status = values.status;
-  const labelKey = values.labelKey.trim();
-  const labelValue = values.labelValue.trim();
-  const labelOperator = values.labelOperator === "contains" ? "contains" : "equals";
-  const titleContains = values.titleContains.trim();
-  const messageContains = values.messageContains.trim();
-
-  return {
-    sourceIds: sourceId ? [sourceId] : [],
-    severities: severity === "any" ? [] : [severity],
-    statuses: status === "any" ? [] : [status],
-    labels:
-      labelKey && labelValue
-        ? [
-            {
-              key: labelKey,
-              operator: labelOperator,
-              value: labelValue,
-            },
-          ]
-        : [],
-    titleContains: titleContains ? [titleContains] : [],
-    messageContains: messageContains ? [messageContains] : [],
-  };
-}
-
-function routeFormValuesFromForm(data: FormData): RouteRuleFormValues {
-  const sourceId = formTrimmedString(data, "sourceId");
-  const severity = formString(data, "severity");
-  const status = formString(data, "status");
-  const labelKey = formTrimmedString(data, "labelKey");
-  const labelValue = formTrimmedString(data, "labelValue");
-  const labelOperator = formString(data, "labelOperator") === "contains" ? "contains" : "equals";
-  const titleContains = formTrimmedString(data, "titleContains");
-  const messageContains = formTrimmedString(data, "messageContains");
-
-  return {
-    sourceId,
-    severity: severity === "any" ? "any" : (severity as RouteRuleFormValues["severity"]),
-    status: status === "any" ? "any" : (status as RouteRuleFormValues["status"]),
-    labelKey,
-    labelOperator,
-    labelValue,
-    titleContains,
-    messageContains,
-  };
-}
-
-export function routeFormDefaultsFromRule(rule: RouteRule): RouteFormDefaults {
-  const firstLabel = rule.labels[0];
-
-  return {
-    sourceId: rule.sourceIds[0] ?? "",
-    severity: rule.severities[0] ?? "any",
-    status: rule.statuses[0] ?? "any",
-    labelKey: firstLabel?.key ?? "",
-    labelOperator: firstLabel?.operator ?? "equals",
-    labelValue: firstLabel?.value ?? "",
-    titleContains: rule.titleContains[0] ?? "",
-    messageContains: rule.messageContains[0] ?? "",
-  };
-}
+export type RouteSeverityCondition = RouteRule["severities"][number];
+export type RouteStatusCondition = RouteRule["statuses"][number];
+export type RouteLabelCondition = RouteRule["labels"][number];
 
 /**
- * The visual route editor only exposes the first condition of each kind.
- * Matching still honors full multi-value RouteRule arrays (import/TOML/API).
- * Callers should surface a restricted-edit notice when `restricted` is true.
+ * Editable mirror of a route rule. Every stored entry of every condition class
+ * gets exactly one row here, so the form shows all of them and the saved rule is
+ * built from the rows the operator actually saw.
+ *
+ * An empty class means "no condition of that kind" (matching treats it as
+ * unconditional), which is what removing every row expresses.
  */
+export interface RouteRuleFormValues {
+  sourceIds: string[];
+  severities: RouteSeverityCondition[];
+  statuses: RouteStatusCondition[];
+  labels: RouteLabelCondition[];
+  titleContains: string[];
+  messageContains: string[];
+}
+
+/** Builds the stored rule from the form rows, dropping rows the operator left empty. */
+export function routeRuleFromValues(values: RouteRuleFormValues): RouteRule {
+  return {
+    sourceIds: normalizeConditionValues(values.sourceIds),
+    severities: [...values.severities],
+    statuses: [...values.statuses],
+    labels: values.labels
+      .map((label) => ({
+        key: label.key.trim(),
+        operator: label.operator,
+        value: label.value.trim(),
+      }))
+      .filter((label) => label.key.length > 0 && label.value.length > 0),
+    titleContains: normalizeConditionValues(values.titleContains),
+    messageContains: normalizeConditionValues(values.messageContains),
+  };
+}
+
+/** Turns a stored rule into one editable row per stored entry. */
+export function routeFormDefaultsFromRule(rule: RouteRule): RouteRuleFormValues {
+  return {
+    sourceIds: [...rule.sourceIds],
+    severities: [...rule.severities],
+    statuses: [...rule.statuses],
+    labels: rule.labels.map((label) => ({ ...label })),
+    titleContains: [...rule.titleContains],
+    messageContains: [...rule.messageContains],
+  };
+}
+
+/** A label row only applies when both the key and the value are filled. */
+export function isIncompleteLabelCondition(condition: RouteLabelCondition): boolean {
+  return (condition.key.trim().length === 0) !== (condition.value.trim().length === 0);
+}
+
+export function createEmptyLabelCondition(): RouteLabelCondition {
+  return { key: "", operator: "equals", value: "" };
+}
+
+function normalizeConditionValues(values: string[]): string[] {
+  return values.map((value) => value.trim()).filter((value) => value.length > 0);
+}
+
 export type RouteRuleFormRestrictionField =
   | "sourceIds"
   | "severities"
@@ -85,8 +74,8 @@ export type RouteRuleFormRestrictionField =
 
 export interface RouteRuleFormRestriction {
   field: RouteRuleFormRestrictionField;
-  total: number;
-  preserved: number;
+  /** The exact stored entries the editable form cannot offer as choices. */
+  values: string[];
 }
 
 export interface RouteRuleFormRestrictions {
@@ -94,71 +83,24 @@ export interface RouteRuleFormRestrictions {
   fields: RouteRuleFormRestriction[];
 }
 
-export function getRouteRuleFormRestrictions(rule: RouteRule): RouteRuleFormRestrictions {
-  const candidates: Array<{ field: RouteRuleFormRestrictionField; total: number }> = [
-    { field: "sourceIds", total: rule.sourceIds.length },
-    { field: "severities", total: rule.severities.length },
-    { field: "statuses", total: rule.statuses.length },
-    { field: "labels", total: rule.labels.length },
-    { field: "titleContains", total: rule.titleContains.length },
-    { field: "messageContains", total: rule.messageContains.length },
-  ];
-
-  const fields = candidates
-    .filter((candidate) => candidate.total > 1)
-    .map((candidate) => ({
-      field: candidate.field,
-      total: candidate.total,
-      preserved: candidate.total - 1,
-    }));
+/**
+ * Conditions whose stored entries exist but cannot be picked in the form:
+ * today only source ids that are not part of the configured sources.
+ *
+ * The form still renders those entries so they round-trip untouched, and this
+ * report makes sure the operator is told which values they are.
+ */
+export function getRouteRuleFormRestrictions(
+  rule: RouteRule,
+  options: { knownSourceIds: readonly string[] },
+): RouteRuleFormRestrictions {
+  const knownSourceIds = new Set(options.knownSourceIds);
+  const unknownSourceIds = rule.sourceIds.filter((sourceId) => !knownSourceIds.has(sourceId));
+  const fields: RouteRuleFormRestriction[] =
+    unknownSourceIds.length > 0 ? [{ field: "sourceIds", values: unknownSourceIds }] : [];
 
   return {
     restricted: fields.length > 0,
     fields,
   };
-}
-
-export function routeRulePatchFromForm(baseRule: RouteRule, data: FormData): RouteRule {
-  return routeRulePatchFromValues(baseRule, routeFormValuesFromForm(data));
-}
-
-export function routeRulePatchFromValues(
-  baseRule: RouteRule,
-  values: RouteRuleFormValues,
-): RouteRule {
-  const edited = routeRuleFromValues(values);
-
-  return {
-    sourceIds: replaceFirstCondition(baseRule.sourceIds, edited.sourceIds),
-    severities: replaceFirstCondition(baseRule.severities, edited.severities),
-    statuses: replaceFirstCondition(baseRule.statuses, edited.statuses),
-    labels: replaceFirstCondition(baseRule.labels, edited.labels),
-    titleContains: replaceFirstCondition(baseRule.titleContains, edited.titleContains),
-    messageContains: replaceFirstCondition(baseRule.messageContains, edited.messageContains),
-  };
-}
-
-export interface RouteFormDefaults {
-  sourceId: string;
-  severity: RouteRule["severities"][number] | "any";
-  status: RouteRule["statuses"][number] | "any";
-  labelKey: string;
-  labelOperator: RouteRule["labels"][number]["operator"];
-  labelValue: string;
-  titleContains: string;
-  messageContains: string;
-}
-
-export type RouteRuleFormValues = RouteFormDefaults;
-
-function replaceFirstCondition<T>(existing: T[], edited: T[]): T[] {
-  if (existing.length === 0) {
-    return edited;
-  }
-
-  if (edited.length === 0) {
-    return existing.slice(1);
-  }
-
-  return [edited[0]!, ...existing.slice(1)];
 }
