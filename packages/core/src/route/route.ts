@@ -56,7 +56,35 @@ export const RouteMatchCheckSchema = z.object({
   field: z.enum(["enabled", "source", "severity", "status", "label", "title", "message"]),
   matched: z.boolean(),
   detail: z.string(),
+  /**
+   * Structured form of the comparison, so the console can render the evidence
+   * in the operator's language instead of the English string built here —
+   * and so it can show the event's *actual* value next to the expected one
+   * without the operator switching to the normalized tab.
+   *
+   * `condition: "none"` means the rule carries no condition for this field
+   * (which matches everything). When `condition` is absent entirely the check
+   * predates this field: those snapshots are immutable, so the console falls
+   * back to rendering `detail` verbatim.
+   */
+  condition: z.enum(["none", "compare"]).optional(),
+  /** Expected values, in the rule's own order. */
+  expected: z.array(z.string()).optional(),
+  /** The event value the condition was applied to; absent when the event lacks it. */
+  actual: z.string().optional(),
+  /** Label key, only set for `field: "label"` comparisons. */
+  labelKey: z.string().optional(),
 });
+
+/**
+ * Where the route-match evidence on an event came from.
+ *
+ * `intake_snapshot` — recorded when the event was ingested, and never rewritten,
+ * so it reflects the route definitions in force at that moment.
+ * `recomputed` — the event had no snapshot, so the current route definitions were
+ * evaluated on read. The two look identical without this marker.
+ */
+export const RouteMatchProvenanceSchema = z.enum(["intake_snapshot", "recomputed"]);
 
 export const RouteMatchResultSchema = z.object({
   routeId: NonEmptyRouteStringSchema,
@@ -75,6 +103,7 @@ export type RouteDefinition = z.output<typeof RouteDefinitionSchema>;
 export type RouteDefinitionInput = z.input<typeof RouteDefinitionSchema>;
 export type RouteMatchInput = z.infer<typeof RouteMatchInputSchema>;
 export type RouteMatchCheck = z.infer<typeof RouteMatchCheckSchema>;
+export type RouteMatchProvenance = z.infer<typeof RouteMatchProvenanceSchema>;
 export type RouteMatchResult = z.infer<typeof RouteMatchResultSchema>;
 
 export function evaluateRouteMatch(
@@ -85,11 +114,16 @@ export function evaluateRouteMatch(
   const checks: RouteMatchCheck[] = [];
 
   if (!route.enabled) {
-    checks.push({ field: "enabled", matched: false, detail: "Route is disabled" });
+    checks.push({
+      field: "enabled",
+      matched: false,
+      detail: "Route is disabled",
+      condition: "none",
+    });
     return resultFor(route, checks);
   }
 
-  checks.push({ field: "enabled", matched: true, detail: "Route is enabled" });
+  checks.push({ field: "enabled", matched: true, detail: "Route is enabled", condition: "none" });
   evaluateSource(route.rule.sourceIds, input.sourceId, checks);
   evaluateOneOf("severity", route.rule.severities, input.event.severity, checks);
   evaluateOneOf("status", route.rule.statuses, input.event.status, checks);
@@ -127,7 +161,12 @@ function evaluateSource(
   checks: RouteMatchCheck[],
 ): void {
   if (expectedSourceIds.length === 0) {
-    checks.push({ field: "source", matched: true, detail: "No source condition" });
+    checks.push({
+      field: "source",
+      matched: true,
+      detail: "No source condition",
+      condition: "none",
+    });
     return;
   }
 
@@ -135,6 +174,9 @@ function evaluateSource(
     field: "source",
     matched: expectedSourceIds.includes(actualSourceId),
     detail: `Expected one of ${expectedSourceIds.join(", ")}, received ${actualSourceId}`,
+    condition: "compare",
+    expected: expectedSourceIds,
+    actual: actualSourceId,
   });
 }
 
@@ -145,7 +187,7 @@ function evaluateOneOf(
   checks: RouteMatchCheck[],
 ): void {
   if (expected.length === 0) {
-    checks.push({ field, matched: true, detail: `No ${field} condition` });
+    checks.push({ field, matched: true, detail: `No ${field} condition`, condition: "none" });
     return;
   }
 
@@ -153,6 +195,9 @@ function evaluateOneOf(
     field,
     matched: expected.includes(actual),
     detail: `Expected one of ${expected.join(", ")}, received ${actual}`,
+    condition: "compare",
+    expected,
+    actual,
   });
 }
 
@@ -162,7 +207,7 @@ function evaluateLabels(
   checks: RouteMatchCheck[],
 ): void {
   if (matchers.length === 0) {
-    checks.push({ field: "label", matched: true, detail: "No label condition" });
+    checks.push({ field: "label", matched: true, detail: "No label condition", condition: "none" });
     return;
   }
 
@@ -177,6 +222,12 @@ function evaluateLabels(
       field: "label",
       matched,
       detail: `Expected label ${matcher.key} ${matcher.operator} ${matcher.value}`,
+      condition: "compare",
+      expected: [matcher.value],
+      // Absent when the event does not carry this label at all — which is the
+      // single most common reason a label condition misses.
+      ...(actualValue === undefined ? {} : { actual: actualValue }),
+      labelKey: matcher.key,
     });
   }
 }
@@ -188,7 +239,7 @@ function evaluateContainsAll(
   checks: RouteMatchCheck[],
 ): void {
   if (expectedNeedles.length === 0) {
-    checks.push({ field, matched: true, detail: `No ${field} condition` });
+    checks.push({ field, matched: true, detail: `No ${field} condition`, condition: "none" });
     return;
   }
 
@@ -199,6 +250,9 @@ function evaluateContainsAll(
       field,
       matched: normalizedHaystack.includes(needle.toLocaleLowerCase()),
       detail: `Expected ${field} to contain ${needle}`,
+      condition: "compare",
+      expected: [needle],
+      actual: actualHaystack,
     });
   }
 }

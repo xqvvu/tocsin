@@ -45,6 +45,7 @@ export function EventDetailView({ detail }: { detail: EventDetailData }) {
           <EventDetailRouteMatchesTable
             matches={detail.routeMatches}
             matchedRouteCount={matchedRouteCount}
+            provenance={detail.routeMatchesProvenance}
           />
         </TabsContent>
 
