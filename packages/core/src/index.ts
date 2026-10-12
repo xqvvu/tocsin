@@ -15,3 +15,4 @@ export * from "#core/integration/index";
 export * from "#core/oncall/index";
 export * from "#core/route/index";
 export * from "#core/source/index";
+export * from "#core/suppression/index";
