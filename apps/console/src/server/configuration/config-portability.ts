@@ -8,6 +8,7 @@ import {
   ConfigurationSchema,
   configurationToTomlDocument,
   tomlDocumentToConfiguration,
+  type DestinationKind,
   type FeishuApp,
   type JsonObject,
   type JsonValue,
@@ -284,16 +285,7 @@ function sanitizeDestinationConfig(destination: DestinationRuntimeConfig): {
 }
 
 function destinationSecretPaths(destination: DestinationRuntimeConfig): string[] {
-  const paths: string[] =
-    destination.kind === "generic_webhook"
-      ? ["url"]
-      : destination.kind === "feishu"
-        ? ["webhookUrl", "signSecret"]
-        : destination.kind === "slack"
-          ? ["webhookUrl"]
-          : destination.kind === "email"
-            ? ["endpointUrl"]
-            : [];
+  const paths = [...destinationKindSecretPaths(destination.kind)];
   const headers = destination.config.headers;
 
   if (headers && typeof headers === "object" && !Array.isArray(headers)) {
@@ -305,6 +297,32 @@ function destinationSecretPaths(destination: DestinationRuntimeConfig): string[]
   }
 
   return paths;
+}
+
+/**
+ * Secret field paths owned by each destination kind.
+ *
+ * The switch is exhaustive on purpose: a new destination kind that is not
+ * listed here fails typecheck (`_exhaustive: never`) instead of silently
+ * falling back to "no secrets", which would export credentials such as
+ * `url` / `endpointUrl` in plaintext — keys the `isSensitiveKey` denylist
+ * does not cover.
+ */
+function destinationKindSecretPaths(kind: DestinationKind): readonly string[] {
+  switch (kind) {
+    case "generic_webhook":
+      return ["url"];
+    case "feishu":
+      return ["webhookUrl", "signSecret"];
+    case "slack":
+      return ["webhookUrl"];
+    case "email":
+      return ["endpointUrl"];
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
 }
 
 function sourceSecretPaths(source: SourceRuntimeConfig): string[] {
