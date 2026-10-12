@@ -66,6 +66,11 @@ test-providers:
 test-destinations:
     vp -C packages/destinations test run
 
+# Scaffold a destination adapter directory (see docs/contributing/destination-adapter.md).
+[group('Destinations')]
+new-destination kind *args:
+    node scripts/new-destination-adapter.mjs {{kind}} {{args}}
+
 # Build and push a multi-platform image.
 [group('Docker')]
 docker-buildx image tag:

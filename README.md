@@ -71,6 +71,7 @@ docs
 - `docs/architecture/frontend-architecture.md`
 - `docs/architecture/sqlite-store.md`
 - `docs/architecture/application-container.md`
+- `docs/contributing/destination-adapter.md`（新增 destination adapter 的操作手册）
 
 ## 本地开发
 
@@ -239,7 +240,8 @@ BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 优先贡献这些小而清晰的切片：
 
 - 新 provider parser：adapter、fixtures、normalization tests、registry registration。
-- 新 destination sender：config schema、send/preview、secret handling tests、registry registration。
+- 新 destination sender：按 `docs/contributing/destination-adapter.md` 操作（scaffold + checklist +
+  registry registration）。
 - 控制台 feature：保持 route thin，把表单、表格、query/mutation 放入 `features/*`。
 - SQLite 变更：新增 forward-only migration，并补 migration/store tests。
 - 文档变更：中文优先，产品范围和架构决策写入 `docs`。

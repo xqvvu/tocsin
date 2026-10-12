@@ -282,9 +282,11 @@ Registry 可以暴露 `get`/`list` 供服务端编排使用，但业务路径优
 `preview`、`parseConfig`、`toCatalog` 等窄方法。Client-safe catalog projection 由 registry/package
 提供，console service 只做认证和 app-level 包装。
 
-注册阶段校验硬性 manifest 不变量并在代码错误时 throw。Destination registry 不维护通用
-`audit()` 方法；跨 adapter 一致性只通过聚焦的单元测试或集成测试覆盖，生产启动不运行 registry
-检查。
+注册阶段校验硬性 manifest 不变量并在代码错误时 throw。Destination registry 现与 provider 对齐，
+提供可复用的 `audit()`（kind 枚举与 registry 一致、`sensitive` 与 `secretFields` 对齐、manifest
+message key 存在、catalog 不含运行时内部、`defaultValue` 与 schema 默认值一致）；它由测试强制通过，
+生产启动不因为 soft warning 阻塞。新增 destination adapter 的操作步骤、注册点清单与已知摩擦见
+`docs/contributing/destination-adapter.md`。
 
 ## 落地顺序
 
