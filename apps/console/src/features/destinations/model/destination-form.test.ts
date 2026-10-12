@@ -377,15 +377,33 @@ describe("destination template modes (#47)", () => {
     expect(JSON.parse(draft.templateCard)).not.toEqual({ blocks: [] });
   });
 
-  it("accepts an object draft or an empty one, and rejects anything else", () => {
+  it("accepts an object draft or an empty one, and reports why anything else fails", () => {
     // Empty means "no template", which is valid.
-    expect(isDestinationTemplateBodyDraft("")).toBe(true);
-    expect(isDestinationTemplateBodyDraft('{"blocks":[]}')).toBe(true);
-    // A JSON mode's schema requires an object root, so a half-written or
-    // non-object draft must be reported at the form boundary, not at save.
-    expect(isDestinationTemplateBodyDraft("[]")).toBe(false);
-    expect(isDestinationTemplateBodyDraft("{")).toBe(false);
-    expect(isDestinationTemplateBodyDraft('"text"')).toBe(false);
+    expect(isDestinationTemplateBodyDraft("")).toEqual({ valid: true });
+    expect(isDestinationTemplateBodyDraft("   \n ")).toEqual({ valid: true });
+    expect(isDestinationTemplateBodyDraft('{"blocks":[]}')).toEqual({ valid: true });
+
+    // A JSON mode's schema requires an object root, so a non-object draft is
+    // reported as such instead of as a syntax error.
+    expect(isDestinationTemplateBodyDraft("[]")).toEqual({ valid: false, reason: "not-object" });
+    expect(isDestinationTemplateBodyDraft('"text"')).toEqual({
+      valid: false,
+      reason: "not-object",
+    });
+
+    // A parse failure keeps the parser's stopping point as a 1-based
+    // line/column, which is the whole point: the editor can point at it.
+    expect(isDestinationTemplateBodyDraft('{\n  "a": 1,\n}')).toEqual({
+      valid: false,
+      reason: "syntax",
+      location: { line: 3, column: 1 },
+    });
+
+    // Engines that report no position still report the syntax error itself.
+    const truncated = isDestinationTemplateBodyDraft("{");
+
+    expect(truncated.valid).toBe(false);
+    expect(truncated).toMatchObject({ reason: "syntax" });
   });
 
   it("resolves every shared mode to a form mode", () => {

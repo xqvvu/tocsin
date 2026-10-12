@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
@@ -29,89 +29,7 @@ describe("destination notices", () => {
   });
 
   it("shows rendered payload in the preview dialog", () => {
-    const notice: DestinationPreviewResult = {
-      destination: {
-        id: "destination-1",
-        name: "Ops Slack",
-        kind: "slack",
-        enabled: true,
-      },
-      renderedPayload: {
-        text: "disk full",
-        labels: {
-          service: "api",
-        },
-      },
-      sample: {
-        kind: "built_in",
-        eventId: "preview-event",
-        source: {
-          id: "preview-source",
-          name: "Tocsin preview",
-          provider: "generic",
-          enabled: true,
-        },
-        receivedAt: null,
-      },
-      normalizedEvent: {
-        title: "Disk full",
-        message: "disk is full",
-        severity: "critical",
-        status: "firing",
-        fingerprint: "disk:api",
-        labels: {
-          service: "api",
-        },
-        occurredAt: "2026-01-01T00:00:00.000Z",
-      },
-      context: {
-        event: {
-          id: "preview-event",
-          title: "Disk full",
-          message: "disk is full",
-          severity: "critical",
-          severityDisplay: "Critical",
-          status: "firing",
-          statusDisplay: "Firing",
-          fingerprint: "disk:api",
-          occurredAt: "2026-01-01T00:00:00.000Z",
-          occurredAtDisplay: "Jan 1, 2026",
-          labels: {
-            service: "api",
-          },
-        },
-        source: {
-          id: "preview-source",
-          name: "Tocsin preview",
-          provider: "generic",
-        },
-        destination: {
-          id: "destination-1",
-          name: "Ops Slack",
-          kind: "slack",
-        },
-        presentation: {
-          locale: "en-US",
-          timeZone: "UTC",
-          labels: {
-            summary: "Alert summary",
-          },
-        },
-        tocsin: {
-          eventUrl: "",
-        },
-        payload: {},
-        bindings: {},
-      },
-      rawPayloadReference: {
-        eventId: "event-1",
-        payload: {
-          token: "[REDACTED]",
-        },
-        headers: {},
-      },
-      diagnostics: [],
-    };
+    const notice = createPreviewNotice();
 
     render(
       <AppIntlProvider locale="en-US">
@@ -126,6 +44,51 @@ describe("destination notices", () => {
     expect(screen.getByText("Context")).toBeTruthy();
     expect(screen.getByText("Raw reference")).toBeTruthy();
     expect(screen.getByText("Diagnostics")).toBeTruthy();
+  });
+
+  it("says so explicitly when the preview found no diagnostics", () => {
+    renderPreviewDialog(createPreviewNotice());
+
+    fireEvent.click(screen.getByRole("tab", { name: "Diagnostics" }));
+
+    expect(screen.getByText("No diagnostics found")).toBeTruthy();
+  });
+
+  it("renders preview diagnostics as readable rows instead of raw JSON", () => {
+    renderPreviewDialog(
+      createPreviewNotice({
+        diagnostics: [
+          {
+            severity: "error",
+            path: "template.payload.url",
+            variable: "config.webhookUrl",
+            message:
+              "Destination template contains unknown variable: config.webhookUrl (did you mean tocsin.eventUrl?)",
+          },
+          {
+            severity: "warning",
+            path: "template.bindings.unusedColor",
+            variable: "bindings.unusedColor",
+            message: "Destination template binding is not referenced: unusedColor",
+          },
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Diagnostics" }));
+
+    expect(screen.getByText("Error")).toBeTruthy();
+    expect(screen.getByText("Warning")).toBeTruthy();
+    expect(screen.getByText("template.payload.url")).toBeTruthy();
+    expect(screen.getByText("template.bindings.unusedColor")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Destination template contains unknown variable: config.webhookUrl (did you mean tocsin.eventUrl?)",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Destination template binding is not referenced: unusedColor"),
+    ).toBeTruthy();
   });
 
   it("shows destination test response bodies in a toast", () => {
@@ -171,3 +134,100 @@ describe("destination notices", () => {
     expect(screen.getByText("bad gateway token=[REDACTED]")).toBeTruthy();
   });
 });
+
+function renderPreviewDialog(notice: DestinationPreviewResult) {
+  render(
+    <AppIntlProvider locale="en-US">
+      <DestinationPreviewDialog open onOpenChange={() => {}} notice={notice} />
+    </AppIntlProvider>,
+  );
+}
+
+function createPreviewNotice(
+  overrides: Partial<DestinationPreviewResult> = {},
+): DestinationPreviewResult {
+  return {
+    destination: {
+      id: "destination-1",
+      name: "Ops Slack",
+      kind: "slack",
+      enabled: true,
+    },
+    renderedPayload: {
+      text: "disk full",
+      labels: {
+        service: "api",
+      },
+    },
+    sample: {
+      kind: "built_in",
+      eventId: "preview-event",
+      source: {
+        id: "preview-source",
+        name: "Tocsin preview",
+        provider: "generic",
+        enabled: true,
+      },
+      receivedAt: null,
+    },
+    normalizedEvent: {
+      title: "Disk full",
+      message: "disk is full",
+      severity: "critical",
+      status: "firing",
+      fingerprint: "disk:api",
+      labels: {
+        service: "api",
+      },
+      occurredAt: "2026-01-01T00:00:00.000Z",
+    },
+    context: {
+      event: {
+        id: "preview-event",
+        title: "Disk full",
+        message: "disk is full",
+        severity: "critical",
+        severityDisplay: "Critical",
+        status: "firing",
+        statusDisplay: "Firing",
+        fingerprint: "disk:api",
+        occurredAt: "2026-01-01T00:00:00.000Z",
+        occurredAtDisplay: "Jan 1, 2026",
+        labels: {
+          service: "api",
+        },
+      },
+      source: {
+        id: "preview-source",
+        name: "Tocsin preview",
+        provider: "generic",
+      },
+      destination: {
+        id: "destination-1",
+        name: "Ops Slack",
+        kind: "slack",
+      },
+      presentation: {
+        locale: "en-US",
+        timeZone: "UTC",
+        labels: {
+          summary: "Alert summary",
+        },
+      },
+      tocsin: {
+        eventUrl: "",
+      },
+      payload: {},
+      bindings: {},
+    },
+    rawPayloadReference: {
+      eventId: "event-1",
+      payload: {
+        token: "[REDACTED]",
+      },
+      headers: {},
+    },
+    diagnostics: [],
+    ...overrides,
+  };
+}
