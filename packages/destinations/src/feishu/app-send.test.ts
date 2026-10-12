@@ -1,4 +1,5 @@
 import type { JsonObject } from "@tocsin/core";
+import { destinationSendInput } from "@tocsin/destinations/test-kit";
 import { describe, expect, it } from "vite-plus/test";
 
 import { FeishuConfigSchema, feishuSender } from "#destinations/feishu/index";
@@ -206,38 +207,12 @@ describe("feishu app send mode", () => {
   });
 });
 
-const baseInput = {
-  eventId: "event-1",
-  source: {
-    id: "source-1",
-    name: "Grafana prod",
-    provider: "grafana",
-    enabled: true,
-  },
-  destination: {
-    id: "dest-1",
-    name: "Feishu SRE",
-    kind: "feishu",
-    enabled: true,
-  },
-  normalizedEvent: {
-    title: "Checkout API latency high",
-    message: "p95 latency exceeded",
-    severity: "critical",
-    status: "firing",
-    fingerprint: "checkout-latency",
-    labels: {
-      service: "checkout",
-    },
-    occurredAt: "2026-06-07T08:00:00.000Z",
-  },
-} as const;
-
 function createInput(config: JsonObject): DestinationSendInput<FeishuConfig> {
-  return {
-    ...baseInput,
+  return destinationSendInput<FeishuConfig>({
+    destination: { kind: "feishu", name: "Feishu SRE" },
+    source: { name: "Grafana prod", provider: "grafana" },
     config: FeishuConfigSchema.parse(config),
-  };
+  });
 }
 
 function textTemplate(): JsonObject {

@@ -1,3 +1,4 @@
+import { destinationSendInput } from "@tocsin/destinations/test-kit";
 import { describe, expect, it } from "vite-plus/test";
 
 import { feishuSender } from "#destinations/feishu/index";
@@ -9,31 +10,9 @@ import {
 } from "#destinations/template";
 import type { DestinationSendInput } from "#destinations/types";
 
-const input: DestinationSendInput<unknown> = {
-  eventId: "event-1",
-  source: {
-    id: "source-1",
-    name: "Grafana prod",
-    provider: "grafana",
-    enabled: true,
-  },
-  destination: {
-    id: "dest-1",
-    name: "Ops destination",
-    kind: "generic_webhook",
-    enabled: true,
-  },
-  normalizedEvent: {
-    title: "Checkout API latency high",
-    message: "p95 latency exceeded",
-    severity: "critical",
-    status: "firing",
-    fingerprint: "checkout-latency",
-    labels: {
-      service: "checkout",
-    },
-    occurredAt: "2026-06-07T08:00:00.000Z",
-  },
+const input = destinationSendInput<unknown>({
+  destination: { kind: "generic_webhook", name: "Ops destination" },
+  source: { name: "Grafana prod", provider: "grafana" },
   payload: {
     monitor: {
       name: "Checkout API",
@@ -49,7 +28,7 @@ const input: DestinationSendInput<unknown> = {
     incidents: [{ message: "timeout" }],
   },
   config: {},
-};
+});
 
 describe("destination templates", () => {
   it("interpolates allow-listed event, source, destination, Tocsin URL, and label fields", () => {

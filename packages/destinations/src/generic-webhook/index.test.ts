@@ -1,34 +1,12 @@
+import { destinationSendInput, fakeFetch } from "@tocsin/destinations/test-kit";
 import { describe, expect, it } from "vite-plus/test";
 
 import { genericWebhookSender } from "#destinations/generic-webhook/index";
 import type { GenericWebhookConfig } from "#destinations/generic-webhook/index";
-import type { DestinationSendInput, FetchLike } from "#destinations/types";
 
-const input: DestinationSendInput<GenericWebhookConfig> = {
-  eventId: "event-1",
-  source: {
-    id: "source-1",
-    name: "Grafana prod",
-    provider: "grafana",
-    enabled: true,
-  },
-  destination: {
-    id: "dest-1",
-    name: "Internal relay",
-    kind: "generic_webhook",
-    enabled: true,
-  },
-  normalizedEvent: {
-    title: "Checkout API latency high",
-    message: "p95 latency exceeded",
-    severity: "critical",
-    status: "firing",
-    fingerprint: "checkout-latency",
-    labels: {
-      service: "checkout",
-    },
-    occurredAt: "2026-06-07T08:00:00.000Z",
-  },
+const input = destinationSendInput<GenericWebhookConfig>({
+  destination: { kind: "generic_webhook", name: "Internal relay" },
+  source: { name: "Grafana prod", provider: "grafana" },
   config: {
     url: "https://relay.example.test/tocsin",
     method: "POST",
@@ -36,31 +14,23 @@ const input: DestinationSendInput<GenericWebhookConfig> = {
       "X-Team": "sre",
     },
   },
-};
+});
 
 describe("generic webhook sender", () => {
   it("sends normalized alert payloads through an injected transport", async () => {
-    const calls: Array<{ url: string; init: RequestInit }> = [];
-    const fetcher: FetchLike = async (url, init) => {
-      calls.push({ url, init });
-      return {
-        ok: true,
-        status: 202,
-        text: async () => "accepted",
-      };
-    };
+    const fetcher = fakeFetch(() => ({ status: 202, body: "accepted" }));
 
     const result = await genericWebhookSender.send(input, { fetch: fetcher });
 
     expect(result.ok).toBe(true);
     expect(result.statusCode).toBe(202);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]?.url).toBe("https://relay.example.test/tocsin");
-    expect(calls[0]?.init.headers).toEqual({
+    expect(fetcher.calls).toHaveLength(1);
+    expect(fetcher.calls[0]?.url).toBe("https://relay.example.test/tocsin");
+    expect(fetcher.calls[0]?.init.headers).toEqual({
       "Content-Type": "application/json",
       "X-Team": "sre",
     });
-    const body = calls[0]?.init.body;
+    const body = fetcher.calls[0]?.init.body;
     expect(typeof body).toBe("string");
     expect(JSON.parse(body as string)).toMatchObject({
       eventId: "event-1",
@@ -72,11 +42,7 @@ describe("generic webhook sender", () => {
   });
 
   it("reports non-2xx responses as delivery failures", async () => {
-    const fetcher: FetchLike = async () => ({
-      ok: false,
-      status: 500,
-      text: async () => "down",
-    });
+    const fetcher = fakeFetch(() => ({ ok: false, status: 500, body: "down" }));
 
     const result = await genericWebhookSender.send(input, { fetch: fetcher });
 
@@ -90,15 +56,7 @@ describe("generic webhook sender", () => {
   });
 
   it("renders sent payloads with the same parsed template config as previews", async () => {
-    const calls: Array<{ url: string; init: RequestInit }> = [];
-    const fetcher: FetchLike = async (url, init) => {
-      calls.push({ url, init });
-      return {
-        ok: true,
-        status: 202,
-        text: async () => "accepted",
-      };
-    };
+    const fetcher = fakeFetch(() => ({ status: 202, body: "accepted" }));
 
     const result = await genericWebhookSender.send(
       {
@@ -113,7 +71,7 @@ describe("generic webhook sender", () => {
       },
       { fetch: fetcher },
     );
-    const body = JSON.parse(calls[0]?.init.body as string) as { message: string };
+    const body = JSON.parse(fetcher.calls[0]?.init.body as string) as { message: string };
 
     expect(body.message).toBe("Checkout API latency high -> Internal relay");
     expect(result.renderedPayload).toMatchObject({
@@ -123,11 +81,7 @@ describe("generic webhook sender", () => {
 
   describe("json_payload template mode", () => {
     it("replaces the default envelope and interpolates nested string fields", async () => {
-      const calls: Array<{ url: string; init: RequestInit }> = [];
-      const fetcher: FetchLike = async (url, init) => {
-        calls.push({ url, init });
-        return { ok: true, status: 202, text: async () => "accepted" };
-      };
+      const fetcher = fakeFetch(() => ({ status: 202, body: "accepted" }));
 
       const result = await genericWebhookSender.send(
         {
@@ -151,7 +105,7 @@ describe("generic webhook sender", () => {
         { fetch: fetcher },
       );
 
-      const body = JSON.parse(calls[0]?.init.body as string) as Record<string, unknown>;
+      const body = JSON.parse(fetcher.calls[0]?.init.body as string) as Record<string, unknown>;
 
       expect(result.ok).toBe(true);
       // Whole template replaces the envelope: no eventId/alert wrapper keys.
@@ -183,11 +137,7 @@ describe("generic webhook sender", () => {
     });
 
     it("reports unknown variables as path-level diagnostics", async () => {
-      const calls: Array<unknown> = [];
-      const fetcher: FetchLike = async () => {
-        calls.push(1);
-        return { ok: true, status: 200, text: async () => "ok" };
-      };
+      const fetcher = fakeFetch();
 
       const result = await genericWebhookSender.send(
         {
@@ -211,7 +161,7 @@ describe("generic webhook sender", () => {
         errorKind: "configuration_error",
         retryHint: "not_retryable",
       });
-      expect(calls).toHaveLength(0);
+      expect(fetcher.calls).toHaveLength(0);
       expect(result.renderedPayload).toMatchObject({
         templateError: {
           diagnostics: [
@@ -233,11 +183,7 @@ describe("generic webhook sender", () => {
       "route.id",
       "delivery.id",
     ])("rejects unsafe variable %s without sending", async (variable) => {
-      const calls: Array<unknown> = [];
-      const fetcher: FetchLike = async () => {
-        calls.push(1);
-        return { ok: true, status: 200, text: async () => "ok" };
-      };
+      const fetcher = fakeFetch();
 
       const result = await genericWebhookSender.send(
         {
@@ -258,7 +204,7 @@ describe("generic webhook sender", () => {
         errorKind: "configuration_error",
         retryHint: "not_retryable",
       });
-      expect(calls).toHaveLength(0);
+      expect(fetcher.calls).toHaveLength(0);
     });
 
     it("rejects config/header references and never leaks the webhook url or secrets", () => {

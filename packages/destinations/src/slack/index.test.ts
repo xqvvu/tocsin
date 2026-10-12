@@ -1,63 +1,33 @@
+import { destinationSendInput, fakeFetch } from "@tocsin/destinations/test-kit";
 import { describe, expect, it } from "vite-plus/test";
 
 import { createDefaultDestinationRegistry } from "#destinations/registry";
 import { slackSender } from "#destinations/slack/index";
 import type { SlackConfig } from "#destinations/slack/index";
 import { DestinationTemplateEngine } from "#destinations/template";
-import type { DestinationSendInput, FetchLike } from "#destinations/types";
 
-const input: DestinationSendInput<SlackConfig> = {
-  eventId: "event-1",
-  source: {
-    id: "source-1",
-    name: "Alertmanager prod",
-    provider: "alertmanager",
-    enabled: true,
-  },
-  destination: {
-    id: "dest-1",
-    name: "Slack SRE",
-    kind: "slack",
-    enabled: true,
-  },
-  normalizedEvent: {
-    title: "Checkout API latency high",
-    message: "p95 latency exceeded",
-    severity: "critical",
-    status: "firing",
-    fingerprint: "checkout-latency",
-    labels: {
-      service: "checkout",
-    },
-    occurredAt: "2026-06-07T08:00:00.000Z",
-  },
+const input = destinationSendInput<SlackConfig>({
+  destination: { kind: "slack", name: "Slack SRE" },
+  source: { name: "Alertmanager prod", provider: "alertmanager" },
   config: {
     webhookUrl: "https://hooks.slack.com/services/example",
   },
-};
+});
 
 describe("slack sender", () => {
   it("sends block-kit alert payloads through an injected transport", async () => {
-    const calls: Array<{ url: string; init: RequestInit }> = [];
-    const fetcher: FetchLike = async (url, init) => {
-      calls.push({ url, init });
-      return {
-        ok: true,
-        status: 200,
-        text: async () => "ok",
-      };
-    };
+    const fetcher = fakeFetch();
 
     const result = await slackSender.send(input, { fetch: fetcher });
 
     expect(result.ok).toBe(true);
     expect(result.statusCode).toBe(200);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]?.url).toBe(input.config.webhookUrl);
-    expect(calls[0]?.init.headers).toEqual({
+    expect(fetcher.calls).toHaveLength(1);
+    expect(fetcher.calls[0]?.url).toBe(input.config.webhookUrl);
+    expect(fetcher.calls[0]?.init.headers).toEqual({
       "Content-Type": "application/json",
     });
-    const body = JSON.parse(calls[0]?.init.body as string) as {
+    const body = JSON.parse(fetcher.calls[0]?.init.body as string) as {
       text: string;
       blocks: Array<{ type: string }>;
     };
@@ -75,11 +45,7 @@ describe("slack sender", () => {
   });
 
   it("reports non-ok Slack responses as delivery failures", async () => {
-    const fetcher: FetchLike = async () => ({
-      ok: true,
-      status: 200,
-      text: async () => "invalid_payload",
-    });
+    const fetcher = fakeFetch(() => ({ body: "invalid_payload" }));
 
     const result = await slackSender.send(input, { fetch: fetcher });
 
@@ -92,15 +58,7 @@ describe("slack sender", () => {
   });
 
   it("renders sent payloads with the same parsed template config as previews", async () => {
-    const calls: Array<{ url: string; init: RequestInit }> = [];
-    const fetcher: FetchLike = async (url, init) => {
-      calls.push({ url, init });
-      return {
-        ok: true,
-        status: 200,
-        text: async () => "ok",
-      };
-    };
+    const fetcher = fakeFetch();
 
     const result = await slackSender.send(
       {
@@ -115,7 +73,7 @@ describe("slack sender", () => {
       },
       { fetch: fetcher },
     );
-    const body = JSON.parse(calls[0]?.init.body as string) as {
+    const body = JSON.parse(fetcher.calls[0]?.init.body as string) as {
       blocks: Array<{ type: string; text?: { text: string } }>;
     };
     const messageBlock = body.blocks.find((block) => block.type === "section" && block.text?.text);
@@ -141,11 +99,7 @@ describe("slack sender", () => {
 
   describe("slack_blocks template mode", () => {
     it("replaces the default blocks payload and interpolates nested string fields", async () => {
-      const calls: Array<{ url: string; init: RequestInit }> = [];
-      const fetcher: FetchLike = async (url, init) => {
-        calls.push({ url, init });
-        return { ok: true, status: 200, text: async () => "ok" };
-      };
+      const fetcher = fakeFetch();
 
       const result = await slackSender.send(
         {
@@ -169,7 +123,7 @@ describe("slack sender", () => {
         { fetch: fetcher },
       );
 
-      const body = JSON.parse(calls[0]?.init.body as string) as {
+      const body = JSON.parse(fetcher.calls[0]?.init.body as string) as {
         text: string;
         blocks: Array<{ text?: { text: string } }>;
       };
@@ -197,11 +151,7 @@ describe("slack sender", () => {
     });
 
     it("reports unknown variables with path-level diagnostics and does not send", async () => {
-      const calls: Array<unknown> = [];
-      const fetcher: FetchLike = async () => {
-        calls.push(1);
-        return { ok: true, status: 200, text: async () => "ok" };
-      };
+      const fetcher = fakeFetch();
 
       const result = await slackSender.send(
         {
@@ -224,7 +174,7 @@ describe("slack sender", () => {
         errorKind: "configuration_error",
         retryHint: "not_retryable",
       });
-      expect(calls).toHaveLength(0);
+      expect(fetcher.calls).toHaveLength(0);
       expect(result.renderedPayload).toMatchObject({
         templateError: {
           diagnostics: [
@@ -238,11 +188,7 @@ describe("slack sender", () => {
     });
 
     it("never leaks the webhook url into the rendered payload", async () => {
-      const calls: Array<{ init: RequestInit }> = [];
-      const fetcher: FetchLike = async (url, init) => {
-        calls.push({ init });
-        return { ok: true, status: 200, text: async () => "ok" };
-      };
+      const fetcher = fakeFetch();
       const webhookUrl = "https://hooks.slack.com/services/T000/B000/super-secret";
 
       const result = await slackSender.send(
@@ -258,15 +204,11 @@ describe("slack sender", () => {
 
       expect(result.ok).toBe(true);
       expect(JSON.stringify(result.renderedPayload)).not.toContain("super-secret");
-      expect(JSON.stringify(calls[0]?.init.body)).not.toContain("super-secret");
+      expect(JSON.stringify(fetcher.calls[0]?.init.body)).not.toContain("super-secret");
     });
 
     it("resolves bindings from each allowed scalar selector", async () => {
-      const calls: Array<{ init: RequestInit }> = [];
-      const fetcher: FetchLike = async (url, init) => {
-        calls.push({ init });
-        return { ok: true, status: 200, text: async () => "ok" };
-      };
+      const fetcher = fakeFetch();
 
       const result = await slackSender.send(
         {
@@ -305,18 +247,14 @@ describe("slack sender", () => {
         },
         { fetch: fetcher },
       );
-      const body = JSON.parse(calls[0]?.init.body as string) as { text: string };
+      const body = JSON.parse(fetcher.calls[0]?.init.body as string) as { text: string };
 
       expect(result.ok).toBe(true);
       expect(body.text).toBe("FIRING SEV1 ALERTMANAGER SLACK");
     });
 
     it("falls back when no binding case matches the selector value", async () => {
-      const calls: Array<{ init: RequestInit }> = [];
-      const fetcher: FetchLike = async (url, init) => {
-        calls.push({ init });
-        return { ok: true, status: 200, text: async () => "ok" };
-      };
+      const fetcher = fakeFetch();
 
       const result = await slackSender.send(
         {
@@ -340,7 +278,7 @@ describe("slack sender", () => {
         },
         { fetch: fetcher },
       );
-      const body = JSON.parse(calls[0]?.init.body as string) as {
+      const body = JSON.parse(fetcher.calls[0]?.init.body as string) as {
         blocks: Array<{ text: { text: string } }>;
       };
 
@@ -350,11 +288,7 @@ describe("slack sender", () => {
     });
 
     it("reports unknown binding references as configuration errors and does not send", async () => {
-      const calls: Array<unknown> = [];
-      const fetcher: FetchLike = async () => {
-        calls.push(1);
-        return { ok: true, status: 200, text: async () => "ok" };
-      };
+      const fetcher = fakeFetch();
 
       const result = await slackSender.send(
         {
@@ -382,7 +316,7 @@ describe("slack sender", () => {
         errorKind: "configuration_error",
         retryHint: "not_retryable",
       });
-      expect(calls).toHaveLength(0);
+      expect(fetcher.calls).toHaveLength(0);
       expect(result.renderedPayload).toMatchObject({
         templateError: {
           diagnostics: [
@@ -423,11 +357,7 @@ describe("slack sender", () => {
         },
       ]);
 
-      const calls: Array<{ init: RequestInit }> = [];
-      const fetcher: FetchLike = async (url, init) => {
-        calls.push({ init });
-        return { ok: true, status: 200, text: async () => "ok" };
-      };
+      const fetcher = fakeFetch();
 
       const result = await slackSender.send(
         {
@@ -439,7 +369,7 @@ describe("slack sender", () => {
         },
         { fetch: fetcher },
       );
-      const body = JSON.parse(calls[0]?.init.body as string) as { text: string };
+      const body = JSON.parse(fetcher.calls[0]?.init.body as string) as { text: string };
 
       // Warnings are advisory: the alert is still delivered.
       expect(result.ok).toBe(true);
@@ -495,11 +425,7 @@ describe("slack sender", () => {
     });
 
     it("keeps the plain text template compatible", async () => {
-      const calls: Array<{ init: RequestInit }> = [];
-      const fetcher: FetchLike = async (url, init) => {
-        calls.push({ init });
-        return { ok: true, status: 200, text: async () => "ok" };
-      };
+      const fetcher = fakeFetch();
 
       const result = await slackSender.send(
         {
@@ -511,7 +437,7 @@ describe("slack sender", () => {
         },
         { fetch: fetcher },
       );
-      const body = JSON.parse(calls[0]?.init.body as string) as {
+      const body = JSON.parse(fetcher.calls[0]?.init.body as string) as {
         blocks: Array<{ type: string; text?: { text: string } }>;
       };
 

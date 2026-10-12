@@ -1,3 +1,4 @@
+import { destinationSendInput, fakeFetch } from "@tocsin/destinations/test-kit";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
@@ -10,36 +11,13 @@ import {
 } from "#destinations/feishu/index";
 import type { FeishuConfig } from "#destinations/feishu/index";
 import { createDefaultDestinationRegistry } from "#destinations/registry";
-import type { DestinationSendInput, FetchLike } from "#destinations/types";
 
 import signozTemplate from "../../../../examples/feishu/signoz-template.json" with { type: "json" };
 import uptimeKumaTemplate from "../../../../examples/feishu/uptime-kuma-template.json" with { type: "json" };
 
-const input: DestinationSendInput<FeishuConfig> = {
-  eventId: "event-1",
-  source: {
-    id: "source-1",
-    name: "Grafana prod",
-    provider: "grafana",
-    enabled: true,
-  },
-  destination: {
-    id: "dest-1",
-    name: "Feishu SRE",
-    kind: "feishu",
-    enabled: true,
-  },
-  normalizedEvent: {
-    title: "Checkout API latency high",
-    message: "p95 latency exceeded",
-    severity: "critical",
-    status: "firing",
-    fingerprint: "checkout-latency",
-    labels: {
-      service: "checkout",
-    },
-    occurredAt: "2026-06-07T08:00:00.000Z",
-  },
+const input = destinationSendInput<FeishuConfig>({
+  destination: { kind: "feishu", name: "Feishu SRE" },
+  source: { name: "Grafana prod", provider: "grafana" },
   config: {
     sendMode: "webhook",
     webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/example",
@@ -50,7 +28,9 @@ const input: DestinationSendInput<FeishuConfig> = {
       text: "[{{event.severity}}] {{event.title}}\n{{event.message}}\nStatus: {{event.status}}",
     },
   },
-};
+});
+
+const webhookSuccessBody = JSON.stringify({ code: 0, msg: "success" });
 
 describe("feishu sender", () => {
   it("renders the SigNoz example with alert context, dotted keys, and action links", async () => {
@@ -335,15 +315,7 @@ describe("feishu sender", () => {
   });
 
   it("sends signed text messages through an injected transport", async () => {
-    const calls: Array<{ url: string; init: RequestInit }> = [];
-    const fetcher: FetchLike = async (url, init) => {
-      calls.push({ url, init });
-      return {
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify({ code: 0, msg: "success" }),
-      };
-    };
+    const fetcher = fakeFetch(() => ({ body: webhookSuccessBody }));
 
     const result = await feishuSender.send(input, {
       fetch: fetcher,
@@ -352,12 +324,12 @@ describe("feishu sender", () => {
 
     expect(result.ok).toBe(true);
     expect(result.statusCode).toBe(200);
-    expect(calls).toHaveLength(1);
-    expect(calls[0]?.url).toBe(input.config.webhookUrl);
-    expect(calls[0]?.init.headers).toEqual({
+    expect(fetcher.calls).toHaveLength(1);
+    expect(fetcher.calls[0]?.url).toBe(input.config.webhookUrl);
+    expect(fetcher.calls[0]?.init.headers).toEqual({
       "Content-Type": "application/json",
     });
-    const body = JSON.parse(calls[0]?.init.body as string) as {
+    const body = JSON.parse(fetcher.calls[0]?.init.body as string) as {
       msg_type: string;
       content: { text: string };
       timestamp: string;
@@ -380,15 +352,7 @@ describe("feishu sender", () => {
   });
 
   it("renders Feishu interactive card templates without signing fields in rendered payload", async () => {
-    const calls: Array<{ url: string; init: RequestInit }> = [];
-    const fetcher: FetchLike = async (url, init) => {
-      calls.push({ url, init });
-      return {
-        ok: true,
-        status: 200,
-        text: async () => JSON.stringify({ code: 0, msg: "success" }),
-      };
-    };
+    const fetcher = fakeFetch(() => ({ body: webhookSuccessBody }));
 
     const result = await feishuSender.send(
       {
@@ -446,7 +410,7 @@ describe("feishu sender", () => {
       },
     });
 
-    const body = JSON.parse(calls[0]?.init.body as string) as {
+    const body = JSON.parse(fetcher.calls[0]?.init.body as string) as {
       msg_type: string;
       timestamp: string;
       sign: string;
@@ -458,9 +422,9 @@ describe("feishu sender", () => {
   });
 
   it("reports template validation failures as non-retryable configuration errors", async () => {
-    const fetcher: FetchLike = async () => {
+    const fetcher = fakeFetch(() => {
       throw new Error("fetch should not be called");
-    };
+    });
 
     const result = await feishuSender.send(
       {
@@ -500,11 +464,9 @@ describe("feishu sender", () => {
   it("reports Feishu error codes as delivery failures", async () => {
     // The custom-bot webhook answers a rejection with HTTP 200 plus a body code;
     // the platform's own `msg` is the actionable part and must survive.
-    const fetcher: FetchLike = async () => ({
-      ok: true,
-      status: 200,
-      text: async () => JSON.stringify({ code: 19024, msg: "invalid sign" }),
-    });
+    const fetcher = fakeFetch(() => ({
+      body: JSON.stringify({ code: 19024, msg: "invalid sign" }),
+    }));
 
     const result = await feishuSender.send(input, { fetch: fetcher });
 
@@ -517,11 +479,7 @@ describe("feishu sender", () => {
   });
 
   it("adds the HTTP status to a webhook failure the body cannot explain", async () => {
-    const fetcher: FetchLike = async () => ({
-      ok: false,
-      status: 502,
-      text: async () => "Bad Gateway",
-    });
+    const fetcher = fakeFetch(() => ({ ok: false, status: 502, body: "Bad Gateway" }));
 
     const result = await feishuSender.send(input, { fetch: fetcher });
 
@@ -536,11 +494,9 @@ describe("feishu sender", () => {
   it("retries a custom group bot send that Feishu rate limited", async () => {
     // Documented for custom bots: 100 次/分钟、5 次/秒, and the platform surfaces
     // the burst as body code 11232 with an otherwise successful HTTP response.
-    const fetcher: FetchLike = async () => ({
-      ok: true,
-      status: 200,
-      text: async () => JSON.stringify({ code: 11232, msg: "create message trigger rate limit" }),
-    });
+    const fetcher = fakeFetch(() => ({
+      body: JSON.stringify({ code: 11232, msg: "create message trigger rate limit" }),
+    }));
 
     const result = await feishuSender.send(input, { fetch: fetcher });
 
