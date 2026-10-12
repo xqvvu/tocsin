@@ -7,6 +7,7 @@ import type { Page } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
 import type { SqliteDeliveryRepository } from "#/infra/sqlite/repositories/delivery/delivery.repository";
+import type { DestinationRepository } from "#/infra/sqlite/repositories/destination/destination.interface";
 import {
   decodeHistoryCursor,
   encodeHistoryCursor,
@@ -18,6 +19,10 @@ import type {
   EventListQuery,
   HistoryRepository,
 } from "#/infra/sqlite/repositories/history/history.interface";
+import {
+  deliveryTargetKey,
+  routeMatchGaps,
+} from "#/infra/sqlite/repositories/history/route-match-gaps";
 import type { SqliteIntakeRepository } from "#/infra/sqlite/repositories/intake/intake.repository";
 import type { RouteRepository } from "#/infra/sqlite/repositories/route/route.interface";
 import {
@@ -32,6 +37,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
     private readonly sources: SourceRepository,
     private readonly intake: SqliteIntakeRepository,
     private readonly routes: RouteRepository,
+    private readonly destinations: DestinationRepository,
     _deliveries: SqliteDeliveryRepository,
   ) {}
 
@@ -155,7 +161,49 @@ export class SqliteHistoryRepository implements HistoryRepository {
         .execute()
     ).map((row) => eventDetailDeliveryFromRow(row as EventDetailDeliveryRow));
 
-    return { event, source, routeMatches, routeMatchesProvenance, deliveries };
+    // Explain the pairs the snapshot matched but which produced no delivery.
+    //
+    // Read-only by construction: it reads current routes/destinations plus the
+    // event's own deliveries and (briefly) its dedupe rows. Nothing is written,
+    // so this cannot alter what the intake path decided.
+    const [allRoutes, allDestinations, dedupeRows] = await Promise.all([
+      this.routes.list(),
+      this.destinations.list(),
+      event.idempotencyKey
+        ? this.context.db
+            .selectFrom("delivery_dedupe_keys")
+            .select(["route_id", "destination_id", "first_event_id"])
+            .where("idempotency_key", "=", event.idempotencyKey)
+            .where("source_id", "=", event.sourceId)
+            .execute()
+        : Promise.resolve([]),
+    ]);
+
+    const gaps = routeMatchGaps({
+      matches: routeMatches,
+      deliveries,
+      routes: allRoutes.map((route) => ({ id: route.id, enabled: route.enabled })),
+      destinations: allDestinations.map((destination) => ({
+        id: destination.id,
+        name: destination.name,
+        enabled: destination.enabled,
+      })),
+      dedupeFirstEvents: new Map(
+        dedupeRows.map((row) => [
+          deliveryTargetKey(row.route_id, row.destination_id),
+          row.first_event_id,
+        ]),
+      ),
+    });
+
+    return {
+      event,
+      source,
+      routeMatches,
+      routeMatchesProvenance,
+      routeMatchGaps: gaps,
+      deliveries,
+    };
   }
 
   async listDeliveries(query: DeliveryListQuery = {}): Promise<Page<DeliveryListItem>> {

@@ -80,7 +80,14 @@ export function createSqliteRepositories(context: SqliteRepositoryContext): Sqli
     oncall,
   );
   const feishuApps = new SqliteFeishuAppRepository(context);
-  const history = new SqliteHistoryRepository(context, sources, intake, routes, deliveries);
+  const history = new SqliteHistoryRepository(
+    context,
+    sources,
+    intake,
+    routes,
+    destinations,
+    deliveries,
+  );
   const settings = new SqliteSettingsRepository(context);
 
   return {

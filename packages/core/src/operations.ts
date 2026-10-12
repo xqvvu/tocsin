@@ -6,7 +6,12 @@ import type { EventRecord } from "#core/event/event";
 import type { NormalizedEvent } from "#core/event/normalized-event";
 import type { JsonObject, JsonValue } from "#core/json";
 import type { OncallPing } from "#core/oncall/oncall";
-import type { RouteDefinition, RouteMatchProvenance, RouteMatchResult } from "#core/route/route";
+import type {
+  RouteDefinition,
+  RouteMatchGap,
+  RouteMatchProvenance,
+  RouteMatchResult,
+} from "#core/route/route";
 import type { SourceSummary } from "#core/source/source";
 
 export type IsoDateTimeString = string;
@@ -51,6 +56,12 @@ export interface EventDetail {
    * indistinguishable in the UI — see `docs/research/route-authoring-current-state.md` §4.2.
    */
   routeMatchesProvenance: RouteMatchProvenance;
+  /**
+   * Pairs the snapshot matched but which produced no delivery, with the reason
+   * recoverable from records — or `unknown` when the records are gone. Empty is
+   * the normal case.
+   */
+  routeMatchGaps: RouteMatchGap[];
   deliveries: EventDetailDelivery[];
 }
 
