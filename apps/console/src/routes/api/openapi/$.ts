@@ -6,7 +6,7 @@ import { openAPIHandler } from "#/server/orpc/handler";
  * OpenAPI surface for the oRPC router: the HTTP API itself plus the generated
  * reference at `/api/openapi/spec.json` and `/api/openapi/docs`.
  *
- * The dashboard uses the RPC protocol on `/api/rpc`; this prefix exists so
+ * The dashboard uses the RPC protocol on `/api`; this prefix exists so
  * external callers and the generated reference describe the same procedures.
  */
 export const Route = createFileRoute("/api/openapi/$")({

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { rpcHandler } from "#/server/orpc/handler";
 
-export const Route = createFileRoute("/api/rpc/$")({
+export const Route = createFileRoute("/api/$")({
   server: {
     handlers: {
       GET: async ({ request }) => await handleRpc(request),
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/api/rpc/$")({
 });
 
 async function handleRpc(request: Request): Promise<Response> {
-  const { matched, response } = await rpcHandler.handle(request, { prefix: "/api/rpc" });
+  const { matched, response } = await rpcHandler.handle(request, { prefix: "/api" });
   if (matched) return response;
   return new Response("Not found", { status: 404 });
 }

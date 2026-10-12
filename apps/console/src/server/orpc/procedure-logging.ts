@@ -10,11 +10,11 @@ const orpcLogger = getLogger(["tocsin", "orpc"]);
  * Logs failed oRPC procedure calls with the resolved procedure path and code.
  *
  * Successful browser calls are already covered by the HTTP request-logging
- * middleware (`POST /api/rpc/<path>` reaches it with status and duration), so
+ * middleware (`POST /api/<path>` reaches it with status and duration), so
  * this middleware records failures only. It runs on the shared `os`
  * implementer, which means it sees both transports a dashboard call can take:
  *
- * - the browser RPC transport (`RPCHandler` on `/api/rpc`), and
+ * - the browser RPC transport (`RPCHandler` on `/api`), and
  * - in-process SSR calls (`createRouterClient` in `#/lib/orpc`), which never
  *   reach the handler and would otherwise be silent when they throw.
  *

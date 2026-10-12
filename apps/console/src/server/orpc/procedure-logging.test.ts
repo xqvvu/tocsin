@@ -184,7 +184,7 @@ describe("oRPC procedure logging", () => {
 
 async function callRpcHandler(path: string, input: unknown): Promise<void> {
   const { response } = await rpcHandler.handle(
-    new Request(`http://localhost/api/rpc/${path}`, {
+    new Request(`http://localhost/api/${path}`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -192,7 +192,7 @@ async function callRpcHandler(path: string, input: unknown): Promise<void> {
       },
       body: JSON.stringify({ json: input }),
     }),
-    { prefix: "/api/rpc" },
+    { prefix: "/api" },
   );
 
   await response?.arrayBuffer();
