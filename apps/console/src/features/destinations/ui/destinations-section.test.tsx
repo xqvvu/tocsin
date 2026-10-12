@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
+import { createDefaultDestinationRegistry } from "@tocsin/destinations";
 import larkIconUrl from "@tocsin/destinations/assets/destination-icons/lark.svg?url";
 import slackIconUrl from "@tocsin/destinations/assets/destination-icons/slack.svg?url";
 import webhookIconUrl from "@tocsin/destinations/assets/destination-icons/webhook.svg?url";
@@ -13,6 +14,10 @@ import { AppIntlProvider } from "#/i18n/provider";
 
 type DestinationActionHandler = (destination: DestinationListItem) => void;
 type DestinationEditHandler = (destinationId: string) => void;
+
+// The real registry catalog, so the identity column resolves the same icon
+// names production ships instead of a test-only mapping.
+const defaultDestinationCatalog = createDefaultDestinationRegistry().toCatalog();
 
 describe("destinations section table", () => {
   afterEach(() => {
@@ -26,6 +31,7 @@ describe("destinations section table", () => {
       <AppIntlProvider locale="en-US">
         <DestinationsSection
           destinations={destinations}
+          destinationCatalog={defaultDestinationCatalog}
           routes={[]}
           pending={false}
           onTest={vi.fn<DestinationActionHandler>()}
@@ -60,6 +66,7 @@ describe("destinations section table", () => {
       <AppIntlProvider locale="en-US">
         <DestinationsSection
           destinations={[]}
+          destinationCatalog={defaultDestinationCatalog}
           routes={[]}
           pending={false}
           onTest={vi.fn<DestinationActionHandler>()}
@@ -80,6 +87,7 @@ describe("destinations section table", () => {
       <AppIntlProvider locale="en-US">
         <DestinationsSection
           destinations={[destinationFixture(1), destinationFixture(2)]}
+          destinationCatalog={defaultDestinationCatalog}
           routes={[
             routeFixture("route-1", "Primary paging", ["destination-1"], true),
             routeFixture("route-2", "Disabled paging", ["destination-1"], false),
@@ -110,6 +118,7 @@ describe("destinations section table", () => {
             destinationFixture(3, "slack"),
             destinationFixture(4, "email"),
           ]}
+          destinationCatalog={defaultDestinationCatalog}
           routes={[]}
           pending={false}
           onTest={vi.fn<DestinationActionHandler>()}
@@ -144,6 +153,7 @@ describe("destinations section table", () => {
       <AppIntlProvider locale="en-US">
         <DestinationsSection
           destinations={[destination]}
+          destinationCatalog={defaultDestinationCatalog}
           routes={[]}
           pending={false}
           onTest={onTest}

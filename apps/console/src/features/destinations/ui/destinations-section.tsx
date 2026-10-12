@@ -7,9 +7,13 @@ import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
 import { OperationsTable } from "#/components/common/operations-table";
 import type { ConsoleTableFeatures } from "#/components/common/table-features";
 import { destinationRouteCoverage } from "#/features/destinations/model/destination-route-coverage";
-import type { DestinationListItem } from "#/features/destinations/model/destination-types";
+import type {
+  DestinationCatalog,
+  DestinationListItem,
+} from "#/features/destinations/model/destination-types";
 import { DestinationActions } from "#/features/destinations/ui/destination-actions";
 import { DestinationIdentityCell } from "#/features/destinations/ui/destination-identity-cell";
+import { destinationIconNamesByKind } from "#/features/destinations/ui/destination-kind-icon";
 import { DestinationOperationalConfigCell } from "#/features/destinations/ui/destination-operational-config-cell";
 import { DestinationRouteCoverageCell } from "#/features/destinations/ui/destination-route-coverage-cell";
 import { DestinationsEmptyState } from "#/features/destinations/ui/destinations-empty-state";
@@ -17,6 +21,12 @@ import { useTranslations } from "#/i18n/use-i18n";
 
 export interface DestinationsSectionProps {
   destinations: DestinationListItem[];
+  /**
+   * Client-safe catalog the identity column resolves each row's `iconName`
+   * from. Passing the catalog (not a console-side kind list) is what lets a
+   * new adapter's icon name work without editing the console.
+   */
+  destinationCatalog: DestinationCatalog;
   routes: RouteDefinition[];
   pending: boolean;
   onTest: (destination: DestinationListItem) => void;
@@ -28,6 +38,7 @@ export interface DestinationsSectionProps {
 
 export function DestinationsSection({
   destinations,
+  destinationCatalog,
   routes,
   pending,
   onTest,
@@ -38,12 +49,21 @@ export function DestinationsSection({
 }: DestinationsSectionProps) {
   const t = useTranslations();
   const data = React.useMemo(() => destinations, [destinations]);
+  const destinationIconNames = React.useMemo(
+    () => destinationIconNamesByKind(destinationCatalog),
+    [destinationCatalog],
+  );
   const columns = React.useMemo<Array<ColumnDef<ConsoleTableFeatures, DestinationListItem>>>(
     () => [
       {
         id: "destination",
         header: t("destinations.table.headers.destination"),
-        cell: ({ row }) => <DestinationIdentityCell destination={row.original} />,
+        cell: ({ row }) => (
+          <DestinationIdentityCell
+            destination={row.original}
+            iconName={destinationIconNames.get(row.original.kind)}
+          />
+        ),
       },
       {
         id: "operationalConfig",
@@ -80,7 +100,7 @@ export function DestinationsSection({
         ),
       },
     ],
-    [onDelete, onEdit, onPreview, onTest, onToggle, pending, routes, t],
+    [destinationIconNames, onDelete, onEdit, onPreview, onTest, onToggle, pending, routes, t],
   );
 
   return (

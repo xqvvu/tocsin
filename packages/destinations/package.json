@@ -13,6 +13,7 @@
     "./feishu/card-types": "./src/feishu/card.types.ts",
     "./feishu/default-card": "./src/feishu/default-card.ts",
     "./generic-webhook": "./src/generic-webhook/index.ts",
+    "./icons": "./src/icons.ts",
     "./slack": "./src/slack/index.ts",
     "./test-kit": "./src/test-kit/index.ts",
     "./urgency": "./src/urgency/index.ts",

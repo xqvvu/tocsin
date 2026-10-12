@@ -5,7 +5,11 @@ import { toast } from "sonner";
 
 import { DeliveriesPageToolbar } from "#/features/deliveries/ui/deliveries-page-toolbar";
 import { DeliveriesTable } from "#/features/deliveries/ui/deliveries-table";
-import { destinationsQueryOptions } from "#/features/destinations/api/destination.queries";
+import {
+  destinationCatalogQueryOptions,
+  destinationsQueryOptions,
+} from "#/features/destinations/api/destination.queries";
+import { destinationIconNamesByKind } from "#/features/destinations/ui/destination-kind-icon";
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import { operationsQueryOptions } from "#/features/operations/api/operations.queries";
 import {
@@ -29,9 +33,18 @@ export interface DeliveriesPageProps {
 export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPageProps) {
   const t = useTranslations();
   const navigate = useNavigate();
-  const [{ data: sources }, { data: destinations }] = useSuspenseQueries({
-    queries: [sourcesQueryOptions(), destinationsQueryOptions()],
-  });
+  const [{ data: sources }, { data: destinations }, { data: destinationCatalog }] =
+    useSuspenseQueries({
+      queries: [
+        sourcesQueryOptions(),
+        destinationsQueryOptions(),
+        destinationCatalogQueryOptions(),
+      ],
+    });
+  const destinationIconNames = React.useMemo(
+    () => destinationIconNamesByKind(destinationCatalog),
+    [destinationCatalog],
+  );
   const { data: operations } = useSuspenseQuery(operationsQueryOptions(filters));
   const operationConfiguration = { sources, destinations };
   const { invalidateOperations, retryDelivery, runDeliveryWorker } = useOperationMutations();
@@ -104,6 +117,7 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
           />
           <DeliveriesTable
             deliveries={operations.deliveries.items}
+            destinationIconNames={destinationIconNames}
             nextCursor={operations.deliveries.nextCursor}
             pending={pending}
             onInspect={(deliveryId) =>
