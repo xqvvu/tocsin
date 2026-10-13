@@ -91,8 +91,10 @@ docker compose logs --tail=50 console
 | `TOCSIN_DATA_DIR`   | `scripts/docker-entrypoint.sh` | 覆盖 entrypoint 需要 chown 的目录；缺省取 `TOCSIN_DATABASE_PATH` 的目录，再缺省 `/data` |
 
 还有一类只在配置导入/导出里出现的环境变量引用：导出 TOML/JSON 时，secret 字段会被替换成
-`TOCSIN_SOURCE_*` / `TOCSIN_DEST_*` / `TOCSIN_FEISHU_APP_<APP_ID>_APPSECRET` 这类变量名，导入时从进程环境
-取值。它们不是部署开关，但部署环境里需要能看到这些变量，导入才能拿到明文 secret。
+`TOCSIN_SOURCE_<SOURCE_ID>_<FIELD>`、`TOCSIN_DEST_<DESTINATION_ID>_<FIELD>`、
+`TOCSIN_FEISHU_APP_<APP_RECORD_ID>_APPSECRET`（用应用记录的 id，不是飞书 app_id）这类变量名；ID 与字段名
+会被转成大写、非字母数字字符替换成 `_`（例如 `app-1` → `APP_1`）。导入时从进程环境取这些变量的值。它们
+不是部署开关，但部署环境里需要能看到它们，导入才能拿到明文 secret。
 
 ## 5. 反向代理与 TLS
 

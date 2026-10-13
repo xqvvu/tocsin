@@ -18,7 +18,7 @@
 | Changelog 与版本递增工具 | 不存在                                                           | 没有 `.changeset/`、没有 `CHANGELOG.md`、根 `package.json` 没有 `release` script |
 | git tag                  | 一个都没有                                                       | `git tag -l` 输出为空，所以这次是**第一个** tag                          |
 | 版本号来源               | 只有根 `package.json`（当前 `0.1.0-beta.8`）                     | 启动日志的 `tocsin.runtime` 版本来自根 `package.json`（`apps/console/src/server/runtime/system-information.ts`） |
-| 容器镜像发布             | 不存在                                                           | 没有 registry push 步骤；`docker-compose.yml` 使用本机构建的 `image: tocsin:local` |
+| 容器镜像发布             | 没有自动化，只有手工 recipe                                       | 没有 CI 构建/推送步骤；`Justfile` 提供 `just docker-buildx <image> <tag>`（多平台构建并 `--push`）、`just docker-tag`、`just docker-push`，registry 与 tag 由人决定。`docker-compose.yml` 默认用本机构建的 `image: tocsin:local` |
 | E2E / Docker smoke 自动化 | 不存在                                                          | 仓库没有 playwright 或 smoke 脚本；`docs/release/mvp-rc-checklist.md` A 节两条仍未勾选 |
 
 结论：**首个 release 是一次全手工动作。** 不要假设打 tag 会产出镜像、Release note 或 changelog。
@@ -83,9 +83,10 @@ git push origin v0.1.0-beta.8
   监听 tag。
 - **不会触发**：镜像构建、镜像推送、GitHub Release、changelog 生成、npm 发布（所有 workspace package
   都是 `private`）。
-- 因此容器镜像需要本机构建并自行命名。建议每个版本单独打镜像标签，例如
-  `docker build -t tocsin:0.1.0-beta.8 .`，因为 compose 默认的 `tocsin:local` 会被下一次 build 覆盖，
-  回滚时没有旧镜像可用。
+- 因此容器镜像需要人工构建和命名。本机可以用 `docker build -t tocsin:0.1.0-beta.8 .`；要推到自己
+  的 registry 就用 `just docker-buildx <image> <tag>`（多平台 `linux/amd64,linux/arm64` + `--push`）或
+  `just docker-tag` + `just docker-push`，见根目录 `Justfile`。建议每个版本单独打镜像标签，因为
+  compose 默认的 `tocsin:local` 会被下一次 build 覆盖，回滚时没有旧镜像可用。
 
 ## 5. 发布之后
 
@@ -100,6 +101,7 @@ git push origin v0.1.0-beta.8
 
 - 没有 release workflow：tag 与发布产物之间没有自动关联。
 - 没有自动化版本递增与 changelog。
-- 没有镜像仓库发布流程；镜像只在本地存在。
+- 没有镜像仓库的自动化发布：只有 `Justfile` 里三条手工 recipe，没有 CI 任务，也没有既定的 registry
+  或 tag 约定。
 - 没有 E2E 与 compose smoke 自动化，CI 覆盖不到浏览器路径和容器运行时。
 - 没有发布说明模板，也没有“发布失败/撤回”的预案文档。
