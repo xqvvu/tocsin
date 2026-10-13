@@ -14,8 +14,9 @@ Docker runtime 形态。
 这个结论的含义是：可以停止继续往 MVP PRD 里追加功能，进入下一轮产品讨论、产出新的 post-MVP PRD，
 再用 `to-issues` 拆分新需求。
 
-它不等于稳定公开发布已经完成。CI/E2E、生产部署文档、release checklist、部分 UI 深度和若干
-长期可靠性策略仍应作为发布硬化项继续收尾。
+它不等于稳定公开发布已经完成。截至 2026-10-13，发布文档（release checklist、Docker 生产部署、
+备份/恢复/升级/回滚）与 README 的状态措辞已经补齐，见 `docs/release/`；仍然缺的是关键浏览器 E2E
+workflow、compose smoke automation，以及 delivery history retention 之类的长期可靠性策略。
 
 ## 已完成的 MVP 能力
 
@@ -40,14 +41,20 @@ Docker runtime 形态。
   secret，并支持 env ref。
 - Runtime：单进程、SQLite-first、application container、request context、显式 migrations、
   health/readiness endpoint、Dockerfile、docker compose 和数据卷。
-- 架构边界：`@tocsin/core`、`@tocsin/providers`、`@tocsin/destinations`、`apps/console` 的职责边界已经建立，
-  console 内部采用 route-first frontend 与 plain layered backend。
+- 架构边界：`@tocsin/core`、`@tocsin/api`（oRPC 契约层，2026-10-13 补记）、`@tocsin/providers`、
+  `@tocsin/destinations`、`apps/console` 的职责边界已经建立，console 内部采用 route-first frontend 与
+  plain layered backend。
 
 ## 非目标
 
 以下内容没有进入 MVP baseline。除非新的 PRD 明确接收，否则不要在发布硬化中顺手实现：
 
-- Silence、suppression、maintenance window。
+- Silence、suppression、maintenance window。（2026-10-13 校正）抑制已经作为 post-MVP 切片**部分落地**：
+  `@tocsin/core` 有抑制领域模型、匹配器与生命周期投影，`silence` 与 `maintenance_window` 是同一机制下
+  的两种 kind；SQLite 有 `suppressions` 表与 delivery 的抑制列，投递在入队与认领时会命中规则并落
+  `suppressed` 状态（不发送）。但**产品里还没有创建/管理抑制规则的入口**：没有 suppression service、
+  oRPC procedure、页面，投递侧只有状态展示，所以今天不能把它当作可用功能对外描述。PRD 与决策见
+  `docs/prd/alert-suppression.md`、`docs/prd/alert-suppression-decisions.md`。
 - Incident lifecycle、on-call scheduling、escalation policy。
 - 更多 destination/provider 适配器，除非为了修复现有主链路。
 - SaaS tenant、organization workspace、billing、多实例部署。
@@ -59,9 +66,11 @@ Docker runtime 形态。
 
 ### Route builder
 
-Route matching 层支持完整 `RouteRule` schema，但当前可视化编辑器仍偏向常见单条件编辑。导入或已有规则里
-出现多个同类条件时，编辑表单会展示明确的受限编辑提示，并在保存时只改每类第一条、保留其余条件。完整
-多条件可视化编辑仍可作为后续增强。
+（2026-10-13 校正）可视化编辑器现在会列出并逐条编辑规则里的**每一个**条件条目（source / severity /
+status / label / title / message），保存时不再只改每类第一条、保留其余条件
+（`apps/console/src/features/routes/ui/route-forms.tsx`，commit `2dd1b5c`）。仅当规则引用了**当前已不存在
+的配置值**（例如被删掉的 source）时，才显示受限编辑提示并要求用户先移除这些条目
+（`route-edit-restricted-notice.tsx`）；原来的“多条件只能编辑第一条”限制已经不成立。
 
 ### 模板
 
@@ -70,15 +79,27 @@ Route matching 层支持完整 `RouteRule` schema，但当前可视化编辑器�
 清单见 `docs/prd/destination-template-engine.md`，模式扩展决策见
 `docs/adr/0010-destination-template-object-root-payload-and-html-escaping.md`。
 
-仍未完成的是编辑体验：console 的 Destination 表单只对 Feishu 渲染模式选择器，`slack_blocks` 与
-`json_payload` 只能经 config JSON / API / TOML 配置，Email 的两个新字段也没有表单输入项；缺口由
-https://github.com/xqvvu/vane/issues/47 跟踪。
+（2026-10-13 校正）上面这条编辑体验缺口也已经消失：Destination 表单按 manifest 渲染模式选择器
+（`generic_webhook`: `text` / `json_payload`，`slack`: `text` / `slack_blocks`，`feishu`: `text` /
+`feishu_card`，见 `packages/destinations/src/*/manifest.ts` 与
+`apps/console/src/features/destinations/model/destination-form.ts`），Email 的 `subjectTemplate` 与
+`htmlTemplate` 已是表单输入项，并带模板变量引用面板。issue
+https://github.com/xqvvu/vane/issues/47 的剩余范围无法在离线环境核对（GitHub 不可达），但清单原先描述的
+三个具体缺口已不再成立。
 
 ### 发布硬化
 
-仓库已有 Docker runtime、health/readiness endpoint 和 root CI workflow（fmt-check / lint / test /
-console build），但仍缺少关键浏览器 E2E workflow、compose smoke automation、正式发布 checklist、
-生产部署/备份/升级/回滚文档。
+（2026-10-13 校正）发布文档已经补齐：
+
+- `docs/release/release-checklist.md`：切第一个 tag 的人工流程，含“仓库没有任何 release 自动化”的事实。
+- `docs/release/docker-production-deployment.md`：反向代理/TLS、环境变量、数据卷、secret、健康检查，
+  并把“没有 TLS 终止、没有 Docker secret 注入、compose 内置公开默认 `BETTER_AUTH_SECRET`”写成已知缺口。
+- `docs/release/backup-restore-upgrade.md`：SQLite 冷备份/恢复、升级、回滚，以及单一 baseline migration
+  的后果。
+
+仍然缺的是自动化：仓库只有 `.github/workflows/ci.yml`（`check · test · build`，`push` 到 main 与
+`pull_request` 触发，tag 不触发任何东西），没有关键浏览器 E2E workflow，也没有 compose/Docker smoke
+automation；这两条继续留在下面的发布 gate 里。
 
 ### 运行时策略
 
@@ -88,8 +109,10 @@ raw payload retention 已可配置并在 intake 路径执行清理；服务端�
 
 ### Fixtures 与贡献体验
 
-Provider adapters 已有测试，但真实 fixture 文件与 contributor guide 仍可以继续增强，帮助外部贡献者更容易增加
-provider/destination。
+（2026-10-13 校正）destination 侧已经有 contributor guide：`docs/contributing/destination-adapter.md`
+覆盖 scaffold、manifest、config schema、preview/send、secret handling、tests 与 registry 注册点，配套
+`scripts/new-destination-adapter.mjs`（`just new-destination <kind>`）与 registry audit。provider 侧还没有
+对应指南，也不存在 fixture 文件（payload 仍写在 inline 测试里），这两条继续留在 E 节。
 
 ## 剩余发布 Gate
 
@@ -102,16 +125,23 @@ provider/destination。
 - [x] 增加 health endpoint 与 readiness endpoint。
 - [x] Dockerfile 提供 runtime image、数据卷和 container healthcheck。
 - [x] docker compose 提供本地自托管试运行形态。
-- [ ] 增加 release checklist。
+- [x] 增加 release checklist：`docs/release/release-checklist.md`。首个 tag 是全人工流程，仓库没有 release
+      workflow、changelog 工具或既有 tag。
 
 ### B. 文档
 
-- [ ] 更新 README，将“仍处于 MVP 开发阶段”的措辞调整为“baseline complete / not stable release”。
-- [ ] 补充 Docker 生产部署文档：反向代理/TLS、环境变量、数据卷、secret、健康检查。
-- [ ] 补充备份/恢复/升级/回滚文档。
-- [ ] 增加 provider/destination contributor guide 或 README 贡献切片。
+- [x] 更新 README，将“仍处于 MVP 开发阶段”的措辞调整为“baseline complete / not stable release”。
+      （2026-10-13 完成，保留“不是稳定发布版”的诚实表述；顺带修正 README 里过时的 pnpm 版本号与缺失的
+      `packages/api` 结构说明。）
+- [x] 补充 Docker 生产部署文档：反向代理/TLS、环境变量、数据卷、secret、健康检查。
+      `docs/release/docker-production-deployment.md`（缺失的 TLS 终止与 secret 注入按已知缺口写明，没有编造流程）。
+- [x] 补充备份/恢复/升级/回滚文档。`docs/release/backup-restore-upgrade.md`。
+- [x] 增加 provider/destination contributor guide 或 README 贡献切片：destination 侧已完成
+      （`docs/contributing/destination-adapter.md`，commit `b2173f2`，README「贡献方向」也已链接）；provider 侧
+      仍未开始，保留在 E 节。
 - [x] 清理 `apps/console/README.md` starter 内容。
 - [x] 对齐 README、package metadata、workspace 中的 Node/vp 版本说明。
+      （2026-10-13 校正）README 里写成 pnpm `12.6.0`，实际 `packageManager` 是 `pnpm@12.10.1`，已修正。
 
 ### C. 产品与 UI 收尾
 
@@ -138,18 +168,28 @@ provider/destination。
 
 - [ ] 将 provider inline payload tests 扩展为 fixture 文件。
 - [ ] 覆盖 SigNoz、Grafana、Uptime Kuma、Alertmanager、FastGPT 的多版本/代表性 payload。
-- [ ] 增加 adapter 开发贡献指南：manifest、schema、preview/send、secret handling、tests、registry。
+- [x] 增加 adapter 开发贡献指南：manifest、schema、preview/send、secret handling、tests、registry。
+      （2026-10-13 校正：这项在名单里一直没勾，但内容早已由 `docs/contributing/destination-adapter.md` 覆盖
+      —— 含 scaffold、manifest/config schema 契约、preview/send 失败形状、secret handling、test-kit 与
+      registry 注册点，对应 commit `b2173f2`；上游 PR 号（据称 #85）无法在本地历史里核对。范围仍只限
+      destination adapter，provider 与 urgency adapter 不在该指南内。）
 
 ## 下一轮 PRD 候选
 
 下一轮讨论应该从具体 PRD 进入，而不是继续扩写 MVP：
 
 - Destination 结构化模板引擎：Feishu 卡片、Slack blocks、Email HTML、generic JSON payload template。
-  （2026-10-11 已完成，见 `docs/prd/destination-template-engine.md`；剩余缺口是上文的表单侧模式选择。）
+  （2026-10-11 已完成，见 `docs/prd/destination-template-engine.md`；2026-10-13 校正：表单侧的模式选择也
+  已落地，见上文的模板小节。）
 - Alert 操作增强：silence、suppression、maintenance window、per-fingerprint mute。
+  （2026-10-13 校正：抑制的领域模型、持久化与投递层执行已落地，`fingerprints` 也在 matcher 里；仍未落地的
+  是创建/管理入口（service、procedure、页面）与窗口结束后的通知型汇总。）
 - 搜索与排障体验：更强的 Events/Deliveries filter、时间范围、fingerprint 视图、route explain。
 - 自托管发布硬化：CI/E2E/Docker smoke、部署文档、备份恢复、升级回滚。
+  （2026-10-13 校正：部署、备份恢复、升级回滚文档与 release checklist 已完成；E2E 与 Docker smoke 自动化
+  仍未落地。）
 - Adapter 贡献体验：fixture 体系、contributor guide、adapter scaffold。
+  （2026-10-13 校正：destination 的 contributor guide 与 scaffold 已完成；provider 的 fixture 体系仍缺。）
 
 ## 验收标准
 
@@ -167,3 +207,7 @@ MVP baseline 已能覆盖以下演示路径；发布前仍需要用自动化 E2E
 10. 导出 TOML 或 JSON 时不包含明文 secret。
 11. 发布 gate 中，CI、测试、build、Docker smoke 和 E2E 通过。
 12. 发布文档能指导用户完成自托管部署、备份、升级和恢复。
+
+> 第 12 条的文档已经就位（`docs/release/`），但**没有在真实部署上演练过**：仓库没有 E2E 与 Docker
+> smoke 自动化，备份/恢复/回滚步骤也只是标准工具用法，未在部署环境执行。首次发布前应把第 11、12 条当成
+> 人工验收项，而不是已完成项。
