@@ -57,7 +57,7 @@ LogTape 的 environment-neutral logger/context 接口，运行时由 server entr
 浏览器进入服务端能力的默认门面是 `#/lib/orpc`。它用 `createIsomorphicFn` 分叉两条路径：
 
 - server：`createRouterClient(router, { context: async () => ({ reqHeaders: getRequestHeaders() }) })`。
-- client：`new RPCLink({ url: "/api/rpc" })` + `createORPCClient`。
+- client：`new RPCLink({ url: "/api" })` + `createORPCClient`。
 
 因此 client-safe code 只 import `#/lib/orpc`，由 TanStack Start 的 build 剥掉 server 分支；`#/server/orpc/**` 属于 server-only implementer，静态 imports 规则是：
 

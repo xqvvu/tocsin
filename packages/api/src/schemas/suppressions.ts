@@ -22,8 +22,8 @@ export const SuppressionDetailInputSchema = z.object({
 });
 
 export const SuppressionHitsInputSchema = SuppressionDetailInputSchema.extend({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
 });
 
 /** The deliveries a rule silenced, newest page first, shaped like every other list. */

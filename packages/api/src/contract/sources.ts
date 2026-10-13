@@ -1,5 +1,4 @@
 import { oc } from "@orpc/contract";
-import { openapi } from "@orpc/openapi";
 import {
   CreateSourceCommandSchema,
   DeleteSourceCommandSchema,
@@ -29,19 +28,14 @@ const dashboardErrors = dashboardAuth.error;
  * `RecordNotFoundError` when the target row is gone.
  */
 export const sources = {
-  list: oc
-    .meta(openapi({ method: "GET" }))
-    .errors(dashboardErrors)
-    .output(SourceListOutputSchema),
+  list: oc.errors(dashboardErrors).output(SourceListOutputSchema),
 
   create: oc
-    .meta(openapi({ method: "POST" }))
     .input(CreateSourceCommandSchema)
     .errors(dashboardErrors)
     .output(SourceTokenOutputSchema),
 
   update: oc
-    .meta(openapi({ method: "POST" }))
     .input(UpdateSourceCommandSchema)
     .errors(dashboardErrors)
     .errors(resourceErrors.error)
@@ -49,14 +43,12 @@ export const sources = {
 
   // Returns the new intake token exactly once; only its hash is persisted.
   rotateToken: oc
-    .meta(openapi({ method: "POST" }))
     .input(RotateSourceTokenCommandSchema)
     .errors(dashboardErrors)
     .errors(resourceErrors.error)
     .output(SourceTokenOutputSchema),
 
   delete: oc
-    .meta(openapi({ method: "POST" }))
     .input(DeleteSourceCommandSchema)
     .errors(dashboardErrors)
     .errors(resourceErrors.error)

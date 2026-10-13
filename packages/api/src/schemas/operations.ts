@@ -189,15 +189,15 @@ export const OperationsOutputSchema = z.object({
 
 export const ListOperationsInputSchema = z
   .object({
-    limit: z.coerce.number().int().min(1).max(100).default(20),
+    limit: z.number().int().min(1).max(100).default(20),
     sourceId: z.string().min(1).optional(),
     severity: AlertSeveritySchema.optional(),
     status: AlertStatusSchema.optional(),
     destinationId: z.string().min(1).optional(),
     deliveryState: DeliveryStateSchema.optional(),
     q: z.string().trim().min(1).max(120).optional(),
-    eventPage: z.coerce.number().int().min(1).default(1),
-    deliveryPage: z.coerce.number().int().min(1).default(1),
+    eventPage: z.number().int().min(1).default(1),
+    deliveryPage: z.number().int().min(1).default(1),
   })
   .optional();
 

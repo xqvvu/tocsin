@@ -39,14 +39,14 @@ env-neutral、`server/` 按能力分目录、dynamic import 只作边界适配�
 
 3. **浏览器只 import `#/lib/orpc.ts`。** 该文件用 `createIsomorphicFn` 分叉：server 侧
    `createRouterClient(router, { context: async () => ({ reqHeaders: getRequestHeaders() }) })`，
-   浏览器侧 `RPCLink({ url: "/api/rpc" })` + `createORPCClient`。导出 `rpcClient` 与
+   浏览器侧 `RPCLink({ url: "/api" })` + `createORPCClient`。导出 `rpcClient` 与
    `createTanstackQueryUtils(rpcClient)` 得到的 `orpc`，feature 用
    `orpc.<ns>.<proc>.queryOptions(...)` / `.call` 封装 query 与 mutation。
 
 4. **Authentication 按 procedure 挂载。** private procedure 在 contract 上声明
    `dashboardAuth.error`（UNAUTHORIZED / FORBIDDEN），实现处 `.use(requireDashboard())`
    或 `.use(withDashboardService(...))`。不把 dashboard middleware 挂在 router 级——那会把
-   错误映射强加到 public 的 `health`、`i18n` 和 `auth.getDashboardSession` 上。
+   错误映射强加到 public 的 `health`、`i18n` 和 `session.getDashboardSession` 上。
    `requireDashboardContext()` 从 `context.reqHeaders` 解析 session，因此 SSR 进程内调用与
    浏览器 RPC 调用走同一条鉴权路径。guard 的 output context 显式类型化，使
    `context.dashboardRequest` / `context.service` 在挂过 guard 的 handler 内非可选，漏挂
@@ -55,10 +55,12 @@ env-neutral、`server/` 按能力分目录、dynamic import 只作边界适配�
    `withDashboardService(createService)` 由该 ADR 之后的实现补充：它在 guard 之上注入
    `context.service`，把“解析服务”从每个 handler 上移到 middleware，handler 只剩一次调用。
 
-5. **两个 handler、两个协议，不混用。** 浏览器走 RPC protocol（`POST /api/rpc`），
+5. **两个 handler、两个协议，不混用。** 浏览器走 RPC protocol（`POST /api/<procedure path>`），
    外部调用与生成的 reference 走 OpenAPI surface（`/api/openapi`、`/api/openapi/spec.json`、
    `/api/openapi/docs`）。两个 handler 共用同一个 router，因此文档与实际服务形状一致；
    但 `RPCLink` 的 `{"json": ...}` 信封只能由 RPC codec 解码，两套协议不可互换。
+   procedure 不声明 HTTP method，OpenAPI generator 与 RPCLink 都采用默认 POST；两面有 input
+   的 procedure 都使用 JSON body。
 
 6. **Webhook intake 与 Better Auth 保持普通 API route。** 上游监控系统的 intake 用 Source
    token 或额外共享密钥认证，不进入 oRPC surface，也不读取浏览器 session。
@@ -80,7 +82,7 @@ env-neutral、`server/` 按能力分目录、dynamic import 只作边界适配�
 行为不变的小步迁移，每步通过 console `lint` / `test` / `build`：
 
 1. 建 `packages/api` 的 contract / errors / schemas / client 类型，`server/orpc` 的
-   implementer、feature router、middleware、handler 与 `/api/rpc`、`/api/openapi` route。
+   implementer、feature router、middleware、handler 与 `/api`、`/api/openapi` route。
 2. 换 `#/lib/orpc.ts`，把九个 feature/lib 的 `*.queries.ts` / `*.mutations.ts` 改为
    `orpc.*` 封装，保留既有 query key factory。
 3. 删除 `server/functions/*.functions.ts` 与 `dashboard-context.middleware.ts`，更新调用点。

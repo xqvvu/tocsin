@@ -1,5 +1,4 @@
 import { oc } from "@orpc/contract";
-import { openapi } from "@orpc/openapi";
 
 import { RequestLocaleOutputSchema } from "../schemas/i18n";
 
@@ -11,5 +10,5 @@ import { RequestLocaleOutputSchema } from "../schemas/i18n";
  * headers only; it never touches user-owned data.
  */
 export const i18n = {
-  getRequestLocale: oc.meta(openapi({ method: "GET" })).output(RequestLocaleOutputSchema),
+  getRequestLocale: oc.output(RequestLocaleOutputSchema),
 };

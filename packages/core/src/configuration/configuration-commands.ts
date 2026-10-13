@@ -105,15 +105,10 @@ export const DeleteDestinationCommandSchema = z.object({
 
 export const ExportConfigurationCommandSchema = z
   .object({
-    // Accepts the string spelling only because a GET query string cannot
-    // carry a boolean. Deliberately NOT `z.coerce.boolean()`: `Boolean("false")`
-    // is `true`, which would read a caller's explicit "no secrets" as consent
-    // to include them. Only `false` / `"false"` are legal, and both normalise
-    // to `false`.
-    includeSecrets: z
-      .union([z.literal(false), z.literal("false")])
-      .transform(() => false as const)
-      .optional(),
+    // Still only `false`, and still deliberately not a boolean: `true` must be
+    // unrepresentable so "include secrets" cannot be requested at all. A JSON
+    // body carries a real `false`, so no string spelling is needed.
+    includeSecrets: z.literal(false).optional(),
   })
   .default({});
 
