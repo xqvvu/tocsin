@@ -34,7 +34,7 @@ export class OperationsService {
         destinationId: input.destinationId,
         state: input.deliveryState,
         q: input.q,
-        cursor: input.deliveryCursor,
+        page: input.deliveryPage ?? 1,
       }),
     ]);
 

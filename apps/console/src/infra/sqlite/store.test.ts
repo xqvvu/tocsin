@@ -843,11 +843,8 @@ describe("sqlite store", () => {
       limit: 1,
       page: 2,
     });
-    const deliveryFirstPage = await store.history.listDeliveries({ limit: 1 });
-    const deliverySecondPage = await store.history.listDeliveries({
-      limit: 1,
-      cursor: deliveryFirstPage.nextCursor ?? undefined,
-    });
+    const deliveryFirstPage = await store.history.listDeliveries({ limit: 1, page: 1 });
+    const deliverySecondPage = await store.history.listDeliveries({ limit: 1, page: 2 });
 
     expect(eventFirstPage).toMatchObject({
       total: 2,
@@ -860,10 +857,20 @@ describe("sqlite store", () => {
       page: 2,
       pageSize: 1,
     });
-    expect(deliveryFirstPage.nextCursor).toBeTruthy();
+    // Deliveries paginate by page number like every other list, so the shape
+    // mirrors the event assertions above rather than a cursor.
+    expect(deliveryFirstPage).toMatchObject({
+      total: 2,
+      page: 1,
+      pageSize: 1,
+    });
     expect(deliverySecondPage.items).toHaveLength(1);
     expect(deliverySecondPage.items[0]?.id).not.toBe(deliveryFirstPage.items[0]?.id);
-    expect(deliverySecondPage.nextCursor).toBeNull();
+    expect(deliverySecondPage).toMatchObject({
+      total: 2,
+      page: 2,
+      pageSize: 1,
+    });
 
     const eventDetail = await store.history.getEventDetail(criticalEvent.id);
     const deliveryDetail = await store.deliveries.get(criticalDelivery.id);

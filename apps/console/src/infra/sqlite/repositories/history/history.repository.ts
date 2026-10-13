@@ -3,14 +3,11 @@ import { sql } from "kysely";
 import type { DeliveryListItem, EventDetail, EventListItem, NumberedPage } from "@tocsin/core";
 import { decodeSchemaJson, evaluateRouteMatch, RouteMatchResultsSchema } from "@tocsin/core";
 import type { RouteMatchProvenance } from "@tocsin/core";
-import type { Page } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
 import type { SqliteDeliveryRepository } from "#/infra/sqlite/repositories/delivery/delivery.repository";
 import type { DestinationRepository } from "#/infra/sqlite/repositories/destination/destination.interface";
 import {
-  decodeHistoryCursor,
-  encodeHistoryCursor,
   eventDetailDeliveryFromRow,
   type EventDetailDeliveryRow,
 } from "#/infra/sqlite/repositories/history/history.helpers";
@@ -210,8 +207,12 @@ export class SqliteHistoryRepository implements HistoryRepository {
     };
   }
 
-  async listDeliveries(query: DeliveryListQuery = {}): Promise<Page<DeliveryListItem>> {
-    const limit = query.limit ?? 50;
+  async listDeliveries(query: DeliveryListQuery = {}): Promise<NumberedPage<DeliveryListItem>> {
+    const pageSize = Math.max(query.limit ?? 50, 1);
+    const total = await this.countDeliveries(query);
+    const pageCount = Math.max(Math.ceil(total / pageSize), 1);
+    const page = Math.min(Math.max(query.page ?? 1, 1), pageCount);
+    const offset = (page - 1) * pageSize;
     let builder = this.context.db
       .selectFrom("deliveries")
       .innerJoin("events", "events.id", "deliveries.event_id")
@@ -234,7 +235,8 @@ export class SqliteHistoryRepository implements HistoryRepository {
       ])
       .orderBy("deliveries.created_at", "desc")
       .orderBy("deliveries.id", "desc")
-      .limit(limit + 1);
+      .limit(pageSize)
+      .offset(offset);
 
     if (query.sourceId) {
       builder = builder.where("events.source_id", "=", query.sourceId);
@@ -264,29 +266,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       );
     }
 
-    if (query.cursor) {
-      const cursor = decodeHistoryCursor(query.cursor);
-
-      if (cursor.id) {
-        builder = builder.where((eb) =>
-          eb.or([
-            eb("deliveries.created_at", "<", cursor.time),
-            eb.and([
-              eb("deliveries.created_at", "=", cursor.time),
-              eb("deliveries.id", "<", cursor.id),
-            ]),
-          ]),
-        );
-      } else {
-        builder = builder.where("deliveries.created_at", "<", cursor.time);
-      }
-    }
-
     const rows = await builder.execute();
-    const pageRows = rows.slice(0, limit);
 
     return {
-      items: pageRows.map((row) => ({
+      items: rows.map((row) => ({
         id: row.id,
         eventId: row.event_id,
         sourceName: row.source_name,
@@ -299,10 +282,9 @@ export class SqliteHistoryRepository implements HistoryRepository {
         lastError: row.last_error,
         updatedAt: row.updated_at,
       })),
-      nextCursor:
-        rows.length > limit && pageRows.at(-1)
-          ? encodeHistoryCursor(pageRows.at(-1)!.created_at, pageRows.at(-1)!.id)
-          : null,
+      total,
+      page,
+      pageSize,
     };
   }
 
@@ -319,6 +301,55 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.status) {
       builder = builder.where("events.status", "=", query.status);
+    }
+
+    if (query.q) {
+      const q = `%${query.q}%`;
+
+      builder = builder.where((eb) =>
+        eb.or([eb("events.title", "like", q), eb("events.message", "like", q)]),
+      );
+    }
+
+    const row = await builder.executeTakeFirst();
+
+    return row?.total ?? 0;
+  }
+
+  /**
+   * Counts the deliveries matching the same filters the page query applies.
+   *
+   * The filters live here rather than sharing a builder with `listDeliveries`
+   * because the two queries differ in shape: the list joins `events`,
+   * `sources`, `destinations` and `routes` to project display fields, while the
+   * count only needs the joins its filters actually reference. Keeping them
+   * separate mirrors `countEvents` and avoids counting duplicated rows through
+   * a join the count does not need.
+   */
+  private async countDeliveries(query: DeliveryListQuery): Promise<number> {
+    let builder = this.context.db
+      .selectFrom("deliveries")
+      .innerJoin("events", "events.id", "deliveries.event_id")
+      .select(sql<number>`COUNT(*)`.as("total"));
+
+    if (query.sourceId) {
+      builder = builder.where("events.source_id", "=", query.sourceId);
+    }
+
+    if (query.severity) {
+      builder = builder.where("events.severity", "=", query.severity);
+    }
+
+    if (query.status) {
+      builder = builder.where("events.status", "=", query.status);
+    }
+
+    if (query.destinationId) {
+      builder = builder.where("deliveries.destination_id", "=", query.destinationId);
+    }
+
+    if (query.state) {
+      builder = builder.where("deliveries.state", "=", query.state);
     }
 
     if (query.q) {

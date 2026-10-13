@@ -22,7 +22,7 @@ import {
 } from "@tocsin/core";
 import * as z from "zod";
 
-import { NumberedPageSchema, PageSchema } from "./shared";
+import { NumberedPageSchema } from "./shared";
 
 /**
  * Event and delivery operations contract.
@@ -184,7 +184,7 @@ export const RouteReplayResultSchema = z.object({
 /** Combined events and deliveries page behind the operations workspace. */
 export const OperationsOutputSchema = z.object({
   events: NumberedPageSchema(EventListItemSchema),
-  deliveries: PageSchema(DeliveryListItemSchema),
+  deliveries: NumberedPageSchema(DeliveryListItemSchema),
 });
 
 export const ListOperationsInputSchema = z
@@ -197,7 +197,7 @@ export const ListOperationsInputSchema = z
     deliveryState: DeliveryStateSchema.optional(),
     q: z.string().trim().min(1).max(120).optional(),
     eventPage: z.coerce.number().int().min(1).default(1),
-    deliveryCursor: z.string().min(1).optional(),
+    deliveryPage: z.coerce.number().int().min(1).default(1),
   })
   .optional();
 

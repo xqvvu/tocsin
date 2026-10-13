@@ -1,19 +1,11 @@
 import * as z from "zod";
 
-export type { NumberedPage, Page } from "@tocsin/core";
+export type { NumberedPage } from "@tocsin/core";
 
 /** Result of a delete-style command: the identifier that was removed. */
 export const IdOutputSchema = z.object({
   id: z.string().min(1),
 });
-
-/** Schema mirror of the `Page<T>` cursor page type in `@tocsin/core`. */
-export function PageSchema<const T extends z.ZodType>(item: T) {
-  return z.object({
-    items: z.array(item),
-    nextCursor: z.string().nullable(),
-  });
-}
 
 /** Schema mirror of the `NumberedPage<T>` page type in `@tocsin/core`. */
 export function NumberedPageSchema<const T extends z.ZodType>(item: T) {

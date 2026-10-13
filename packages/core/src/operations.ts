@@ -16,11 +16,6 @@ import type { SourceSummary } from "#core/source/source";
 
 export type IsoDateTimeString = string;
 
-export interface Page<T> {
-  items: T[];
-  nextCursor: string | null;
-}
-
 export interface NumberedPage<T> {
   items: T[];
   total: number;
@@ -30,7 +25,7 @@ export interface NumberedPage<T> {
 
 export interface Operations {
   events: NumberedPage<EventListItem>;
-  deliveries: Page<DeliveryListItem>;
+  deliveries: NumberedPage<DeliveryListItem>;
 }
 
 export interface EventListItem {

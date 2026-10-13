@@ -79,6 +79,8 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.deliveryState ? { deliveryState: filters.deliveryState } : {}),
     ...(filters.q?.trim() ? { q: filters.q.trim() } : {}),
     ...(filters.eventPage && filters.eventPage > 1 ? { eventPage: filters.eventPage } : {}),
-    ...(filters.deliveryCursor ? { deliveryCursor: filters.deliveryCursor } : {}),
+    ...(filters.deliveryPage && filters.deliveryPage > 1
+      ? { deliveryPage: filters.deliveryPage }
+      : {}),
   };
 }
