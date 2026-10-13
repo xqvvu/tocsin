@@ -159,9 +159,9 @@ raw payload retention 已可配置并在 intake 路径执行清理；服务端�
 - [x] Delivery worker honor adapter `retryHint`。
 - [x] 增加 worker health / last-run 状态。
 - [x] raw payload retention 可配置并有测试覆盖。
-- [ ] 增加 delivery history retention 或明确不自动清理 delivery history 的产品理由。
-- [ ] 将 raw payload pruning / dedupe cleanup 从 intake hot path 中移出或限制成本。
-- [ ] 评估 Delivery detail 所需的历史快照字段，避免配置重命名破坏历史解释。
+- [x] 增加 delivery history retention 或明确不自动清理 delivery history 的产品理由。→ **决定不自动清理**，理由与代价见 `docs/release/history-retention-and-snapshots.md` §1。
+- [x] 将 raw payload pruning / dedupe cleanup 从 intake hot path 中移出或限制成本。→ 接入改为**有界批**（100/次，主键定位），积压由响应路径外的单飞 sweep 清空；保留行为不变。见 `docs/release/history-retention-and-snapshots.md` §2。
+- [x] 评估 Delivery detail 所需的历史快照字段，避免配置重命名破坏历史解释。→ **评估完成：缺陷成立**（改名会追溯改写历史显示名；删除则级联删掉投递行）。需 schema 变更，属发布决策，见 `docs/release/history-retention-and-snapshots.md` §3。
 - [x] 增加 secret-safe logging 测试或边界测试。
 
 ### E. Fixtures 与贡献体验

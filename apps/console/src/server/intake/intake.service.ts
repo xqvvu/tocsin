@@ -46,6 +46,8 @@ export class WebhookIntakeService {
   private readonly providers: WebhookIntakeServiceOptions["providers"];
   private readonly now: () => string;
   private readonly dedupeWindowMs: number;
+  /** Guards the post-ingest sweep so concurrent webhooks do not stack drains. */
+  private pruneSweepRunning = false;
 
   constructor(options: WebhookIntakeServiceOptions) {
     this.store = options.store;
@@ -100,6 +102,8 @@ export class WebhookIntakeService {
       },
     );
 
+    let pruneCutoff: string | null = null;
+
     const accepted: AcceptedWebhook = await this.store.transaction(async (tx) => {
       const settings = await tx.settings.get();
       const event = await tx.intake.recordEvent({
@@ -123,9 +127,10 @@ export class WebhookIntakeService {
         ).toISOString(),
         now: receivedAt,
       });
-      await tx.intake.pruneRawPayloads({
-        before: retentionCutoff(receivedAt, settings.rawPayloadRetentionDays),
-      });
+      // Bounded: this is the ingest request path, so the batch keeps the
+      // per-webhook cost constant no matter how large the backlog is.
+      pruneCutoff = retentionCutoff(receivedAt, settings.rawPayloadRetentionDays);
+      await tx.intake.pruneRawPayloads({ before: pruneCutoff });
 
       return {
         accepted: true,
@@ -148,7 +153,39 @@ export class WebhookIntakeService {
       },
     );
 
+    // Finish the backlog off the response path. The bounded prune above already
+    // did its share; this drains the rest so retention converges even during a
+    // quiet period. Not awaited on purpose — the webhook must not wait on it.
+    this.sweepRawPayloadsKicked(pruneCutoff);
+
     return accepted;
+  }
+
+  /**
+   * Drain remaining stale raw payloads in the background.
+   *
+   * Single-flight: if a sweep is already running, this webhook's batch was
+   * aheady pruned and the running sweep will reach the rest, so there is nothing
+   * to add. Without this guard a burst of concurrent webhooks would each start a
+   * full-table drain and multiply the very cost we bounded.
+   *
+   * Failures are swallowed deliberately: this is housekeeping off the request
+   * path, and the next webhook retries it. Surfacing an error here would report a
+   * failure for a webhook that in fact succeeded.
+   */
+  private sweepRawPayloadsKicked(cutoff: string | null): void {
+    if (cutoff === null || this.pruneSweepRunning) {
+      return;
+    }
+
+    this.pruneSweepRunning = true;
+
+    void this.store.intake
+      .pruneAllRawPayloads({ before: cutoff })
+      .catch(() => undefined)
+      .finally(() => {
+        this.pruneSweepRunning = false;
+      });
   }
 
   private recordParserFailureEvent(input: ParserFailureRecordInput): Promise<string> {

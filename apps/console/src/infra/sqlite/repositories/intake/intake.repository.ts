@@ -11,6 +11,7 @@ import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
 import {
   eventFromRow,
   PRUNED_RAW_PAYLOAD,
+  RAW_PAYLOAD_PRUNE_BATCH_SIZE,
   requireEvent,
 } from "#/infra/sqlite/repositories/intake/intake.helpers";
 import type {
@@ -85,7 +86,61 @@ export class SqliteIntakeRepository implements IntakeRepository {
     return rows.map((row) => eventFromRow(row));
   }
 
+  /**
+   * Redact raw payloads older than the retention cutoff.
+   *
+   * Bounded on purpose. This runs on the ingest request path (once per accepted
+   * webhook), so an unbounded `UPDATE ... WHERE received_at < cutoff` grows with
+   * the backlog: after a first deploy against a database with a year of history,
+   * or any period where ingestion outpaced pruning, every single webhook pays for
+   * the whole backlog. A bounded batch keeps the per-request cost constant and
+   * still converges — the next webhook prunes the next batch, and the post-ingest
+   * sweep (see `pruneAllRawPayloads`) finishes anything a quiet period leaves
+   * behind. Operators see the same retention behaviour; only the work is moved.
+   *
+   * The selected ids make this an index-driven scan rather than a full table
+   * update: `events.id` is the primary key, so the follow-up update touches only
+   * the batch.
+   */
   async pruneRawPayloads(input: PruneRawPayloadsInput): Promise<number> {
+    const prunedPayload = encodeJson(PRUNED_RAW_PAYLOAD);
+    const stale = await this.context.db
+      .selectFrom("events")
+      .select("id")
+      .where("received_at", "<", input.before)
+      .where("raw_payload_json", "!=", prunedPayload)
+      .orderBy("received_at", "asc")
+      .limit(input.limit ?? RAW_PAYLOAD_PRUNE_BATCH_SIZE)
+      .execute();
+
+    if (stale.length === 0) {
+      return 0;
+    }
+
+    const result = await this.context.db
+      .updateTable("events")
+      .set({
+        raw_payload_json: prunedPayload,
+        raw_headers_json: encodeJsonObject({}),
+      })
+      .where(
+        "id",
+        "in",
+        stale.map((row) => row.id),
+      )
+      .executeTakeFirst();
+
+    return Number(result.numUpdatedRows);
+  }
+
+  /**
+   * Drain every stale raw payload, ignoring the ingest batch bound.
+   *
+   * For offline maintenance (a one-shot over an existing database) and for the
+   * post-ingest sweep, which finishes the backlog once the response is no longer
+   * waiting on it. Callers must not put this on a request path.
+   */
+  async pruneAllRawPayloads(input: PruneRawPayloadsInput): Promise<number> {
     const prunedPayload = encodeJson(PRUNED_RAW_PAYLOAD);
     const result = await this.context.db
       .updateTable("events")
