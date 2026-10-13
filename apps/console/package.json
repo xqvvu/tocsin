@@ -6,15 +6,17 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vp dev",
-    "build": "vp build",
-    "preview": "vp preview",
     "auth:schema": "pnpm dlx auth@latest generate --config src/lib/auth-cli.ts --adapter kysely --dialect sqlite --output src/infra/sqlite/migrate/better-auth.generated.sql --yes",
-    "test": "vp test run",
+    "build": "vp build",
+    "dev": "vp dev",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "fmt": "vp fmt --write",
+    "fmt:check": "vp fmt --check",
     "lint": "vp lint",
     "lint:fix": "vp lint --fix",
-    "fmt": "vp fmt --write",
-    "fmt:check": "vp fmt --check"
+    "preview": "vp preview",
+    "test": "vp test run"
   },
   "dependencies": {
     "@base-ui/react": "catalog:ui",
@@ -78,6 +80,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:testing",
     "@rolldown/plugin-babel": "catalog:toolchain",
     "@tailwindcss/typography": "catalog:tailwind",
     "@tanstack/devtools-vite": "catalog:tanstack",
