@@ -117,7 +117,8 @@ docker compose logs --tail=50 console
 
 ```bash
 # 1) 冷备份（见第 3 节）
-# 2) 取得/构建目标版本镜像，并显式打版本 tag（没有镜像仓库，镜像只在本机）
+# 2) 取得/构建目标版本镜像，并显式打版本 tag
+#    仓库没有自动发布流程：可以本机构建，也可以用 `just docker-buildx <image> <tag>` 推到自己的 registry
 docker build -t tocsin:0.1.0-beta.8 .
 
 # 3) 让 compose 使用新镜像：改 compose 的 image 字段，或就地重建本地 tag
@@ -125,7 +126,7 @@ docker compose up -d --build
 
 # 4) 确认就绪与版本
 curl -fsS http://127.0.0.1:3000/api/ready
-docker compose logs --tail=100 console     # 首行含 tocsin.runtime 的版本与 SQLite 信息
+docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime 行含版本与 SQLite 信息
 ```
 
 要点：
