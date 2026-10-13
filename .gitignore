@@ -35,6 +35,12 @@ dist-ssr
 
 # MCP
 .playwright-mcp
+# Playwright artifacts: traces, screenshots and failure contexts are per-run
+# output, not sources.
+apps/console/test-results
+apps/console/playwright-report
+apps/console/blob-report
+apps/console/.playwright
 
 # Vite+ hooks
 .vite-hooks/_

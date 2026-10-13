@@ -71,6 +71,18 @@ test-destinations:
 new-destination kind *args:
     node scripts/new-destination-adapter.mjs {{kind}} {{args}}
 
+# Browser end-to-end suite: first-run setup, create a source, route and deliver
+# an alert. Starts the real app against a throwaway database.
+# Slow on purpose (real browser + real server) so it stays out of the fast gate.
+[group('Test')]
+e2e:
+    vp -C apps/console exec playwright test
+
+# Same suite, headed, with Playwright's UI for stepping through a failure.
+[group('Test')]
+e2e-ui:
+    vp -C apps/console exec playwright test --ui
+
 # Build the image, bring the stack up, wait for readiness, tear it down.
 # Slow on purpose (it builds an image) so it stays out of the fast CI gate.
 [group('Docker')]

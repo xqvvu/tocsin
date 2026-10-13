@@ -39,6 +39,14 @@ const config = defineConfig(() => ({
     }),
   ]),
 
+  test: {
+    // The browser suite lives under `e2e/` and drives a real server through
+    // Playwright. Vitest's default include globs would otherwise collect these
+    // specs and fail them for lack of a browser, so they are excluded here and
+    // run by their own command (`just e2e`).
+    exclude: ["**/node_modules/**", "**/dist/**", "**/.output/**", "e2e/**"],
+  },
+
   build: {
     chunkSizeWarningLimit: 1024,
   },
