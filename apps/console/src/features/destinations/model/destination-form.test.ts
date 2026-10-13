@@ -18,7 +18,11 @@ describe("destination form helpers", () => {
     const data = new FormData();
 
     data.set("kind", "generic_webhook");
-    data.set("url", "https://relay.example.test/tocsin");
+    // `webhookUrl` — the name the form actually renders for this input. This test
+    // used to set `url`, a field that exists only in the form's defaults and is
+    // never on screen, so it passed while every real save failed with
+    // "url: Invalid URL".
+    data.set("webhookUrl", "https://relay.example.test/tocsin");
     data.set("method", "PATCH");
     data.set("headers", "Authorization: Bearer relay-secret\nX-Team: sre\ninvalid");
     data.set("templateText", "{{event.title}} from {{source.name}}");
@@ -351,7 +355,7 @@ describe("destination template modes (#47)", () => {
     const data = new FormData();
 
     data.set("kind", "generic_webhook");
-    data.set("url", "https://relay.example.test/tocsin");
+    data.set("webhookUrl", "https://relay.example.test/tocsin");
     data.set("templateMode", "json_payload");
     data.set("templatePayload", '{"title":"{{event.title}}"}');
 

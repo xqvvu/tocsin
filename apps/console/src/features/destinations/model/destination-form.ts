@@ -456,7 +456,11 @@ export function destinationConfigFromForm(kind: DestinationFormKind, data: FormD
   const headers = formHeaderLines(data);
 
   return {
-    url: formTrimmedString(data, "url"),
+    // `webhookUrl`, not `url`: that is the input the form actually renders for
+    // every webhook-style destination. `url` exists only in the form's default
+    // values, so reading it always produced an empty address and the save failed
+    // with "url: Invalid URL". Same defect as in `destinationConfigPatchFromForm`.
+    url: formTrimmedString(data, "webhookUrl"),
     method: formWebhookMethod(data),
     ...nonEmptyObject({ headers }),
     ...nonEmptyObject({ template }),
@@ -543,7 +547,12 @@ export function destinationConfigPatchFromForm(
       config.webhookUrl = webhookUrl;
     }
   } else {
-    const url = formTrimmedString(data, "url");
+    // The form renders this input as `webhookUrl` — the same field name slack
+    // and feishu use for a webhook address — while the generic-webhook manifest
+    // names its config key `url`. Reading `url` from the form found an input
+    // that is never rendered, so `config.url` was always empty and every
+    // generic-webhook destination failed to save with "url: Invalid URL".
+    const url = formTrimmedString(data, "webhookUrl");
     const method = formString(data, "method").toUpperCase();
     const headers = formHeaderLines(data);
 
