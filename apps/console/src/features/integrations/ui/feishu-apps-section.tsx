@@ -6,6 +6,7 @@ import type { FeishuAppListItem } from "@tocsin/core";
 import { OperationsTable } from "#/components/common/operations-table";
 import type { ConsoleTableFeatures } from "#/components/common/table-features";
 import { FeishuAppActions } from "#/features/integrations/ui/feishu-app-actions";
+import { FeishuAppIdentityCell } from "#/features/integrations/ui/feishu-app-identity-cell";
 import { FeishuAppsEmptyState } from "#/features/integrations/ui/feishu-apps-empty-state";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -30,11 +31,7 @@ export function FeishuAppsSection({
       {
         id: "name",
         header: t("integrations.table.headers.name"),
-        cell: ({ row }) => (
-          <span className="block truncate font-medium" title={row.original.name}>
-            {row.original.name}
-          </span>
-        ),
+        cell: ({ row }) => <FeishuAppIdentityCell app={row.original} />,
       },
       {
         id: "appId",
