@@ -254,6 +254,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("deliveries.destination_id", "=", query.destinationId);
     }
 
+    if (query.suppressionId) {
+      builder = builder.where("deliveries.suppression_id", "=", query.suppressionId);
+    }
+
     if (query.state) {
       builder = builder.where("deliveries.state", "=", query.state);
     }
@@ -346,6 +350,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.destinationId) {
       builder = builder.where("deliveries.destination_id", "=", query.destinationId);
+    }
+
+    if (query.suppressionId) {
+      builder = builder.where("deliveries.suppression_id", "=", query.suppressionId);
     }
 
     if (query.state) {

@@ -1,11 +1,12 @@
 import { z } from "zod";
 
 import { DestinationKindSchema } from "#core/destination/destination";
-import { AlertStatusSchema } from "#core/event/normalized-event";
+import { AlertStatusSchema, IsoDateTimeSchema } from "#core/event/normalized-event";
 import { JsonObjectSchema } from "#core/json";
 import { IanaTimeZoneSchema, LocaleSchema } from "#core/presentation";
 import { RouteDefinitionSchema } from "#core/route/route";
 import { SourceProviderSchema } from "#core/source/source";
+import { SuppressionKindSchema, SuppressionMatcherSchema } from "#core/suppression/suppression";
 
 export const CreateSourceCommandSchema = z.object({
   name: z.string().trim().min(1),
@@ -149,6 +150,44 @@ export const DeleteRouteCommandSchema = z.object({
   id: z.string().min(1),
 });
 
+export const CreateSuppressionCommandSchema = z.object({
+  name: z.string().trim().min(1),
+  kind: SuppressionKindSchema,
+  enabled: z.boolean().default(true),
+  reason: z.string().trim().min(1).nullable().default(null),
+  /**
+   * A completely empty matcher is legal (silence everything in the window) but
+   * dangerous; the UI confirms it before calling this. The command does not
+   * reject it, because "silence everything during a migration" is a real intent.
+   * Omitting the matcher means the same thing as `{}`.
+   */
+  matcher: SuppressionMatcherSchema.optional(),
+  /** Omitted means "starts now", which the repository applies. */
+  startsAt: IsoDateTimeSchema.optional(),
+  /** Required by owner ruling (2026-10-12): silence always self-heals. */
+  endsAt: IsoDateTimeSchema,
+});
+
+export const UpdateSuppressionCommandSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(1).optional(),
+  kind: SuppressionKindSchema.optional(),
+  enabled: z.boolean().optional(),
+  reason: z.string().trim().min(1).nullable().optional(),
+  matcher: SuppressionMatcherSchema.optional(),
+  startsAt: IsoDateTimeSchema.optional(),
+  endsAt: IsoDateTimeSchema.optional(),
+});
+
+export const DeleteSuppressionCommandSchema = z.object({
+  id: z.string().min(1),
+});
+
+export const SetSuppressionEnabledCommandSchema = z.object({
+  id: z.string().min(1),
+  enabled: z.boolean(),
+});
+
 export type CreateSourceCommand = z.input<typeof CreateSourceCommandSchema>;
 export type UpdateSourceCommand = z.input<typeof UpdateSourceCommandSchema>;
 export type RotateSourceTokenCommand = z.input<typeof RotateSourceTokenCommandSchema>;
@@ -174,3 +213,7 @@ export type UpdateAppSettingsCommand = z.input<typeof UpdateAppSettingsCommandSc
 export type CreateRouteCommand = z.input<typeof CreateRouteCommandSchema>;
 export type UpdateRouteCommand = z.input<typeof UpdateRouteCommandSchema>;
 export type DeleteRouteCommand = z.input<typeof DeleteRouteCommandSchema>;
+export type CreateSuppressionCommand = z.input<typeof CreateSuppressionCommandSchema>;
+export type UpdateSuppressionCommand = z.input<typeof UpdateSuppressionCommandSchema>;
+export type DeleteSuppressionCommand = z.input<typeof DeleteSuppressionCommandSchema>;
+export type SetSuppressionEnabledCommand = z.input<typeof SetSuppressionEnabledCommandSchema>;
