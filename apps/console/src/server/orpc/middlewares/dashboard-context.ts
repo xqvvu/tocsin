@@ -48,9 +48,16 @@ export async function requireDashboardContext(input: {
 
 /**
  * Tolerant variant used by public procedures such as the dashboard session
- * probe: a missing or insufficient session is an expected answer, not an error,
- * so only the auth errors are folded into `null` and unexpected failures still
- * propagate.
+ * probe: no session is an expected answer, not an error, so `UNAUTHORIZED` is
+ * folded into `null` and everything else propagates.
+ *
+ * `FORBIDDEN` is deliberately **not** folded into `null`. The two mean
+ * different things — "you are not signed in" versus "you are signed in and not
+ * allowed" — and collapsing them made an authenticated-but-unauthorised user
+ * indistinguishable from a signed-out one, which is how a signed-in member
+ * ended up silently redirected to the login page with no explanation. Callers
+ * that genuinely want to treat both as "no dashboard access" can catch
+ * `FORBIDDEN` themselves; that decision should be visible at the call site.
  */
 export async function findDashboardContext(input: {
   reqHeaders?: Headers;
@@ -58,7 +65,7 @@ export async function findDashboardContext(input: {
   try {
     return await requireDashboardContext(input);
   } catch (error) {
-    if (error instanceof ORPCError) {
+    if (error instanceof ORPCError && error.code === "UNAUTHORIZED") {
       return null;
     }
 

@@ -275,17 +275,46 @@ describe("dashboard oRPC auth gates", () => {
     );
 
     expect(indexRoute).toContain('to: "/events"');
-    expect(dashboardRoute).toContain(
-      "const session = await context.queryClient.ensureQueryData(dashboardSessionQueryOptions())",
-    );
     expect(authQueries).toContain("orpc.session.getDashboardSession.queryOptions");
     expect(authQueries).toContain("orpc.session.getAuthBootstrap.queryOptions");
+    expect(dashboardRoute).toContain("ensureDashboardSession");
     expect(dashboardRoute).toContain("throw redirect({");
     expect(dashboardRoute).toContain('to: "/login"');
     expect(loginRoute).toContain("authBootstrapQueryOptions()");
     expect(loginRoute).toContain('to: "/setup"');
     expect(setupRoute).toContain("authBootstrapQueryOptions()");
     expect(setupRoute).toContain('to: "/login"');
+  });
+
+  it("distinguishes an unauthorised session from a missing one", () => {
+    const dashboardRoute = readFileSync(path.join(routesDir, "_dashboard.tsx"), "utf8");
+    const loginRoute = readFileSync(path.join(routesDir, "login.tsx"), "utf8");
+    const setupRoute = readFileSync(path.join(routesDir, "setup.tsx"), "utf8");
+    const authQueries = readFileSync(
+      path.join(srcDir, "features/auth/api/auth.queries.ts"),
+      "utf8",
+    );
+
+    // The probe must be able to fail with FORBIDDEN, which is what lets a caller
+    // tell "sign in" apart from "signing in will not help".
+    expect(authQueries).toContain("isForbiddenSessionError");
+
+    // Every route that probes the session must tolerate that failure, otherwise
+    // a signed-in-but-unauthorised user cannot reach the one page that lets them
+    // switch accounts, or create the first owner.
+    for (const [name, source] of [
+      ["_dashboard", dashboardRoute],
+      ["login", loginRoute],
+      ["setup", setupRoute],
+    ] as const) {
+      expect(source, `${name} must handle a forbidden session`).toContain(
+        "isForbiddenSessionError",
+      );
+    }
+
+    // And the dashboard must render that state rather than redirecting to login,
+    // because a redirect would bounce the user in a loop.
+    expect(dashboardRoute).toContain("DashboardForbiddenPage");
   });
 });
 

@@ -4,8 +4,10 @@ import { getApplicationContainer, type ApplicationContainer } from "#/server/run
 import {
   DashboardAuthError,
   DashboardAuthorizationError,
+  type BetterAuthSession,
   type DashboardSession,
   type GetDashboardSession,
+  toDashboardSession,
 } from "#/server/runtime/dashboard-session";
 
 export interface RequestContextOptions {
@@ -38,22 +40,29 @@ export async function requireDashboardRequestContext(
   } = {},
 ): Promise<DashboardRequestContext> {
   const context = createBaseRequestContext(options);
-  const session = await (options.getSession ?? getBetterAuthSession)({
-    headers: context.headers,
-  });
+
+  // The resolver always yields Better Auth's session, never a pre-projected one:
+  // projection happens in exactly one place below, so there is no path where an
+  // un-projected session (with its token) reaches a procedure.
+  const resolveSession = options.getSession ?? getBetterAuthSession;
+  const session = await resolveSession({ headers: context.headers });
 
   if (!session) {
     throw new DashboardAuthError();
   }
 
+  // Authorisation reads Better Auth's own value, before projection, so the role
+  // check cannot be affected by what the projection chooses to expose.
   if (!isDashboardAdminRole(session.user.role)) {
     throw new DashboardAuthorizationError();
   }
 
+  const dashboardSession = toDashboardSession(session);
+
   return {
     ...context,
-    dashboardSession: session,
-    currentUser: session.user,
+    dashboardSession,
+    currentUser: dashboardSession.user,
   };
 }
 
@@ -87,7 +96,9 @@ export function createBaseRequestContext(options: RequestContextOptions = {}): B
   };
 }
 
-async function getBetterAuthSession(input: { headers: HeadersInit }) {
+async function getBetterAuthSession(input: {
+  headers: HeadersInit;
+}): Promise<BetterAuthSession | null> {
   return (await getApplicationContainer().getAuth()).api.getSession(input);
 }
 

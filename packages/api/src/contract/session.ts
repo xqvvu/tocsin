@@ -1,6 +1,7 @@
 import { oc } from "@orpc/contract";
 import { openapi } from "@orpc/openapi";
 
+import { dashboardAuth } from "../errors/dashboard-auth";
 import { AuthBootstrapOutputSchema, DashboardSessionOutputSchema } from "../schemas/auth";
 
 /**
@@ -14,11 +15,19 @@ import { AuthBootstrapOutputSchema, DashboardSessionOutputSchema } from "../sche
  *
  * Both procedures are reachable without a dashboard session: the login and
  * setup routes need the bootstrap flag, and the dashboard shell tolerates a
- * missing session so it can redirect. A null session is an expected result, not
- * an error, so neither procedure declares auth error keys.
+ * missing session so it can redirect. So **no session** is a `null` result, not
+ * an error.
+ *
+ * `getDashboardSession` declares `FORBIDDEN`, though, because a session that
+ * exists but lacks dashboard access is a different outcome and must not be
+ * flattened into `null` — that is what made a signed-in member look
+ * indistinguishable from a signed-out visitor.
  */
 export const session = {
-  getDashboardSession: oc.meta(openapi({ method: "GET" })).output(DashboardSessionOutputSchema),
+  getDashboardSession: oc
+    .meta(openapi({ method: "GET" }))
+    .errors(dashboardAuth.error)
+    .output(DashboardSessionOutputSchema),
 
   getAuthBootstrap: oc.meta(openapi({ method: "GET" })).output(AuthBootstrapOutputSchema),
 };

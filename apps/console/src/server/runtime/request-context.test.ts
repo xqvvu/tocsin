@@ -10,6 +10,7 @@ import type { ApplicationContainer, AuthServer } from "#/server/runtime/containe
 import {
   DashboardAuthError,
   DashboardAuthorizationError,
+  type BetterAuthSession,
   type DashboardSession,
 } from "#/server/runtime/dashboard-session";
 import {
@@ -24,14 +25,39 @@ const session: DashboardSession = {
   },
   user: {
     id: "user-1",
+    name: "Owner",
     email: "owner@example.test",
+    image: null,
     role: "owner",
   },
 };
 
-const fakeGetSession = vi.fn<(input: { headers: HeadersInit }) => Promise<DashboardSession | null>>(
-  async () => null,
-);
+/** Better Auth's own session shape: note it carries `token`, which the
+ * projection under test must strip. */
+const betterAuthSession: BetterAuthSession = {
+  session: {
+    id: "session-1",
+    userId: "user-1",
+    token: "session-token-should-not-leak",
+    expiresAt: new Date("2026-07-10T08:00:00.000Z"),
+    createdAt: new Date("2026-06-10T08:00:00.000Z"),
+    updatedAt: new Date("2026-06-10T08:00:00.000Z"),
+  },
+  user: {
+    id: "user-1",
+    email: "owner@example.test",
+    emailVerified: true,
+    name: "Owner",
+    image: null,
+    role: "owner",
+    createdAt: new Date("2026-06-10T08:00:00.000Z"),
+    updatedAt: new Date("2026-06-10T08:00:00.000Z"),
+  },
+};
+
+const fakeGetSession = vi.fn<
+  (input: { headers: HeadersInit }) => Promise<BetterAuthSession | null>
+>(async () => null);
 
 const fakeAuth: AuthServer = {
   handler: async () => new Response(null),
@@ -45,8 +71,34 @@ describe("request context", () => {
     vi.clearAllMocks();
   });
 
+  it("strips the session token when projecting Better Auth's session", async () => {
+    // Better Auth's own session carries `session.token`; the dashboard context
+    // must not. This is the assertion that keeps a future "just return the
+    // session" refactor from shipping a credential to the browser.
+    const container = createFakeContainer();
+    const context = await requireDashboardRequestContext({
+      container,
+      headers: { cookie: "better-auth.session_token=token" },
+      now: () => "2026-06-10T08:00:00.000Z",
+      getSession: async () => betterAuthSession,
+    });
+
+    expect(context.dashboardSession).toEqual({
+      session: { id: "session-1", userId: "user-1" },
+      user: {
+        id: "user-1",
+        name: "Owner",
+        email: "owner@example.test",
+        image: null,
+        role: "owner",
+      },
+    });
+    expect(JSON.stringify(context.dashboardSession)).not.toContain("session-token-should-not-leak");
+    expect(context.dashboardSession.session).not.toHaveProperty("token");
+  });
+
   it("builds dashboard context from an authenticated owner session", async () => {
-    const getSession = vi.fn<() => Promise<DashboardSession>>(async () => session);
+    const getSession = vi.fn<() => Promise<BetterAuthSession>>(async () => betterAuthSession);
     const container = createFakeContainer();
 
     const context = await requireDashboardRequestContext({
@@ -61,7 +113,9 @@ describe("request context", () => {
 
     expect(context.container).toBe(container);
     expect(context.currentUser).toEqual(session.user);
-    expect(context.dashboardSession).toBe(session);
+    // Not `toBe`: the context holds a projection of Better Auth's session, not
+    // that object itself — that is what removes the token.
+    expect(context.dashboardSession).toEqual(session);
     expect(context.requestId).toBe("request-1");
     expect(context.now).toBe("2026-06-10T08:00:00.000Z");
     expect(getSession).toHaveBeenCalledWith({
@@ -83,10 +137,10 @@ describe("request context", () => {
         container: createFakeContainer(),
         headers: new Headers(),
         getSession: async () => ({
-          ...session,
+          ...betterAuthSession,
           user: {
-            ...session.user,
-            role: "member",
+            ...betterAuthSession.user,
+            role: "member" as const,
           },
         }),
       }),
