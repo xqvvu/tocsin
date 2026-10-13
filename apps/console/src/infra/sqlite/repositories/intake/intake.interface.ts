@@ -33,7 +33,10 @@ export interface IntakeRepository {
   recordEvent(input: RecordEventInput): Promise<EventRecord>;
   get(id: string): Promise<EventRecord | null>;
   listRecent(input?: ListRecentEventsInput): Promise<EventRecord[]>;
+  /** Bounded; safe on the ingest request path. */
   pruneRawPayloads(input: PruneRawPayloadsInput): Promise<number>;
+  /** Unbounded; for maintenance and the post-ingest sweep, never a request path. */
+  pruneAllRawPayloads(input: PruneRawPayloadsInput): Promise<number>;
 }
 
 export interface RecordEventInput {
@@ -51,6 +54,8 @@ export interface RecordEventInput {
 
 export interface PruneRawPayloadsInput {
   before: IsoDateTimeString;
+  /** Max rows one call may redact. Defaults to the ingest batch size. */
+  limit?: number;
 }
 
 export interface ListRecentEventsInput {

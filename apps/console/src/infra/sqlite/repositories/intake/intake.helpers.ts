@@ -11,6 +11,15 @@ import type { EventRecord } from "@tocsin/core";
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import type { EventRow } from "#/infra/sqlite/repositories/intake/intake.interface";
 
+/**
+ * How many stale events one ingest request may redact.
+ *
+ * Ingest prunes raw payloads inline; an unbounded prune makes every webhook pay
+ * for the entire backlog, so this bounds the work per request. The post-ingest
+ * sweep and the offline `pruneAllRawPayloads` finish the rest.
+ */
+export const RAW_PAYLOAD_PRUNE_BATCH_SIZE = 100;
+
 export const PRUNED_RAW_PAYLOAD = {
   retentionPruned: true,
 };

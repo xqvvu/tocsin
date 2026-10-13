@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { createDefaultProviderRegistry } from "@tocsin/providers";
 
+import {
+  PRUNED_RAW_PAYLOAD,
+  RAW_PAYLOAD_PRUNE_BATCH_SIZE,
+} from "#/infra/sqlite/repositories/intake/intake.helpers";
 import { openSqliteStore } from "#/infra/sqlite/store";
 import {
   WebhookIntakeError,
@@ -286,6 +290,97 @@ describe("webhook intake service", () => {
     expect((await store.history.getEventDetail(fresh.eventId))?.event.rawPayload).toMatchObject({
       title: "Fresh alert",
     });
+
+    await store.close();
+  });
+
+  it("caps how much a single bounded prune call redacts", async () => {
+    const store = await createStore();
+
+    const staleEventIds = await recordStaleEvents(store, 250);
+
+    // Ingest runs this inline, so the bound is what keeps per-webhook cost
+    // constant regardless of how large the backlog has grown.
+    const pruned = await store.intake.pruneRawPayloads({
+      before: retentionCutoffFor(now, 30),
+    });
+
+    expect(pruned).toBe(RAW_PAYLOAD_PRUNE_BATCH_SIZE);
+    expect(pruned).toBeLessThan(250);
+
+    const remaining = await store.intake.pruneRawPayloads({
+      before: retentionCutoffFor(now, 30),
+    });
+
+    // Calling again makes progress rather than redoing the same batch.
+    expect(remaining).toBe(RAW_PAYLOAD_PRUNE_BATCH_SIZE);
+    expect(await countPrunedEvents(store, staleEventIds)).toBe(2 * RAW_PAYLOAD_PRUNE_BATCH_SIZE);
+
+    await store.close();
+  });
+
+  it("drains the whole backlog through the unbounded sweep", async () => {
+    const store = await createStore();
+
+    const staleEventIds = await recordStaleEvents(store, 250);
+    await store.intake.pruneRawPayloads({ before: retentionCutoffFor(now, 30) });
+
+    const drained = await store.intake.pruneAllRawPayloads({
+      before: retentionCutoffFor(now, 30),
+    });
+
+    // The sweep must finish what the bounded path could not, or retention would
+    // stall behind a queue that only ever advances one batch per webhook.
+    expect(drained).toBe(250 - RAW_PAYLOAD_PRUNE_BATCH_SIZE);
+    expect(await countPrunedEvents(store, staleEventIds)).toBe(250);
+
+    await store.close();
+  });
+
+  it("still prunes stale payloads end to end through a webhook", async () => {
+    const store = await createStore();
+    const service = new WebhookIntakeService({
+      store,
+      providers: createDefaultProviderRegistry(),
+      now: () => now,
+    });
+    await store.sources.create({
+      id: "source-1",
+      name: "Generic source",
+      tokenHash: hashSourceToken("source-token"),
+      provider: "generic",
+    });
+
+    const staleEventIds = await recordStaleEvents(store, 250);
+
+    await service.acceptWebhook({
+      sourceId: "source-1",
+      token: "source-token",
+      headers: {},
+      payload: { id: "fresh", title: "Fresh", message: "fresh" },
+      receivedAt: now,
+    });
+
+    // The webhook pruned at least its batch; the post-ingest sweep finishes the
+    // rest. Waiting on the sweep is what makes this assertion deterministic
+    // instead of racing it — the operator-visible outcome is the same either way.
+    await waitForSweep(store, staleEventIds.length);
+
+    expect(await countPrunedEvents(store, staleEventIds)).toBe(staleEventIds.length);
+
+    await store.close();
+  });
+
+  it("converges retention across successive batches", async () => {
+    const store = await createStore();
+
+    const staleEventIds = await recordStaleEvents(store, 5);
+
+    // A batch large enough for the whole backlog must clear it all: bounding the
+    // per-request work must not weaken retention for realistic volumes.
+    await store.intake.pruneRawPayloads({ before: retentionCutoffFor(now, 30), limit: 1000 });
+
+    expect(await countPrunedEvents(store, staleEventIds)).toBe(5);
 
     await store.close();
   });
@@ -798,3 +893,102 @@ describe("webhook intake service", () => {
     await store.close();
   });
 });
+
+/** Record stale events directly, so pruning does not race their creation. */
+async function recordStaleEvents(
+  store: Awaited<ReturnType<typeof createStore>>,
+  count: number,
+): Promise<string[]> {
+  const ids: string[] = [];
+
+  // Events reference a source, so the fixture has to exist before recording.
+  if (!(await store.sources.get("source-1"))) {
+    await store.sources.create({
+      id: "source-1",
+      name: "Generic source",
+      provider: "generic",
+      tokenHash: hashSourceToken("source-token"),
+    });
+  }
+
+  for (let index = 0; index < count; index += 1) {
+    const recorded = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: `stale-${index}`,
+      normalized: {
+        title: `Stale ${index}`,
+        message: "stale payload",
+        severity: "warning",
+        status: "firing",
+        fingerprint: `stale:${index}`,
+        labels: {},
+        occurredAt: "2026-05-01T08:00:00.000Z",
+      },
+      rawPayload: { index },
+      routeMatches: [],
+      receivedAt: "2026-05-01T08:00:00.000Z",
+    });
+
+    ids.push(recorded.id);
+  }
+
+  return ids;
+}
+
+/**
+ * Wait for the post-ingest sweep to finish redacting `expected` events.
+ *
+ * The sweep is deliberately not awaited by the webhook, so a test that needs to
+ * observe its result must wait for the outcome rather than assume it is done.
+ */
+async function waitForSweep(
+  store: Awaited<ReturnType<typeof createStore>>,
+  expected: number,
+  attempts = 100,
+): Promise<void> {
+  const ids = await store.intake.listRecent({ limit: 1000 });
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const pruned = await countPrunedEvents(
+      store,
+      ids.map((event) => event.id),
+    );
+
+    if (pruned >= expected) {
+      return;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
+/**
+ * The retention cutoff the service computes, recomputed here so the tests state
+ * the boundary they expect rather than importing production internals.
+ */
+function retentionCutoffFor(referenceTime: string, days: number): string {
+  return new Date(new Date(referenceTime).valueOf() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
+/**
+ * Count events whose raw payload has already been redacted.
+ *
+ * Reads event detail (the public read path) rather than a list projection,
+ * because the list deliberately does not expose the raw payload's pruned state.
+ */
+async function countPrunedEvents(
+  store: Awaited<ReturnType<typeof createStore>>,
+  eventIds: string[],
+): Promise<number> {
+  let pruned = 0;
+
+  for (const eventId of eventIds) {
+    const detail = await store.history.getEventDetail(eventId);
+
+    if (JSON.stringify(detail?.event.rawPayload) === JSON.stringify(PRUNED_RAW_PAYLOAD)) {
+      pruned += 1;
+    }
+  }
+
+  return pruned;
+}
