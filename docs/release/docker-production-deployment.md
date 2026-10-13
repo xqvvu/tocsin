@@ -1,0 +1,153 @@
+# Docker 生产部署（自托管）
+
+> 一句话结论：Tocsin 的受支持形态是**一个容器 + 一个数据卷 + 一个 SQLite 文件**；容器只提供明文 HTTP
+> 3000，TLS、反向代理和 secret 注入都要由运维自己解决，而且 `docker-compose.yml` 里内置的默认
+> `BETTER_AUTH_SECRET` 在真正部署前**必须**替换。
+
+本文所有端口、路径、变量都核对过当前仓库：`Dockerfile`、`docker-compose.yml`、`scripts/docker-entrypoint.sh`、
+`apps/console/src/env.ts`、`apps/console/src/lib/auth-config.ts`、`apps/console/src/routes/api/{health,ready}.ts`。
+备份、升级、回滚见 `docs/release/backup-restore-upgrade.md`；发布流程见
+`docs/release/release-checklist.md`。
+
+## 1. 先说清楚缺口（这些今天**没有**现成方案）
+
+| 运维预期                     | 现状                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| TLS 终止                     | **没有。** 应用只监听明文 HTTP；生产必须在反向代理终止 TLS                        |
+| Secret 注入                   | **没有 Docker secret / `*_FILE` 支持。** 只能用环境变量（env file 或 compose 自带的默认值） |
+| 默认 secret 安全              | **不安全。** `docker-compose.yml` 给 `BETTER_AUTH_SECRET` 内置了公开默认值，且不在占位值黑名单里，不覆盖也能启动 |
+| 端口暴露范围                  | compose 默认把 3000 发布在所有网卡（`"${TOCSIN_HTTP_PORT:-3000}:3000"`），不会自动只绑 127.0.0.1 |
+| 多副本 / 横向扩容             | **不支持。** 单进程 + 进程内 worker + 单文件 SQLite 是设计约束                    |
+| unhealthy 自动重启            | **没有。** compose 只有 `restart: unless-stopped`；容器变 unhealthy 不会自动重建  |
+| 日志轮转                      | 没有应用侧配置；日志写 stdout，轮转由 Docker daemon 负责                          |
+| 反向代理头（`X-Forwarded-*`） | 仓库里没有自定义转发头处理；对外 URL 完全由 `BETTER_AUTH_URL` / `SERVER_URL` 决定 |
+
+## 2. 镜像与容器事实
+
+- **构建**：多阶段构建。build 阶段用 `ghcr.io/voidzero-dev/vite-plus:1.1.0`，按 `.node-version`
+  （当前 `26.11.1`）装 Node 与依赖，产物是 `apps/console/.output`；runtime 阶段是
+  `debian:trixie-slim` + 从 build 阶段拷来的 node 二进制，只安装 `gosu`、`curl`、`libatomic1`、
+  `ca-certificates`。
+- **启动命令**：`node .output/server/index.mjs`（Nitro node-server preset）。容器内监听
+  `HOST` / `PORT`，镜像默认 `0.0.0.0:3000`。
+- **端口**：只 `EXPOSE 3000`；compose 用 `${TOCSIN_HTTP_PORT:-3000}` 映射到宿主机。
+- **运行用户**：entrypoint 以 root 启动 → 确保 `/data`（或 `TOCSIN_DATA_DIR`）存在并 chown 给
+  `node:node`（uid/gid 1000），并修正数据库文件与 `-wal` / `-shm` 的属主 → 用 `gosu node` 降权执行。
+  如果运维自己指定 `user:`，这段 chown 不会执行。
+- **数据卷**：`VOLUME ["/data"]`；compose 声明命名卷 `tocsin-data`（`name: tocsin-data`）；
+  数据库默认 `/data/tocsin.sqlite`。
+- **健康检查**：镜像 `HEALTHCHECK` 与 compose `healthcheck` 都调用
+  `curl -fsS http://127.0.0.1:3000/api/ready`，间隔 30s、超时 5s、重试 3 次、启动宽限 20s。
+- **启动顺序**：server entry 用顶层 `await` 先打开 SQLite store 并执行 migration，再开始服务；
+  这一步失败进程会直接退出（compose 会按重启策略重试）。
+
+## 3. 最小部署步骤
+
+```bash
+# 1) 显式提供 secret（不要依赖 compose 默认值）
+export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
+export BETTER_AUTH_URL="https://tocsin.example.com"   # 生产必须，或改用 SERVER_URL
+export SERVER_URL="https://tocsin.example.com"
+
+# 2) 构建并启动
+docker compose up -d --build
+
+# 3) 等就绪并确认健康
+curl -fsS http://127.0.0.1:3000/api/ready
+docker compose ps
+docker compose logs --tail=50 console
+```
+
+**立即完成首次 setup。** 打开 `https://<你的域名>/setup`，用第一个账号完成 owner 注册：第一个注册用户自动
+成为 owner，之后任何新的用户创建都会被拒绝（`Owner user already exists`）。当前版本没有邀请、用户管理或
+注册开关，所以**在把地址暴露给公网之前先完成 setup**，否则先访问的人就会拿到 owner。
+
+## 4. 环境变量
+
+应用读 `process.env` + Vite 环境，`apps/console/src/env.ts` 是唯一 schema。容器内默认值如下：
+
+| 变量                              | 默认值（容器内）      | 作用与约束                                                                 |
+| --------------------------------- | --------------------- | -------------------------------------------------------------------------- |
+| `HOST` / `PORT`                   | `0.0.0.0` / `3000`    | Nitro node-server 监听地址与端口（镜像里已设）                             |
+| `BETTER_AUTH_SECRET`              | 无（compose 有内置默认值） | 生产**必需**：≥32 字符，且不能是占位值；缺失或过短会让进程启动失败     |
+| `BETTER_AUTH_URL`                 | 无                    | 生产**必需**（或提供 `SERVER_URL`）：Better Auth 的对外 base URL，必须是合法 URL |
+| `SERVER_URL`                      | 无                    | 对外访问 URL；`BETTER_AUTH_URL` 缺省时作为回落值                            |
+| `BETTER_AUTH_ALLOWED_HOSTS`       | 无                    | 可选，逗号/换行分隔的 Host 白名单（走 PVC、反代、临时域名时使用）           |
+| `BETTER_AUTH_TRUSTED_ORIGINS`     | 无                    | 可选，逗号/换行分隔的额外可信 Origin（CSRF/origin 检查）                    |
+| `TOCSIN_DATABASE_PATH`            | `/data/tocsin.sqlite` | SQLite 文件路径；应用自身缺省是 `<cwd>/data.sqlite`，容器里由镜像覆盖       |
+| `TOCSIN_LOG_LEVEL`                | `info`                | `trace` / `debug` / `info` / `warning` / `error` / `fatal` / `off`          |
+| `TOCSIN_LOG_FORMAT`               | `auto`                | `auto` / `json` / `text`；production build 下 `auto` 输出 JSON Lines        |
+| `TOCSIN_MAX_WEBHOOK_BYTES`        | `1048576`（1 MiB）    | 入站 webhook 上限，最大 `10485760`（10 MiB）                                |
+| `TOCSIN_WORKER_BATCH_SIZE`        | `10`                  | 每批投递数，最大 100                                                        |
+| `TOCSIN_WORKER_INTERVAL_MS`       | `5000`                | worker 轮询间隔，最大 60000                                                 |
+| `TOCSIN_WORKER_STALE_RUNNING_MS`  | `300000`              | `running` 超时回收窗口，最大 3600000                                        |
+| `VITE_APP_TITLE`                  | 无                    | 可选，目前只在 `env.ts` 里声明，仓库中没有读取点（未发现使用）               |
+
+只在 compose / entrypoint 层面存在、应用代码不读的变量：
+
+| 变量                | 位置                  | 作用                                                            |
+| ------------------- | --------------------- | --------------------------------------------------------------- |
+| `TOCSIN_HTTP_PORT`  | `docker-compose.yml`  | 只决定宿主机映射端口（容器内始终是 3000）                        |
+| `TOCSIN_DATA_DIR`   | `scripts/docker-entrypoint.sh` | 覆盖 entrypoint 需要 chown 的目录；缺省取 `TOCSIN_DATABASE_PATH` 的目录，再缺省 `/data` |
+
+还有一类只在配置导入/导出里出现的环境变量引用：导出 TOML/JSON 时，secret 字段会被替换成
+`TOCSIN_SOURCE_*` / `TOCSIN_DEST_*` / `TOCSIN_FEISHU_APP_<APP_ID>_APPSECRET` 这类变量名，导入时从进程环境
+取值。它们不是部署开关，但部署环境里需要能看到这些变量，导入才能拿到明文 secret。
+
+## 5. 反向代理与 TLS
+
+应用**不做 TLS 终止**（Nitro 的 `NITRO_SSL_CERT` / `NITRO_SSL_KEY` 按其官方文档只用于测试）。生产做法是在
+前置反向代理（nginx、Caddy、Traefik 等）终止 TLS，再把请求转给容器的 3000。
+
+- 反向代理指向 `http://127.0.0.1:3000`（或同一 Docker 网络里的 `console:3000`）。
+- **建议把 compose 的端口映射改成只绑本机**，例如
+  `"127.0.0.1:${TOCSIN_HTTP_PORT:-3000}:3000"`；当前文件默认发布在所有网卡上，这是文档层面的建议，
+  仓库没有替你改。
+- 反代侧不要设置低于 `TOCSIN_MAX_WEBHOOK_BYTES` 的请求体上限，否则告警载荷会在到达应用前被截断。
+- 外部访问 URL 必须写进 `BETTER_AUTH_URL` / `SERVER_URL`：仓库里没有自定义的 `X-Forwarded-*` 处理代码，
+  应用不会自己推断外部协议和域名。通过多个 Host（PVC、临时域名、内网 + 外网）访问时，额外配置
+  `BETTER_AUTH_ALLOWED_HOSTS` 与 `BETTER_AUTH_TRUSTED_ORIGINS`。
+- **注意：compose 文件目前不透传这两个变量。** 使用它们需要自建 `docker-compose.override.yml`（或直接改
+  你的部署清单）把 `BETTER_AUTH_ALLOWED_HOSTS` / `BETTER_AUTH_TRUSTED_ORIGINS` 加进 `environment`。
+- 只有代理端口对外；容器端口保持在内网。应用没有内置的登录限流或 WAF 能力，需要限流就在代理层做。
+
+## 6. 数据卷
+
+- 唯一持久状态是 `/data` 里的 SQLite 文件：`tocsin.sqlite`，WAL 模式下还会有
+  `tocsin.sqlite-wal` 和 `tocsin.sqlite-shm`。
+- 生产请用命名卷或显式 bind mount；Dockerfile 的 `VOLUME ["/data"]` 在没有显式挂载时会产生匿名卷，
+  重建容器时容易丢数据。
+- 卷里包含 secret（通知目标凭证、飞书应用 `app_secret`、Source 共享密钥），因此**卷的备份也按密钥保管**；
+  详见 `docs/release/backup-restore-upgrade.md`。
+- 不要用 NFS 之类的网络文件系统承载 SQLite；单机本地卷是设计前提。
+
+## 7. Secrets
+
+- **必须替换 `BETTER_AUTH_SECRET`。** compose 里内置的默认值是一个公开的 64 位十六进制串，不在
+  `auth-config.ts` 的占位值黑名单里，所以不设它也能在生产模式启动 —— 这等于把 session 签名密钥公开。
+  部署时用 `openssl rand -hex 32` 之类生成并显式注入。
+- 应用**不支持** Docker secret、`*_FILE` 或外部 secret manager；secret 通过环境变量进入进程。
+  这意味着 `docker inspect` / `docker compose config` 会看到明文，请限制宿主访问权限，并使用
+  `--env-file` 或编排平台的 secret 机制管理文件本身。
+- 不要把 secret 打进镜像：`.dockerignore` 已排除 `.env` 与 `.env.*`（保留 `.env.example`）。
+- 持久化 secret（目标 URL、邮件密码、飞书 app secret 等）保存在 `/data` 的 SQLite 里；导出 TOML/JSON 时
+  默认用环境变量引用替换明文 secret，导入时再从环境变量读取。
+
+## 8. 健康检查与观测
+
+| 端点          | 语义      | 行为                                                                        |
+| ------------- | --------- | --------------------------------------------------------------------------- |
+| `/api/health` | liveness  | 恒返回 200 `{"status":"ok"}`，不检查依赖                                     |
+| `/api/ready`  | readiness | 返回 `{"status":"ok","checks":{"sqlite":"ok","migrations":"ok","worker":"ok"}}`；任一项失败时 503 |
+
+- 用 `/api/ready` 做容器健康检查和发布判断；`/api/health` 只适合"进程还在不在"。
+- 成功访问 `/api/health`、`/api/ready` 的请求日志被降级为 `debug`，避免探针污染常规日志。
+- 日志输出到 stdout/stderr：production 下 `TOCSIN_LOG_FORMAT=auto` 是 JSON Lines，可由 Docker 或外部
+  采集器收集；应用不写本地日志文件，也不把运行日志写进业务库。分类、级别与脱敏规则见
+  `docs/architecture/observability.md`。
+
+## 9. 日常运维入口
+
+- 备份、恢复、升级、回滚：`docs/release/backup-restore-upgrade.md`。
+- 发布前的验收路径：`docs/release/mvp-rc-checklist.md`。
+- 配置导入/导出（TOML/JSON、secret 用环境变量引用）：console 的 Settings 页面。
