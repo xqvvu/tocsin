@@ -42,7 +42,7 @@ import type { EventReplayServiceOptions } from "#/server/operations/event-replay
 import { OperationsService } from "#/server/operations/operations.service";
 import type { OperationsServiceOptions } from "#/server/operations/operations.service.types";
 import { RouteService } from "#/server/routes/route.service";
-import type { DashboardSession } from "#/server/runtime/dashboard-session";
+import type { BetterAuthSession } from "#/server/runtime/dashboard-session";
 import {
   createDeliveryWorkerRunner,
   type DeliveryWorkerRunner,
@@ -58,7 +58,13 @@ const oncallWorkerLogger = getLogger(["tocsin", "worker", "oncall"]);
 export interface AuthServer {
   handler(request: Request): Promise<Response>;
   api: {
-    getSession(input: { headers: HeadersInit }): Promise<DashboardSession | null>;
+    /**
+     * Better Auth's own session lookup, so the result is Better Auth's session —
+     * including `session.token`. Callers must project it (`toDashboardSession`)
+     * before it leaves the server; the type keeps that visible rather than
+     * handing back a shape that looks safe to return as-is.
+     */
+    getSession(input: { headers: HeadersInit }): Promise<BetterAuthSession | null>;
   };
 }
 

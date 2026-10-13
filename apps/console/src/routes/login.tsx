@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   authBootstrapQueryOptions,
   dashboardSessionQueryOptions,
+  isForbiddenSessionError,
 } from "#/features/auth/api/auth.queries";
 import { LanguageSelector } from "#/i18n/language-switcher";
 import { LoginForm } from "#/routes/-login-form";
@@ -27,12 +28,21 @@ export const Route = createFileRoute("/login")({
       });
     }
 
-    const session = await context.queryClient.ensureQueryData(dashboardSessionQueryOptions());
+    try {
+      const session = await context.queryClient.ensureQueryData(dashboardSessionQueryOptions());
 
-    if (session) {
-      throw redirect({
-        to: search.redirect || "/",
-      });
+      if (session) {
+        throw redirect({
+          to: search.redirect || "/",
+        });
+      }
+    } catch (error) {
+      // A signed-in user who cannot use the dashboard must be able to reach this
+      // page — it is where they sign out and switch accounts. Letting the probe's
+      // FORBIDDEN escape would make the sign-in page itself unreachable.
+      if (!isForbiddenSessionError(error)) {
+        throw error;
+      }
     }
   },
   component: LoginPage,

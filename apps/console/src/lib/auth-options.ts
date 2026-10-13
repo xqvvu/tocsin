@@ -2,7 +2,16 @@ import "@tanstack/react-start/server-only";
 import type { BetterAuthOptions } from "better-auth";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
-export function createBaseBetterAuthOptions(): BetterAuthOptions {
+/**
+ * Shared Better Auth options.
+ *
+ * Deliberately unannotated: an explicit `BetterAuthOptions` return type erases
+ * the literal shape of `user.additionalFields`, and with it the inferred type
+ * of a session's `user.role`. Letting TypeScript infer the literal object keeps
+ * `$Infer.Session` exact, which is what the session type below is derived from
+ * (see `dashboard-session.ts`).
+ */
+export function createBaseBetterAuthOptions() {
   return {
     advanced: {
       database: {
@@ -59,5 +68,5 @@ export function createBaseBetterAuthOptions(): BetterAuthOptions {
       enabled: true,
     },
     plugins: [tanstackStartCookies()],
-  };
+  } satisfies BetterAuthOptions;
 }

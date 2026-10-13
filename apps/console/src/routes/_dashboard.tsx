@@ -1,16 +1,39 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery, type QueryClient } from "@tanstack/react-query";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
-import { dashboardSessionQueryOptions } from "#/features/auth/api/auth.queries";
+import {
+  dashboardSessionQueryOptions,
+  isForbiddenSessionError,
+} from "#/features/auth/api/auth.queries";
 import { DashboardErrorPage } from "#/shell/dashboard-error";
+import { DashboardForbiddenPage } from "#/shell/dashboard-forbidden";
 import { DashboardLayout } from "#/shell/dashboard-layout";
 import { DashboardNotFoundPage } from "#/shell/dashboard-not-found";
 
+function ensureDashboardSession(queryClient: QueryClient) {
+  return queryClient.ensureQueryData(dashboardSessionQueryOptions());
+}
+
 export const Route = createFileRoute("/_dashboard")({
   loader: async ({ context, location }) => {
-    const session = await context.queryClient.ensureQueryData(dashboardSessionQueryOptions());
+    let session: Awaited<ReturnType<typeof ensureDashboardSession>>;
 
+    try {
+      session = await ensureDashboardSession(context.queryClient);
+    } catch (error) {
+      // A session that lacks dashboard access must NOT become a login redirect:
+      // signing in again lands right back here. Report it instead, and let the
+      // component render that state.
+      if (isForbiddenSessionError(error)) {
+        return { forbidden: true as const };
+      }
+
+      throw error;
+    }
+
+    // No session at all: send them to sign in. Kept outside the `try` so this
+    // control-flow value can never be mistaken for a caught error.
     if (!session) {
       throw redirect({
         to: "/login" as const,
@@ -19,6 +42,8 @@ export const Route = createFileRoute("/_dashboard")({
         } as never,
       });
     }
+
+    return { forbidden: false as const };
   },
   component: DashboardRouteLayout,
   errorComponent: DashboardRouteError,
@@ -29,6 +54,18 @@ export const Route = createFileRoute("/_dashboard")({
 });
 
 function DashboardRouteLayout() {
+  const { forbidden } = Route.useLoaderData();
+
+  if (forbidden) {
+    // Rendered instead of a redirect: the session is real, it just cannot use
+    // the dashboard.
+    return <DashboardForbiddenPage />;
+  }
+
+  return <DashboardRouteContent />;
+}
+
+function DashboardRouteContent() {
   const { data: session } = useSuspenseQuery(dashboardSessionQueryOptions());
 
   if (!session) {
