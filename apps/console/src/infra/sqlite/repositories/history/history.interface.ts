@@ -6,7 +6,6 @@ import type {
   NumberedPage,
   NormalizedEvent,
 } from "@tocsin/core";
-import type { Page } from "@tocsin/core";
 
 export type {
   DeliveryListItem,
@@ -18,7 +17,7 @@ export type {
 export interface HistoryRepository {
   listEvents(query?: EventListQuery): Promise<NumberedPage<EventListItem>>;
   getEventDetail(eventId: string): Promise<EventDetail | null>;
-  listDeliveries(query?: DeliveryListQuery): Promise<Page<DeliveryListItem>>;
+  listDeliveries(query?: DeliveryListQuery): Promise<NumberedPage<DeliveryListItem>>;
 }
 
 export interface EventListQuery {
@@ -37,6 +36,6 @@ export interface DeliveryListQuery {
   destinationId?: string;
   state?: DeliveryState;
   q?: string;
-  cursor?: string;
+  page?: number;
   limit?: number;
 }

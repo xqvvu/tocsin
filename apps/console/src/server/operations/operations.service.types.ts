@@ -5,7 +5,6 @@ import type {
   NormalizedEvent,
   NumberedPage,
   OncallPing,
-  Page,
 } from "@tocsin/core";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
@@ -29,10 +28,10 @@ export interface ListOperationsInput {
   deliveryState?: DeliveryState;
   q?: string;
   eventPage?: number;
-  deliveryCursor?: string;
+  deliveryPage?: number;
 }
 
 export interface OperationsList {
   events: NumberedPage<EventListItem>;
-  deliveries: Page<DeliveryListItem>;
+  deliveries: NumberedPage<DeliveryListItem>;
 }

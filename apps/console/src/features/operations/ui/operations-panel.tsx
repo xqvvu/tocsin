@@ -34,9 +34,7 @@ export interface OperationsPanelProps {
   onInspectDelivery: (deliveryId: string) => void;
   onRetryDelivery: (deliveryId: string) => void;
   onEventPageChange: (page: number) => void;
-  onOlderDeliveries: (cursor: string) => void;
-  onPreviousDeliveries: () => void;
-  canPreviousDeliveries: boolean;
+  onDeliveryPageChange: (page: number) => void;
 }
 
 export function OperationsPanel({
@@ -53,9 +51,7 @@ export function OperationsPanel({
   onInspectDelivery,
   onRetryDelivery,
   onEventPageChange,
-  onOlderDeliveries,
-  onPreviousDeliveries,
-  canPreviousDeliveries,
+  onDeliveryPageChange,
 }: OperationsPanelProps) {
   const t = useTranslations();
 
@@ -89,13 +85,13 @@ export function OperationsPanel({
         <DeliveriesTable
           deliveries={operations.deliveries.items}
           destinationIconNames={destinationIconNames}
-          nextCursor={operations.deliveries.nextCursor}
           pending={pending}
           onInspect={onInspectDelivery}
           onRetry={onRetryDelivery}
-          onOlder={onOlderDeliveries}
-          canPrevious={canPreviousDeliveries}
-          onPrevious={onPreviousDeliveries}
+          page={operations.deliveries.page}
+          pageSize={operations.deliveries.pageSize}
+          total={operations.deliveries.total}
+          onPageChange={onDeliveryPageChange}
         />
       </div>
       <DetailPanel eventDetail={eventDetail} deliveryDetail={deliveryDetail} />

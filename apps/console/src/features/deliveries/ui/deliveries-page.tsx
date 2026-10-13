@@ -12,11 +12,9 @@ import {
 import { destinationIconNamesByKind } from "#/features/destinations/ui/destination-kind-icon";
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import { operationsQueryOptions } from "#/features/operations/api/operations.queries";
-import {
-  decodeCursorTrail,
-  encodeCursorTrail,
-  type DashboardOperationSearch,
-  type OperationFilterData,
+import type {
+  DashboardOperationSearch,
+  OperationFilterData,
 } from "#/features/operations/model/operation-search";
 import { OperationFilters } from "#/features/operations/ui/operation-filters";
 import { showWorkerRunToast } from "#/features/operations/ui/worker-notice-panel";
@@ -50,14 +48,6 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
   const { invalidateOperations, retryDelivery, runDeliveryWorker } = useOperationMutations();
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
   const pending = pendingAction !== null;
-
-  // Cursor paging cannot derive its own history, so the visited cursors live in
-  // the URL (see `deliveryCursorTrail`) and are replayed here: appending one to
-  // go deeper, popping one to come back.
-  // The trail ends with the page being shown; its head is always page 1, which
-  // has no cursor of its own.
-  const cursorTrail = decodeCursorTrail(search.deliveryCursorTrail);
-  const canPrevious = cursorTrail.length > 1;
 
   async function refreshOperations() {
     await invalidateOperations();
@@ -118,7 +108,6 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
           <DeliveriesTable
             deliveries={operations.deliveries.items}
             destinationIconNames={destinationIconNames}
-            nextCursor={operations.deliveries.nextCursor}
             pending={pending}
             onInspect={(deliveryId) =>
               void navigate({
@@ -135,25 +124,10 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
                 }),
               )
             }
-            canPrevious={canPrevious}
-            // Going forward pushes the page we are leaving onto the trail, so
-            // Previous can come back to it.
-            onOlder={(cursor) =>
-              onSearchChange({
-                deliveryCursor: cursor,
-                deliveryCursorTrail: encodeCursorTrail([...cursorTrail, cursor]),
-              })
-            }
-            onPrevious={() => {
-              const remaining = cursorTrail.slice(0, -1);
-              // The cursor we are returning to is the one the previous page was
-              // fetched with — i.e. the last entry still on the trail. Page 1
-              // has no cursor, so an empty trail means "back to the start".
-              onSearchChange({
-                deliveryCursor: remaining.at(-1) ?? "",
-                deliveryCursorTrail: encodeCursorTrail(remaining),
-              });
-            }}
+            page={operations.deliveries.page}
+            pageSize={operations.deliveries.pageSize}
+            total={operations.deliveries.total}
+            onPageChange={(page) => onSearchChange({ deliveryPage: page })}
           />
         </>
       }

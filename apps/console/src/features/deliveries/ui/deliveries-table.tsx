@@ -24,28 +24,30 @@ import { useTranslations } from "#/i18n/use-i18n";
 export function DeliveriesTable({
   deliveries,
   destinationIconNames,
-  nextCursor,
+  page,
+  pageSize,
+  total,
   pending,
-  canPrevious,
   onInspect,
   onRetry,
-  onOlder,
-  onPrevious,
+  onPageChange,
 }: {
   deliveries: Operations["deliveries"]["items"];
   /** Client-safe destination catalog projected to kind → manifest `iconName`. */
   destinationIconNames: ReadonlyMap<string, string | undefined>;
-  nextCursor: string | null;
+  page: number;
+  pageSize: number;
+  total: number;
   pending: boolean;
-  /** Whether any earlier page was visited; cursor paging cannot infer this. */
-  canPrevious: boolean;
   onInspect: (deliveryId: string) => void;
   onRetry: (deliveryId: string) => void;
-  onOlder: (cursor: string) => void;
-  onPrevious: () => void;
+  onPageChange: (page: number) => void;
 }) {
   const t = useTranslations();
   const data = React.useMemo(() => deliveries, [deliveries]);
+  const normalizedPageSize = Math.max(pageSize, 1);
+  const pageCount = Math.max(Math.ceil(total / normalizedPageSize), 1);
+  const pageIndex = Math.min(Math.max(page - 1, 0), pageCount - 1);
   const columns = React.useMemo<
     Array<ColumnDef<ConsoleTableFeatures, Operations["deliveries"]["items"][number]>>
   >(
@@ -141,18 +143,18 @@ export function DeliveriesTable({
       />
 
       <TablePagination
-        mode="cursor"
+        rangeLabel={
+          total > 0 ? t("deliveries.table.range", { total }) : t("deliveries.table.emptyRange")
+        }
+        pageLabel={t("deliveries.table.page", {
+          page: pageIndex + 1,
+          pageCount,
+        })}
         previousLabel={t("deliveries.table.previous")}
         nextLabel={t("deliveries.table.next")}
-        canPrevious={canPrevious && !pending}
-        // `nextCursor === null` means this is the oldest page reached, so there
-        // is nothing further to go to — never a "jump to latest" in disguise.
-        canNext={nextCursor !== null && !pending}
-        onPrevious={onPrevious}
-        onNext={() => {
-          if (nextCursor === null) return;
-          onOlder(nextCursor);
-        }}
+        pageIndex={pageIndex}
+        pageCount={pageCount}
+        onPageIndexChange={(nextPageIndex) => onPageChange(nextPageIndex + 1)}
       />
     </section>
   );

@@ -8,7 +8,6 @@ export type {
   IsoDateTimeString,
   NumberedPage,
   Operations,
-  Page,
   WorkerHealthSnapshot,
   WorkerRunNotice,
 } from "@tocsin/core";
