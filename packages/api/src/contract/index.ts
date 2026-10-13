@@ -8,6 +8,7 @@ import { routes } from "./routes";
 import { session } from "./session";
 import { settings } from "./settings";
 import { sources } from "./sources";
+import { suppressions } from "./suppressions";
 
 export { session } from "./session";
 export { destinations } from "./destinations";
@@ -19,6 +20,7 @@ export { portability } from "./portability";
 export { routes } from "./routes";
 export { settings } from "./settings";
 export { sources } from "./sources";
+export { suppressions } from "./suppressions";
 
 /**
  * Root contract: one namespace per business capability.
@@ -37,4 +39,5 @@ export const contract = {
   routes,
   settings,
   sources,
+  suppressions,
 };

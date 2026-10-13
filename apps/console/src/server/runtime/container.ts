@@ -51,6 +51,8 @@ import {
 import { safeErrorProperties } from "#/server/runtime/log-safety";
 import { SourceService } from "#/server/sources/source.service";
 import type { SourceServiceOptions } from "#/server/sources/source.service.types";
+import { SuppressionService } from "#/server/suppressions/suppression.service";
+import type { SuppressionServiceOptions } from "#/server/suppressions/suppression.service.types";
 
 const deliveryWorkerLogger = getLogger(["tocsin", "worker", "delivery"]);
 const oncallWorkerLogger = getLogger(["tocsin", "worker", "oncall"]);
@@ -80,6 +82,9 @@ export interface ApplicationContainer {
     options?: Partial<Omit<DestinationServiceOptions, "store" | "destinations">>,
   ): Promise<DestinationService>;
   createRouteService(): Promise<RouteService>;
+  createSuppressionService(
+    options?: Partial<Omit<SuppressionServiceOptions, "store">>,
+  ): Promise<SuppressionService>;
   createFeishuAppService(
     options?: Partial<Omit<FeishuAppServiceOptions, "store">>,
   ): Promise<FeishuAppService>;
@@ -228,6 +233,13 @@ export function createApplicationContainer(
 
     async createRouteService() {
       return new RouteService({ store: await container.getSqliteStore() });
+    },
+
+    async createSuppressionService(serviceOptions = {}) {
+      return new SuppressionService({
+        store: await container.getSqliteStore(),
+        ...serviceOptions,
+      });
     },
 
     async createFeishuAppService(serviceOptions = {}) {

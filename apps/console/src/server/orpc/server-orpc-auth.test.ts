@@ -28,6 +28,9 @@ const fakeContainer = {
   createRouteService: async () => {
     throw new Error("routes procedures must not run without a dashboard session");
   },
+  createSuppressionService: async () => {
+    throw new Error("suppressions procedures must not run without a dashboard session");
+  },
   createFeishuAppService: async () => {
     throw new Error("integrations procedures must not run without a dashboard session");
   },
@@ -125,6 +128,10 @@ const expectedProcedures: Record<
   },
   portability: { public: [], private: ["exportToml", "exportJson", "importToml", "importJson"] },
   routes: { public: [], private: ["list", "create", "update", "delete"] },
+  suppressions: {
+    public: [],
+    private: ["list", "get", "hits", "create", "update", "setEnabled", "delete"],
+  },
   settings: { public: [], private: ["get", "update"] },
   sources: {
     public: [],
@@ -182,6 +189,28 @@ const procedureArgs: Record<string, unknown> = {
   runDeliveryWorker: {},
 };
 
+/**
+ * Arguments that cannot be shared by procedure name because the namespaces
+ * disagree on the input shape (`create`, `get`). The guard middleware runs after
+ * input validation, so a wrong argument here would show up as BAD_REQUEST and
+ * the auth assertion would pass for the wrong reason.
+ */
+const featureProcedureArgs: Record<string, unknown> = {
+  "suppressions.create": {
+    name: "probe",
+    kind: "silence",
+    matcher: {},
+    endsAt: "2030-01-01T00:00:00.000Z",
+  },
+  "suppressions.get": { id: "suppression-missing" },
+  "suppressions.hits": { id: "suppression-missing" },
+  "suppressions.setEnabled": { id: "suppression-missing", enabled: false },
+};
+
+function argsFor(feature: string, procedure: string): unknown {
+  return featureProcedureArgs[`${feature}.${procedure}`] ?? procedureArgs[procedure];
+}
+
 describe("dashboard oRPC auth gates", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -212,7 +241,7 @@ describe("dashboard oRPC auth gates", () => {
 
     const observed = await Promise.all(
       privateProcedures.map(async ([feature, procedure]) => {
-        const code = await client[feature]![procedure]!(procedureArgs[procedure]).then(
+        const code = await client[feature]![procedure]!(argsFor(feature, procedure)).then(
           () => "RESOLVED",
           (error: { code?: string }) => error.code ?? "NO_CODE",
         );

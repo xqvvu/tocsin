@@ -34,6 +34,8 @@ export interface DeliveryListQuery {
   severity?: NormalizedEvent["severity"];
   status?: NormalizedEvent["status"];
   destinationId?: string;
+  /** Only the deliveries silenced by one rule ("what did this rule hit?"). */
+  suppressionId?: string;
   state?: DeliveryState;
   q?: string;
   page?: number;

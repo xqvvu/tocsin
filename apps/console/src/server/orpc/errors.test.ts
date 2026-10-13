@@ -6,6 +6,7 @@ import { CreateSourceCommandSchema } from "@tocsin/core";
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import { InvalidDeliveryStateError } from "#/infra/sqlite/repositories/delivery/delivery.interface";
 import type { ApplicationContainer } from "#/server/runtime/container";
+import { DomainValidationError } from "#/server/runtime/domain-errors";
 
 const fakeContainer = {
   createSourceService: async () => ({
@@ -16,6 +17,14 @@ const fakeContainer = {
   createOperationsService: async () => ({
     retryDelivery: async () => {
       throw new InvalidDeliveryStateError("delivery-1", "succeeded", "retry");
+    },
+  }),
+  createSuppressionService: async () => ({
+    getSuppression: async () => {
+      throw new RecordNotFoundError("Suppression", "suppression-missing");
+    },
+    createSuppression: async () => {
+      throw new DomainValidationError("A suppression must end after it starts");
     },
   }),
   getAuth: async () => ({
@@ -74,6 +83,27 @@ describe("oRPC domain error translation", () => {
     expect(status).toBe(409);
     expect(body.code).toBe("CONFLICT");
     expect(body.message).toBe("Cannot retry delivery delivery-1 while it is succeeded");
+  });
+
+  it("maps a missing suppression rule to NOT_FOUND through the new namespace", async () => {
+    const { status, body } = await callProcedure("suppressions/get", { id: "suppression-missing" });
+
+    expect(status).toBe(404);
+    expect(body.code).toBe("NOT_FOUND");
+    expect(body.message).toBe("Suppression not found: suppression-missing");
+  });
+
+  it("maps an invalid suppression window to BAD_REQUEST", async () => {
+    const { status, body } = await callProcedure("suppressions/create", {
+      name: "Backwards",
+      kind: "silence",
+      startsAt: "2026-10-12T11:00:00.000Z",
+      endsAt: "2026-10-12T09:00:00.000Z",
+    });
+
+    expect(status).toBe(400);
+    expect(body.code).toBe("BAD_REQUEST");
+    expect(body.message).toBe("A suppression must end after it starts");
   });
 
   it("leaves unknown failures as internal errors", async () => {

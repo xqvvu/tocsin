@@ -8,6 +8,7 @@ import { routesRouter } from "#/server/orpc/features/routes/router";
 import { sessionRouter } from "#/server/orpc/features/session/router";
 import { settingsRouter } from "#/server/orpc/features/settings/router";
 import { sourcesRouter } from "#/server/orpc/features/sources/router";
+import { suppressionsRouter } from "#/server/orpc/features/suppressions/router";
 import { os } from "#/server/orpc/os";
 
 export const router = os.router({
@@ -26,4 +27,5 @@ export const router = os.router({
   routes: routesRouter,
   settings: settingsRouter,
   sources: sourcesRouter,
+  suppressions: suppressionsRouter,
 });

@@ -9,4 +9,5 @@ export * from "./routes";
 export * from "./settings";
 export * from "./shared";
 export * from "./sources";
+export * from "./suppressions";
 export * from "./worker";
