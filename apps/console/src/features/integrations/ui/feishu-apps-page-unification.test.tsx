@@ -1,0 +1,151 @@
+// @vitest-environment jsdom
+
+import { cleanup, render } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it } from "vite-plus/test";
+
+import { FeishuAppsPageToolbar } from "#/features/integrations/ui/feishu-apps-page-toolbar";
+import { FeishuAppsSection } from "#/features/integrations/ui/feishu-apps-section";
+import { SourcesPageToolbar } from "#/features/sources/ui/sources-page-toolbar";
+import { SourcesSection } from "#/features/sources/ui/sources-section";
+import { AppIntlProvider } from "#/i18n/provider";
+
+/**
+ * The Feishu apps page is compared against the sources page throughout, because
+ * sources is a plain list page of the same shape — a toolbar and a paginated
+ * table — and is the shape the rest of the console already uses.
+ *
+ * These assertions are on the *rendered* result, not on which components are
+ * imported. That distinction is the whole point: an earlier attempt at unifying
+ * another page swapped the component while still passing props that produced a
+ * visibly different control, and a component-level assertion would have passed
+ * while the page still looked wrong.
+ */
+
+const noop = () => {};
+
+function renderWithIntl(ui: ReactNode) {
+  return render(<AppIntlProvider locale="en-US">{ui}</AppIntlProvider>);
+}
+
+function sourcesSection() {
+  return (
+    <SourcesSection
+      sources={[]}
+      routes={[]}
+      pending={false}
+      onEdit={noop}
+      onToggle={noop}
+      onRotateToken={noop}
+      onDelete={noop}
+    />
+  );
+}
+
+function feishuSection() {
+  return (
+    <FeishuAppsSection apps={[]} pending={false} onTest={noop} onEdit={noop} onDelete={noop} />
+  );
+}
+
+describe("Feishu apps page matches the other list pages", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("renders the same table chrome as another list page", () => {
+    const { container: sources } = renderWithIntl(sourcesSection());
+    const { container: feishu } = renderWithIntl(feishuSection());
+
+    const chrome = (container: HTMLElement) => ({
+      table: container.querySelectorAll("table").length,
+      headCells: container.querySelectorAll("thead th").length,
+      // The empty state uses the shared `Empty` primitive, which renders an icon.
+      emptyStateIcon: container.querySelectorAll("svg").length > 0,
+    });
+
+    // Same shape: one table, one header cell per column, an icon-bearing empty
+    // state. A hand-rolled table or a bare two-line empty block would differ here.
+    expect(chrome(feishu)).toEqual(chrome(sources));
+    expect(chrome(feishu).table).toBe(1);
+    expect(chrome(feishu).headCells).toBe(5);
+    expect(chrome(feishu).emptyStateIcon).toBe(true);
+  });
+
+  it("renders the same pagination footer as another list page", () => {
+    const { container: sources } = renderWithIntl(sourcesSection());
+    const { container: feishu } = renderWithIntl(feishuSection());
+
+    // Normalise the honest differences: the noun, and the empty-state copy.
+    // Anchor on the pagination label instead of slicing characters — a slice
+    // cuts mid-word and makes the assertion depend on copy length.
+    const footer = (container: HTMLElement) => {
+      const text = container.textContent ?? "";
+      const start = text.indexOf("Page ");
+
+      return text.slice(start);
+    };
+
+    // Page label, Previous and Next all present — i.e. the shared numbered
+    // control, which is what makes the footer identical across list pages.
+    expect(footer(feishu)).toContain("Page 1 / 1");
+    expect(footer(feishu)).toContain("Previous");
+    expect(footer(feishu)).toContain("Next");
+    expect(footer(feishu)).toBe(footer(sources));
+
+    // The range label is part of the same footer and legitimately differs by
+    // noun, so assert it separately rather than skipping it: dropping it would
+    // leave a footer that renders only arrows, which is the exact regression
+    // this page needed fixing for.
+    const rangeLabel = (container: HTMLElement) =>
+      (container.textContent ?? "").split("Page ")[0].split("right rail").at(-1);
+
+    expect(rangeLabel(feishu)).toBe("No Feishu apps");
+  });
+
+  it("renders its own columns, so the table is not merely structurally identical", () => {
+    const { container } = renderWithIntl(feishuSection());
+
+    // Guards against "unifying" by rendering the wrong table entirely: the
+    // headers must be the Feishu ones.
+    const headers = Array.from(container.querySelectorAll("thead th")).map(
+      (cell) => cell.textContent,
+    );
+
+    expect(headers).toEqual(["Name", "App ID", "Referenced by", "Updated", "Actions"]);
+  });
+
+  it("keeps its actionable columns, so unification did not drop functionality", () => {
+    const { container } = renderWithIntl(feishuSection());
+
+    // The actions column exists as a real column (5 headers above); assert the
+    // empty state did not swallow the table.
+    expect(container.querySelector("table")).not.toBeNull();
+  });
+});
+
+describe("Feishu apps page header matches the other list pages", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("renders the same header shape as another list page", () => {
+    const { container: sources } = renderWithIntl(
+      <SourcesPageToolbar actions={<button type="button">Action</button>} />,
+    );
+    const { container: feishu } = renderWithIntl(
+      <FeishuAppsPageToolbar actions={<button type="button">Action</button>} />,
+    );
+
+    const header = (container: HTMLElement) => ({
+      headers: container.querySelectorAll("header").length,
+      // The dashboard shell renders the page heading; the toolbar must NOT add
+      // its own, which is what made this page's header stand out.
+      headings: container.querySelectorAll("h1").length,
+      descriptions: container.querySelectorAll("p").length,
+    });
+
+    expect(header(feishu)).toEqual(header(sources));
+    expect(header(feishu).headings).toBe(0);
+  });
+});
