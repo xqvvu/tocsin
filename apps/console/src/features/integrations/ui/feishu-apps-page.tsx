@@ -5,11 +5,11 @@ import { toast } from "sonner";
 
 import type { FeishuAppListItem } from "@tocsin/core";
 
-import { PageToolbar } from "#/components/common/page-toolbar";
 import { Button } from "#/components/ui/button";
 import { useFeishuAppMutations } from "#/features/integrations/api/feishu-app.mutations";
 import { feishuAppsQueryOptions } from "#/features/integrations/api/feishu-app.queries";
 import { FeishuAppDialog } from "#/features/integrations/ui/feishu-app-dialog";
+import { FeishuAppsPageToolbar } from "#/features/integrations/ui/feishu-apps-page-toolbar";
 import { FeishuAppsSection } from "#/features/integrations/ui/feishu-apps-section";
 import { useTranslations } from "#/i18n/use-i18n";
 import { DashboardContentLayout } from "#/shell/dashboard-layout";
@@ -42,9 +42,7 @@ export function FeishuAppsPage() {
     <DashboardContentLayout
       main={
         <>
-          <PageToolbar
-            title={t("integrations.page.title")}
-            description={t("integrations.page.description")}
+          <FeishuAppsPageToolbar
             actions={
               <>
                 <Button
