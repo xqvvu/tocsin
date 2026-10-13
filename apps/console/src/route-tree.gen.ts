@@ -20,11 +20,13 @@ import { Route as DashboardIntegrationsRouteImport } from "./routes/_dashboard.i
 import { Route as DashboardRoutesRouteImport } from "./routes/_dashboard.routes";
 import { Route as DashboardSettingsRouteImport } from "./routes/_dashboard.settings";
 import { Route as DashboardSourcesRouteImport } from "./routes/_dashboard.sources";
+import { Route as DashboardSuppressionsRouteImport } from "./routes/_dashboard.suppressions";
 import { Route as ApiSplatRouteImport } from "./routes/api/$";
 import { Route as ApiHealthRouteImport } from "./routes/api/health";
 import { Route as ApiReadyRouteImport } from "./routes/api/ready";
 import { Route as DashboardDeliveriesDeliveryIdRouteImport } from "./routes/_dashboard.deliveries_.$deliveryId";
 import { Route as DashboardEventsEventIdRouteImport } from "./routes/_dashboard.events_.$eventId";
+import { Route as DashboardSuppressionsSuppressionIdRouteImport } from "./routes/_dashboard.suppressions_.$suppressionId";
 import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth/$";
 import { Route as ApiOpenapiSplatRouteImport } from "./routes/api/openapi/$";
 import { Route as ApiSourcesSourceIdWebhookRouteImport } from "./routes/api/sources/$sourceId/webhook";
@@ -83,6 +85,11 @@ const DashboardSourcesRoute = DashboardSourcesRouteImport.update({
   path: "/sources",
   getParentRoute: () => DashboardRoute,
 } as any);
+const DashboardSuppressionsRoute = DashboardSuppressionsRouteImport.update({
+  id: "/suppressions",
+  path: "/suppressions",
+  getParentRoute: () => DashboardRoute,
+} as any);
 const ApiSplatRoute = ApiSplatRouteImport.update({
   id: "/api/$",
   path: "/api/$",
@@ -109,6 +116,12 @@ const DashboardEventsEventIdRoute = DashboardEventsEventIdRouteImport.update({
   path: "/events/$eventId",
   getParentRoute: () => DashboardRoute,
 } as any);
+const DashboardSuppressionsSuppressionIdRoute =
+  DashboardSuppressionsSuppressionIdRouteImport.update({
+    id: "/suppressions_/$suppressionId",
+    path: "/suppressions/$suppressionId",
+    getParentRoute: () => DashboardRoute,
+  } as any);
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: "/api/auth/$",
   path: "/api/auth/$",
@@ -137,11 +150,13 @@ export interface FileRoutesByFullPath {
   "/routes": typeof DashboardRoutesRoute;
   "/settings": typeof DashboardSettingsRoute;
   "/sources": typeof DashboardSourcesRoute;
+  "/suppressions": typeof DashboardSuppressionsRoute;
   "/api/$": typeof ApiSplatRoute;
   "/api/health": typeof ApiHealthRoute;
   "/api/ready": typeof ApiReadyRoute;
   "/deliveries/$deliveryId": typeof DashboardDeliveriesDeliveryIdRoute;
   "/events/$eventId": typeof DashboardEventsEventIdRoute;
+  "/suppressions/$suppressionId": typeof DashboardSuppressionsSuppressionIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/openapi/$": typeof ApiOpenapiSplatRoute;
   "/api/sources/$sourceId/webhook": typeof ApiSourcesSourceIdWebhookRoute;
@@ -157,11 +172,13 @@ export interface FileRoutesByTo {
   "/routes": typeof DashboardRoutesRoute;
   "/settings": typeof DashboardSettingsRoute;
   "/sources": typeof DashboardSourcesRoute;
+  "/suppressions": typeof DashboardSuppressionsRoute;
   "/api/$": typeof ApiSplatRoute;
   "/api/health": typeof ApiHealthRoute;
   "/api/ready": typeof ApiReadyRoute;
   "/deliveries/$deliveryId": typeof DashboardDeliveriesDeliveryIdRoute;
   "/events/$eventId": typeof DashboardEventsEventIdRoute;
+  "/suppressions/$suppressionId": typeof DashboardSuppressionsSuppressionIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/openapi/$": typeof ApiOpenapiSplatRoute;
   "/api/sources/$sourceId/webhook": typeof ApiSourcesSourceIdWebhookRoute;
@@ -179,11 +196,13 @@ export interface FileRoutesById {
   "/_dashboard/routes": typeof DashboardRoutesRoute;
   "/_dashboard/settings": typeof DashboardSettingsRoute;
   "/_dashboard/sources": typeof DashboardSourcesRoute;
+  "/_dashboard/suppressions": typeof DashboardSuppressionsRoute;
   "/api/$": typeof ApiSplatRoute;
   "/api/health": typeof ApiHealthRoute;
   "/api/ready": typeof ApiReadyRoute;
   "/_dashboard/deliveries_/$deliveryId": typeof DashboardDeliveriesDeliveryIdRoute;
   "/_dashboard/events_/$eventId": typeof DashboardEventsEventIdRoute;
+  "/_dashboard/suppressions_/$suppressionId": typeof DashboardSuppressionsSuppressionIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
   "/api/openapi/$": typeof ApiOpenapiSplatRoute;
   "/api/sources/$sourceId/webhook": typeof ApiSourcesSourceIdWebhookRoute;
@@ -201,11 +220,13 @@ export interface FileRouteTypes {
     | "/routes"
     | "/settings"
     | "/sources"
+    | "/suppressions"
     | "/api/$"
     | "/api/health"
     | "/api/ready"
     | "/deliveries/$deliveryId"
     | "/events/$eventId"
+    | "/suppressions/$suppressionId"
     | "/api/auth/$"
     | "/api/openapi/$"
     | "/api/sources/$sourceId/webhook";
@@ -221,11 +242,13 @@ export interface FileRouteTypes {
     | "/routes"
     | "/settings"
     | "/sources"
+    | "/suppressions"
     | "/api/$"
     | "/api/health"
     | "/api/ready"
     | "/deliveries/$deliveryId"
     | "/events/$eventId"
+    | "/suppressions/$suppressionId"
     | "/api/auth/$"
     | "/api/openapi/$"
     | "/api/sources/$sourceId/webhook";
@@ -242,11 +265,13 @@ export interface FileRouteTypes {
     | "/_dashboard/routes"
     | "/_dashboard/settings"
     | "/_dashboard/sources"
+    | "/_dashboard/suppressions"
     | "/api/$"
     | "/api/health"
     | "/api/ready"
     | "/_dashboard/deliveries_/$deliveryId"
     | "/_dashboard/events_/$eventId"
+    | "/_dashboard/suppressions_/$suppressionId"
     | "/api/auth/$"
     | "/api/openapi/$"
     | "/api/sources/$sourceId/webhook";
@@ -344,6 +369,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof DashboardSourcesRouteImport;
       parentRoute: typeof DashboardRoute;
     };
+    "/_dashboard/suppressions": {
+      id: "/_dashboard/suppressions";
+      path: "/suppressions";
+      fullPath: "/suppressions";
+      preLoaderRoute: typeof DashboardSuppressionsRouteImport;
+      parentRoute: typeof DashboardRoute;
+    };
     "/api/$": {
       id: "/api/$";
       path: "/api/$";
@@ -379,6 +411,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof DashboardEventsEventIdRouteImport;
       parentRoute: typeof DashboardRoute;
     };
+    "/_dashboard/suppressions_/$suppressionId": {
+      id: "/_dashboard/suppressions_/$suppressionId";
+      path: "/suppressions/$suppressionId";
+      fullPath: "/suppressions/$suppressionId";
+      preLoaderRoute: typeof DashboardSuppressionsSuppressionIdRouteImport;
+      parentRoute: typeof DashboardRoute;
+    };
     "/api/auth/$": {
       id: "/api/auth/$";
       path: "/api/auth/$";
@@ -411,8 +450,10 @@ interface DashboardRouteChildren {
   DashboardRoutesRoute: typeof DashboardRoutesRoute;
   DashboardSettingsRoute: typeof DashboardSettingsRoute;
   DashboardSourcesRoute: typeof DashboardSourcesRoute;
+  DashboardSuppressionsRoute: typeof DashboardSuppressionsRoute;
   DashboardDeliveriesDeliveryIdRoute: typeof DashboardDeliveriesDeliveryIdRoute;
   DashboardEventsEventIdRoute: typeof DashboardEventsEventIdRoute;
+  DashboardSuppressionsSuppressionIdRoute: typeof DashboardSuppressionsSuppressionIdRoute;
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
@@ -423,8 +464,11 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardRoutesRoute: DashboardRoutesRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardSourcesRoute: DashboardSourcesRoute,
+  DashboardSuppressionsRoute: DashboardSuppressionsRoute,
   DashboardDeliveriesDeliveryIdRoute: DashboardDeliveriesDeliveryIdRoute,
   DashboardEventsEventIdRoute: DashboardEventsEventIdRoute,
+  DashboardSuppressionsSuppressionIdRoute:
+    DashboardSuppressionsSuppressionIdRoute,
 };
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

@@ -309,6 +309,7 @@ const dashboardNavSkeletons = [
   "events",
   "sources",
   "routes",
+  "suppressions",
   "destinations",
   "integrations",
   "deliveries",

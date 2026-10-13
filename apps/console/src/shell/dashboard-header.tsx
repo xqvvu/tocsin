@@ -39,6 +39,9 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             <DashboardNavLink to="/integrations">
               {t("common.routes.integrations")}
             </DashboardNavLink>
+            <DashboardNavLink to="/suppressions">
+              {t("common.routes.suppressions")}
+            </DashboardNavLink>
             <DashboardNavLink to="/deliveries">{t("common.routes.deliveries")}</DashboardNavLink>
             <DashboardNavLink to="/settings">{t("common.routes.settings")}</DashboardNavLink>
           </nav>
