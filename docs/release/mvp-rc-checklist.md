@@ -121,7 +121,7 @@ raw payload retention 已可配置并在 intake 路径执行清理；服务端�
 - [x] 增加 root/workspace CI workflow，至少运行 fmt-check、lint、test、console build。
 - [ ] 增加关键浏览器 E2E workflow：setup/login、创建 Source、复制 webhook URL、创建/测试 Destination、
       创建 Route、发送 webhook、查看 Event/Delivery、过滤历史、失败 retry。
-- [ ] 增加 Docker build/compose smoke automation。
+- [x] 增加 Docker build/compose smoke automation。→ `just docker-smoke` / `scripts/docker-smoke.sh`：构建镜像 → 起栈 → 等 `/api/ready` → 断言 `/api/health` 与 `/api/ready` 不同 → 断言 `/data/tocsin.sqlite` 已挂载 → 断言首页出 HTML → 拆栈并删卷。**已在本机实测通过**（见 PR）。故意不进 `ci.yml`：构镜像慢，快速门禁应保持快。
 - [x] 增加 health endpoint 与 readiness endpoint。
 - [x] Dockerfile 提供 runtime image、数据卷和 container healthcheck。
 - [x] docker compose 提供本地自托管试运行形态。

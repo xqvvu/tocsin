@@ -71,6 +71,12 @@ test-destinations:
 new-destination kind *args:
     node scripts/new-destination-adapter.mjs {{kind}} {{args}}
 
+# Build the image, bring the stack up, wait for readiness, tear it down.
+# Slow on purpose (it builds an image) so it stays out of the fast CI gate.
+[group('Docker')]
+docker-smoke:
+    bash scripts/docker-smoke.sh
+
 # Build and push a multi-platform image.
 [group('Docker')]
 docker-buildx image tag:
