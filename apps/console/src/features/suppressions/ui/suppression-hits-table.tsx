@@ -32,7 +32,10 @@ export function SuppressionHitsTable({
   const data = React.useMemo(() => hits.items, [hits.items]);
   const pageSize = Math.max(hits.pageSize, 1);
   const pageCount = Math.max(Math.ceil(hits.total / pageSize), 1);
-  const pageIndex = Math.min(Math.max(page - 1, 0), pageCount - 1);
+  // The server clamps an out-of-range page, so believe its answer over the
+  // requested page rather than rendering an empty page that claims to exist.
+  const effectivePage = hits.page ?? page;
+  const pageIndex = Math.min(Math.max(effectivePage - 1, 0), pageCount - 1);
   const columns = React.useMemo<Array<ColumnDef<ConsoleTableFeatures, DeliveryListItem>>>(
     () => [
       {
