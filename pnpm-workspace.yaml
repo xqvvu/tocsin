@@ -101,11 +101,6 @@ allowBuilds:
   esbuild: true
   lightningcss: true
 
-onlyBuiltDependencies:
-  - better-sqlite3
-  - esbuild
-  - lightningcss
-
 overrides:
   vite@*: "catalog:"
 
@@ -114,3 +109,17 @@ peerDependencyRules:
     - vite
   allowedVersions:
     vite: "*"
+
+permissions:
+  "@logtape/logtape":
+    skills: true
+  "@tanstack/devtools-vite":
+    skills: true
+  "@tanstack/match-sorter-utils":
+    skills: true
+  "@tanstack/react-start":
+    skills: true
+  "@tanstack/react-table":
+    skills: true
+  "@tanstack/router-plugin":
+    skills: true
