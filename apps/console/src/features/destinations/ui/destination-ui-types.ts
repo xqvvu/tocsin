@@ -33,7 +33,11 @@ export type DestinationFormValues = DestinationTemplateFormState & {
   subjectTemplate: string;
   htmlTemplate: string;
   headers: string;
-  url: string;
+  /**
+   * Webhook address for every webhook-style kind. The generic-webhook manifest
+   * calls its config key `url`, but the form field is `webhookUrl` — having both
+   * names in this type is what let the builder and the input disagree.
+   */
   webhookUrl: string;
   method: string;
   signSecret: string;

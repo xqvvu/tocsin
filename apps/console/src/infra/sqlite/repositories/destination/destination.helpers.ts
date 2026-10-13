@@ -122,8 +122,12 @@ export function destinationEditorFormDraftFromRuntime(
     subjectTemplate: configString(config, "subjectTemplate") ?? "",
     htmlTemplate: configString(config, "htmlTemplate") ?? "",
     headers: configHeaderLinesForEditor(config),
-    url: configString(config, "url") ?? "",
-    webhookUrl: configString(config, "webhookUrl") ?? "",
+    // One field, because the form renders exactly one input for it. Manifests
+    // disagree on the config key — slack and feishu use `webhookUrl`, generic
+    // webhook uses `url` — so read whichever this destination stores. Keeping
+    // two parallel draft fields meant a generic-webhook destination loaded its
+    // address into `url`, which no input ever displayed.
+    webhookUrl: configString(config, "url") ?? configString(config, "webhookUrl") ?? "",
     method: configString(config, "method") ?? "",
     sendMode: feishuSendMode(config) ?? "webhook",
     appRef: feishuApp ? (configString(feishuApp, "appRef") ?? "") : "",

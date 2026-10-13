@@ -183,7 +183,11 @@ export const DestinationEditorFormDraftSchema = z.object({
   htmlTemplate: z.string(),
   /** Header lines as `Name: value`; sensitive values become empty strings. */
   headers: z.string(),
-  url: z.string(),
+  /**
+   * The webhook address, whichever config key this kind stores it under
+   * (`url` for generic webhook, `webhookUrl` for slack and feishu). The form has
+   * a single input for it, so the draft has a single field.
+   */
   webhookUrl: z.string(),
   method: z.string(),
   /** Feishu send mode and app-mode target fields. */

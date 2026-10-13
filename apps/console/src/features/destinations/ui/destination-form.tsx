@@ -1270,7 +1270,6 @@ export function createDestinationDefaults(): DestinationFormValues {
     subjectTemplate: "",
     htmlTemplate: "",
     headers: "",
-    url: "",
     webhookUrl: "",
     method: "POST",
     signSecret: "",

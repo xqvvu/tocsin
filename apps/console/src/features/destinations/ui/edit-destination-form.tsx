@@ -78,7 +78,6 @@ export function EditDestinationForm({
           subjectTemplate: editorDraft.form.subjectTemplate,
           htmlTemplate: editorDraft.form.htmlTemplate,
           headers: editorDraft.form.headers,
-          url: editorDraft.form.url,
           webhookUrl: editorDraft.form.webhookUrl,
           method: editorDraft.form.method,
           signSecret: "",
