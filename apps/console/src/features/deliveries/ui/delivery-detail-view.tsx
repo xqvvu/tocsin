@@ -5,6 +5,7 @@ import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detai
 import { DeliveryJsonBlock } from "#/features/deliveries/ui/delivery-json-block";
 import { DeliveryPingsTable } from "#/features/deliveries/ui/delivery-pings-table";
 import { DeliverySummaryTab } from "#/features/deliveries/ui/delivery-summary-tab";
+import { DeliverySuppressionNotice } from "#/features/deliveries/ui/delivery-suppression-notice";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function DeliveryDetailView({ detail }: { detail: DeliveryDetailData }) {
@@ -13,6 +14,8 @@ export function DeliveryDetailView({ detail }: { detail: DeliveryDetailData }) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
       <DeliveryDetailSummary detail={detail} />
+
+      {detail.job.state === "suppressed" ? <DeliverySuppressionNotice detail={detail} /> : null}
 
       <Tabs
         defaultValue="summary"

@@ -10,10 +10,20 @@ export function DeliveryStateBadge({ state }: { state: DeliveryState }) {
   return (
     <Badge
       variant={state === "failed" ? "destructive" : state === "succeeded" ? "default" : "secondary"}
+      className={deliveryStateBadgeClassName(state)}
     >
       {t(`common.deliveryState.${state}`)}
     </Badge>
   );
+}
+
+/**
+ * `suppressed` must never be mistaken for `failed` ("we chose not to send" versus
+ * "sending broke", PRD story 25), so it is outlined and muted rather than red,
+ * matching how the paging table already renders its own suppressed pings.
+ */
+function deliveryStateBadgeClassName(state: DeliveryState): string | undefined {
+  return state === "suppressed" ? "border-muted-foreground/40 text-muted-foreground" : undefined;
 }
 
 export function DeliveryAttemptStateBadge({
