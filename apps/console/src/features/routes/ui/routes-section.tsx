@@ -126,7 +126,7 @@ export function RoutesSection({
   );
 
   return (
-    <section className="bg-background">
+    <section className="bg-background flex min-h-0 min-w-0 flex-1 flex-col">
       <OperationsTable
         data={data}
         columns={columns}
@@ -299,9 +299,16 @@ function RouteRuleCell({ route, sources }: { route: RouteSummary; sources: Sourc
   }
 
   return (
-    <div className="flex min-w-0 flex-wrap gap-1" title={describeRouteRule(route.rule, copy)}>
+    <div
+      className="flex min-w-0 flex-nowrap gap-1 overflow-hidden"
+      title={describeRouteRule(route.rule, copy)}
+    >
       {chips.map((chip) => (
-        <Badge key={chip} variant="outline" className="max-w-full truncate font-mono text-[11px]">
+        <Badge
+          key={chip}
+          variant="outline"
+          className="max-w-48 min-w-0 shrink truncate font-mono text-[11px]"
+        >
           {chip}
         </Badge>
       ))}
