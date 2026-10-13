@@ -4,7 +4,7 @@
 > release workflow、没有 changelog 工具、没有任何 git tag；下面是从现在到第一个 tag 的**人工**流程，
 > 并且明确说明 tag 本身不会触发任何东西。
 
-核实时间 2026-10-13，核实基线 `origin/main` @ `4e17c28`。本文只回答"怎么切一个 tag"；发布前的产品验收
+核实时间 2026-10-13，核实基线 `origin/main` @ `4e17c28`。本文只回答“怎么切一个 tag”；发布前的产品验收
 清单在 `docs/release/mvp-rc-checklist.md`，部署与数据操作见
 `docs/release/docker-production-deployment.md` 和 `docs/release/backup-restore-upgrade.md`。
 
@@ -54,7 +54,7 @@
    preview/test → 建 Route → 发 webhook → 看 Event/Delivery → 失败 retry → 重启进程 → 导出配置不含明文
    secret。
 5. **文档与版本一致。** 版本号、README 状态段落、部署/备份文档、`mvp-rc-checklist.md` 的结论日期要对齐
-   本次 tag 的事实；不要留下"尚无部署文档"这类已经过时的说法。
+   本次 tag 的事实；不要留下“尚无部署文档”这类已经过时的说法。
 6. **数据兼容性自查。** 确认本次发布没有原地修改 SQLite baseline migration。当前 migration plan 只有
    `0001_initial_schema`，runner 会跳过已应用的版本，所以**改 baseline 对任何已有数据库都是 no-op**；
    判断方法与后果见 `docs/release/backup-restore-upgrade.md`。
@@ -102,4 +102,4 @@ git push origin v0.1.0-beta.8
 - 没有自动化版本递增与 changelog。
 - 没有镜像仓库发布流程；镜像只在本地存在。
 - 没有 E2E 与 compose smoke 自动化，CI 覆盖不到浏览器路径和容器运行时。
-- 没有发布说明模板，也没有"发布失败/撤回"的预案文档。
+- 没有发布说明模板，也没有“发布失败/撤回”的预案文档。

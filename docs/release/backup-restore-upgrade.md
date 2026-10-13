@@ -1,7 +1,7 @@
 # 备份、恢复、升级与回滚
 
 > 一句话结论：要备份的只有 `/data` 里的一个 SQLite 文件（外加 WAL/SHM 两个伴生文件）；升级与回滚的正确
-> 顺序是"先冷备份、再换镜像"；而当前 **migration 只有一个 baseline，runner 会跳过已应用的版本**，所以
+> 顺序是“先冷备份、再换镜像”；而当前 **migration 只有一个 baseline，runner 会跳过已应用的版本**，所以
 > **原地修改 baseline 对任何已有数据库都是 no-op** —— 这不是异常，是必须按事实处理的升级约束。
 
 核实时间 2026-10-13，核实基线 `origin/main` @ `4e17c28`。相关文件：
@@ -43,14 +43,14 @@ migration 文件**；`migrate/` 目录下至今只有 `0001_initial_schema.ts` �
 | 全新数据库                        | baseline 全量执行，schema 与当前代码一致                                                          |
 | 在 baseline 被修改**之前**创建的库 | `schema_migrations` 里已经有 `0001`，runner 跳过，新表/新列**不会**被创建；启动能通过（迁移检查只看版本号），第一次读写缺失对象时才报运行时错误 |
 
-所以"升级镜像"在今天**不等于**"升级数据库"。
+所以“升级镜像”在今天**不等于**“升级数据库”。
 
 ### 现在能做的处理
 
 - 开发 / 试用环境：删库重建是最省事的做法，**但这是破坏性操作**。重建前先导出配置（Settings 页面的
   TOML/JSON 导出），重建后重新 setup 再导入；`docker compose down -v` 会删掉命名卷 `tocsin-data`，
   只有在确认数据可以丢弃时才用它。
-- 自托管生产环境：今天**没有**自动路径。可选做法只有"重建"或人工补 schema，仓库里没有任何补表工具或
+- 自托管生产环境：今天**没有**自动路径。可选做法只有“重建”或人工补 schema，仓库里没有任何补表工具或
   校验命令；这就是为什么首个稳定版本之前必须冻结 baseline。
 - 第一个稳定版本发布后要恢复 forward-only migration（`sqlite-store.md` 的既定计划）。那一天起升级/回滚
   语义会改变，本文需要同步更新。
@@ -87,7 +87,7 @@ docker compose start console
 ### 备份校验与保留
 
 - 用 `PRAGMA integrity_check;` 验证备份可读（同样需要 sqlite3）。
-- 至少保留"上一个可用版本 + 再上一个"两份，回滚时才有的可选。
+- 至少保留“上一个可用版本 + 再上一个”两份，回滚时才有的可选。
 
 ## 4. 恢复
 
@@ -133,7 +133,7 @@ docker compose logs --tail=100 console     # 首行含 tocsin.runtime 的版本�
 - migration 在**容器启动时**执行（server entry 顶层 `await` 打开 store 后才开始服务）。迁移失败会让进程
   直接退出，容器按 `restart: unless-stopped` 反复重启 —— 这时先看日志里的 migration 报错，别让它一直重启。
 - 升级前必须读一遍本版本的 release 说明，确认是否动过 baseline（第 2 节）。动过 baseline 的版本对已有库
-  是"代码升级、schema 没升级"。
+  是“代码升级、schema 没升级”。
 - 老镜像 tag 不要删，回滚要用。
 
 ## 6. 回滚

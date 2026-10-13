@@ -140,7 +140,7 @@ docker compose logs --tail=50 console
 | `/api/health` | liveness  | 恒返回 200 `{"status":"ok"}`，不检查依赖                                     |
 | `/api/ready`  | readiness | 返回 `{"status":"ok","checks":{"sqlite":"ok","migrations":"ok","worker":"ok"}}`；任一项失败时 503 |
 
-- 用 `/api/ready` 做容器健康检查和发布判断；`/api/health` 只适合"进程还在不在"。
+- 用 `/api/ready` 做容器健康检查和发布判断；`/api/health` 只适合“进程还在不在”。
 - 成功访问 `/api/health`、`/api/ready` 的请求日志被降级为 `debug`，避免探针污染常规日志。
 - 日志输出到 stdout/stderr：production 下 `TOCSIN_LOG_FORMAT=auto` 是 JSON Lines，可由 Docker 或外部
   采集器收集；应用不写本地日志文件，也不把运行日志写进业务库。分类、级别与脱敏规则见
