@@ -93,6 +93,7 @@
     "jsdom": "catalog:testing",
     "typescript": "catalog:toolchain",
     "vite": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
   }
 }

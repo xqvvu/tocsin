@@ -252,6 +252,9 @@ catalogs:
     vite-plus:
       specifier: 1.1.0
       version: 1.1.0
+    vitest:
+      specifier: 5.0.3
+      version: 5.0.3
     zod:
       specifier: ^4.6.6
       version: 4.6.6
@@ -634,6 +637,9 @@ importers:
       vite-plus:
         specifier: 'catalog:'
         version: 1.1.0(@types/node@26.6.5)(@vitest/ui@5.0.3)(jiti@2.7.0)(jsdom@30.1.2(@noble/hashes@2.4.0))(typescript@7.0.2)
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@types/node@26.6.5)(@vitest/browser-preview@5.0.3)(@vitest/ui@5.0.3)(@voidzero-dev/vite-plus-core@1.1.0(@types/node@26.6.5)(jiti@2.7.0)(typescript@7.0.2))(jsdom@30.1.2(@noble/hashes@2.4.0))
 
   packages/api:
     dependencies:
