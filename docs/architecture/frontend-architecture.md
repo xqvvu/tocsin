@@ -274,14 +274,14 @@ Tocsin console 的数据流固定为：
 route validateSearch/params
   -> feature queryOptions
   -> TanStack Query cache
-  -> #/lib/orpc（SSR: createRouterClient / 浏览器: RPCLink -> POST /api/rpc/$procedure）
+  -> #/lib/orpc（SSR: createRouterClient / 浏览器: RPCLink -> POST /api/$procedure）
   -> server/orpc/features/<capability>/router.ts
   -> service
   -> infra SQLite / provider registry / destination registry
 ```
 
 浏览器侧 `#/lib/orpc` 通过 `createIsomorphicFn` 分叉：SSR 用 `createRouterClient` 在进程内直接
-调用 router，浏览器用 `RPCLink` 打到 `/api/rpc`。因此 procedure 的 context 必须从请求 headers
+调用 router，浏览器用 `RPCLink` 打到 `/api`。因此 procedure 的 context 必须从请求 headers
 解析（`context.reqHeaders`），保证两条路径都拿到同一份 session。细节见
 `docs/architecture/orpc-api-layer.md`。
 
@@ -334,7 +334,7 @@ dashboard route 的 `beforeLoad` 可以存在，但它只是 UX guard：提前�
 - webhook intake API route 用 Source token 或 Tocsin 侧额外共享密钥鉴权，不能因为 dashboard
   `beforeLoad` 已经保护了 UI 就跳过服务端认证。
 
-原因很简单：`beforeLoad` 保护的是浏览器导航体验，不保护 `/api/rpc`、`/api/openapi`、
+原因很简单：`beforeLoad` 保护的是浏览器导航体验，不保护 `/api`、`/api/openapi`、
 API route、脚本调用、过期 hydration data 或绕过 UI 的请求。
 
 ---

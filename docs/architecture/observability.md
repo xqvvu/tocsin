@@ -30,7 +30,7 @@ Console 内的业务模块直接使用 LogTape 原生分类 logger，不新增 `
 
 ## Request Context
 
-`request-logging.middleware.ts` 包住 SSR、API route 和 `/api/rpc` procedure 调用的完整请求调用链：
+`request-logging.middleware.ts` 包住 SSR、API route 和 `/api` procedure 调用的完整请求调用链：
 
 - 优先接受 `x-request-id`，其次接受 `x-correlation-id`。
 - 上游 ID 必须匹配受限字符集且不超过 128 字符；无效或缺失时生成 UUID。

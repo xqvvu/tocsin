@@ -1,5 +1,4 @@
 import { oc } from "@orpc/contract";
-import { openapi } from "@orpc/openapi";
 
 import { dashboardAuth } from "../errors/dashboard-auth";
 import { AuthBootstrapOutputSchema, DashboardSessionOutputSchema } from "../schemas/auth";
@@ -24,10 +23,7 @@ import { AuthBootstrapOutputSchema, DashboardSessionOutputSchema } from "../sche
  * indistinguishable from a signed-out visitor.
  */
 export const session = {
-  getDashboardSession: oc
-    .meta(openapi({ method: "GET" }))
-    .errors(dashboardAuth.error)
-    .output(DashboardSessionOutputSchema),
+  getDashboardSession: oc.errors(dashboardAuth.error).output(DashboardSessionOutputSchema),
 
-  getAuthBootstrap: oc.meta(openapi({ method: "GET" })).output(AuthBootstrapOutputSchema),
+  getAuthBootstrap: oc.output(AuthBootstrapOutputSchema),
 };

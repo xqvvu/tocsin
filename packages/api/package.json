@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@orpc/contract": "catalog:orpc",
-    "@orpc/openapi": "catalog:orpc",
     "@orpc/zod": "catalog:orpc",
     "@tocsin/core": "workspace:*",
     "zod": "catalog:"

@@ -143,7 +143,7 @@ export const sourcesRouter = os.sources.router({
 
 `withDashboardService()` 让 router 文件在顶部声明一次依赖，handler 只认 `context.service`；需要 container 本身的 procedure（如手动跑 delivery worker）使用裸 `requireDashboard()` 并读 `context.dashboardRequest.container`。guard 的 output context 是显式类型的，所以忘记挂 guard 会在类型检查阶段失败，而不是靠 `!` 断言掩盖。
 
-`server/orpc/*` 是 server-only implementer，浏览器不导入它。浏览器侧只导入 `#/lib/orpc`（isomorphic client），它经 `#/server/orpc/router` 建立 SSR 进程内调用或 `/api/rpc` 网络调用。procedure handler 内可以使用窄 runtime accessor 或 `context.dashboardRequest.container`；不要在 module 初始化阶段调用 runtime/container。
+`server/orpc/*` 是 server-only implementer，浏览器不导入它。浏览器侧只导入 `#/lib/orpc`（isomorphic client），它经 `#/server/orpc/router` 建立 SSR 进程内调用或 `/api` 网络调用。procedure handler 内可以使用窄 runtime accessor 或 `context.dashboardRequest.container`；不要在 module 初始化阶段调用 runtime/container。
 
 ### API Routes
 

@@ -30,7 +30,7 @@ oRPC 把契约变成一等公民：
 - **TanStack Query 集成是官方的**：`orpc.<ns>.<proc>.queryOptions()` / `mutationOptions()`
   直接产出可用的 query options，feature 层不用自己包一层。
 
-代价是要维护一个 workspace 包和一层 protocol 知识。以 Tocsin 的 procedure 数量（9 个 namespace）
+代价是要维护一个 workspace 包和一层 protocol 知识。以 Tocsin 当前的 11 个业务 namespace
 和长期维护目标看，这个代价是划算的。
 
 ## 2. 分层与数据流
@@ -44,14 +44,14 @@ packages/api                     契约层（env-neutral，无 server-only 代�
 
 apps/console/src/server/orpc     实现层（server-only）
   os.ts                          implement(contract).use(procedureLogging()).use(translateErrors).use(requestId())，全 console 共用
-  router.ts                      根 router：os.router({ auth, sources, ... })
+  router.ts                      根 router：os.router({ session, sources, ... })
   features/<capability>/router.ts  每个 procedure 一行：取 service、调用、返回 DTO
   middlewares/*.ts                requestId、requireDashboard
-  handler.ts                     RPCHandler（/api/rpc）与 OpenAPIHandler（/api/openapi）
+  handler.ts                     RPCHandler（/api）与 OpenAPIHandler（/api/openapi）
 
 apps/console/src/lib/orpc.ts     同构客户端入口（isomorphic）
   server: createRouterClient(router)  直接进程内调用，不经过 HTTP
-  client: RPCLink('/api/rpc') + createORPCClient
+  client: RPCLink('/api') + createORPCClient
   export const orpc = createTanstackQueryUtils(rpcClient)
 
 apps/console/src/features/*/api  feature 边界（client-safe）
@@ -64,9 +64,9 @@ apps/console/src/features/*/api  feature 边界（client-safe）
 route loader / 组件
   -> feature api（orpc.sources.list.queryOptions(...)）
      -> SSR 阶段：#/lib/orpc 的 server 分支 createRouterClient，进程内直调 router
-     -> 浏览器阶段：RPCLink POST /api/rpc/sources/list
-        -> routes/api/rpc/$.ts（server handler）
-           -> rpcHandler.handle(request, { prefix: "/api/rpc" })
+     -> 浏览器阶段：RPCLink POST /api/sources/list
+        -> routes/api/$.ts（server handler）
+           -> rpcHandler.handle(request, { prefix: "/api" })
               -> middleware 链：procedureLogging -> translateErrors -> requestId -> withDashboardService
                  -> procedure handler
                     -> context.service.listSources()
@@ -90,10 +90,9 @@ bundle 安全引用。
 ```ts
 // packages/api/src/contract/sources.ts
 export const sources = {
-  list: oc.meta(openapi({ method: "GET" })).errors(dashboardAuth.error).output(SourceListOutputSchema),
+  list: oc.errors(dashboardAuth.error).output(SourceListOutputSchema),
 
   create: oc
-    .meta(openapi({ method: "POST" }))
     .input(CreateSourceCommandSchema)
     .errors(dashboardAuth.error)
     .output(SourceTokenOutputSchema),
@@ -102,8 +101,10 @@ export const sources = {
 
 约定：
 
-- **namespace 按业务能力划分**，不按 HTTP method 或文件名划分。当前为 `auth`、`destinations`、
-  `health`、`i18n`、`operations`、`portability`、`routes`、`settings`、`sources`。
+- **namespace 按业务能力划分**，不按 HTTP method 或文件名划分。当前为 `session`、`destinations`、
+  `health`、`i18n`、`integrations`、`operations`、`portability`、`routes`、`settings`、
+  `sources`、`suppressions`。`session` 是 dashboard 自己的登录态探测；`/api/auth/*` 留给
+  better-auth handler。
 - **input / output 一律带 schema**。command schema 直接复用 `@tocsin/core` 中既有的
   `CreateSourceCommandSchema` 等定义，不在契约层复制。
 - **只在契约层声明 error code**。dashboard 面统一 `.errors(dashboardAuth.error)`，声明
@@ -112,8 +113,11 @@ export const sources = {
   `.errors(resourceErrors.error)` 声明 `NOT_FOUND` / `BAD_REQUEST` / `CONFLICT`
   （`packages/api/src/errors/resources.ts`）。没有声明的 code 仍然会拿到正确 HTTP status，
   只是不属于客户端可 narrow 的类型集合。
-- **`openapi({ method })` 只影响 OpenAPI 面**。RPC protocol 固定用 POST，method 元数据是给
-  `/api/openapi` 用的；因此浏览器侧永远发 POST，用 GET 探测 `/api/rpc/*` 返回 404 是预期行为。
+- **所有 procedure 都省略 HTTP method 元数据**。oRPC 的 OpenAPI 默认 method 是 `POST`，
+  与浏览器侧 `RPCLink` 的默认行为一致：RPC 和 OpenAPI 两个面都用 POST，input 都通过 JSON
+  body 传递；不在 contract 中声明 GET/PUT/PATCH。查询语义由 procedure 名和 TanStack Query
+  的 `queryOptions()` 表达，不映射成 HTTP GET。这样数字、布尔等类型保持 JSON 原值，不需要
+  为 query string 增加 `z.coerce`。
 - **output 必须是 safe DTO**。契约是类型层的“返回什么”，不要在 output schema 里放 token hash、
   destination secret、raw sensitive payload。
 
@@ -136,7 +140,7 @@ export const os = implement(contract)
   procedure 名字写错即类型错误。
 - `procedureLogging()` 挂在最外层：内层 `translateErrors` 翻译后的 `ORPCError.code`、以及
   guard 拒绝（`UNAUTHORIZED` / `FORBIDDEN`）在这里都已经是有类型的 oRPC 错误。它只记录失败
-  （成功的浏览器调用已由 HTTP request-logging middleware 以 `POST /api/rpc/<path>` 记录），
+  （成功的浏览器调用已由 HTTP request-logging middleware 以 `POST /api/<path>` 记录），
   级别跟随错误映射的 HTTP status：4xx 记 `warn`，5xx 与未翻译的意外故障记 `error`，
   message 走 `safeErrorProperties` 脱敏。requestId 不用在这里注入——HTTP request middleware
   的 `withContext()` 包住整个调用链（含 SSR），日志自动带上同一个 requestId。
@@ -147,7 +151,7 @@ export const os = implement(contract)
 - `translateErrors` 把 service 抛出的领域错误映射成 oRPC 错误，见 4.5。它**不声明
   error map**，否则 public procedure 会连带继承 `NOT_FOUND` / `CONFLICT` 这些并不属于它的 code。
 - `requestId()` 挂在根上，所有 procedure 都拿到 `context.requestId`，并回写 `x-request-id`。
-  同一个请求（浏览器 `/api/rpc` 或进程内 `createRouterClient`）拿到的是同一个 id，和 HTTP
+  同一个请求（浏览器 `/api` 或进程内 `createRouterClient`）拿到的是同一个 id，和 HTTP
   访问日志里的 request id 一致。
 - **不要在 `os` 上挂全局 auth middleware**。鉴权按 procedure 显式声明，见 4.3。
 
@@ -157,7 +161,7 @@ export const os = implement(contract)
 
 ```ts
 export const router = os.router({
-  auth: authRouter,
+  session: sessionRouter,
   sources: sourcesRouter,
   // ...
 });
@@ -258,7 +262,7 @@ middleware 从 `context.reqHeaders` 取 header，而不是直接调用 `getReque
 
 | handler | 路由 | protocol | 用途 |
 | ------- | ---- | -------- | ---- |
-| `rpcHandler`（`RPCHandler`） | `/api/rpc/*` | oRPC RPC | 浏览器客户端 `RPCLink`；dashboard 的主通道 |
+| `rpcHandler`（`RPCHandler`） | `/api/*` | oRPC RPC | 浏览器客户端 `RPCLink`；dashboard 的主通道 |
 | `openAPIHandler`（`OpenAPIHandler`） | `/api/openapi/*` | OpenAPI | 外部调用方、`/spec.json`、`/docs` 参考页 |
 
 两个 handler 都额外挂了 `CORSHandlerPlugin`、`RequestHeadersHandlerPlugin`、
@@ -270,13 +274,15 @@ LogTape、脱敏和 requestId 关联，而且覆盖不到 SSR 进程内调用。
 路由文件是标准的 TanStack Start server route，把 HTTP method 全部转给 handler：
 
 ```ts
-// apps/console/src/routes/api/rpc/$.ts
-export const Route = createFileRoute("/api/rpc/$")({
+// apps/console/src/routes/api/$.ts
+export const Route = createFileRoute("/api/$")({
   server: {
     handlers: {
       GET: async ({ request }) => await handleRpc(request),
       POST: async ({ request }) => await handleRpc(request),
-      // PUT / DELETE / PATCH 同理
+      PUT: async ({ request }) => await handleRpc(request),
+      DELETE: async ({ request }) => await handleRpc(request),
+      PATCH: async ({ request }) => await handleRpc(request),
     },
   },
 });
@@ -286,8 +292,8 @@ export const Route = createFileRoute("/api/rpc/$")({
 一致，否则 path 解析错位。
 
 **RPC 与 OpenAPI 两个 protocol 不能混用**：`RPCLink` 发的是 `{"json": ...}` envelope，只有 RPC
-codec 能解；`OpenAPIHandler` 按 HTTP method + path 匹配。所以 dashboard 走 `/api/rpc`，参考页走
-`/api/openapi`，两者共享同一份 router，OpenAPI 文档描述的就是实际提供的能力。
+codec 能解；`OpenAPIHandler` 按 HTTP method + path 匹配。所以 dashboard 与参考页都以 POST 调用；RPC 走 `/api/<procedure path>`，OpenAPI 走
+`/api/openapi/<procedure path>`，两者共享同一份 router，OpenAPI 文档描述的就是实际提供的能力。
 
 **webhook intake 不在 oRPC 面上。** `/api/sources/$sourceId/webhook` 仍是一个普通 server route：
 它面向第三方监控系统，鉴权靠 Source token，payload 形状由 provider parser 决定，和 dashboard
@@ -305,7 +311,7 @@ const getRpcClient = createIsomorphicFn()
     }),
   )
   .client((): RPCClient => {
-    const link = new RPCLink({ url: "/api/rpc" });
+    const link = new RPCLink({ url: "/api" });
     return createORPCClient(link);
   });
 
@@ -318,8 +324,10 @@ export const orpc = createTanstackQueryUtils(rpcClient);
 - **SSR 不走 HTTP**。server 分支用 `createRouterClient` 直接进程内调用 router，省掉一次自请求，
   也没有 base URL、cookie 转发的麻烦。但它绕过了 handler 的 `RequestHeadersHandlerPlugin`，
   所以必须显式传 `context.reqHeaders = getRequestHeaders()`——`requireDashboard()` 依赖它。
-- **浏览器分支固定 POST**。`RPCLink` 默认使用 POST，`openapi({ method: "GET" })` 的元数据只影响
-  OpenAPI 面。
+- **两个 HTTP 面都固定 POST**。契约不声明 method，oRPC OpenAPI 默认 POST；RPCLink 也默认 POST。
+  有 input 的 procedure 在 RPC 面用 JSON envelope，在 OpenAPI 面用 JSON request body；不会把
+  number/boolean 放进 query string，因此输入 schema 保持严格的 `z.number()` / `z.boolean()`，
+  不需要为 transport coercion 扩宽成 `unknown`。
 - **feature 层只认 `orpc`**。`orpc.sources.list.queryOptions({ queryKey, input })` 与
   `orpc.sources.create.call(input)` 是 feature `api/*` 的两个基本动作。
 
@@ -367,8 +375,11 @@ export const sourceMutations = {
   （message 可读）、未知错误仍是 500、service 抛出的 `ORPCError` 不被改写。
 - `vp -C apps/console run typecheck`：契约与实现是否对齐由类型检查兜底。
 - `vp -C apps/console build`：验证 import protection 仍然成立，client bundle 不含 SQLite。
-- 手工验证：登录后访问 dashboard 各页面，确认浏览器发出 `POST /api/rpc/<ns>/<proc>` 且无 console
-  报错；`GET /api/openapi/spec.json` 应返回生成的 spec。
+- `apps/console/src/server/orpc/openapi-post-only.test.ts`：遍历 contract，守卫所有 procedure
+  均未声明 HTTP method；并验证输入 schema 接受 JSON number、拒绝 numeric string。这样未来
+  意外加回 GET 时会先失败，而不会等外部调用者收到 400 才发现。
+- 手工验证：登录后访问 dashboard 页面，确认浏览器发出 `POST /api/<ns>/<proc>`；
+  `/api/openapi/spec.json` 应将 procedure 生成为 POST + JSON request body，且无 query 参数。
 
 ## 8. 参考
 
