@@ -4,7 +4,11 @@ Tocsin 是一个面向 SRE 和运维团队的开源、自托管 Alert Hub。它�
 
 Tocsin 的目标不是做 SaaS 平台，也不是做通用工作流引擎。它更接近一个可以私有部署的运维基础设施组件：一个进程、一个 SQLite 数据库、一个数据卷，清楚记录告警从进入、规范化、匹配、投递、重试到失败的完整路径。
 
-> 当前项目仍处于 MVP 开发阶段。核心架构、控制台、SQLite 持久化、认证、配置、投递与 UI 基础已经在仓库中推进，但还不应视为稳定发布版。
+> 当前状态：**MVP baseline 已完成，但还不是稳定发布版**。核心架构、控制台、SQLite 持久化、认证、
+> 配置、投递与 UI 基础都已落地，Source → Webhook → Event → Route → Destination → Delivery → Worker →
+> History 主链路与 Docker 运行形态可用；仍缺少浏览器 E2E、Docker smoke 自动化、稳定的 migration
+> 兼容承诺和公开管理 API，所以请按“可试用的自托管 MVP”而不是“生产就绪的稳定版”来评估。发布硬化清单
+> 见 `docs/release/mvp-rc-checklist.md`。
 
 ## 为什么需要 Tocsin
 
@@ -54,6 +58,10 @@ packages/core
   共享领域 schema、类型、路由规则、delivery 类型、config schema、JSON helper、
   redaction helper 和共享错误。
 
+packages/api
+  env-neutral 的 oRPC 契约层：contract、共享 error map、procedure input/output schema
+  与 client helper；浏览器与 server 从同一处推导类型。
+
 packages/providers
   入站 provider parser 与 provider registry。
 
@@ -78,7 +86,7 @@ docs
 要求：
 
 - Node.js `26.x`（以仓库根目录的 `.node-version` 为准）
-- pnpm `12.6.0`（由 `package.json` 的 `packageManager` 声明）
+- pnpm `12.10.1`（由 `package.json` 的 `packageManager` 声明）
 
 工程化统一由 [Vite+](https://vite.plus) 的 `vp` CLI 提供：Vite、Vitest、Oxlint、Oxfmt 和任务编排都在一个入口下。`vite-plus` 是仓库根目录的 devDependency，用 `vp` 前先在根目录安装一次依赖。
 
@@ -167,6 +175,11 @@ BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 
 默认服务会暴露在 `http://localhost:3000`，SQLite 数据放在 `tocsin-data` volume 中。
 
+这份 compose 文件是本机试运行形态，不是生产方案：它内置了一个公开的默认 `BETTER_AUTH_SECRET`，也没有
+TLS 与 secret 注入。生产部署、反向代理、环境变量与健康检查见
+`docs/release/docker-production-deployment.md`；备份、恢复、升级与回滚见
+`docs/release/backup-restore-upgrade.md`；切 tag 的流程见 `docs/release/release-checklist.md`。
+
 ## Roadmap
 
 ### 0. 已落地的基础
@@ -193,11 +206,15 @@ BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 ### 2. 自托管发布硬化
 
 - 整理生产部署文档：Docker、反向代理、数据卷、备份恢复、升级步骤。
+  （已完成：`docs/release/docker-production-deployment.md`、`docs/release/backup-restore-upgrade.md`）
 - 明确 migration 与版本升级策略，保证 SQLite schema 向前兼容。
+  （升级/回滚后果已写入 `docs/release/backup-restore-upgrade.md`；baseline 冻结与 forward-only
+  migration 仍未落地）
 - 增加 webhook、worker、delivery、auth 的运行时观测日志。
 - 增加配置和敏感字段的安全测试，防止 token hash、destination secret、raw secret config 泄露到客户端。
 - 明确默认 retention 策略，限制 raw payload 与 delivery history 的 SQLite 增长。
-- 增加 release checklist 和示例配置。
+- 增加 release checklist（已完成：`docs/release/release-checklist.md`）和示例配置
+  （`examples/feishu/` 有飞书卡片模板，部署样例仍缺）。
 
 ### 3. 集成扩展
 
