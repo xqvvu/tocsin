@@ -167,8 +167,28 @@ function probeMessage(input: {
 
 function redactProbeError(errorText: string): string {
   const redacted = redactText(errorText);
+  if (CREDENTIAL_LIKE_TEXT_PATTERN.test(redacted)) {
+    return PROBE_ERROR_REDACTED;
+  }
 
-  return CREDENTIAL_LIKE_TEXT_PATTERN.test(redacted) ? PROBE_ERROR_REDACTED : redacted;
+  const match = /^(\d{3})\s+(\{[\s\S]*\})$/.exec(redacted);
+  if (!match) return redacted;
+
+  try {
+    const body: unknown = JSON.parse(match[2]!);
+    if (!isJsonObject(body)) return redacted;
+    const error = isJsonObject(body.error) ? body.error : body;
+    const message = typeof error.message === "string" ? error.message : undefined;
+    const code = typeof error.code === "string" ? error.code : undefined;
+    const type = typeof body.type === "string" ? body.type : undefined;
+    const safeMessage =
+      message === undefined || CREDENTIAL_LIKE_TEXT_PATTERN.test(message) ? undefined : message;
+    const reason = [code, type].filter(Boolean).join(" · ");
+    const summary = [reason, safeMessage].filter(Boolean).join(": ");
+    return summary.length > 0 ? `${match[1]} ${summary}` : `${match[1]} upstream error`;
+  } catch {
+    return redacted;
+  }
 }
 
 function describeModel(modelProvider: string | undefined, modelType: string | undefined): string {
@@ -196,6 +216,12 @@ function extractLabels(model: JsonObject | undefined, probe: JsonObject | undefi
     labels,
     "probe_latency_ms",
     firstScalarString(probe, ["latencyMs", "latency_ms"]),
+  );
+  const probeError = firstString(probe, ["error"]);
+  setOptionalLabel(
+    labels,
+    "probe_error",
+    probeError === undefined ? undefined : redactProbeError(probeError),
   );
 
   return labels;
