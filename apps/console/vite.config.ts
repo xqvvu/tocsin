@@ -32,7 +32,11 @@ const config = defineConfig(() => ({
     // and log a `ReferenceError: module is not defined` from React's CJS entry.
     // `VITEST` is set by the runner itself, so this holds for
     // `vp test --mode <anything>`. Upstream: nitrojs/nitro#3659, #4144.
-    !process.env.VITEST && nitro({ wasm: { silent: true } }),
+    !process.env.VITEST &&
+      nitro({
+        sourcemap: true,
+        wasm: { silent: true },
+      }),
     viteReact(),
     babel({
       presets: [reactCompilerPreset()],
