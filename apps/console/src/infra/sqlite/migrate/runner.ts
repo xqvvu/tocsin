@@ -1,4 +1,6 @@
 import "@tanstack/react-start/server-only";
+import { sql } from "kysely";
+
 import { SqliteMigrationError } from "#/infra/sqlite/errors";
 import { sqliteSchemaPlan } from "#/infra/sqlite/migrate/plan";
 import type { MigrationResult, SqliteMigration } from "#/infra/sqlite/migrate/types";
@@ -29,24 +31,37 @@ export async function migrateSqliteDatabase(
       continue;
     }
 
-    await db.transaction().execute(async (tx) => {
-      try {
-        await migration.up(tx as never);
-      } catch (cause) {
-        throw new SqliteMigrationError(`Failed to apply SQLite migration ${migration.filename}`, {
-          cause,
-        });
-      }
+    if (migration.foreignKeysOff) {
+      // SQLite only honors this pragma outside a transaction. The migration must
+      // therefore opt in explicitly, run its own foreign_key_check before commit,
+      // and preserve dependent rows while rebuilding a referenced table.
+      await sql`PRAGMA foreign_keys = OFF`.execute(db);
+    }
 
-      await tx
-        .insertInto("schema_migrations")
-        .values({
-          version: migration.version,
-          name: migration.name,
-          applied_at: new Date().toISOString(),
-        })
-        .execute();
-    });
+    try {
+      await db.transaction().execute(async (tx) => {
+        try {
+          await migration.up(tx as never);
+        } catch (cause) {
+          throw new SqliteMigrationError(`Failed to apply SQLite migration ${migration.filename}`, {
+            cause,
+          });
+        }
+
+        await tx
+          .insertInto("schema_migrations")
+          .values({
+            version: migration.version,
+            name: migration.name,
+            applied_at: new Date().toISOString(),
+          })
+          .execute();
+      });
+    } finally {
+      if (migration.foreignKeysOff) {
+        await sql`PRAGMA foreign_keys = ON`.execute(db);
+      }
+    }
     appliedVersions.add(migration.version);
     result.applied.push(migration);
   }

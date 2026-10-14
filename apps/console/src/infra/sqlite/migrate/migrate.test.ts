@@ -12,12 +12,13 @@ import {
   sqliteSchemaPlan,
 } from "#/infra/sqlite/migrate";
 import betterAuthGeneratedSql from "#/infra/sqlite/migrate/better-auth.generated.sql?raw";
-import { OpenedSqliteStore } from "#/infra/sqlite/store";
+import { createSqliteRepositories, OpenedSqliteStore } from "#/infra/sqlite/store";
 
 describe("sqlite schema plan", () => {
   it("reads the MVP baseline from the explicit TypeScript schema plan", () => {
     expect(readSqliteSchemaPlan().map((migration) => migration.filename)).toEqual([
       "0001_initial_schema.ts",
+      "0002_suppressions.ts",
     ]);
   });
 
@@ -36,11 +37,11 @@ describe("sqlite schema plan", () => {
     try {
       const result = await migrateSqliteDatabase(db);
 
-      expect(result.applied.map((migration) => migration.version)).toEqual(["0001"]);
-      expect(await getAppliedMigrationVersions(db)).toEqual(new Set(["0001"]));
+      expect(result.applied.map((migration) => migration.version)).toEqual(["0001", "0002"]);
+      expect(await getAppliedMigrationVersions(db)).toEqual(new Set(["0001", "0002"]));
       const store = new OpenedSqliteStore(db, new SqliteRepositoryContext({ db }));
 
-      expect(await store.schemaVersion()).toBe("0001");
+      expect(await store.schemaVersion()).toBe("0002");
       expect((await store.settings.get()).rawPayloadRetentionDays).toBe(30);
 
       const tables = (
@@ -124,6 +125,185 @@ describe("sqlite schema plan", () => {
     }
   });
 
+  it("upgrades a 0001 database to suppressions without losing deliveries or attempts", async () => {
+    const db = createSqliteDatabase({ databasePath: ":memory:" });
+    const baselineOnly = [sqliteSchemaPlan[0]!];
+
+    try {
+      // This is the shape of a customer's existing database: it has already
+      // recorded 0001, and contains real data before the feature migration lands.
+      await migrateSqliteDatabase(db, { plan: baselineOnly });
+      await db
+        .insertInto("sources")
+        .values({
+          id: "source-1",
+          name: "Prometheus",
+          provider: "generic",
+          token_hash: "hash",
+          created_at: "2026-10-14T00:00:00.000Z",
+          updated_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+      await db
+        .insertInto("destinations")
+        .values({
+          id: "destination-1",
+          name: "Pager",
+          kind: "generic_webhook",
+          created_at: "2026-10-14T00:00:00.000Z",
+          updated_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+      await db
+        .insertInto("events")
+        .values({
+          id: "event-1",
+          source_id: "source-1",
+          fingerprint: "fingerprint-1",
+          severity: "critical",
+          status: "firing",
+          title: "CPU high",
+          message: "CPU high",
+          labels_json: "{}",
+          normalized_json: "{}",
+          provider_metadata_json: "{}",
+          raw_payload_json: "{}",
+          raw_headers_json: "{}",
+          received_at: "2026-10-14T00:00:00.000Z",
+          occurred_at: "2026-10-14T00:00:00.000Z",
+          created_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+      await db
+        .insertInto("routes")
+        .values({
+          id: "route-1",
+          name: "Critical alerts",
+          enabled: 1,
+          rule_json: "{}",
+          destination_ids_json: '["destination-1"]',
+          created_at: "2026-10-14T00:00:00.000Z",
+          updated_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+      await db
+        .insertInto("deliveries")
+        .values({
+          id: "delivery-1",
+          event_id: "event-1",
+          destination_id: "destination-1",
+          route_id: "route-1",
+          state: "pending",
+          attempt_count: 1,
+          max_attempts: 3,
+          created_at: "2026-10-14T00:00:00.000Z",
+          updated_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+      await db
+        .insertInto("delivery_attempts")
+        .values({
+          id: "attempt-1",
+          delivery_id: "delivery-1",
+          attempt_number: 1,
+          state: "failed",
+          started_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+
+      const result = await migrateSqliteDatabase(db);
+
+      expect(result.applied.map((migration) => migration.version)).toEqual(["0002"]);
+      expect(await getAppliedMigrationVersions(db)).toEqual(new Set(["0001", "0002"]));
+      expect(
+        await db
+          .selectFrom("deliveries")
+          .selectAll()
+          .where("id", "=", "delivery-1")
+          .executeTakeFirst(),
+      ).toMatchObject({
+        id: "delivery-1",
+        event_id: "event-1",
+        destination_id: "destination-1",
+        route_id: "route-1",
+        state: "pending",
+        attempt_count: 1,
+        suppression_id: null,
+        suppressed_at: null,
+        suppress_reason: null,
+      });
+      expect(
+        await db
+          .selectFrom("delivery_attempts")
+          .selectAll()
+          .where("id", "=", "attempt-1")
+          .executeTakeFirst(),
+      ).toMatchObject({ id: "attempt-1", delivery_id: "delivery-1", state: "failed" });
+
+      await db
+        .insertInto("suppressions")
+        .values({
+          id: "suppression-1",
+          name: "Mute CPU noise",
+          kind: "silence",
+          enabled: 1,
+          matcher_json: "{}",
+          starts_at: "2026-10-14T00:00:00.000Z",
+          ends_at: "2026-10-14T01:00:00.000Z",
+          created_at: "2026-10-14T00:00:00.000Z",
+          updated_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+      await db
+        .updateTable("deliveries")
+        .set({
+          state: "suppressed",
+          suppression_id: "suppression-1",
+          suppressed_at: "2026-10-14T00:00:00.000Z",
+          suppress_reason: "matched rule",
+        })
+        .where("id", "=", "delivery-1")
+        .execute();
+
+      expect(
+        await db
+          .selectFrom("deliveries")
+          .select(["state", "suppression_id", "suppressed_at", "suppress_reason"])
+          .where("id", "=", "delivery-1")
+          .executeTakeFirst(),
+      ).toMatchObject({
+        state: "suppressed",
+        suppression_id: "suppression-1",
+        suppress_reason: "matched rule",
+      });
+      expect((await sql`PRAGMA foreign_key_check`.execute(db)).rows).toEqual([]);
+
+      // This is the same database path a suppression detail page follows:
+      // `get` the rule, then list its hits through the joined history query. It
+      // must work on a database that was already on 0001 before the app upgrade.
+      const repositories = createSqliteRepositories(new SqliteRepositoryContext({ db }));
+      await expect(repositories.suppressions.get("suppression-1")).resolves.toMatchObject({
+        id: "suppression-1",
+        name: "Mute CPU noise",
+      });
+      await expect(
+        repositories.history.listDeliveries({ suppressionId: "suppression-1" }),
+      ).resolves.toMatchObject({
+        total: 1,
+        page: 1,
+        items: [
+          expect.objectContaining({
+            id: "delivery-1",
+            state: "suppressed",
+            destinationName: "Pager",
+          }),
+        ],
+      });
+    } finally {
+      await db.destroy();
+    }
+  });
+
   it("skips an already-applied baseline", async () => {
     const db = createSqliteDatabase({ databasePath: ":memory:" });
 
@@ -132,7 +312,7 @@ describe("sqlite schema plan", () => {
       const result = await migrateSqliteDatabase(db);
 
       expect(result.applied).toHaveLength(0);
-      expect(result.skipped.map((migration) => migration.version)).toEqual(["0001"]);
+      expect(result.skipped.map((migration) => migration.version)).toEqual(["0001", "0002"]);
     } finally {
       await db.destroy();
     }
