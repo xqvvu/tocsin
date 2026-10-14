@@ -8,7 +8,6 @@ import {
   mergeOperationSearch,
   operationFiltersFromSearch,
 } from "#/features/operations/model/operation-search";
-import { routesQueryOptions } from "#/features/routes/api/route.queries";
 import { sourcesQueryOptions } from "#/features/sources/api/source.queries";
 import { DashboardContentLayout } from "#/shell/dashboard-layout";
 
@@ -21,14 +20,13 @@ export const Route = createFileRoute("/_dashboard/events")({
     await Promise.all([
       context.queryClient.ensureQueryData(sourcesQueryOptions()),
       context.queryClient.ensureQueryData(destinationsQueryOptions()),
-      context.queryClient.ensureQueryData(routesQueryOptions()),
       context.queryClient.ensureQueryData(operationsQueryOptions(filters)),
     ]);
 
     return { filters };
   },
   component: EventsRoute,
-  pendingComponent: DashboardContentLayout.SkeletonWithRail,
+  pendingComponent: DashboardContentLayout.Skeleton,
   pendingMs: 120,
   pendingMinMs: 250,
 });

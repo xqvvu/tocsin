@@ -137,7 +137,7 @@ export function SuppressionsSection({
   );
 
   return (
-    <section className="bg-background">
+    <section className="bg-background flex min-h-0 min-w-0 flex-1 flex-col">
       <OperationsTable
         data={data}
         columns={columns}
