@@ -19,6 +19,7 @@ describe("sqlite schema plan", () => {
     expect(readSqliteSchemaPlan().map((migration) => migration.filename)).toEqual([
       "0001_initial_schema.ts",
       "0002_suppressions.ts",
+      "0003_complete_legacy_schema.ts",
     ]);
   });
 
@@ -37,11 +38,15 @@ describe("sqlite schema plan", () => {
     try {
       const result = await migrateSqliteDatabase(db);
 
-      expect(result.applied.map((migration) => migration.version)).toEqual(["0001", "0002"]);
-      expect(await getAppliedMigrationVersions(db)).toEqual(new Set(["0001", "0002"]));
+      expect(result.applied.map((migration) => migration.version)).toEqual([
+        "0001",
+        "0002",
+        "0003",
+      ]);
+      expect(await getAppliedMigrationVersions(db)).toEqual(new Set(["0001", "0002", "0003"]));
       const store = new OpenedSqliteStore(db, new SqliteRepositoryContext({ db }));
 
-      expect(await store.schemaVersion()).toBe("0002");
+      expect(await store.schemaVersion()).toBe("0003");
       expect((await store.settings.get()).rawPayloadRetentionDays).toBe(30);
 
       const tables = (
@@ -210,16 +215,46 @@ describe("sqlite schema plan", () => {
           started_at: "2026-10-14T00:00:00.000Z",
         })
         .execute();
-      // `0001` was edited after some installations had already run it; these
-      // two nullable provider-reference columns were added later and do not
-      // exist in the affected databases.
+      // Emulate a 0001 database produced before later features were folded
+      // into the already-applied baseline, plus an earlier 0002 that created
+      // suppressions but did not repair Feishu/on-call tables.
       await db.schema.alterTable("deliveries").dropColumn("provider_ref_value").execute();
       await db.schema.alterTable("deliveries").dropColumn("provider_ref_type").execute();
+      await db.schema.alterTable("destinations").dropColumn("secret_refs_json").execute();
+      await db.schema.alterTable("events").dropColumn("route_matches_json").execute();
+      await db.schema.alterTable("events").dropColumn("raw_headers_json").execute();
+      await db.schema.alterTable("events").dropColumn("provider_metadata_json").execute();
+      await db.schema.alterTable("events").dropColumn("normalized_json").execute();
+      await db.schema.dropTable("feishu_apps").execute();
+      await db.schema.dropTable("oncall_ping_dedupe_keys").execute();
+      await db.schema.dropTable("oncall_pings").execute();
+      await db.deleteFrom("settings").where("key", "in", ["locale", "time_zone"]).execute();
+      await db
+        .insertInto("schema_migrations")
+        .values({ version: "0002", name: "suppressions", applied_at: "2026-10-14T00:00:00.000Z" })
+        .execute();
+      await db.schema
+        .createTable("suppressions")
+        .addColumn("id", "text", (column) => column.primaryKey())
+        .addColumn("name", "text", (column) => column.notNull().unique())
+        .addColumn("kind", "text", (column) => column.notNull())
+        .addColumn("enabled", "integer", (column) => column.notNull().defaultTo(1))
+        .addColumn("reason", "text")
+        .addColumn("matcher_json", "text", (column) => column.notNull())
+        .addColumn("starts_at", "text", (column) => column.notNull())
+        .addColumn("ends_at", "text", (column) => column.notNull())
+        .addColumn("created_by", "text")
+        .addColumn("created_at", "text", (column) => column.notNull())
+        .addColumn("updated_at", "text", (column) => column.notNull())
+        .execute();
+      await db.schema.alterTable("deliveries").addColumn("suppression_id", "text").execute();
+      await db.schema.alterTable("deliveries").addColumn("suppressed_at", "text").execute();
+      await db.schema.alterTable("deliveries").addColumn("suppress_reason", "text").execute();
 
       const result = await migrateSqliteDatabase(db);
 
-      expect(result.applied.map((migration) => migration.version)).toEqual(["0002"]);
-      expect(await getAppliedMigrationVersions(db)).toEqual(new Set(["0001", "0002"]));
+      expect(result.applied.map((migration) => migration.version)).toEqual(["0003"]);
+      expect(await getAppliedMigrationVersions(db)).toEqual(new Set(["0001", "0002", "0003"]));
       expect(
         await db
           .selectFrom("deliveries")
@@ -284,11 +319,57 @@ describe("sqlite schema plan", () => {
         suppress_reason: "matched rule",
       });
       expect((await sql`PRAGMA foreign_key_check`.execute(db)).rows).toEqual([]);
+      const repairedTables = await sql<{ name: string }>`
+        SELECT name FROM sqlite_master WHERE type = 'table'
+      `.execute(db);
+      const repairedTableNames = new Set(repairedTables.rows.map((row) => row.name));
+      expect(repairedTableNames.has("feishu_apps")).toBe(true);
+      expect(repairedTableNames.has("oncall_pings")).toBe(true);
+      expect(repairedTableNames.has("oncall_ping_dedupe_keys")).toBe(true);
+      const repairedEventColumns = await sql<{ name: string }>`PRAGMA table_info("events")`.execute(
+        db,
+      );
+      const repairedEventColumnNames = new Set(repairedEventColumns.rows.map((row) => row.name));
+      expect(repairedEventColumnNames.has("normalized_json")).toBe(true);
+      expect(repairedEventColumnNames.has("provider_metadata_json")).toBe(true);
+      expect(repairedEventColumnNames.has("raw_headers_json")).toBe(true);
+      expect(repairedEventColumnNames.has("route_matches_json")).toBe(true);
+      const repairedDestinationColumns = await sql<{
+        name: string;
+      }>`PRAGMA table_info("destinations")`.execute(db);
+      expect(repairedDestinationColumns.rows.map((row) => row.name)).toContain("secret_refs_json");
+      const repairedOncallColumns = await sql<{
+        name: string;
+      }>`PRAGMA table_info("oncall_pings")`.execute(db);
+      expect(repairedOncallColumns.rows.map((row) => row.name)).toContain("provider_ref_type");
+      const repairedIndexes = await sql<{ name: string }>`
+        SELECT name FROM sqlite_master WHERE type = 'index'
+      `.execute(db);
+      const indexNames = new Set(repairedIndexes.rows.map((row) => row.name));
+      expect(indexNames.has("idx_oncall_pings_state_next_attempt_at")).toBe(true);
+      expect(indexNames.has("idx_oncall_pings_delivery_id")).toBe(true);
+      expect(indexNames.has("idx_oncall_ping_dedupe_created_at")).toBe(true);
+      expect(
+        await db
+          .selectFrom("settings")
+          .select("value")
+          .where("key", "=", "locale")
+          .executeTakeFirst(),
+      ).toEqual({ value: "en-US" });
+      expect(
+        await db
+          .selectFrom("settings")
+          .select("value")
+          .where("key", "=", "time_zone")
+          .executeTakeFirst(),
+      ).toEqual({ value: "UTC" });
 
       // This is the same database path a suppression detail page follows:
       // `get` the rule, then list its hits through the joined history query. It
       // must work on a database that was already on 0001 before the app upgrade.
       const repositories = createSqliteRepositories(new SqliteRepositoryContext({ db }));
+      await expect(repositories.feishuApps.list()).resolves.toEqual([]);
+      await expect(repositories.oncall.listForDelivery("delivery-1")).resolves.toEqual([]);
       await expect(repositories.suppressions.get("suppression-1")).resolves.toMatchObject({
         id: "suppression-1",
         name: "Mute CPU noise",
@@ -319,7 +400,11 @@ describe("sqlite schema plan", () => {
       const result = await migrateSqliteDatabase(db);
 
       expect(result.applied).toHaveLength(0);
-      expect(result.skipped.map((migration) => migration.version)).toEqual(["0001", "0002"]);
+      expect(result.skipped.map((migration) => migration.version)).toEqual([
+        "0001",
+        "0002",
+        "0003",
+      ]);
     } finally {
       await db.destroy();
     }
