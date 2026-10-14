@@ -6,6 +6,12 @@ interface TypedSqliteMigration<Schema extends object> {
   version: string;
   name: string;
   filename: string;
+  /**
+   * SQLite cannot drop/rebuild a referenced parent table while FK checks are
+   * active. Set only for migrations that preserve all rows and run an explicit
+   * `PRAGMA foreign_key_check` before commit.
+   */
+  foreignKeysOff?: boolean;
   up: (db: SqliteMigrationDb<Schema>) => Promise<void>;
 }
 
@@ -13,6 +19,7 @@ export interface SqliteMigration {
   version: string;
   name: string;
   filename: string;
+  foreignKeysOff?: boolean;
   up: (db: SqliteMigrationDb<Record<string, never>>) => Promise<void>;
 }
 
