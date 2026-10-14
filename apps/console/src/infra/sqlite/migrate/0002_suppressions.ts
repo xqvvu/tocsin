@@ -74,19 +74,51 @@ export default defineSqliteMigration<SqliteDatabaseSchema>({
       .addCheckConstraint("deliveries_max_attempts_check", sql`max_attempts > 0`)
       .execute();
 
-    await sql`
-      INSERT INTO deliveries_new (
-        id, event_id, destination_id, route_id, state, attempt_count, max_attempts,
-        next_attempt_at, last_error, rendered_payload_json, provider_ref_type,
-        provider_ref_value, suppression_id, suppressed_at, suppress_reason,
-        created_at, updated_at, finished_at
-      )
-      SELECT
-        id, event_id, destination_id, route_id, state, attempt_count, max_attempts,
-        next_attempt_at, last_error, rendered_payload_json, provider_ref_type,
-        provider_ref_value, NULL, NULL, NULL, created_at, updated_at, finished_at
+    const deliveryColumns = await sql<{ name: string }>`PRAGMA table_info("deliveries")`.execute(
+      db,
+    );
+    const existingColumns = new Set(deliveryColumns.rows.map((column) => column.name));
+    const requiredColumns = [
+      "id",
+      "event_id",
+      "destination_id",
+      "route_id",
+      "state",
+      "attempt_count",
+      "max_attempts",
+      "next_attempt_at",
+      "last_error",
+      "created_at",
+      "updated_at",
+      "finished_at",
+    ] as const;
+    const missingRequiredColumns = requiredColumns.filter((column) => !existingColumns.has(column));
+
+    if (missingRequiredColumns.length > 0) {
+      throw new Error(
+        `Cannot migrate deliveries: required columns are missing: ${missingRequiredColumns.join(", ")}`,
+      );
+    }
+
+    const copiedColumns = [
+      ...requiredColumns.slice(0, 9),
+      "rendered_payload_json",
+      "provider_ref_type",
+      "provider_ref_value",
+      ...requiredColumns.slice(9),
+    ] as const;
+    const selectExpressions = copiedColumns
+      .map((column) => (existingColumns.has(column) ? `"${column}"` : "NULL"))
+      .join(", ");
+    const insertColumns = copiedColumns.map((column) => `"${column}"`).join(", ");
+
+    await sql
+      .raw(`
+      INSERT INTO deliveries_new (${insertColumns})
+      SELECT ${selectExpressions}
       FROM deliveries
-    `.execute(db);
+    `)
+      .execute(db);
 
     await db.schema.dropTable("deliveries").execute();
     await db.schema.alterTable("deliveries_new").renameTo("deliveries").execute();
