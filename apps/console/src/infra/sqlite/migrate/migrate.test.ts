@@ -210,6 +210,11 @@ describe("sqlite schema plan", () => {
           started_at: "2026-10-14T00:00:00.000Z",
         })
         .execute();
+      // `0001` was edited after some installations had already run it; these
+      // two nullable provider-reference columns were added later and do not
+      // exist in the affected databases.
+      await db.schema.alterTable("deliveries").dropColumn("provider_ref_value").execute();
+      await db.schema.alterTable("deliveries").dropColumn("provider_ref_type").execute();
 
       const result = await migrateSqliteDatabase(db);
 
@@ -228,6 +233,8 @@ describe("sqlite schema plan", () => {
         route_id: "route-1",
         state: "pending",
         attempt_count: 1,
+        provider_ref_type: null,
+        provider_ref_value: null,
         suppression_id: null,
         suppressed_at: null,
         suppress_reason: null,
