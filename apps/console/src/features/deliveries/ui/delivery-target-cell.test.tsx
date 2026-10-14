@@ -34,6 +34,14 @@ describe("delivery target cell", () => {
     const image = container.querySelector("img");
     expect(image, "no icon rendered in the target cell").not.toBeNull();
     expect(image!.getAttribute("src")).toBe(larkIconUrl);
+    expect(image!.className).toContain("size-5");
+    expect(image!.className).toContain("object-contain");
+
+    const tile = image!.parentElement;
+    expect(tile?.className).toContain("size-8");
+    expect(tile?.className).toContain("items-center");
+    expect(tile?.className).toContain("justify-center");
+    expect(tile?.parentElement?.className).toContain("gap-3");
     expect(screen.getByText("SRE pager")).toBeTruthy();
   });
 
@@ -46,9 +54,15 @@ describe("delivery target cell", () => {
       />,
     );
 
-    // Email has no asset file; it renders a glyph instead of an <img>.
+    // Email has no asset file; its 16px glyph sits in the same centered 32px
+    // tile as bundled 20px brand assets, matching the destination identity cell.
     expect(container.querySelector("img")).toBeNull();
-    expect(container.querySelector("svg")).not.toBeNull();
+    const glyph = container.querySelector("svg");
+    expect(glyph).not.toBeNull();
+    expect(glyph!.getAttribute("class")).toContain("size-4");
+    expect(glyph!.parentElement?.className).toContain("size-8");
+    expect(glyph!.parentElement?.className).toContain("items-center");
+    expect(glyph!.parentElement?.className).toContain("justify-center");
   });
 
   it("falls back to a neutral glyph when the catalog does not know the kind", () => {
