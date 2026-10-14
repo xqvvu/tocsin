@@ -1,6 +1,7 @@
 import type { JsonObject, JsonValue } from "@tocsin/core";
 
 import { resolveBuiltInFeishuCardTemplate } from "#destinations/feishu/default-card";
+import { createFastgptModelProbeCardTemplate } from "#destinations/feishu/fastgpt-card";
 import type { FeishuConfig } from "#destinations/feishu/schema";
 import { createFeishuSign } from "#destinations/feishu/sign";
 import { DestinationTemplateEngine } from "#destinations/template";
@@ -15,7 +16,9 @@ export function renderFeishuPreviewPayload(
   if (config.template.source === "builtin" || config.template.mode === "feishu_card") {
     const card =
       config.template.source === "builtin"
-        ? resolveBuiltInFeishuCardTemplate(config.template)
+        ? input.source.provider === "fastgpt"
+          ? createFastgptModelProbeCardTemplate({ event: input.normalizedEvent })
+          : resolveBuiltInFeishuCardTemplate(config.template)
         : config.template.card;
 
     return {

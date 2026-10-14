@@ -128,6 +128,15 @@ export type TemplateStaticPath =
   | "presentation.labels.monitorPath"
   | "presentation.labels.checkUrl"
   | "presentation.labels.lastFailure"
+  | "presentation.labels.fastgptModelProbe"
+  | "presentation.labels.modelProviderAndType"
+  | "presentation.labels.modelId"
+  | "presentation.labels.modelTypeLlm"
+  | "presentation.labels.modelTypeTts"
+  | "presentation.labels.attempts"
+  | "presentation.labels.probeError"
+  | "presentation.labels.probeRecovered"
+  | "presentation.labels.probeFailed"
   | "tocsin.eventUrl";
 
 type TemplateStaticPathResolver = (context: TemplateContext) => string;
@@ -175,6 +184,17 @@ const TemplateStaticPathResolvers = {
   "presentation.labels.monitorPath": (context) => context.presentation.labels.monitorPath,
   "presentation.labels.checkUrl": (context) => context.presentation.labels.checkUrl,
   "presentation.labels.lastFailure": (context) => context.presentation.labels.lastFailure,
+  "presentation.labels.fastgptModelProbe": (context) =>
+    context.presentation.labels.fastgptModelProbe,
+  "presentation.labels.modelProviderAndType": (context) =>
+    context.presentation.labels.modelProviderAndType,
+  "presentation.labels.modelId": (context) => context.presentation.labels.modelId,
+  "presentation.labels.modelTypeLlm": (context) => context.presentation.labels.modelTypeLlm,
+  "presentation.labels.modelTypeTts": (context) => context.presentation.labels.modelTypeTts,
+  "presentation.labels.attempts": (context) => context.presentation.labels.attempts,
+  "presentation.labels.probeError": (context) => context.presentation.labels.probeError,
+  "presentation.labels.probeRecovered": (context) => context.presentation.labels.probeRecovered,
+  "presentation.labels.probeFailed": (context) => context.presentation.labels.probeFailed,
   "tocsin.eventUrl": (context) => context.tocsin.eventUrl,
 } satisfies Record<TemplateStaticPath, TemplateStaticPathResolver>;
 

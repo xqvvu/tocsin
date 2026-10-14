@@ -58,8 +58,7 @@ describe("fastgpt provider parser", () => {
 
     expect(result.normalized).toEqual({
       title: "speech-01-turbo model probe failed",
-      message:
-        'MiniMax tts model probe failed after 4 attempts: 500 {"code":"bad_response","type":"upstream_error","param":"500"}',
+      message: "MiniMax tts model probe failed after 4 attempts: 500 bad_response · upstream_error",
       severity: "critical",
       status: "firing",
       fingerprint: "fastgpt:6a995e6514161dc586c6cded",
@@ -71,6 +70,7 @@ describe("fastgpt provider parser", () => {
         model_provider: "MiniMax",
         model_type: "tts",
         probe_attempts: "4",
+        probe_error: "500 bad_response · upstream_error",
       },
       occurredAt: "2026-09-25T07:25:10.391Z",
     });
@@ -245,6 +245,9 @@ describe("fastgpt provider parser", () => {
     expect(result.normalized.message).toBe(
       "OpenAI llm model probe failed after 4 attempts: probe error redacted",
     );
+    expect(result.normalized.labels.probe_error).toBe("probe error redacted");
+    expect(serialized).not.toContain("invalid_api_key");
+    expect(serialized).not.toContain("apiKey");
     expect(serialized).not.toContain("sk-live-9f2b7c41d8e5");
     expect(serialized).not.toContain("must-not-be-normalized");
     expect(serialized).not.toContain("invalid_api_key");

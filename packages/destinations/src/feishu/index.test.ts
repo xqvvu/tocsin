@@ -106,6 +106,147 @@ describe("feishu sender", () => {
     expect(serialized).not.toContain("x-forwarded-for");
   });
 
+  it("renders FastGPT recovered probes with model identity, attempts, and response time", async () => {
+    const config = FeishuConfigSchema.parse({
+      webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/example",
+    });
+    const preview = await feishuSender.preview({
+      ...input,
+      source: { ...input.source, name: "FastGPT 模型探测", provider: "fastgpt" },
+      normalizedEvent: {
+        ...input.normalizedEvent,
+        title: "speech-01-turbo model probe recovered",
+        message: "MiniMax tts model probe recovered after 1 attempt in 295 ms",
+        severity: "info",
+        status: "resolved",
+        fingerprint: "fastgpt:6a995e6514161dc586c6cded",
+        labels: {
+          provider: "fastgpt",
+          model: "speech-01-turbo",
+          model_name: "speech-01-turbo",
+          model_id: "6a995e6514161dc586c6cded",
+          model_provider: "MiniMax",
+          model_type: "tts",
+          probe_attempts: "1",
+          probe_latency_ms: "295",
+        },
+      },
+      payload: {
+        event: "model_status_recovered",
+        model: {
+          model: "speech-01-turbo",
+          modelId: "6a995e6514161dc586c6cded",
+          name: "speech-01-turbo",
+          provider: "MiniMax",
+          type: "tts",
+        },
+        probe: { attempts: 1, latencyMs: 295 },
+        status: "green",
+      },
+      config,
+      presentation: { locale: "en-US", timeZone: "Asia/Shanghai" },
+    });
+    const serialized = JSON.stringify(preview);
+
+    expect(serialized).toContain("FastGPT model probe");
+    expect(serialized).toContain("speech-01-turbo");
+    expect(serialized).toContain("The model is responding again.");
+    expect(serialized).toContain("MiniMax · Text-to-speech");
+    expect(serialized).toContain("295 ms");
+    expect(serialized).toContain("Model ID");
+    expect(serialized).not.toContain("Uptime Kuma");
+    expect(serialized).not.toContain("Check URL");
+  });
+
+  it("shows a concise FastGPT failure reason, and omits response time when absent", async () => {
+    const config = FeishuConfigSchema.parse({
+      webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/example",
+    });
+    const preview = await feishuSender.preview({
+      ...input,
+      source: { ...input.source, name: "FastGPT 模型探测", provider: "fastgpt" },
+      normalizedEvent: {
+        ...input.normalizedEvent,
+        title: "speech-01-turbo model probe failed",
+        message:
+          "MiniMax tts model probe failed after 4 attempts: 500 upstream_error: bad_response",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "fastgpt:6a995e6514161dc586c6cded",
+        labels: {
+          provider: "fastgpt",
+          model_name: "speech-01-turbo",
+          model_id: "6a995e6514161dc586c6cded",
+          model_provider: "MiniMax",
+          model_type: "tts",
+          probe_attempts: "4",
+          probe_error: "500 bad_response · upstream_error",
+        },
+      },
+      payload: {
+        event: "model_status_error",
+        model: {
+          name: "speech-01-turbo",
+          modelId: "6a995e6514161dc586c6cded",
+          provider: "MiniMax",
+          type: "tts",
+        },
+        probe: {
+          attempts: 4,
+          error: '500 {"code":"bad_response","credential":"MUST_NOT_APPEAR"}',
+        },
+        status: "red",
+      },
+      config,
+      presentation: { locale: "en-US", timeZone: "Asia/Shanghai" },
+    });
+    const serialized = JSON.stringify(preview);
+
+    expect(serialized).toContain("Probe error");
+    expect(serialized).toContain("Model probe failed");
+    expect(serialized).toContain("500 bad_response · upstream_error");
+    expect(serialized).not.toContain("MUST_NOT_APPEAR");
+    expect(serialized).toContain("4");
+    expect(serialized).not.toContain("Response time");
+    expect(serialized).not.toContain(" ms");
+    expect(serialized).not.toContain("Uptime Kuma");
+  });
+
+  it("localizes the built-in FastGPT probe card for Chinese destinations", async () => {
+    const config = FeishuConfigSchema.parse({
+      webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/example",
+    });
+    const preview = await feishuSender.preview({
+      ...input,
+      source: { ...input.source, name: "FastGPT 模型探测", provider: "fastgpt" },
+      normalizedEvent: {
+        ...input.normalizedEvent,
+        title: "speech-01-turbo model probe recovered",
+        message: "MiniMax tts model probe recovered after 1 attempt in 295 ms",
+        severity: "info",
+        status: "resolved",
+        fingerprint: "fastgpt:6a995e6514161dc586c6cded",
+        labels: {
+          provider: "fastgpt",
+          model_name: "speech-01-turbo",
+          model_id: "6a995e6514161dc586c6cded",
+          model_provider: "MiniMax",
+          model_type: "tts",
+          probe_attempts: "1",
+          probe_latency_ms: "295",
+        },
+      },
+      config,
+      presentation: { locale: "zh-Hans", timeZone: "Asia/Shanghai" },
+    });
+    const serialized = JSON.stringify(preview);
+
+    expect(serialized).toContain("FastGPT 模型探测");
+    expect(serialized).toContain("模型已恢复响应");
+    expect(serialized).toContain("服务商 / 类型");
+    expect(serialized).toContain("响应耗时");
+  });
+
   it("renders the Uptime Kuma example with operational details and no request headers", async () => {
     const config = FeishuConfigSchema.parse({
       webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/example",
