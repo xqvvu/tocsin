@@ -1,3 +1,4 @@
+import { createStableHash } from "@tocsin/core";
 import type { JsonObject, JsonValue } from "@tocsin/core";
 
 import { resolveBuiltInFeishuCardTemplate } from "#destinations/feishu/default-card";
@@ -7,6 +8,9 @@ import { createFeishuSign } from "#destinations/feishu/sign";
 import { DestinationTemplateEngine } from "#destinations/template";
 import type { DestinationSendInput } from "#destinations/types";
 
+// Pin this behavior to the shipped example, not arbitrary operator templates.
+const UPTIME_KUMA_EXAMPLE_CARD_HASH = "d9f057a6";
+
 export function renderFeishuPreviewPayload(
   input: DestinationSendInput<FeishuConfig>,
   config: FeishuConfig,
@@ -14,11 +18,18 @@ export function renderFeishuPreviewPayload(
   const context = DestinationTemplateEngine.createRenderContext(input);
 
   if (config.template.source === "builtin" || config.template.mode === "feishu_card") {
-    const card =
-      config.template.source === "builtin"
-        ? input.source.provider === "fastgpt"
-          ? createFastgptModelProbeCardTemplate({ event: input.normalizedEvent })
-          : resolveBuiltInFeishuCardTemplate(config.template)
+    const isFastgptUptimeExample =
+      input.source.provider === "fastgpt" &&
+      config.template.source === "custom" &&
+      config.template.mode === "feishu_card" &&
+      isUptimeKumaExampleCard(config.template.card);
+    const useFastgptCard =
+      input.source.provider === "fastgpt" &&
+      (config.template.source === "builtin" || isFastgptUptimeExample);
+    const card = useFastgptCard
+      ? createFastgptModelProbeCardTemplate({ event: input.normalizedEvent })
+      : config.template.source === "builtin"
+        ? resolveBuiltInFeishuCardTemplate(config.template)
         : config.template.card;
 
     return {
@@ -43,6 +54,10 @@ export function renderFeishuPreviewPayload(
       ),
     },
   };
+}
+
+function isUptimeKumaExampleCard(card: JsonObject): boolean {
+  return createStableHash(card) === UPTIME_KUMA_EXAMPLE_CARD_HASH;
 }
 
 export async function renderFeishuWirePayload(

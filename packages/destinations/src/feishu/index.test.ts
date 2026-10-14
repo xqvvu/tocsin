@@ -315,6 +315,92 @@ describe("feishu sender", () => {
     expect(serialized).not.toContain("x-forwarded-for");
   });
 
+  it("uses the FastGPT card for a FastGPT event with the shipped Uptime Kuma example", async () => {
+    const config = FeishuConfigSchema.parse({
+      webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/example",
+      template: {
+        mode: "feishu_card",
+        card: uptimeKumaTemplate,
+        bindings: defaultFeishuCardBindings,
+      },
+    });
+    const preview = await feishuSender.preview({
+      ...input,
+      source: {
+        ...input.source,
+        name: "FastGPT model probe",
+        provider: "fastgpt",
+      },
+      normalizedEvent: {
+        ...input.normalizedEvent,
+        title: "speech-01-turbo model probe recovered",
+        message: "MiniMax tts model probe recovered after 1 attempt in 295 ms",
+        severity: "info",
+        status: "resolved",
+        fingerprint: "fastgpt:6a995e6514161dc586c6cded",
+        labels: {
+          provider: "fastgpt",
+          model_name: "speech-01-turbo",
+          model_id: "6a995e6514161dc586c6cded",
+          model_provider: "MiniMax",
+          model_type: "tts",
+          probe_attempts: "1",
+          probe_latency_ms: "295",
+        },
+      },
+      payload: {
+        event: "model_status_recovered",
+        model: {
+          name: "speech-01-turbo",
+          modelId: "6a995e6514161dc586c6cded",
+          provider: "MiniMax",
+          type: "tts",
+        },
+        probe: { attempts: 1, latencyMs: 295 },
+        status: "green",
+      },
+      config,
+      presentation: { locale: "en-US", timeZone: "Asia/Shanghai" },
+    });
+    const serialized = JSON.stringify(preview);
+
+    expect(serialized).toContain("FastGPT model probe");
+    expect(serialized).toContain("speech-01-turbo");
+    expect(serialized).toContain("MiniMax · Text-to-speech");
+    expect(serialized).toContain("295 ms");
+    expect(serialized).not.toContain("Uptime Kuma");
+    expect(serialized).not.toContain("Monitor path");
+    expect(serialized).not.toContain("Check URL");
+    expect(serialized).not.toContain("lastDownTime");
+  });
+
+  it("keeps a modified Uptime Kuma custom card for FastGPT events", async () => {
+    const customCard = structuredClone(uptimeKumaTemplate);
+    customCard.header.title.content = "Custom monitor: {{payload.monitor.name}}";
+    const config = FeishuConfigSchema.parse({
+      webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/example",
+      template: {
+        mode: "feishu_card",
+        card: customCard,
+        bindings: defaultFeishuCardBindings,
+      },
+    });
+    const preview = await feishuSender.preview({
+      ...input,
+      source: { ...input.source, provider: "fastgpt" },
+      payload: { monitor: { name: "Login page" } },
+      config,
+    });
+
+    expect(preview).toMatchObject({
+      card: {
+        header: {
+          title: { content: "Custom monitor: Login page" },
+        },
+      },
+    });
+  });
+
   it.each([
     ["SigNoz", signozTemplate, "Detailed description", "详细描述"],
     ["Uptime Kuma", uptimeKumaTemplate, "Check result", "检查结果"],
