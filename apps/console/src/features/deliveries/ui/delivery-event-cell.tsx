@@ -31,7 +31,9 @@ export function DeliveryEventCell({
         </span>
         <span aria-hidden="true">·</span>
         <span
-          className={eventStatus === "firing" ? "shrink-0 font-medium text-red-700" : "shrink-0"}
+          className={
+            eventStatus === "firing" ? "text-destructive shrink-0 font-medium" : "shrink-0"
+          }
         >
           {t(`common.alertStatus.${eventStatus}`)}
         </span>
