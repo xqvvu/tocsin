@@ -62,13 +62,16 @@ async function repositoryWithSearchFixtures(): Promise<
       event("event-hyphen", "fp-hyphen", "cpu-high", "usage"),
       event("event-percent", "fp-percent", "100% packet loss", "loss"),
       event("event-message", "fp-message", "Memory", "oom"),
+      // Opaque ids that are not substrings of each other, so an identifier
+      // lookup can only hit through the intended branch.
+      event("evt-opaque-7f3a", "fp-opaque", "Node down", "node"),
     ])
     .execute();
 
   await db
     .insertInto("deliveries")
-    .values(
-      [
+    .values([
+      ...[
         "event-fingerprint",
         "event-underscore",
         "event-hyphen",
@@ -82,7 +85,15 @@ async function repositoryWithSearchFixtures(): Promise<
         created_at: NOW,
         updated_at: NOW,
       })),
-    )
+      {
+        id: "dlv-opaque-91c2",
+        event_id: "evt-opaque-7f3a",
+        destination_id: "dest-1",
+        state: "pending" as const,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+    ])
     .execute();
 
   return createSqliteRepositories(new SqliteRepositoryContext({ db })).history;
@@ -111,28 +122,28 @@ describe("history search", () => {
     expect(page.total).toBe(1);
   });
 
-  it("matches a pasted event id", async () => {
+  it("matches a pasted event id on both lists", async () => {
     const repository = await repositoryWithSearchFixtures();
 
-    const events = await repository.listEvents({ q: "event-message" });
-    const deliveries = await repository.listDeliveries({ q: "event-message" });
+    const events = await repository.listEvents({ q: "evt-opaque-7f3a" });
+    const deliveries = await repository.listDeliveries({ q: "evt-opaque-7f3a" });
 
-    expect(ids(events.items)).toEqual(["event-message"]);
+    expect(ids(events.items)).toEqual(["evt-opaque-7f3a"]);
     expect(events.total).toBe(1);
     // The event id narrows deliveries to the ones it produced.
-    expect(ids(deliveries.items)).toEqual(["delivery-event-message"]);
+    expect(ids(deliveries.items)).toEqual(["dlv-opaque-91c2"]);
     expect(deliveries.total).toBe(1);
   });
 
   it("matches a pasted delivery id on both lists", async () => {
     const repository = await repositoryWithSearchFixtures();
 
-    const events = await repository.listEvents({ q: "delivery-event-percent" });
-    const deliveries = await repository.listDeliveries({ q: "delivery-event-percent" });
+    const events = await repository.listEvents({ q: "dlv-opaque-91c2" });
+    const deliveries = await repository.listDeliveries({ q: "dlv-opaque-91c2" });
 
-    expect(ids(events.items)).toEqual(["event-percent"]);
+    expect(ids(events.items)).toEqual(["evt-opaque-7f3a"]);
     expect(events.total).toBe(1);
-    expect(ids(deliveries.items)).toEqual(["delivery-event-percent"]);
+    expect(ids(deliveries.items)).toEqual(["dlv-opaque-91c2"]);
     expect(deliveries.total).toBe(1);
   });
 
