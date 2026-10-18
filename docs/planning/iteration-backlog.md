@@ -122,10 +122,17 @@
 | DOC-17 | adapter-extensibility 称无 registry audit 且模板模式未扩展 | docs drift | 25 | shipped | #123 | `registry.ts:83` 已有 `audit()`；四种模式已落地 |
 | DOC-18 | 架构文档 typecheck 命令与 session namespace 过期 | docs drift | 24 | shipped | #123 | 两处 `vp -C apps/console run typecheck` 改为 `vp check`；`auth.*` 改 `session.*`；ADR 0007 命名空间补齐 |
 | REQ-37 | 投递搜索覆盖失败原因/目标/路由 | requirements lane | 29 | candidate | — | `deliverySearchPredicate` 已覆盖 ID/标题/消息/指纹，但表格展示的 `lastError`、目标名、路由名不可搜；`history.repository.ts:425-435`、`deliveries-table.tsx:97-101` |
-| REQ-38 | 投递详情页重试闭环 | requirements lane | 29 | candidate | — | RC checklist `:152` 声称详情可 retry，实际只在列表（`delivery-actions.tsx:20-33`、`delivery-detail-page.tsx:47-56`）；复用 `operations.retryDelivery` |
+| REQ-38 | 投递详情页重试闭环 | requirements lane | 29 | shipped | #126 | 详情页工具栏新增 `DeliveryRetryButton`（仅 failed 态），复用 `operations.retryDelivery`；成功后失效 operations 查询；PRD `docs/prd/delivery-detail-retry.md` |
 | REQ-39 | 静默窗口剩余时间与一键续期 | requirements lane | 27 | candidate | — | 列表/详情只显示起止时间（`suppressions-section.tsx:247-258`、`suppression-detail-page.tsx:83-92`）；core 已有派生状态（`suppression.ts:79-96`） |
 | REQ-40 | 详情返回保留列表筛选 | requirements lane | 26 | candidate | — | 详情返回固定跳 `/events`、`/deliveries`（`event-detail-page.tsx:63-69`、`delivery-detail-page.tsx:49-55`），筛选与分页丢失 |
 | REQ-41 | 告警源接入指引 | requirements lane | 26 | candidate | — | 创建提示只有 URL/Token（`source-token-notice-panel.tsx:16-79`），provider catalog 无接入步骤/示例（`packages/providers/src/types.ts:68-79`）；Generic 文案还声称支持 JSON 字段映射 |
+| REQ-42 | 告警送达时效剖面 | requirements lane | 29 | candidate | — | 详情摘要与 attempts 表只有原始时间戳，无排队/发送/端到端耗时；DTO 已含 `createdAt/finishedAt`（`operations.ts:107-126`）；`delivery-summary-tab.tsx:13-66`、`delivery-attempts-table.tsx:29-45` |
+| REQ-43 | attempt 响应体/错误全文查看 | requirements lane | 29 | candidate | — | attempts 表把响应体截到 120 字并塞进 tooltip（`delivery-attempts-table.tsx:56,75-77`、`operation-format.ts:49-56`）；DTO 已有完整且已脱敏的 `error`/`responseBody`（`operations.ts:109-116`） |
+| REQ-44 | 未匹配路由事件直接补路由 | requirements lane | 27 | candidate | — | 事件详情只有静默/重放/返回（`event-detail-page.tsx:57-71`）；新建路由表单无初始 rule 入口（`route-forms.tsx:50-90`）；默认不追溯 intake 快照 |
+| REQ-45 | 当前筛选窗口投递失败聚合 | requirements lane | 27 | candidate | — | 只有逐行列表；需只读 summary procedure + Top N 目标/错误分组（`operations.ts:36-88`、`history.repository.ts:212-290`） |
+| REQ-46 | 事件排障摘要一键复制 | requirements lane | 27 | candidate | — | 只能复制单个标识符（`event-detail-term.tsx:7-44`）；摘要所需字段均已在页面（`event-detail-summary.tsx:11-71`） |
+| DOC-19 | RC checklist 仍把已交付排障能力列为下一轮候选 | docs drift | 26 | candidate | — | `mvp-rc-checklist.md:188`；时间范围、ID 搜索、route explain 已落地；fingerprint 视图仍未做 |
+| DOC-20 | `destination-historical-event-preview.md` 现状陈述与已实现状态矛盾 | docs drift | 22 | candidate | — | 顶部标已实现，`:24` 仍称控制台从未传参；PR #122 后遗留 |
 
 ## 下一轮优先项
 
