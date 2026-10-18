@@ -127,6 +127,7 @@ export interface ApplicationContainerOptions {
   workerIntervalMs?: number;
   workerBatchSize?: number;
   workerStaleRunningMs?: number;
+  destinationTimeoutMs?: number;
   onWorkerRunComplete?: (result: DeliveryWorkerRunResult) => void;
   onWorkerError?: (error: unknown) => void;
   onOncallWorkerRunComplete?: (result: DeliveryWorkerRunResult) => void;
@@ -181,6 +182,7 @@ export function createApplicationContainer(
   const workerIntervalMs = options.workerIntervalMs ?? env.TOCSIN_WORKER_INTERVAL_MS;
   const workerBatchSize = options.workerBatchSize ?? env.TOCSIN_WORKER_BATCH_SIZE;
   const workerStaleRunningMs = options.workerStaleRunningMs ?? env.TOCSIN_WORKER_STALE_RUNNING_MS;
+  const destinationTimeoutMs = options.destinationTimeoutMs ?? env.TOCSIN_DESTINATION_TIMEOUT_MS;
   const onWorkerRunComplete = options.onWorkerRunComplete ?? logWorkerRunComplete;
   const onWorkerError = options.onWorkerError ?? logWorkerError;
   const onOncallWorkerRunComplete = options.onOncallWorkerRunComplete ?? logOncallWorkerRunComplete;
@@ -227,6 +229,7 @@ export function createApplicationContainer(
         store,
         destinations: container.getDestinationRegistry(),
         resolveDestinationConfig: createDestinationConfigResolver({ store }),
+        destinationSendContext: { timeoutMs: destinationTimeoutMs },
         ...serviceOptions,
       });
     },
@@ -245,6 +248,7 @@ export function createApplicationContainer(
     async createFeishuAppService(serviceOptions = {}) {
       return new FeishuAppService({
         store: await container.getSqliteStore(),
+        timeoutMs: destinationTimeoutMs,
         ...serviceOptions,
       });
     },
@@ -280,6 +284,7 @@ export function createApplicationContainer(
         destinations: container.getDestinationRegistry(),
         staleRunningTimeoutMs: workerStaleRunningMs,
         resolveDestinationConfig: createDestinationConfigResolver({ store }),
+        sendContext: { timeoutMs: destinationTimeoutMs },
         triggerPings: (input) => oncall.triggerPingsForDelivery(input),
         ...workerOptions,
       });
@@ -306,6 +311,7 @@ export function createApplicationContainer(
         urgency: container.getUrgencyRegistry(),
         staleRunningTimeoutMs: workerStaleRunningMs,
         resolveDestinationConfig: createDestinationConfigResolver({ store }),
+        sendContext: { timeoutMs: destinationTimeoutMs },
         ...workerOptions,
       });
     },

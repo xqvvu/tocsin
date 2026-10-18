@@ -499,6 +499,49 @@ describe("delivery worker", () => {
     await store.close();
   });
 
+  it("treats a timed-out destination request as a retryable delivery failure", async () => {
+    const store = await createStore();
+    const delivery = await seedDelivery(store, { maxAttempts: 2 });
+    const worker = new DeliveryWorker({
+      store,
+      destinations: createDefaultDestinationRegistry(),
+      now: () => now,
+      backoff: {
+        initialDelayMs: 60_000,
+        maxDelayMs: 60_000,
+      },
+      sendContext: {
+        timeoutMs: 10,
+        fetch: async () => new Promise(() => {}),
+      },
+    });
+
+    const result = await worker.runOnce();
+    const detail = await store.deliveries.get(delivery.id);
+
+    expect(result).toEqual({
+      claimed: 1,
+      reclaimed: 0,
+      succeeded: 0,
+      failed: 0,
+      retrying: 1,
+      startedAt: now,
+      finishedAt: now,
+    });
+    expect(detail?.job.state).toBe("pending");
+    expect(detail?.job.nextAttemptAt).toBe("2026-06-09T08:01:00.000Z");
+    expect(detail?.job.lastError).toBe("Destination request timed out after 10ms");
+    expect(detail?.attempts).toMatchObject([
+      {
+        attemptNumber: 1,
+        state: "failed",
+        error: "Destination request timed out after 10ms",
+      },
+    ]);
+
+    await store.close();
+  });
+
   it("reclaims stale running deliveries before claiming new work", async () => {
     const store = await createStore();
     const delivery = await seedDelivery(store, { maxAttempts: 2 });
@@ -507,6 +550,7 @@ describe("delivery worker", () => {
       destinations: createDefaultDestinationRegistry(),
       now: () => now,
       sendContext: {
+        timeoutMs: 0,
         fetch: async () =>
           new Promise(() => {
             // Simulate a process that claimed the job and never completed the attempt.
@@ -586,6 +630,7 @@ describe("delivery worker", () => {
       destinations: createDefaultDestinationRegistry(),
       now: () => now,
       sendContext: {
+        timeoutMs: 0,
         fetch: async () =>
           new Promise(() => {
             // Simulate a process that claimed the job and never completed the attempt.

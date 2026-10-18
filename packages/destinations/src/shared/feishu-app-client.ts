@@ -11,6 +11,7 @@ import {
   feishuFailureSummary,
   parseFeishuResult,
 } from "#destinations/shared/feishu-result";
+import { isTimeoutError } from "#destinations/transport";
 import type {
   DestinationErrorKind,
   DestinationRetryHint,
@@ -134,7 +135,7 @@ export async function fetchFeishuTenantAccessToken(
   } catch (error) {
     return {
       ok: false,
-      errorKind: "network_error",
+      errorKind: isTimeoutError(error) ? "timeout" : "network_error",
       retryHint: "retryable",
       errorMessage:
         error instanceof Error && error.message.trim()

@@ -43,6 +43,8 @@ export interface DestinationRenderInput<Config> {
 export interface DestinationTransportContext {
   fetch?: FetchLike;
   now?: () => Date;
+  /** Per-request deadline in milliseconds; `0` disables it. Defaults to 10s. */
+  timeoutMs?: number;
 }
 
 export type DestinationSendContext = DestinationTransportContext;
