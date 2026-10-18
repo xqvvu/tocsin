@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 8 轮）
+
+- 时间：2026-10-18 20:04–20:35 CST（12:04–12:35Z）。
+- 基线：`origin/main` @ `9981b89`（main CI 最近三次全绿）。
+- 本轮类型：**需求切片**（非 full-audit）。backlog 有多个 ≥27 分候选，按第 1.5 步继续；
+  最近全量审计仍是第 1 轮，已超过 6 小时，但 backlog 未清空，优先消化高价值候选。
+- 车道轮转位置：本轮跑 `requirements` + `quality` + `release-infra`。
+  `requirements` 与 `release-infra` 已返回；`quality` 收尾时仍在运行，留待下一轮补记。
+  下一轮建议 `architecture` + `docs-drift`（`requirements` 每轮必跑）。
+- 工作树：写入隔离仍禁止本会话修改 `agent-iteration`；`agent-iteration` 仅用于并发锁，
+  实现与验证使用会话工作树 `xenodochial-volhard-09db85`。
+
+### 本轮交付
+
+- PR #125 `feat(console): search events and deliveries by identifier`（open，CI green 后合并）。
+  - `eventSearchPredicate` 增加 `events.id`，并用 `EXISTS` 子查询匹配所属投递的
+    `deliveries.id`；事件列表粘贴投递 ID 可反查来源事件。
+  - 新增 `deliverySearchPredicate`：匹配 `deliveries.id`、`events.id` 及原有事件字段，
+    投递列表粘贴事件 ID 可拉出整组投递；列表与计数共用同一谓词。
+  - 搜索占位文案更新为中英文「标题、消息、指纹或 ID」。
+  - 新增中文 mini-PRD `docs/prd/operation-search-identifiers.md`；新增 2 条仓储测试，
+    用互不包含的 opaque ID 隔离四条查找分支并断言 `total` 一致。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` console 513 tests
+    及其余 3 个包全绿；`vp run -r build` 通过。
+
+### requirements lane
+
+新增 5 条候选（已写入 backlog）：
+
+- **REQ-37（29）**：投递搜索覆盖失败原因/目标/路由。`lastError`、目标名、路由名已在表格
+  展示（`deliveries-table.tsx:97-101`）但不可搜（`history.repository.ts:425-435`）。
+- **REQ-38（29）**：投递详情页重试闭环。RC checklist `:152` 声称详情可 retry，实际只有列表
+  有（`delivery-actions.tsx:20-33`、`delivery-detail-page.tsx:47-56`）。
+- **REQ-39（27）**：静默窗口剩余时间与一键续期。列表/详情只显示起止时间
+  （`suppressions-section.tsx:247-258`、`suppression-detail-page.tsx:83-92`）。
+- **REQ-40（26）**：详情返回保留列表筛选。返回固定跳 `/events`、`/deliveries`
+  （`event-detail-page.tsx:63-69`、`delivery-detail-page.tsx:49-55`）。
+- **REQ-41（26）**：告警源接入指引。创建提示只有 URL/Token
+  （`source-token-notice-panel.tsx:16-79`），provider catalog 无接入步骤/示例；
+  Generic 文案还声称支持 JSON 字段映射。
+
+### release-infra lane
+
+REL-1..14 均仍成立；RC checklist 只有 3 条未勾选，全是真缺（E2E workflow、provider
+fixtures；Docker smoke 属「形式满足、语义未满足」）。本机 `docker`、`just` 均可用。
+
+- **REL-3/6/7 复核**：显式卷名 + 固定镜像 tag 使 `docker-smoke.sh` 的 `-p tocsin-smoke`
+  失效，`down -v` 会删除正常栈数据卷；`test -f` 分不清卷类型；E2E 等静态 `/api/health`
+  而非 `/api/ready`，端口/DB 路径固定且未固定 locale。
+- **REL-1 最小 CI 方案**（已核实可行，无新服务/secret）：`ci.yml` 增加独立 `e2e` job →
+  setup-vp（`.node-version` + cache）→ 安装 node-gyp 依赖 → `vp install --frozen-lockfile`
+  → `playwright install --with-deps chromium` → `CI=true playwright test`。
+- **REL-9/10/11/12/14** 仍成立；`docker-production-deployment.md:28` 的 Node 版本
+  （`26.11.1` vs `.node-version` `26.12.0`）可直接修。
+- **REL-13**（LICENSE）保持 `blocked-autonomous`，需专家小组做法律/产品决策。
+
+### 本轮未做 / 备注
+
+- `quality` 车道收尾时仍在运行，未返回；下一轮继续并补记发现。
+- 未做浏览器实测：本机没有运行中的 Tocsin console dev server。
+- Obsidian 同步跳过：本会话没有 `obsidian-vault` skill。
+- 无 EXPERT_PANEL 事项。
+- 仓库禁止 squash merge，PR 以 rebase 合并。
+
+### 下一轮优先项
+
+1. REQ-38（29）：投递详情页重试闭环。
+2. REQ-37（29）：投递搜索覆盖失败原因/目标/路由。
+3. REQ-27（28）：Deliveries 列表告警身份。
+4. REQ-32（28）：解析失败事件的诊断可见性。
+5. REL-3（28）：Docker smoke 隔离。
+6. 补记 quality lane 发现（第 7、8 轮连续未返回）。
+
 ## 2026-10-18（第 7 轮）
 
 - 时间：2026-10-18 19:12–20:00 CST（11:12–12:00Z）。
