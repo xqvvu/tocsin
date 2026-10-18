@@ -49,6 +49,7 @@ export class OperationsService {
         severity: input.severity,
         status: input.status,
         destinationId: input.destinationId,
+        routeId: input.routeId,
         state: input.deliveryState,
         q: input.q,
         since,

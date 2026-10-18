@@ -84,6 +84,17 @@ describe("operations service", () => {
       deliveries: { items: [{ id: delivery.id }] },
     });
 
+    // A route filter narrows deliveries only. Events have no route dimension,
+    // so the events list keeps returning the same rows.
+    const byRoute = await service.listOperations({ limit: 10, routeId: "route-1" });
+    expect(byRoute.deliveries.items.map((item) => item.id)).toEqual([delivery.id]);
+    expect(byRoute.deliveries.total).toBe(1);
+    expect(byRoute.events.items.map((item) => item.id)).toEqual([event.id]);
+    expect(byRoute.events.total).toBe(1);
+    const unmatchedRoute = await service.listOperations({ limit: 10, routeId: "route-missing" });
+    expect(unmatchedRoute.deliveries.total).toBe(0);
+    expect(unmatchedRoute.events.total).toBe(1);
+
     await expect(service.getEventDetail(event.id)).resolves.toMatchObject({
       event: { id: event.id },
     });

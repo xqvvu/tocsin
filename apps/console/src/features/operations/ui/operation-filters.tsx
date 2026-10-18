@@ -1,6 +1,6 @@
 import { RiCloseLine, RiFilter3Line, RiSearchLine } from "@remixicon/react";
 
-import type { DestinationSummary, SourceSummary } from "@tocsin/core";
+import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
@@ -28,17 +28,30 @@ import { cn } from "#/lib/utils";
 
 type TranslationFn = ReturnType<typeof useTranslations>;
 
+/**
+ * Which page's query backs the toolbar. Event history has no destination,
+ * route, or delivery-state dimension, so rendering those controls on Events
+ * would silently do nothing.
+ */
+export type OperationFilterScope = "events" | "deliveries";
+
+export interface OperationFilterConfiguration {
+  sources: SourceSummary[];
+  destinations: DestinationSummary[];
+  /** Route options for the deliveries scope; omitted on events. */
+  routes?: RouteDefinition[];
+}
+
 export function OperationFilters({
   configuration,
+  scope,
   search,
   pending,
   onChange,
   layout = "toolbar",
 }: {
-  configuration: {
-    sources: SourceSummary[];
-    destinations: DestinationSummary[];
-  };
+  configuration: OperationFilterConfiguration;
+  scope: OperationFilterScope;
   search: DashboardOperationSearch;
   pending: boolean;
   onChange: (next: Partial<DashboardOperationSearch>) => void;
@@ -46,7 +59,7 @@ export function OperationFilters({
   layout?: "grid" | "rail" | "toolbar";
 }) {
   const t = useTranslations();
-  const chips = activeFilterChips(search, configuration, t);
+  const chips = activeFilterChips(search, configuration, scope, t);
   const activeCount = chips.length;
   const resolvedLayout = layout === "grid" ? "toolbar" : layout;
 
@@ -54,6 +67,7 @@ export function OperationFilters({
     return (
       <OperationFiltersPanel
         configuration={configuration}
+        scope={scope}
         search={search}
         pending={pending}
         onChange={onChange}
@@ -108,6 +122,7 @@ export function OperationFilters({
             </PopoverHeader>
             <OperationFiltersPanel
               configuration={configuration}
+              scope={scope}
               search={search}
               pending={pending}
               onChange={onChange}
@@ -148,6 +163,7 @@ export function OperationFilters({
                 severity: "",
                 status: "",
                 destinationId: "",
+                routeId: "",
                 deliveryState: "",
                 range: "",
                 q: "",
@@ -164,16 +180,15 @@ export function OperationFilters({
 
 function OperationFiltersPanel({
   configuration,
+  scope,
   search,
   pending,
   onChange,
   compact = false,
   className,
 }: {
-  configuration: {
-    sources: SourceSummary[];
-    destinations: DestinationSummary[];
-  };
+  configuration: OperationFilterConfiguration;
+  scope: OperationFilterScope;
   search: DashboardOperationSearch;
   pending: boolean;
   onChange: (next: Partial<DashboardOperationSearch>) => void;
@@ -191,6 +206,10 @@ function OperationFiltersPanel({
       value: destination.id,
       label: destination.name,
     })),
+  ];
+  const routeItems = [
+    { value: null, label: t("operations.filters.anyRoute") },
+    ...(configuration.routes ?? []).map((route) => ({ value: route.id, label: route.name })),
   ];
 
   return (
@@ -287,32 +306,60 @@ function OperationFiltersPanel({
           </SelectContent>
         </Select>
       </UiField>
-      <UiField>
-        <FieldLabel htmlFor="operation-destination">
-          {t("operations.filters.destination")}
-        </FieldLabel>
-        <Select
-          id="operation-destination"
-          items={destinationItems}
-          value={search.destinationId || null}
-          disabled={pending}
-          onValueChange={(value) => onChange({ destinationId: value ?? "" })}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={t("operations.filters.anyDestination")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={null}>{t("operations.filters.anyDestination")}</SelectItem>
-              {configuration.destinations.map((destination) => (
-                <SelectItem key={destination.id} value={destination.id}>
-                  {destination.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </UiField>
+      {scope === "deliveries" ? (
+        <>
+          <UiField>
+            <FieldLabel htmlFor="operation-destination">
+              {t("operations.filters.destination")}
+            </FieldLabel>
+            <Select
+              id="operation-destination"
+              items={destinationItems}
+              value={search.destinationId || null}
+              disabled={pending}
+              onValueChange={(value) => onChange({ destinationId: value ?? "" })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t("operations.filters.anyDestination")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value={null}>{t("operations.filters.anyDestination")}</SelectItem>
+                  {configuration.destinations.map((destination) => (
+                    <SelectItem key={destination.id} value={destination.id}>
+                      {destination.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </UiField>
+          <UiField>
+            <FieldLabel htmlFor="operation-route">{t("operations.filters.route")}</FieldLabel>
+            <Select
+              id="operation-route"
+              items={routeItems}
+              value={search.routeId || null}
+              disabled={pending}
+              onValueChange={(value) => onChange({ routeId: value ?? "" })}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t("operations.filters.anyRoute")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value={null}>{t("operations.filters.anyRoute")}</SelectItem>
+                  {(configuration.routes ?? []).map((route) => (
+                    <SelectItem key={route.id} value={route.id}>
+                      {route.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </UiField>
+        </>
+      ) : null}
       <UiField>
         <FieldLabel htmlFor="operation-range">{t("operations.filters.timeRange")}</FieldLabel>
         <Select
@@ -348,43 +395,45 @@ function OperationFiltersPanel({
           </SelectContent>
         </Select>
       </UiField>
-      <UiField className={compact ? "sm:col-span-2" : undefined}>
-        <FieldLabel htmlFor="operation-delivery-state">
-          {t("operations.filters.deliveryState")}
-        </FieldLabel>
-        <Select
-          id="operation-delivery-state"
-          items={[
-            { value: null, label: t("common.deliveryState.any") },
-            { value: "pending", label: t("common.deliveryState.pending") },
-            { value: "running", label: t("common.deliveryState.running") },
-            { value: "succeeded", label: t("common.deliveryState.succeeded") },
-            { value: "failed", label: t("common.deliveryState.failed") },
-            { value: "suppressed", label: t("common.deliveryState.suppressed") },
-          ]}
-          value={search.deliveryState || null}
-          disabled={pending}
-          onValueChange={(value) =>
-            onChange({
-              deliveryState: (value ?? "") as DashboardOperationSearch["deliveryState"],
-            })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={t("common.deliveryState.any")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={null}>{t("common.deliveryState.any")}</SelectItem>
-              <SelectItem value="pending">{t("common.deliveryState.pending")}</SelectItem>
-              <SelectItem value="running">{t("common.deliveryState.running")}</SelectItem>
-              <SelectItem value="succeeded">{t("common.deliveryState.succeeded")}</SelectItem>
-              <SelectItem value="failed">{t("common.deliveryState.failed")}</SelectItem>
-              <SelectItem value="suppressed">{t("common.deliveryState.suppressed")}</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </UiField>
+      {scope === "deliveries" ? (
+        <UiField className={compact ? "sm:col-span-2" : undefined}>
+          <FieldLabel htmlFor="operation-delivery-state">
+            {t("operations.filters.deliveryState")}
+          </FieldLabel>
+          <Select
+            id="operation-delivery-state"
+            items={[
+              { value: null, label: t("common.deliveryState.any") },
+              { value: "pending", label: t("common.deliveryState.pending") },
+              { value: "running", label: t("common.deliveryState.running") },
+              { value: "succeeded", label: t("common.deliveryState.succeeded") },
+              { value: "failed", label: t("common.deliveryState.failed") },
+              { value: "suppressed", label: t("common.deliveryState.suppressed") },
+            ]}
+            value={search.deliveryState || null}
+            disabled={pending}
+            onValueChange={(value) =>
+              onChange({
+                deliveryState: (value ?? "") as DashboardOperationSearch["deliveryState"],
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("common.deliveryState.any")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={null}>{t("common.deliveryState.any")}</SelectItem>
+                <SelectItem value="pending">{t("common.deliveryState.pending")}</SelectItem>
+                <SelectItem value="running">{t("common.deliveryState.running")}</SelectItem>
+                <SelectItem value="succeeded">{t("common.deliveryState.succeeded")}</SelectItem>
+                <SelectItem value="failed">{t("common.deliveryState.failed")}</SelectItem>
+                <SelectItem value="suppressed">{t("common.deliveryState.suppressed")}</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </UiField>
+      ) : null}
     </FieldGroup>
   );
 }
@@ -398,10 +447,8 @@ interface ActiveFilterChip {
 
 function activeFilterChips(
   search: DashboardOperationSearch,
-  configuration: {
-    sources: SourceSummary[];
-    destinations: DestinationSummary[];
-  },
+  configuration: OperationFilterConfiguration,
+  scope: OperationFilterScope,
   t: TranslationFn,
 ): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
@@ -443,7 +490,7 @@ function activeFilterChips(
     });
   }
 
-  if (search.destinationId) {
+  if (scope === "deliveries" && search.destinationId) {
     const destination = configuration.destinations.find((item) => item.id === search.destinationId);
     chips.push({
       key: "destinationId",
@@ -453,7 +500,17 @@ function activeFilterChips(
     });
   }
 
-  if (search.deliveryState) {
+  if (scope === "deliveries" && search.routeId) {
+    const route = configuration.routes?.find((item) => item.id === search.routeId);
+    chips.push({
+      key: "routeId",
+      label: t("operations.filters.route"),
+      valueLabel: route?.name ?? search.routeId,
+      clear: { routeId: "" },
+    });
+  }
+
+  if (scope === "deliveries" && search.deliveryState) {
     chips.push({
       key: "deliveryState",
       label: t("operations.filters.deliveryState"),

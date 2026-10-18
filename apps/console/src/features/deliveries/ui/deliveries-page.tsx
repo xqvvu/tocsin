@@ -18,6 +18,7 @@ import type {
 } from "#/features/operations/model/operation-search";
 import { OperationFilters } from "#/features/operations/ui/operation-filters";
 import { showWorkerRunToast } from "#/features/operations/ui/worker-notice-panel";
+import { routesQueryOptions } from "#/features/routes/api/route.queries";
 import { sourcesQueryOptions } from "#/features/sources/api/source.queries";
 import { useTranslations } from "#/i18n/use-i18n";
 import { DashboardContentLayout } from "#/shell/dashboard-layout";
@@ -31,20 +32,25 @@ export interface DeliveriesPageProps {
 export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPageProps) {
   const t = useTranslations();
   const navigate = useNavigate();
-  const [{ data: sources }, { data: destinations }, { data: destinationCatalog }] =
-    useSuspenseQueries({
-      queries: [
-        sourcesQueryOptions(),
-        destinationsQueryOptions(),
-        destinationCatalogQueryOptions(),
-      ],
-    });
+  const [
+    { data: sources },
+    { data: destinations },
+    { data: destinationCatalog },
+    { data: routes },
+  ] = useSuspenseQueries({
+    queries: [
+      sourcesQueryOptions(),
+      destinationsQueryOptions(),
+      destinationCatalogQueryOptions(),
+      routesQueryOptions(),
+    ],
+  });
   const destinationIconNames = React.useMemo(
     () => destinationIconNamesByKind(destinationCatalog),
     [destinationCatalog],
   );
   const { data: operations } = useSuspenseQuery(operationsQueryOptions(filters));
-  const operationConfiguration = { sources, destinations };
+  const operationConfiguration = { sources, destinations, routes };
   const { invalidateOperations, retryDelivery, runDeliveryWorker } = useOperationMutations();
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
   const pending = pendingAction !== null;
@@ -59,6 +65,7 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
       severity: "",
       status: "",
       destinationId: "",
+      routeId: "",
       deliveryState: "",
       range: "",
       q: "",
@@ -101,6 +108,7 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
           />
           <OperationFilters
             configuration={operationConfiguration}
+            scope="deliveries"
             search={search}
             pending={pending}
             onChange={onSearchChange}

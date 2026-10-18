@@ -20,6 +20,7 @@ export const DashboardOperationSearchSchema = z.object({
     .catch("")
     .optional(),
   destinationId: z.string().catch("").optional(),
+  routeId: z.string().catch("").optional(),
   deliveryState: z
     .union([DeliveryStateSchema, z.literal("")])
     .catch("")
@@ -38,6 +39,7 @@ export interface DashboardOperationSearch {
   severity?: AlertSeverity | "";
   status?: AlertStatus | "";
   destinationId?: string;
+  routeId?: string;
   deliveryState?: DeliveryState | "";
   range?: OperationTimeRange | "";
   q?: string;
@@ -50,6 +52,7 @@ export type OperationFilterData = {
   severity?: AlertSeverity;
   status?: AlertStatus;
   destinationId?: string;
+  routeId?: string;
   deliveryState?: DeliveryState;
   range?: OperationTimeRange;
   q?: string;
@@ -87,6 +90,7 @@ export function mergeOperationSearch(
     "severity",
     "status",
     "destinationId",
+    "routeId",
     "deliveryState",
     "range",
     "q",

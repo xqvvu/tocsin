@@ -46,6 +46,30 @@ describe("delivery page in the operation search", () => {
   });
 });
 
+describe("route filter in the operation search", () => {
+  it("keeps the route in the URL and resets both lists to the first page", () => {
+    const merged = mergeOperationSearch({ eventPage: 4, deliveryPage: 3 }, { routeId: "route-1" });
+
+    expect(merged.routeId).toBe("route-1");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+
+  it("keeps the route while paging", () => {
+    const merged = mergeOperationSearch(
+      { routeId: "route-1", deliveryPage: 2 },
+      { deliveryPage: 3 },
+    );
+
+    expect(merged.routeId).toBe("route-1");
+    expect(merged.deliveryPage).toBe(3);
+  });
+
+  it("drops an empty route from the URL", () => {
+    expect(pruneSearch({ routeId: "" }).routeId).toBeUndefined();
+  });
+});
+
 describe("time range in the operation search", () => {
   it("accepts every supported window and rejects an unknown one", () => {
     // The URL is user-editable; an unknown window must fall back to "all time"

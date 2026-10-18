@@ -835,6 +835,14 @@ describe("sqlite store", () => {
     expect(
       (await store.history.listDeliveries({ destinationId: "destination-1" })).items[0]?.id,
     ).toBe(criticalDelivery.id);
+    // The route filter narrows the same list the destination filter does, and
+    // its `total` follows the page like every other predicate.
+    const routedDeliveries = await store.history.listDeliveries({ routeId: "route-1" });
+    expect(routedDeliveries.items.map((delivery) => delivery.id)).toEqual([criticalDelivery.id]);
+    expect(routedDeliveries.total).toBe(1);
+    const unmatchedRoute = await store.history.listDeliveries({ routeId: "route-missing" });
+    expect(unmatchedRoute.items).toHaveLength(0);
+    expect(unmatchedRoute.total).toBe(0);
     expect((await store.history.listDeliveries({ state: "failed" })).items[0]?.lastError).toBe(
       "destination unavailable token=[REDACTED]",
     );

@@ -195,6 +195,8 @@ export const ListOperationsInputSchema = z
     severity: AlertSeveritySchema.optional(),
     status: AlertStatusSchema.optional(),
     destinationId: z.string().min(1).optional(),
+    /** Restricts the delivery list to one route; manual deliveries have none. */
+    routeId: z.string().min(1).optional(),
     deliveryState: DeliveryStateSchema.optional(),
     /** Relative window resolved against the server's request time. */
     range: OperationTimeRangeSchema.optional(),
