@@ -6,7 +6,7 @@
 
 - 时间：2026-10-18 20:34–21:15 CST（12:34–13:15Z）。
 - 基线：`origin/main` @ `2b6422e`（main CI 最近一次 success）。
-- 本轮类型：**需求切片**（非 full-audit）。最近全量审计仍是第 1 轮（13:30 CST），已超过
+- 本轮类型：**需求切片 + 文档修复**（非 full-audit）。最近全量审计仍是第 1 轮（13:30 CST），已超过
   6 小时；但 backlog 有多个 ≥27 分候选且无遗留 open PR，按第 1.5 步优先消化高价值候选。
 - 车道轮转位置：本轮跑 `requirements` + `docs-drift` + `architecture`。
   `requirements` 与 `docs-drift` 已返回；`architecture` 超过 30 分钟仍无输出，按记忆中的
@@ -28,6 +28,12 @@
   - 新增 4 条组件测试；console 517 tests 全绿；`vp check` 0 errors（11 条既有 warning）；
     `vp run -r build` 通过。
   - 未做浏览器实测：本机 5173 端口属于其他项目，没有运行中的 Tocsin console dev server。
+- PR #127 `docs: correct stale architecture, search, and release claims`（open，CI green 后 rebase 合并）。
+  - 更正 DOC-13（import boundaries 4 处）、DOC-14（suppressions schema/id 工厂）、
+    DOC-12（去重证据拆行）、DOC-19（RC checklist 排障候选状态）、DOC-20（历史预览 PRD
+    现状陈述）、DOC-4（next-round 基线与 S0 状态）、REL-12（Node 版本）。
+  - `vp fmt --check` 通过；纯文档改动，无行为变更。
+  - DOC-6（文件树）与 DOC-11（adapter PRD 状态注记）范围较大，留在 backlog 下一轮。
 
 ### requirements lane
 
@@ -50,7 +56,7 @@
 
 ### docs-drift lane
 
-8 处断言过期（均写入 backlog，前 7 条为已存在的 DOC/REL 项复核）：
+8 处断言过期（前 7 条为已存在的 DOC/REL 项复核）；除 DOC-6/DOC-11 外均已在 #127 更正：
 
 - **DOC-11（高）**：`adapter-contribution-experience.md` 的「不存在」盘点大面积过期：
   contributor guide/scaffold 已存在（`docs/contributing/destination-adapter.md:1`、
