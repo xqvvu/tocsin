@@ -10,6 +10,7 @@ import {
   JsonObjectSchema,
   JsonValueSchema,
   OncallPingSchema,
+  OperationTimeRangeSchema,
   PreviewRouteReplayCommandSchema,
   ProviderReferenceSchema,
   ReplayEventCommandSchema,
@@ -195,6 +196,8 @@ export const ListOperationsInputSchema = z
     status: AlertStatusSchema.optional(),
     destinationId: z.string().min(1).optional(),
     deliveryState: DeliveryStateSchema.optional(),
+    /** Relative window resolved against the server's request time. */
+    range: OperationTimeRangeSchema.optional(),
     q: z.string().trim().min(1).max(120).optional(),
     eventPage: z.number().int().min(1).default(1),
     deliveryPage: z.number().int().min(1).default(1),

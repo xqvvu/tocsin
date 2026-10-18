@@ -24,6 +24,8 @@ export interface EventListQuery {
   sourceId?: string;
   severity?: NormalizedEvent["severity"];
   status?: NormalizedEvent["status"];
+  /** Inclusive lower bound on `events.received_at`, as an ISO timestamp. */
+  since?: string;
   q?: string;
   page?: number;
   limit?: number;
@@ -37,6 +39,8 @@ export interface DeliveryListQuery {
   /** Only the deliveries silenced by one rule ("what did this rule hit?"). */
   suppressionId?: string;
   state?: DeliveryState;
+  /** Inclusive lower bound on `deliveries.created_at`, as an ISO timestamp. */
+  since?: string;
   q?: string;
   page?: number;
   limit?: number;

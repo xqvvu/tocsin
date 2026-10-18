@@ -1,8 +1,13 @@
 import { pickBy } from "es-toolkit/object";
 import { z } from "zod";
 
-import type { AlertSeverity, AlertStatus, DeliveryState } from "@tocsin/core";
-import { AlertSeveritySchema, AlertStatusSchema, DeliveryStateSchema } from "@tocsin/core";
+import type { AlertSeverity, AlertStatus, DeliveryState, OperationTimeRange } from "@tocsin/core";
+import {
+  AlertSeveritySchema,
+  AlertStatusSchema,
+  DeliveryStateSchema,
+  OperationTimeRangeSchema,
+} from "@tocsin/core";
 
 export const DashboardOperationSearchSchema = z.object({
   sourceId: z.string().catch("").optional(),
@@ -19,6 +24,10 @@ export const DashboardOperationSearchSchema = z.object({
     .union([DeliveryStateSchema, z.literal("")])
     .catch("")
     .optional(),
+  range: z
+    .union([OperationTimeRangeSchema, z.literal("")])
+    .catch("")
+    .optional(),
   q: z.string().catch("").optional(),
   eventPage: z.coerce.number().int().min(1).catch(1).optional(),
   deliveryPage: z.coerce.number().int().min(1).catch(1).optional(),
@@ -30,6 +39,7 @@ export interface DashboardOperationSearch {
   status?: AlertStatus | "";
   destinationId?: string;
   deliveryState?: DeliveryState | "";
+  range?: OperationTimeRange | "";
   q?: string;
   eventPage?: number;
   deliveryPage?: number;
@@ -41,6 +51,7 @@ export type OperationFilterData = {
   status?: AlertStatus;
   destinationId?: string;
   deliveryState?: DeliveryState;
+  range?: OperationTimeRange;
   q?: string;
   eventPage?: number;
   deliveryPage?: number;
@@ -77,6 +88,7 @@ export function mergeOperationSearch(
     "status",
     "destinationId",
     "deliveryState",
+    "range",
     "q",
   ];
   const filterChanged = filterKeys.some((key) => Object.hasOwn(next, key));
