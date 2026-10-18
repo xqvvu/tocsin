@@ -53,7 +53,7 @@ describe("delivery event cell", () => {
       />,
     );
 
-    expect(screen.getByText("Resolved").className).not.toContain("text-red-700");
+    expect(screen.getByText("Resolved").className).not.toContain("text-destructive");
   });
 
   it("keeps the firing marker when the alert is still active", () => {
@@ -67,8 +67,8 @@ describe("delivery event cell", () => {
       />,
     );
 
-    // `info` keeps the severity badge neutral, so the red emphasis can only
-    // come from the firing status.
-    expect(screen.getByText("Firing").className).toContain("text-red-700");
+    // `info` keeps the severity badge neutral, so the destructive emphasis can
+    // only come from the firing status.
+    expect(screen.getByText("Firing").className).toContain("text-destructive");
   });
 });
