@@ -18,8 +18,8 @@ catalog:
   sonner: ^2.0.8
   use-intl: ^4.14.9
   shiki: ^4.5.0
-  srvx: ^1.0.5
-  kysely: ^0.29.6
+  srvx: ^1.0.6
+  kysely: ^0.29.7
   cn: ^0.4.0
   "@logtape/logtape": ^2.4.1
   "@shikijs/langs": ^4.5.0
