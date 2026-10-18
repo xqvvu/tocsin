@@ -166,6 +166,13 @@ function probeMessage(input: {
 }
 
 function redactProbeError(errorText: string): string {
+  // A probe body that carries a credential has no operator value: even after
+  // per-key redaction its code/message would still be surfaced, so hide the
+  // whole body as soon as the raw text looks credential-shaped.
+  if (CREDENTIAL_LIKE_TEXT_PATTERN.test(errorText)) {
+    return PROBE_ERROR_REDACTED;
+  }
+
   const redacted = redactText(errorText);
   if (CREDENTIAL_LIKE_TEXT_PATTERN.test(redacted)) {
     return PROBE_ERROR_REDACTED;
