@@ -19,6 +19,12 @@ export const env = createEnv({
     BETTER_AUTH_TRUSTED_ORIGINS: delimitedListSchema.optional(),
     SERVER_URL: z.url().optional(),
     TOCSIN_DATABASE_PATH: z.string().min(1).optional(),
+    TOCSIN_DESTINATION_TIMEOUT_MS: z.coerce
+      .number<number>()
+      .int()
+      .positive()
+      .max(30_000)
+      .default(10_000),
     TOCSIN_LOG_FORMAT: z.enum(["auto", "json", "text"]).default("auto"),
     TOCSIN_LOG_LEVEL: z
       .enum(["trace", "debug", "info", "warning", "error", "fatal", "off"])

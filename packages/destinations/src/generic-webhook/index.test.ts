@@ -55,6 +55,22 @@ describe("generic webhook sender", () => {
     expect(result.responseBody).toBe("down");
   });
 
+  it("fails as retryable when the target exceeds the transport deadline", async () => {
+    const result = await genericWebhookSender.send(input, {
+      timeoutMs: 10,
+      fetch: async () => new Promise(() => {}),
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      errorKind: "timeout",
+      retryHint: "retryable",
+      errorMessage: "Destination request timed out after 10ms",
+      statusCode: null,
+      responseBody: null,
+    });
+  });
+
   it("renders sent payloads with the same parsed template config as previews", async () => {
     const fetcher = fakeFetch(() => ({ status: 202, body: "accepted" }));
 

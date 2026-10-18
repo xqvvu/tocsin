@@ -36,10 +36,12 @@ import { DomainValidationError } from "#/server/runtime/domain-errors";
 export class FeishuAppService {
   private readonly store: SqliteStore;
   private readonly fetch?: FetchLike;
+  private readonly timeoutMs?: number;
 
   constructor(options: FeishuAppServiceOptions) {
     this.store = options.store;
     this.fetch = options.fetch;
+    this.timeoutMs = options.timeoutMs;
   }
 
   async listFeishuApps(): Promise<FeishuAppListItem[]> {
@@ -101,7 +103,7 @@ export class FeishuAppService {
     const app = requireFeishuApp(await this.store.feishuApps.get(input.id));
     const result = await fetchFeishuTenantAccessToken(
       { appId: app.appId, appSecret: app.appSecret },
-      this.fetch ? { fetch: this.fetch } : undefined,
+      { fetch: this.fetch, timeoutMs: this.timeoutMs },
     );
 
     return {
