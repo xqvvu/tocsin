@@ -273,7 +273,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
     }
 
     if (query.q) {
-      builder = builder.where(eventSearchPredicate(query.q));
+      builder = builder.where(deliverySearchPredicate(query.q));
     }
 
     const rows = await builder.execute();
@@ -375,7 +375,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
     }
 
     if (query.q) {
-      builder = builder.where(eventSearchPredicate(query.q));
+      builder = builder.where(deliverySearchPredicate(query.q));
     }
 
     const row = await builder.executeTakeFirst();
@@ -395,15 +395,40 @@ function countMatchedRoutes(routeMatchesJson: string | null): number {
 }
 
 /**
- * The search box searches title, message, and fingerprint
- * (`operations.filters.searchPlaceholder`). Every list and count query shares
- * this one predicate so a page and its `total` cannot disagree.
+ * Event search covers title, message, fingerprint, and identifiers
+ * (`operations.filters.searchPlaceholder`). A pasted delivery id also finds
+ * the event that produced it, so on-call can jump from an alert notification
+ * back to the event. Every event list and count query shares this predicate so
+ * a page and its `total` cannot disagree.
  */
 function eventSearchPredicate(term: string) {
   const pattern = escapeLikeTerm(term);
 
   return sql<boolean>`(
-    events.title LIKE ${pattern} ESCAPE '\\'
+    events.id LIKE ${pattern} ESCAPE '\\'
+    OR events.title LIKE ${pattern} ESCAPE '\\'
+    OR events.message LIKE ${pattern} ESCAPE '\\'
+    OR events.fingerprint LIKE ${pattern} ESCAPE '\\'
+    OR EXISTS (
+      SELECT 1 FROM deliveries AS searched_deliveries
+      WHERE searched_deliveries.event_id = events.id
+        AND searched_deliveries.id LIKE ${pattern} ESCAPE '\\'
+    )
+  )`;
+}
+
+/**
+ * Delivery search covers the event fields above plus both identifiers: the
+ * delivery id itself and the id of the event it belongs to. Like the event
+ * predicate, list and count queries share it.
+ */
+function deliverySearchPredicate(term: string) {
+  const pattern = escapeLikeTerm(term);
+
+  return sql<boolean>`(
+    deliveries.id LIKE ${pattern} ESCAPE '\\'
+    OR events.id LIKE ${pattern} ESCAPE '\\'
+    OR events.title LIKE ${pattern} ESCAPE '\\'
     OR events.message LIKE ${pattern} ESCAPE '\\'
     OR events.fingerprint LIKE ${pattern} ESCAPE '\\'
   )`;

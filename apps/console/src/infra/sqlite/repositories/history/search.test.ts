@@ -111,6 +111,31 @@ describe("history search", () => {
     expect(page.total).toBe(1);
   });
 
+  it("matches a pasted event id", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "event-message" });
+    const deliveries = await repository.listDeliveries({ q: "event-message" });
+
+    expect(ids(events.items)).toEqual(["event-message"]);
+    expect(events.total).toBe(1);
+    // The event id narrows deliveries to the ones it produced.
+    expect(ids(deliveries.items)).toEqual(["delivery-event-message"]);
+    expect(deliveries.total).toBe(1);
+  });
+
+  it("matches a pasted delivery id on both lists", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "delivery-event-percent" });
+    const deliveries = await repository.listDeliveries({ q: "delivery-event-percent" });
+
+    expect(ids(events.items)).toEqual(["event-percent"]);
+    expect(events.total).toBe(1);
+    expect(ids(deliveries.items)).toEqual(["delivery-event-percent"]);
+    expect(deliveries.total).toBe(1);
+  });
+
   it("keeps title and message matches working", async () => {
     const repository = await repositoryWithSearchFixtures();
 

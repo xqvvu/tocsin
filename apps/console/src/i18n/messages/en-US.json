@@ -636,7 +636,7 @@
   "operations.filters.timeRangeOptions.24h": "Last 24 hours",
   "operations.filters.timeRangeOptions.7d": "Last 7 days",
   "operations.filters.search": "Search",
-  "operations.filters.searchPlaceholder": "title, message, or fingerprint",
+  "operations.filters.searchPlaceholder": "title, message, fingerprint, or ID",
   "operations.filters.severity": "Severity",
   "operations.filters.source": "Source",
   "operations.filters.status": "Status",
