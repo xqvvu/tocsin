@@ -1,6 +1,6 @@
 # PRD：Alert Suppression 与 Maintenance Window
 
-状态：草案（待评审）
+状态：已实现（E1–E3 主体，2026-10-18 复核；OQ1–OQ3 已于 2026-10-12 拍板）
 方向来源：`docs/prd/post-mvp-planning.md:106`（第三优先级，「Alert Suppression 与 Maintenance Window」）
 相关 ADR：`docs/adr/0009-oncall-feishu-urgent.md`（加急去重窗口与指数退避，本 PRD 的关键一致性约束）
 相关 PRD：`docs/prd/self-hosted-alert-hub-mvp.md`（术语与口径基线）
@@ -306,7 +306,7 @@ deliveries + (
 三条的直接后果（实现时必须遵守）：
 
 1. **`suppressed` 是终态。** 被抑制的投递永不执行 → 永不产生 `providerReference` → **既不会自动加急，也不能被手动呼叫**（`buzzDelivery` 同样要求该句柄，`apps/console/src/server/oncall/oncall.service.ts:62-67`）。因此 2.3 节的范围预览文案必须写清「这一段里这些目标的告警**无法用任何 Tocsin 手段叫醒**」，而不是「不会打电话」。
-2. **建表用 `ends_at text not null`**（已与 2.6 草案一致）。因 MVP 只有单条 baseline 且迁移器按版本号跳过已应用步骤（`apps/console/src/infra/sqlite/migrate/runner.ts:26-30` + `AGENTS.md:488-490`），**此字段一旦落地，已部署实例再改就要清库**——故它在本表中是「已冻结」，不是「待定」。
+2. **建表用 `ends_at text not null`**（已随 `0002_suppressions` 落地）。迁移器按版本号跳过已应用步骤（`apps/console/src/infra/sqlite/migrate/runner.ts:26-30`），已应用 `0002` 的实例若要改该字段，必须新增 forward step，不能编辑 `0001` 或已提交的 `0002`。
 3. **窗口结束无通知**，故 2.5 节的审计证据必须自足：运维唯一的检索入口是 UI，`suppress_reason` 快照必须在不依赖规则本体的情况下读懂。不做摘要 = 不做跨投递聚合切片。
 
 ---

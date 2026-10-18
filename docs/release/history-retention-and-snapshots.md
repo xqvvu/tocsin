@@ -77,7 +77,7 @@ apps/console/src/infra/sqlite/repositories/destination/destination.repository.ts
 
 需要投递行上存**当时的名字快照**（与 `suppress_reason` 同一手法：快照而非外键解引用）。注意约束：
 
-- 这要**改 schema**，而本项目是**单条 baseline 迁移**且迁移器按版本号跳过已应用步骤——**在已跑过 `0001` 的实例上编辑 baseline 等于没改**。所以要么趁首个 tag 之前定稿，要么为它写一条真正的前向迁移并把 baseline 约定改掉。**这正是它值得在发 tag 前拍板的原因。**
+- 这要**改 schema**，而当前 migration plan 是 `0001` baseline + `0002`/`0003` forward step，迁移器按版本号跳过已应用步骤——**修改已提交的 migration 对已部署实例等于没改**。因此应新增 forward-only step，而不是编辑 `0001`。
 - 且应同时决定：快照缺失的**老投递**显示什么（回落到实时名字并在 UI 标注"名字为当前值"，还是显示占位）。
 
 **本轮不修的理由**：它是 schema 变更 + 显示语义决策，两者都属于发布决策而非本切片范围。已按检查项要求完成评估并记录。
@@ -86,5 +86,5 @@ apps/console/src/infra/sqlite/repositories/destination/destination.repository.ts
 
 ## 附：本轮未做的事
 
-- **浏览器 E2E workflow 与 Docker/compose 冒烟自动化**：检查项列了，但未包含在本文件范围内（另有切片）。二者仍是待办。
+- **浏览器 E2E 与 Docker/compose 冒烟自动化**：脚本已存在（`just e2e` / `just docker-smoke`），但都未接入 CI；发布前仍需人工执行。
 - **容量信号**（§1 的缓解措施）：未实现。

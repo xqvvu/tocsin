@@ -1,6 +1,6 @@
 # Alert Suppression 决策备忘：三条 Open Question 的拍板材料
 
-状态：**待拍板**（未拍板前 E1 不能开工，见 `docs/planning/next-round.md:133-147`「必须等人拍板」与 `:268` 步骤 5）
+状态：**已拍板并实现**（2026-10-12 拍板；2026-10-18 复核：E1–E3 主体已落地，suppression service、oRPC 与 UI 均在）。本文保留拍板材料与核实记录。
 输入：`docs/prd/alert-suppression.md` §2.1 / §2.3 / §2.5 / §2.6 与 Open Questions；`docs/planning/next-round.md` §2.1 / §3
 口径：本文每个结论都给出 `file:line`。与上述两份文档不一致的地方集中在第 5 节，请以代码为准。
 
@@ -171,14 +171,13 @@ PRD OQ3 说摘要是「跨投递聚合 + 一类新的通知」。核实后第一
 
 备忘 §2.1 说表结构一旦落地再改要付迁移成本。核实后更准确的说法是：**已部署实例根本拿不到这次改动。**
 
-- MVP 期间 schema 只有一步基线，且 AGENTS.md 明确要求「keep one complete baseline step,
-  `migrate/0001_initial_schema.ts`, and update that baseline as the MVP schema changes」
-  （`AGENTS.md:488-490`）。
-- 而迁移执行器**按版本号跳过已应用步骤**（`apps/console/src/infra/sqlite/migrate/runner.ts:26-30`），
+- 2026-10-18 复核：当前 migration plan 已不是“只有一步基线”。`0001_initial_schema` 是全新库
+  baseline，`0002_suppressions` 是抑制表的 forward step，`0003_complete_legacy_schema` 对旧库做
+  幂等 repair。
+- 迁移执行器仍按版本号跳过已应用步骤（`apps/console/src/infra/sqlite/migrate/runner.ts:26-30`），
   漂移检测只校验「已应用版本是否都在计划里」这一件事（`:162-171`），不校验列结构。
-- 合并这两条：**在已跑过 `0001` 的实例上编辑 `0001_initial_schema.ts` 等于什么都没发生。**
-  所以 OQ2 的 `ends_at` 可空性不是「以后可能要迁移」，而是「**现在不定，就要清库重来**」。
-  这是把 OQ1/OQ2 排在所有实现之前的真正理由，比备忘的表述更硬。
+- 合并这两条：**修改已提交的 migration 对已部署实例仍然无效**；但修复方式不再是“清库”，而是新增
+  forward step。这也是本 PRD 的 `0002_suppressions` 选择新建表、而不是回改 `0001` 的原因。
 - 附带影响：`suppressed` 进 `DeliveryStateSchema` 同样会撞上这条（DB CHECK 在 `schema.ts:133` 是内联字面量）。
 
 ### 5.3 PRD 两处内部不一致

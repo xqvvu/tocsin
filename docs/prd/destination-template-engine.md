@@ -66,10 +66,10 @@ Email 没有新增模式，而是增加两个与 `template` **平级**的文本�
 HTML 转义语义与「不提供 raw / 可信原文退出开关」的边界见
 `docs/adr/0010-destination-template-object-root-payload-and-html-escaping.md`。
 
-已知限制（截至本文档更新时）：console 的 Destination 表单只对 Feishu 渲染模式选择器，
-`slack_blocks` 与 `json_payload` 还不能在表单里选择，Email 的 `subjectTemplate` / `htmlTemplate`
-也没有表单输入项。这些模式与字段已经通过 schema、渲染、诊断、preview、test 和 delivery 全链路实现，
-可以用 config JSON / API / TOML 配置；表单侧的缺口由 https://github.com/xqvvu/vane/issues/47 跟踪。
+（2026-10-18 校正）console 的 Destination 表单已按 adapter manifest 渲染模板模式选择器：
+generic webhook 可选 `text` / `json_payload`，Slack 可选 `text` / `slack_blocks`，Feishu 可选
+`text` / `feishu_card`；Email 的 `subjectTemplate` 与 `htmlTemplate` 也已是表单输入项。
+原 issue #47 已在 `xqvvu/tocsin` 关闭。
 
 ## User Stories
 

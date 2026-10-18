@@ -73,11 +73,11 @@ Feishu 落地之后，共享模板引擎只有两种模式：`text`（字段 `te
 - 模板校验失败继续映射为 `configuration_error` + `not_retryable`，且不发请求；四个通道的 adapter
   在这一点上形状一致（`zodTemplateDiagnostics` + `TemplateValidationError` catch）。
 - 已有的 `text` 模板、Feishu 卡片模板和 Email 主题/正文行为不变；无需迁移任何已保存配置。
-- `slack_blocks` 与 `json_payload` 目前只能经 config JSON / API / TOML 配置：console 表单对
-  非 Feishu 通道仍渲染单个 textarea（`destination-form.tsx` 的 `renderTemplateFields`），
-  `DestinationTemplateFormMode` 也只有 `"text" | "feishu_card"`。Email 的两个新字段同样没有表单输入项。
-  缺口由 https://github.com/xqvvu/vane/issues/47 跟踪，PR #46 的 manifest 守卫只保证「声明出来的模式
-  确实能渲染」，不保证能被选择。
+- （2026-10-18 更新）下面的表单缺口已关闭：console 按 manifest 渲染所有已声明模式，
+  `DestinationTemplateFormMode` 覆盖 `"text" | "feishu_card" | "json_payload" | "slack_blocks"`，
+  Email 的 `subjectTemplate` / `htmlTemplate` 也有表单输入项。原文保留如下，供追溯决策时的状态：
+  `slack_blocks` 与 `json_payload` 当时只能经 config JSON / API / TOML 配置，缺口由
+  https://github.com/xqvvu/tocsin/issues/47 跟踪（该 issue 已关闭）。
 - 想发顶层数组的通道必须自己找对象键位。Slack 天然有对象；若将来出现确实需要数组根的平台契约，
   要重开的是「核心 JSON 根类型」这条决策，而不是在 adapter 里偷偷放宽。
 - 反向的代价是 `payload` 这个字段名在两个不相关的模式里含义相近但不共享 schema：
