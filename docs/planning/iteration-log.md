@@ -2,6 +2,68 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 11 轮）
+
+- 时间：2026-10-18 22:32–23:17 CST（14:32–15:17Z）。
+- 基线：`origin/main` @ `31627be`；main 最近一次 CI 为 success，无遗留 open PR。
+- 本轮类型：**需求切片**（非 full-audit）。最近全量审计仍为第 1 轮（13:30 CST）；
+  backlog 有多个 ≥27 分候选，按第 1.5 步继续消化高价值候选。
+- 车道轮转位置：本轮按第 10 轮建议跑 `requirements` + `docs-drift` + `release-infra`。
+  `release-infra` 返回完整结果；`requirements` 与 `docs-drift` 运行约 37 分钟仍无输出，
+  按车道限时规则停止，留待下一轮补跑。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `upbeat-wilbur-5e6119`；收尾时删除该工作树的 `node_modules` 与 `agent-iteration`。
+
+### 本轮交付
+
+- PR #130 `feat(console): search deliveries by error, destination, and route`。
+  - **REQ-37**：`deliverySearchPredicate` 增加 `deliveries.last_error` 与目标/路由名称的
+    关联 `EXISTS` 子查询；列表与计数继续共用同一谓词，计数不新增 join。
+  - 搜索框占位文案按页面区分：Events 保持事件字段，Deliveries 承诺「错误、通知目标或路由」。
+  - 新增中文 mini-PRD `docs/prd/delivery-search-fields.md`；同步修正旧 PRD 的非目标说明与
+    RC checklist 的搜索状态。
+  - 新增 3 条仓储搜索用例（失败原因、目标名、路由名 + 手工投递不误伤）与 2 条占位文案用例。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4 通过
+    （console 544 + providers 183 + destinations 31 + 7/31）；`vp run -r build` 通过。
+  - 前置：本轮会话工作树的 `node_modules` 不完整，先执行 `vp install --frozen-lockfile`
+    才恢复测试能力。
+
+### release-infra lane
+
+`gh auth status` 确认 token 已含 `workflow` scope；main 最近 5 次 CI 全 success，
+最近 50 次 46 success / 1 failure / 3 cancelled，唯一失败已由 `517ecd0f` 修复，非 flaky。
+
+- **REL-3（P0，已核实）**：`docker-compose.yml:7,32-37` 固定镜像与全局卷名；
+  `scripts/docker-smoke.sh:16-17,29,37` 复用同一 compose 且无条件 `down -v`。
+  新证据：`docker-smoke.sh:35-42` 先 `down -v` 再抓日志，失败时日志必丢；
+  `:67,83,96` 的 curl 无连接/总超时。
+- **REL-6**：`test -f` 无法区分命名卷/匿名卷，`curl -f` 不校验 HTML，无 restart 持久化验证。
+- **REL-7**：除已知问题外，Playwright 先启动 webServer 再跑 globalSetup，
+  `e2e/global-setup.ts:13-18` 在服务已打开并迁移数据库之后才删库；host 使用 `127.0.0.1`。
+- **REL-5**：CI 只 build，`.output/server/index.mjs` 从未在 CI 启动；建议先加
+  `scripts/artifact-smoke.sh`（临时目录/DB + 固定 secret + `/api/ready` 断言）。
+- **REL-9/REL-10/REL-11**：migration 测试全为 `:memory:`；恢复 runbook 未清理旧
+  `-wal/-shm`；`.github/**` 被 fmt/lint 排除且无 actionlint/shellcheck。均仍成立。
+- **REL-4**：`alert-flow.spec.ts:27-119` 未创建 Route、未断言 Delivery，测试名却写
+  “set up, route, and deliver”。
+- **REL-1**：CI 无 e2e job、无 `playwright install`、无失败 artifact 上传；权限已具备。
+- **REL-13**：仓库 public 且 `licenseInfo: null`，维持 `blocked-autonomous`。
+- **REL-12**：已确认修复（Node `26.12.0` 与 `.node-version` 一致）。
+
+### EXPERT_PANEL
+
+- 本轮无新增 EXPERT_PANEL 事项。REL-13（LICENSE）继续 `blocked-autonomous`，
+  决策材料已在 backlog；后续轮次换组重评。
+- 安全红线未触碰：无 schema/迁移、无 secret 处理变化、无投递/路由语义变化。
+
+### 下一轮优先项
+
+1. REQ-47（29）：投递详情展示外部消息引用，纯前端。
+2. REL-3（28，P0）：Docker smoke 隔离。
+3. 补跑 requirements + docs-drift 车道。
+4. REQ-48 / REQ-27 / REQ-32 / REQ-22 / REQ-24 / REQ-12 / REQ-13 等既有高价值候选。
+5. REL-6 + REL-7 的 harness/断言增强；REL-5 的 artifact smoke。
+
 ## 2026-10-18（第 10 轮）
 
 - 时间：2026-10-18 21:26–22:30 CST（13:26–14:30Z）。

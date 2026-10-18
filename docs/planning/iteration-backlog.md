@@ -67,7 +67,7 @@
 | REL-2 | Provider payload fixture 目录 | RC checklist E | 27 | candidate | — | 6 个 adapter 测试文件、19 个内联 payload、31 个用例；`packages/providers/src/` 无 fixture 目录 |
 | REL-3 | Docker smoke 使用全局卷名，`down -v` 会删正常数据卷 | 发布 lane | 28 | candidate | — | `docker-compose.yml:7,32-37` 固定镜像 `tocsin:local` + 全局卷名 `tocsin-data`；`docker-smoke.sh:16-17,29,37` 固定项目名/端口并复用同一 compose 文件。正常栈运行时 smoke 会共享真实卷（双 worker）并覆盖镜像 tag；应加 `docker-compose.smoke.yml` override。10-18 release lane 复核仍成立，且 `down -v` 先于抓日志，失败时日志必丢；curl 无超时 |
 | REL-4 | E2E spec 覆盖面不足 | 发布 lane | 25 | candidate | — | 单个串行用例只覆盖 setup/source/destination/webhook/events；未创建 Route、未验证 Delivery/retry/filter/重启/导出（`alert-flow.spec.ts:27`） |
-| REL-5 | build 产物启动与文件型 SQLite migration 无 CI smoke | 发布 lane | 24 | candidate | — | CI 只 `vp run -r build`；`.output/server/index.mjs` 仅 Dockerfile/手动 smoke 执行 |
+| REL-5 | build 产物启动与文件型 SQLite migration 无 CI smoke | 发布 lane | 24 | candidate | — | CI 只 `vp run -r build`；`.output/server/index.mjs` 仅 Dockerfile/手动 smoke 执行。10-18 建议先加 `scripts/artifact-smoke.sh`：临时目录 + 临时 SQLite + 固定 secret，启动产物轮询 `/api/ready`，断言 checks 全 ok 并清理 |
 | ARCH-1 | `route-forms.tsx` 965 行含两个导出组件 | 架构 lane | 25 | candidate | — | 拆 `create-route-form.tsx` / `edit-route-form.tsx` |
 | ARCH-2 | `suppression-forms.tsx` 703 行含两个导出组件 | 架构 lane | 25 | candidate | — | 同上；`CreateSuppressionForm` L67、`EditSuppressionForm` L127 |
 | ARCH-3 | `delivery-state-badge.tsx` 三个导出组件 | 架构 lane | 23 | candidate | — | 低优先级 |
@@ -121,7 +121,7 @@
 | DOC-16 | RC checklist/post-MVP/template follow-up 状态过期 | docs drift | 26 | shipped | #123 | compose smoke 已存在、模板四种模式已交付、抑制主体已交付 |
 | DOC-17 | adapter-extensibility 称无 registry audit 且模板模式未扩展 | docs drift | 25 | shipped | #123 | `registry.ts:83` 已有 `audit()`；四种模式已落地 |
 | DOC-18 | 架构文档 typecheck 命令与 session namespace 过期 | docs drift | 24 | shipped | #123 | 两处 `vp -C apps/console run typecheck` 改为 `vp check`；`auth.*` 改 `session.*`；ADR 0007 命名空间补齐 |
-| REQ-37 | 投递搜索覆盖失败原因/目标/路由 | requirements lane | 29 | in-progress | — | `deliverySearchPredicate` 已覆盖 ID/标题/消息/指纹，但表格展示的 `lastError`、目标名、路由名不可搜；`history.repository.ts:425-435`、`deliveries-table.tsx:97-101`；本轮分支 `agent/delivery-search-fields`，PRD `docs/prd/delivery-search-fields.md` |
+| REQ-37 | 投递搜索覆盖失败原因/目标/路由 | requirements lane | 29 | shipped | #130 | 谓词增加 `last_error` + 目标/路由关联 `EXISTS`；列表与 total 同谓词；占位文案按页面区分；PRD `docs/prd/delivery-search-fields.md` |
 | REQ-38 | 投递详情页重试闭环 | requirements lane | 29 | shipped | #126 | 详情页工具栏新增 `DeliveryRetryButton`（仅 failed 态），复用 `operations.retryDelivery`；成功后失效 operations 查询；PRD `docs/prd/delivery-detail-retry.md` |
 | REQ-39 | 静默窗口剩余时间与一键续期 | requirements lane | 27 | candidate | — | 列表/详情只显示起止时间（`suppressions-section.tsx:247-258`、`suppression-detail-page.tsx:83-92`）；core 已有派生状态（`suppression.ts:79-96`） |
 | REQ-40 | 详情返回保留列表筛选 | requirements lane | 26 | candidate | — | 详情返回固定跳 `/events`、`/deliveries`（`event-detail-page.tsx:63-69`、`delivery-detail-page.tsx:49-55`），筛选与分页丢失 |
@@ -150,24 +150,30 @@
 ## 下一轮优先项
 
 1. **REQ-47**（29）：投递详情展示外部消息引用；DTO 已有、纯前端，可与加急记录联动。
-2. **REQ-37**（29）：投递搜索覆盖失败原因/目标/路由；与 REQ-31 同文件，谓词已集中。
+2. **REL-3**（28，P0）：Docker smoke 卷/镜像/项目/端口隔离；第 11 轮 release lane 补充了
+   `down -v` 丢日志与无超时证据，属任何 smoke CI 接入前的阻断项。
 3. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
 4. **REQ-27**（28）：Deliveries 列表显示告警标题/严重程度/状态；纯 DTO 投影 + UI。
 5. **REQ-32**（28）：解析失败事件的诊断可见性；解析失败审计已落库，缺投影与展示。
-6. **REL-3**（28）：Docker smoke 卷/镜像/项目/端口隔离；任何 smoke CI 接入前的阻断项。
-7. **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：既有高价值切片。
-8. **REQ-49**（27）：可移植配置覆盖抑制规则；schema + portability service + 导入确认。
-9. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
-10. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、事件标签可见性。
-11. **REQ-39/REQ-40/REQ-41**（27/26/26）：静默续期、详情返回保筛选、告警源接入指引。
-12. **Q-14..Q-19 + Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并一个 `test:` PR；
+6. **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：既有高价值切片。
+7. **补跑 requirements + docs-drift 车道**：第 11 轮两条车道 35 分钟无输出被停止，
+   下一轮优先拿到新的需求候选与文档漂移清单。
+8. **REL-6 + REL-7**（26/26）：Docker smoke 断言/日志/超时增强；E2E harness 改为
+   ready 探针、动态临时库、`localhost`、固定 locale，并修正 globalSetup 删库顺序。
+9. **REL-5**（24）：先加 `scripts/artifact-smoke.sh`，再决定是否进 CI。
+10. **REQ-49**（27）：可移植配置覆盖抑制规则；schema + portability service + 导入确认。
+11. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
+12. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、事件标签可见性。
+13. **REQ-39/REQ-40/REQ-41**（27/26/26）：静默续期、详情返回保筛选、告警源接入指引。
+14. **Q-14..Q-19 + Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并一个 `test:` PR；
     Q-16 需重写为真正渲染两个列表的 parity 断言。
-13. **ARCH-13 + ARCH-14 + FIX-8**：显式 env 注入、冗余标记清理、抑制 `createdBy`。
-14. **REL-6 + REL-7**（26/26）：Docker smoke 断言增强、E2E harness 就绪探针/隔离；AUTO_FIX。
-15. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
-16. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（第 8 轮已确认最小 CI 方案：
-    setup vp → playwright install chromium → `CI=true playwright test`，无新服务/secret）；
-    **REL-13**（LICENSE）需专家小组做法律/产品决策。ARCH-10/ARCH-11 等再次触碰对应文件时做。
+15. **ARCH-13 + ARCH-14 + FIX-8**：显式 env 注入、冗余标记清理、抑制 `createdBy`。
+16. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
+17. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（第 8 轮已确认最小 CI 方案：
+    setup vp → playwright install chromium → `CI=true playwright test`，无新服务/secret；
+    第 11 轮补充：失败时上传 `test-results`/`playwright-report` artifact）；
+    **REL-13**（LICENSE）保持 blocked-autonomous，需专家小组做法律/产品决策。
+    ARCH-10/ARCH-11 等再次触碰对应文件时做。
 
 ## 已知过期输入
 
