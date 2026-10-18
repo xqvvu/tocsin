@@ -2,6 +2,118 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 13 轮）
+
+- 时间：2026-10-19 00:25 – 01:05 CST。
+- 基线：起始 `origin/main` @ `b05e4a3`；执行中 main 前进到 `d0f80e5`
+  （`chore: bump deps`），两个交付分支均已 rebase 到 `d0f80e5`。main 最近一次 CI 为
+  success，无遗留 open PR。
+- 本轮类型：**需求切片 + 小修复**（非 full-audit）。最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST，距今约 11.5 小时）；backlog 仍有大量 ≥27 分候选，按第 1.5 步
+  继续消化，不重跑全量审计。
+- 车道轮转位置：本轮跑 `requirements` + `architecture` + `quality`，三条车道均返回
+  （requirements 约 31 分钟、architecture 约 21 分钟、quality 约 31 分钟，后两者经催办
+  返回）。下一轮建议 `requirements` + `release-infra` + `security-exposure`。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `goofy-bun-444b40`；收尾时删除该工作树的 `node_modules` 与 `agent-iteration`。
+
+### 本轮交付
+
+- PR #134（`feat(console): show alert identity in the deliveries list`）—— **REQ-27**。
+  - `DeliveryListItem` / `DeliveryListItemSchema` 新增 `eventTitle`、`eventSeverity`、
+    `eventStatus`；仓储复用既有 `events` join，不新增查询。
+  - 投递列表「事件」列改为：严重程度徽标 + 告警标题；告警源 · 状态 · 事件 ID
+    （`firing` 用语义 `text-destructive` 强调，`resolved` 中性）。
+  - 新增中文 mini-PRD `docs/prd/delivery-event-identity.md`；新增仓储投影、schema
+    枚举拒绝与单元格渲染测试；更新抑制命中与既有 schema fixture。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r typecheck` 2/2；
+    `vp run -r test` 4/4（console 552 + providers 183 + destinations 31 + 7）；
+    `vp run -r build` 通过；CI green。
+  - 自查（code-review low）发现并修复 1 条 conventions 问题：`firing` 状态从原生
+    `text-red-700` 改为语义 token `text-destructive`。
+- PR #135（`docs(release): separate dedupe cleanup from bounded raw pruning`）—— **DOC-21**。
+  - RC checklist 的已勾选 gate 收窄为 raw payload pruning；新增未勾选的 dedupe cleanup
+    gate（`pruneDedupeKeys` 仍是无界 `DELETE`，且在每次 `enqueueForEvent` 内执行）。
+  - `history-retention-and-snapshots.md` §2 增加「本节不覆盖 dedupe cleanup」说明。
+  - 验证：`vp fmt --check` 通过；CI green。
+
+### requirements lane
+
+- **REQ-52（28）**：模板 `tocsin.eventUrl` 生产路径恒为空。所有渲染调用点未传
+  `eventUrl`，且没有公开访问地址配置（`packages/destinations/src/template.ts:369-399`、
+  `feishu/payload.ts:18`、`generic-webhook/payload.ts:18,41`、`slack/payload.ts:24,34`、
+  `email/payload.ts:22,84,135`、`destination.service.ts:299`）。
+- **REQ-53（29）**：加急记录缺 `initiatedBy` / `firedAt` / `nextAttemptAt` 展示；DTO 已有
+  字段，纯 UI（`delivery-pings-table.tsx:28-41`、`oncall.ts:39-50`）。
+- **REQ-54（27）**：告警源覆盖无法区分「没有路由」与「只有停用路由」
+  （`source-route-coverage.ts:11-27`、`source-route-coverage-cell.tsx:22-30`）。
+- **REQ-55（27）**：全静默事件摘要显示 0 成功 / 0 失败，未计入已抑制
+  （`event-detail-stats.ts:3-15`、`event-detail-summary.tsx:43-49`）。
+- **REQ-56（25）**：被抑制投递无逐项 match checks（PRD 故事 26；
+  `suppression.ts:134-141,155-186`、`delivery-suppression-notice.tsx:20-60`）。
+- 复核：REQ-48 / REQ-27 / REQ-32 / REQ-22 / REQ-24 / REQ-12 / REQ-13 均仍成立；
+  DOC-11 剩余范围收窄为 F5；REQ-13 的 `testPayload` 是能力位而非样例 payload。
+
+### architecture lane
+
+- **ARCH-15（23）**：`runDeliveryWorker` 在 oRPC router 内编排 worker 与 health
+  （`server/orpc/features/operations/router.ts:64-77`），应下沉为 service。
+- **ARCH-16（22）**：auth 复杂表单仍在 `routes/-login-form-impl.tsx:27-173`、
+  `routes/-setup-form-impl.tsx:23-207`，`features/auth` 只有 `api/`。
+- **ARCH-17（23）**：`route-forms.tsx:809-811` 与 `components/ai-elements/code-block.tsx:404-423`
+  直接使用 `document`/`navigator`/`window`，但无 client-only 标记；`code-block` 另有一套
+  剪贴板路径，绕过 `#/lib/browser`。
+- **ARCH-18（24）**：抑制详情命中分页保存在 React state
+  （`suppression-detail-page.tsx:34,39,119`），未进 URL，刷新回第 1 页。
+- **ARCH-19（25）**：Event/Delivery `DetailTerm` 近同构重复；delivery 版本用
+  `wrap-break-word`，可能裁切 `fastgpt:<hex>:green:<iso>` 这类长引用
+  （`delivery-detail-term.tsx:59`、`event-detail-term.tsx:52-59`）。
+- 复核 ARCH-5 / 6 / 7 / 8 / 9 / 12 / 13 / 14、FIX-5 / FIX-9 / FIX-10、DOC-23 均仍成立；
+  其余契约维度（service 纯度、容器、repository 拆分、包边界、i18n、import protection）
+  clean。
+
+### quality lane
+
+- **Q-20（高）**：旧库升级后 `normalized_json` 未回填。`ensureOlderNullableColumns`
+  仅执行 `ADD COLUMN ... DEFAULT '{}'`（`ensure-complete-schema.ts:114-120`），
+  `eventFromRow` 直接 `decodeSchemaJson(NormalizedEventSchema, ...)`
+  （`intake.helpers.ts:46-59`）。历史事件详情、引用旧事件的投递详情、含旧事件的路由
+  重放预览都会因 ZodError 整页失败；列表页不受影响。迁移测试只检查列存在
+  （`migrate.test.ts:227,333`），从未读回旧事件。需要 forward-only `0004` 回填 +
+  迁移读回测试（下一轮 EXPERT_PANEL）。
+- **Q-21（中，28）**：搜索框无 120 字符上限。`q` 的 schema 上限为 120
+  （`packages/api/src/schemas/operations.ts:208`），但输入框无 `maxLength`，URL 归一化
+  也不截断（`operation-filters.tsx:87-99`、`operations.queries.ts:87-102`）；超长粘贴或
+  旧链接会让 loader 校验失败，整个列表变成错误页。
+- **Q-22（低）**：外部引用/诊断复制按钮只测「存在」，不测复制内容；非 JSON 响应体回退
+  分支无测试（`delivery-summary-tab.test.tsx:52-67`、`delivery-attempts-table.test.tsx:47-78`、
+  `delivery-attempt-detail-dialog.tsx:151-185`）。
+- 复核 Q-4 / 5 / 12 / 13 / 14 / 15 / 16 / 17 / 18 / 19 均仍成立。
+- 另新增 **Q-23（25）**：DOC-21 暴露的 dedupe cleanup 无界 `DELETE` 仍在
+  `enqueueForEvent` 热路径（`delivery.helpers.ts:98-99`、`delivery.repository.ts:95`）。
+
+### EXPERT_PANEL
+
+- 本轮无新增 EXPERT_PANEL 决策；未触碰 schema/迁移、secret 处理、投递/路由/auth 语义。
+- **Q-20 建议下一轮进入 EXPERT_PANEL**：三位专家评估 forward-only `0004` 回填 +
+  `eventFromRow` 降级策略。这是升级路径上的高严重度问题，但不在本轮交付范围内。
+- REL-13（LICENSE）继续 `blocked-autonomous`。
+
+### 其他
+
+- Obsidian 同步已跳过：`obsidian-vault` skill 不在本会话可用 skill 列表中；本轮文档变更
+  为发布与规划文档，已随 PR #135 提交。
+
+### 下一轮优先项
+
+1. **Q-20（高，P0）**：旧库 `normalized_json` 回填；先跑 EXPERT_PANEL，再实现
+   forward-only `0004` 与迁移读回测试。
+2. **REQ-53（29）**：加急记录审计字段，纯 UI。
+3. **Q-21（28）**：搜索输入上限，含 URL 归一化与 121 字符用例。
+4. **REQ-48（28）** / **REQ-52（28）**。
+5. 补跑 `release-infra` + `security-exposure` 车道（`requirements` 每轮必跑）。
+6. 其余见 `iteration-backlog.md` 的「下一轮优先项」。
+
 ## 2026-10-18（第 12 轮）
 
 - 时间：2026-10-18 23:25 – 2026-10-19 00:10 CST（15:25–16:10Z）。
