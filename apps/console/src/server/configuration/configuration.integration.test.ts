@@ -36,14 +36,16 @@ const destinationSecretCases: Record<
       method: "PATCH",
       headers: {
         Authorization: "Bearer generic-webhook-header-secret",
+        "X-Auth-Token": "generic-webhook-x-auth-token-secret",
       },
     },
     preserved: { method: "PATCH" },
     secretValues: [
       "https://relay.example.test/generic-webhook-secret",
       "Bearer generic-webhook-header-secret",
+      "generic-webhook-x-auth-token-secret",
     ],
-    secretPaths: ["url", "headers.Authorization"],
+    secretPaths: ["url", "headers.Authorization", "headers.X-Auth-Token"],
   },
   feishu: {
     config: {

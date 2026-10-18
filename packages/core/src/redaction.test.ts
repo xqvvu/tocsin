@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { REDACTED_VALUE, redactHeaders, redactJsonValue, redactText } from "#core/redaction";
+import {
+  REDACTED_VALUE,
+  isSensitiveKey,
+  redactHeaders,
+  redactJsonValue,
+  redactText,
+} from "#core/redaction";
 
 describe("redaction", () => {
   it("redacts common sensitive headers", () => {
@@ -50,6 +56,71 @@ describe("redaction", () => {
       ),
     ).toBe(
       `parser failed: Authorization: ${REDACTED_VALUE}; token=${REDACTED_VALUE}, password: ${REDACTED_VALUE} accessToken=${REDACTED_VALUE} signSecret=${REDACTED_VALUE}`,
+    );
+  });
+
+  it.each([
+    "appSecret",
+    "app_secret",
+    "app-secret",
+    "clientSecret",
+    "client_secret",
+    "apiSecret",
+    "api_secret",
+    "privateKey",
+    "private_key",
+    "X-Auth-Token",
+    "x-auth-token",
+    "X-API-Key",
+    "accessToken",
+    "refresh-token",
+    "signingSecret",
+    "credentials",
+  ])("treats %s as a sensitive key", (key) => {
+    expect(isSensitiveKey(key)).toBe(true);
+  });
+
+  it.each([
+    "tokenCount",
+    "maxTokens",
+    "privateKeyId",
+    "secretName",
+    "publicKey",
+    "monkey",
+    "title",
+    "message",
+    "X-Request-Id",
+    "Content-Type",
+  ])("keeps %s visible", (key) => {
+    expect(isSensitiveKey(key)).toBe(false);
+  });
+
+  it("keeps operational fields next to newly covered secrets", () => {
+    expect(
+      redactJsonValue({
+        clientSecret: "client-secret",
+        apiSecret: "api-secret",
+        privateKey: "private-key",
+        tokenCount: 5,
+        maxTokens: 4096,
+        privateKeyId: "key-1",
+      }),
+    ).toEqual({
+      clientSecret: REDACTED_VALUE,
+      apiSecret: REDACTED_VALUE,
+      privateKey: REDACTED_VALUE,
+      tokenCount: 5,
+      maxTokens: 4096,
+      privateKeyId: "key-1",
+    });
+  });
+
+  it("redacts sensitive assignments inside JSON text", () => {
+    expect(redactText('{"clientSecret":"sk-live","tokenCount":5}')).toBe(
+      `{"clientSecret":"${REDACTED_VALUE}","tokenCount":5}`,
+    );
+    expect(redactText('headers: {"X-Auth-Token":"abc123"}')).toBe(
+      `headers: {"X-Auth-Token":"${REDACTED_VALUE}"}`,
     );
   });
 });
