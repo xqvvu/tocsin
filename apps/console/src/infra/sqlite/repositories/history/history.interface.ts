@@ -26,6 +26,7 @@ export interface EventListQuery {
   status?: NormalizedEvent["status"];
   /** Inclusive lower bound on `events.received_at`, as an ISO timestamp. */
   since?: string;
+  /** Literal substring over title, message, fingerprint, and event/delivery ids. */
   q?: string;
   page?: number;
   limit?: number;
@@ -43,6 +44,7 @@ export interface DeliveryListQuery {
   state?: DeliveryState;
   /** Inclusive lower bound on `deliveries.created_at`, as an ISO timestamp. */
   since?: string;
+  /** Literal substring over title, message, fingerprint, and event/delivery ids. */
   q?: string;
   page?: number;
   limit?: number;

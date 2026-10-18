@@ -636,7 +636,7 @@
   "operations.filters.timeRangeOptions.24h": "最近 24 小时",
   "operations.filters.timeRangeOptions.7d": "最近 7 天",
   "operations.filters.search": "搜索",
-  "operations.filters.searchPlaceholder": "标题、消息或指纹",
+  "operations.filters.searchPlaceholder": "标题、消息、指纹或 ID",
   "operations.filters.severity": "严重程度",
   "operations.filters.source": "告警源",
   "operations.filters.status": "状态",
