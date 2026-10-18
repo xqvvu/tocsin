@@ -44,7 +44,7 @@
 | FIX-4 | 删除不存在的 Source/Destination/Route 返回成功 | 质量 lane | 26 | candidate | — | contract 已声明 NOT_FOUND；与 suppression 行为不一致 |
 | FIX-5 | `operations-panel.tsx`/`detail-panel.tsx` 为死代码 | 架构 lane | 24 | candidate | — | 无任何 importer；删除可减少筛选面板歧义。同时删除 `OperationFilters` 只剩测试可达的 `rail`/`grid` 分支（`operation-filters.tsx:58,64-77`） |
 | FIX-6 | 导入配置不识别字面量 `[REDACTED]`，可能覆盖真实凭据 | SEC-1 panel | 27 | shipped | #114 | 四个凭据位置拒绝占位符，事务回滚；`config-portability.ts` 新增 `assertNotRedactedSecret` / `assertNoRedactedSecrets` |
-| FIX-7 | Sources 页中文仍把 Source 译作「来源」 | requirements lane | 23 | candidate | — | `zh-Hans.json:545`；AGENTS.md 要求「告警源」 |
+| FIX-7 | Sources 页中文仍把 Source 译作「来源」 | requirements lane | 23 | shipped | #132 | 事件列头、路由来源条件、抑制匹配器、模板变量分组统一为「告警源」；保留「模板来源/样例来源」 |
 | FIX-8 | 抑制的 `createdBy` 永远为空 | requirements lane | 26 | candidate | — | `suppression.service.ts:53-71` 未接收当前用户；详情页显示「未知」`suppression-detail-page.tsx:95-97` |
 | SEC-1 | `isSensitiveKey` 漏掉 `appSecret/clientSecret/apiSecret/privateKey/X-Auth-Token` | 安全 lane | — | shipped | #107 | EXPERT_PANEL 一致：归一化键名 + 词尾规则；决策 `docs/planning/decisions/secret-redaction-coverage.md` |
 | SEC-2 | 脱敏回归测试按 registry 而非 `DestinationKindSchema.options` | 安全 lane | 25 | candidate | — | 现有 `it.each(registeredDestinationKinds)` 已覆盖四个 kind；补一条枚举一致性断言 |
@@ -87,7 +87,7 @@
 | DOC-8 | README/AGENTS.md 的 pnpm 版本过期 | docs drift | 23 | shipped | #117 | 对齐 `pnpm@12.14.0` |
 | DOC-9 | 发布文档声称没有 E2E/smoke、迁移只有 0001 | release-infra lane | 27 | shipped | #117 | 区分脚本已存在与 CI 未接入；rel 文档更新 |
 | DOC-10 | `route-explain-delivery-gap.md` 仍称「待实现」 | requirements lane | 24 | shipped | #117 | 状态与 R8 说明已对齐代码 |
-| DOC-11 | `adapter-contribution-experience.md` 的「不存在」盘点部分过期 | docs drift | 24 | candidate | — | F4/F6/F7/F8、S0 已有落地；需状态注记 |
+| DOC-11 | `adapter-contribution-experience.md` 的「不存在」盘点部分过期 | docs drift | 24 | candidate | — | 第 12 轮复核：`audit()`(`registry.ts:83`)、test-kit(`package.json:18`)、`iconName`(`destination-kind-icon.tsx:26-47`)、贡献指南均已落地；仅 F3/F5 未完成 |
 | DOC-12 | `route-authoring-current-state.md` 去重证据断言过期 | docs drift | 23 | shipped | #127 | 拆成「去重已落库」与「skipExisting 仅计数」两行（`delivery_dedupe_keys`，`schema.ts:164-185`） |
 | REQ-25 | 抑制规则试跑预览（dry-run） | requirements lane | 27 | candidate | — | PRD 承诺 `preview` 与范围预览，代码只有 list/get/hits；复用 `evaluateSuppressionMatch` + `listRecent`；`alert-suppression.md:97,209,238` |
 | REQ-26 | Destination 用真实历史 Event 预览 | requirements lane | 29 | shipped | #122 | 预览对话框新增样例来源选择器（内置 + 最近 20 条历史 Event），三个预览入口均可重放；`recentEventsQueryOptions`、`destination-notices.tsx`、`destinations-page.tsx`；PRD `docs/prd/destination-historical-event-preview.md` |
@@ -133,7 +133,14 @@
 | REQ-46 | 事件排障摘要一键复制 | requirements lane | 27 | candidate | — | 只能复制单个标识符（`event-detail-term.tsx:7-44`）；摘要所需字段均已在页面（`event-detail-summary.tsx:11-71`） |
 | DOC-19 | RC checklist 仍把已交付排障能力列为下一轮候选 | docs drift | 26 | shipped | #127 | `mvp-rc-checklist.md:188` 补状态：筛选/时间范围/ID 搜索/route explain 已落地；fingerprint 视图等仍未做 |
 | DOC-20 | `destination-historical-event-preview.md` 现状陈述与已实现状态矛盾 | docs drift | 22 | shipped | #127 | 现状陈述改为过去时，与顶部「已实现」一致 |
-| REQ-47 | 投递详情展示外部消息引用 | requirements lane | 29 | candidate | — | DTO 已返回 `providerReference` 且标注非 secret（`packages/api/src/schemas/operations.ts:115-117`），详情页未渲染；纯前端 + 复制 |
+| DOC-21 | RC checklist 声称 dedupe cleanup 已改为有界批 | docs drift | 27 | candidate | — | `mvp-rc-checklist.md:164` 把 raw pruning 与 dedupe cleanup 都标为有界；实际 `delivery.helpers.ts:98-99` 的 `pruneDedupeKeys` 无 LIMIT，仍是无界 DELETE，与同文件 `:108-109` 自相矛盾 |
+| DOC-22 | `next-round.md` 仍把 S0 与抑制写成未决安全缺口 | docs drift | 25 | candidate | — | S0 已在 `config-portability.ts:358-370` 用穷尽 switch 修复；抑制主体已落地且 2026-10-12 拍板（`alert-suppression-decisions.md:3`），仅顶部有更正 |
+| DOC-23 | 架构文档文件树/路由/工厂清单过期 | docs drift | 24 | candidate | — | `frontend-architecture.md:37-108` 缺 suppressions/integrations/settings/setup 与 csrf；`application-container.md:57` 写 `auth/router.ts`（实为 `session/router.ts`）且缺 `createSuppressionService` |
+| DOC-24 | 抑制 PRD 承诺不存在的 preview 且 AC 未勾选 | docs drift | 24 | candidate | — | `alert-suppression.md:238` 列 `preview`，实际 contract 无该过程（`packages/api/src/contract/suppressions.ts:21-63`，preview 是 REQ-25）；`:275-294` AC 全未勾选；`:289` 仍写四状态 |
+| DOC-25 | post-MVP 规划低估已交付的缺口解释与保留策略 | docs drift | 23 | candidate | — | `post-mvp-planning.md:215` 称缺投递缺口解释，实际 `routeMatchGaps` + `event-detail-route-gaps.tsx` 已上线；`:137` 的 retention 已决定不自动清理（`history-retention-and-snapshots.md:14`） |
+| DOC-26 | 三个已交付 mini-PRD 仍用现在时描述问题 | docs drift | 22 | candidate | — | `delivery-retention-notice.md:10-12`（#111）、`event-fingerprint-silence.md:5-7`（#116）、`raw-payload-pruned-state.md:9-12`（#118）均已落地，缺状态注记 |
+| DOC-27 | 版本与路径类细节过期 | docs drift | 20 | candidate | — | ADR 0008 写 setup-vp@1.21.1 / vite-plus:1.0.0（实际 `ci.yml:32` 为 1.21.2、`Dockerfile:4` 为 1.1.0）；ADR 0003 与 restructure-plan 仍指 `server/functions/`；`route-authoring-current-state.md:3` 用旧 `devs/vane` 路径 |
+| REQ-47 | 投递详情展示外部消息引用 | requirements lane | 29 | shipped | #131 | 摘要字段展示可复制的引用值 + 机器类型；无引用显示 `-`；PRD `docs/prd/delivery-provider-reference.md` |
 | REQ-48 | 配置删除影响预检 | requirements lane | 28 | candidate | — | 删除确认只有静态文案（`source-actions.tsx:143-146`、`destination-actions.tsx:132-137`、`routes-section.tsx:249-252`）；需只读 preview procedure 并模拟引用清理 |
 | REQ-49 | 可移植配置覆盖抑制规则 | requirements lane | 27 | candidate | — | `ConfigurationSchema` 只含 settings/feishuApps/sources/destinations/routes（`packages/core/src/config.ts:85-90`）；备份/迁移会静默丢失静默窗口 |
 | REQ-50 | 投递详情内联目标诊断与测试 | requirements lane | 26 | candidate | — | 详情工具栏无目标测试入口（`delivery-detail-page.tsx:46-64`）；可复用 `destinations.test` 与详情 DTO 的 `destinationMetadata` |
@@ -149,27 +156,29 @@
 
 ## 下一轮优先项
 
-1. **REQ-47**（29）：投递详情展示外部消息引用；DTO 已有、纯前端，可与加急记录联动。
-2. **REL-3**（28，P0）：Docker smoke 卷/镜像/项目/端口隔离；第 11 轮 release lane 补充了
+1. **REL-3**（28，P0）：Docker smoke 卷/镜像/项目/端口隔离；第 11 轮 release lane 补充了
    `down -v` 丢日志与无超时证据，属任何 smoke CI 接入前的阻断项。
-3. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
-4. **REQ-27**（28）：Deliveries 列表显示告警标题/严重程度/状态；纯 DTO 投影 + UI。
-5. **REQ-32**（28）：解析失败事件的诊断可见性；解析失败审计已落库，缺投影与展示。
-6. **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：既有高价值切片。
-7. **补跑 requirements + docs-drift 车道**：第 11 轮两条车道 35 分钟无输出被停止，
-   下一轮优先拿到新的需求候选与文档漂移清单。
-8. **REL-6 + REL-7**（26/26）：Docker smoke 断言/日志/超时增强；E2E harness 改为
+2. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
+3. **REQ-27**（28）：Deliveries 列表显示告警标题/严重程度/状态；纯 DTO 投影 + UI。
+4. **REQ-32**（28）：解析失败事件的诊断可见性；解析失败审计已落库，缺投影与展示。
+5. **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：既有高价值切片。
+6. **DOC-21**（27）：RC checklist 的 dedupe cleanup 断言与代码矛盾；纯文档更正，
+   同时核对 `mvp-rc-checklist.md:164` 与 `:108-109`。
+7. **DOC-22/23/24/25/26/27 + DOC-11**：一批文档漂移，可合并一个 `docs:` PR。
+8. **补跑 requirements + architecture 车道**：第 12 轮两条车道 35 分钟无输出被停止，
+   第 12 轮只有 docs-drift 返回；下一轮优先拿新的需求候选与架构发现。
+9. **REL-6 + REL-7**（26/26）：Docker smoke 断言/日志/超时增强；E2E harness 改为
    ready 探针、动态临时库、`localhost`、固定 locale，并修正 globalSetup 删库顺序。
-9. **REL-5**（24）：先加 `scripts/artifact-smoke.sh`，再决定是否进 CI。
-10. **REQ-49**（27）：可移植配置覆盖抑制规则；schema + portability service + 导入确认。
-11. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
-12. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、事件标签可见性。
-13. **REQ-39/REQ-40/REQ-41**（27/26/26）：静默续期、详情返回保筛选、告警源接入指引。
-14. **Q-14..Q-19 + Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并一个 `test:` PR；
+10. **REL-5**（24）：先加 `scripts/artifact-smoke.sh`，再决定是否进 CI。
+11. **REQ-49**（27）：可移植配置覆盖抑制规则；schema + portability service + 导入确认。
+12. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
+13. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、事件标签可见性。
+14. **REQ-39/REQ-40/REQ-41**（27/26/26）：静默续期、详情返回保筛选、告警源接入指引。
+15. **Q-14..Q-19 + Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并一个 `test:` PR；
     Q-16 需重写为真正渲染两个列表的 parity 断言。
-15. **ARCH-13 + ARCH-14 + FIX-8**：显式 env 注入、冗余标记清理、抑制 `createdBy`。
-16. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
-17. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（第 8 轮已确认最小 CI 方案：
+16. **ARCH-13 + ARCH-14 + FIX-8**：显式 env 注入、冗余标记清理、抑制 `createdBy`。
+17. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
+18. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（第 8 轮已确认最小 CI 方案：
     setup vp → playwright install chromium → `CI=true playwright test`，无新服务/secret；
     第 11 轮补充：失败时上传 `test-results`/`playwright-report` artifact）；
     **REL-13**（LICENSE）保持 blocked-autonomous，需专家小组做法律/产品决策。
