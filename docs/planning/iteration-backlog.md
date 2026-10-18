@@ -42,7 +42,7 @@
 | FIX-2 | 搜索框承诺指纹但只搜 title/message | 代码核实 | 29 | shipped | #110 | 与 FIX-3 同一 PR；统一 `title/message/fingerprint` 谓词，列表与 total 共用 |
 | FIX-3 | 搜索未转义 LIKE 通配符 | 质量 lane | 27 | shipped | #110 | 转义 `%` `_` `\` 并使用 `ESCAPE '\'`；新增 `search.test.ts` |
 | FIX-4 | 删除不存在的 Source/Destination/Route 返回成功 | 质量 lane | 26 | candidate | — | contract 已声明 NOT_FOUND；与 suppression 行为不一致 |
-| FIX-5 | `operations-panel.tsx`/`detail-panel.tsx` 为死代码 | 架构 lane | 24 | candidate | — | 无任何 importer；删除可减少筛选面板歧义 |
+| FIX-5 | `operations-panel.tsx`/`detail-panel.tsx` 为死代码 | 架构 lane | 24 | candidate | — | 无任何 importer；删除可减少筛选面板歧义。同时删除 `OperationFilters` 只剩测试可达的 `rail`/`grid` 分支（`operation-filters.tsx:58,64-77`） |
 | FIX-6 | 导入配置不识别字面量 `[REDACTED]`，可能覆盖真实凭据 | SEC-1 panel | 27 | shipped | #114 | 四个凭据位置拒绝占位符，事务回滚；`config-portability.ts` 新增 `assertNotRedactedSecret` / `assertNoRedactedSecrets` |
 | FIX-7 | Sources 页中文仍把 Source 译作「来源」 | requirements lane | 23 | candidate | — | `zh-Hans.json:545`；AGENTS.md 要求「告警源」 |
 | FIX-8 | 抑制的 `createdBy` 永远为空 | requirements lane | 26 | candidate | — | `suppression.service.ts:53-71` 未接收当前用户；详情页显示「未知」`suppression-detail-page.tsx:95-97` |
@@ -104,6 +104,13 @@
 | REL-12 | 发布文档 Node 版本过期 | release-infra lane | 24 | candidate | — | `docker-production-deployment.md:28` 写 `26.11.1`，实际 `.node-version` 为 `26.12.0` |
 | REL-13 | 公开仓库缺少 LICENSE 与 package `license` 字段 | release-infra lane | — | blocked-autonomous | — | PUBLIC 仓库、`licenseInfo: null`；属法律/产品决策，需专家小组，不可自动代选 |
 | REL-14 | 发布卫生项（task cache / 供应链 / 构建上下文） | release-infra lane | 20 | candidate | — | Vite Task 缓存未持久化；node-gyp/actions 未固定；`.dockerignore` 未排除 `.output`；低优先 |
+| ARCH-10 | `destination-form.tsx` 单体 1390 行 | architecture lane | 23 | candidate | — | `destination-form.tsx:82-1292`；适配器/模板/预览内联；建议与模板编辑器改造一起拆 |
+| ARCH-11 | 抑制表单未使用 TanStack Form | architecture lane | 24 | candidate | — | `suppression-forms.tsx:193-236` 仍为 `useState` + 手写校验，违反 AGENTS 表单约定 |
+| ARCH-12 | `hashSourceToken` 放在 intake service 并被跨服务导入 | architecture lane | 22 | candidate | — | `intake.service.ts:329-331`、`source.service.ts:18`、`config-portability.service.ts:33`；建议移到窄模块 |
+| FIX-9 | `server/runtime/store.ts` 为死代码 | architecture lane | 24 | candidate | — | 无生产 importer，唯一引用是自身测试；`application-container.md:50` 仍声称存在 |
+| FIX-10 | 未使用的生产依赖 | architecture lane | 20 | candidate | — | `@faker-js/faker`、`@tanstack/match-sorter-utils` 全仓无 import；确认后移除或降为 devDependency |
+| DOC-13 | import boundaries 文档 4 处与代码不一致 | architecture lane | 24 | candidate | — | `tanstack-start-import-boundaries.md:69,75-77,112,120`；`application-container.md:115`；`orpc-api-layer.md:198` |
+| DOC-14 | sqlite-store 文档缺 suppressions 信息 | architecture lane | 23 | candidate | — | `sqlite-store.md:138-155,189-198`；代码已有 `schema.ts:33,130`、`store.ts:45` |
 
 ## 下一轮优先项
 
@@ -118,9 +125,11 @@
 6. **REL-6 + REL-7**（26/26）：Docker smoke 断言增强、E2E harness 就绪探针/隔离；AUTO_FIX。
 7. **Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并为一个 `test:` PR。
 8. **FIX-8**（26）：抑制 `createdBy` 永远为空。
-9. **DOC-4/DOC-6/DOC-11/DOC-12 + REL-12**：剩余文档漂移，可再合并一个 `docs:` PR。
-10. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖；**REL-13**（LICENSE）需专家小组
-    做法律/产品决策。
+9. **DOC-4/DOC-6/DOC-11/DOC-12/DOC-13/DOC-14 + REL-12**：剩余文档漂移，可再合并一个
+    `docs:` PR。
+10. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
+11. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖；**REL-13**（LICENSE）需专家小组
+    做法律/产品决策。ARCH-10/ARCH-11 等再次触碰对应文件时做。
 
 ## 已知过期输入
 
