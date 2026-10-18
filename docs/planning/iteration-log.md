@@ -8,9 +8,9 @@
 - 基线：`origin/main` @ `e4dcab9`；本轮合并后为 `73e0691`（#118）、`ecb8a8e`（#119）。
 - 本轮类型：**需求切片 + 小修复**（非 full-audit）。最近全量审计为第 1 轮（13:30 CST），
   距本轮开始不足 6 小时；backlog 有多个 ≥27 分候选，按第 1.5 步规则继续。
-- 车道轮转位置：本轮跑 `requirements` + `release-infra` + `architecture`。
-  `requirements` 与 `release-infra` 已返回；`architecture` 超时未返回，下一轮补跑
-  `architecture` + `docs-drift` + `quality`（`release-infra` 已覆盖）。
+- 车道轮转位置：本轮跑 `requirements` + `release-infra` + `architecture`。`requirements`
+  与 `release-infra` 先返回，`architecture` 在收尾阶段返回；下一轮建议
+  `quality` + `docs-drift`（`requirements` 每轮必跑）。
 - 工作树：写入隔离仍禁止本会话修改 `agent-iteration`；`agent-iteration` 仅用于并发锁，
   实现与验证使用会话工作树 `compassionate-blackburn-817360`，收尾时删除两者。
 
@@ -67,6 +67,31 @@ REL-1 的阻碍是发布 gate 设计与 spec 覆盖，不是权限。新增发�
   **N8/N11（REL-14，20）**：workflow 校验、Node 版本文档、LICENSE 缺失、发布卫生项。
 - 已核实非问题：CI 权限最小化、Node 版本接线、migration 升级单测、health/ready 语义。
 
+### architecture lane
+
+未发现 HIGH 级一致性缺口；REQ-5/REQ-7/REQ-16 均未破坏分层与导入边界。ARCH-1..9 全部
+仍成立，FIX-5、DOC-6 仍成立。新增：
+
+- **NEW-1（ARCH-10，23）**：`destination-form.tsx:82-1292` 单体 1390 行，适配器/模板/预览
+  区域全部内联；建议与模板编辑器改造一起拆。
+- **NEW-2（ARCH-11，24）**：抑制表单仍是 `useState` + 手写校验
+  （`suppression-forms.tsx:193-236`），不符合 AGENTS 的 TanStack Form 约定。
+- **NEW-3（FIX-9，24）**：`server/runtime/store.ts` 无生产 importer，唯一引用是自身测试；
+  `application-container.md:50` 仍声称它存在。
+- **NEW-4**：`OperationFilters` 的 `rail`/`grid` 布局分支只剩测试可达
+  （`operation-filters.tsx:58,64-77`），建议并入 FIX-5 删除。
+- **NEW-5（ARCH-12，22）**：`hashSourceToken` 定义在 `intake.service.ts`，被 source 与
+  config-portability service 直接导入，建议移到窄模块。
+- **NEW-6/NEW-7（DOC-13/DOC-14，24/23）**：import boundaries 文档 4 处不一致
+  （`auth.getDashboardSession`、`context.dashboardRequest` 示例、namespace 列表、
+  `operations.ts` 路径）；sqlite-store 文档缺 `suppressions` 表与 `suppression` id 工厂。
+- **NEW-8（FIX-10，20）**：`@faker-js/faker`、`@tanstack/match-sorter-utils` 无 import。
+- **NEW-9 / NEW-10（仅记录）**：`route-match-gaps.ts` 领域逻辑放在 repository 目录；
+  `features/configuration` 缺 `model/`，`use-settings-workspace.ts` 放在 `ui/`。
+- 已核实清洁：service 无 `ORPCError`、无模块级 service 单例、container 无请求级数据、
+  entrypoint 薄、contract/implementer 11 个 namespace 同步、repository 三件套齐全、
+  包边界与前端边界干净。
+
 ### 本轮未做 / 备注
 
 - 未做浏览器实测：本机没有运行中的 Tocsin console dev server。
@@ -83,8 +108,9 @@ REL-1 的阻碍是发布 gate 设计与 spec 覆盖，不是权限。新增发�
 4. REQ-25（27）：抑制规则试跑预览。
 5. REL-6 + REL-7（26/26）：smoke 断言与 E2E harness 隔离。
 6. Q-12/Q-13/Q-4/Q-5：纯测试补齐。
-7. FIX-8（26）、DOC-4/6/11/12 + REL-12。
-8. 补跑 `architecture` lane；REL-1/REL-4 在扩 spec 后再接 CI。
+7. FIX-8（26）、DOC-4/6/11/12/13/14 + REL-12。
+8. 低风险 chore：FIX-5 + FIX-9 + NEW-4 + FIX-10（删除死代码/死分支/未用依赖）。
+9. REL-1/REL-4 在扩 spec 后再接 CI；ARCH-10/ARCH-11 等再次触碰对应文件时做。
 
 ## 2026-10-18（第 5 轮）
 
