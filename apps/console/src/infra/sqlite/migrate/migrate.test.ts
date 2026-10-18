@@ -282,6 +282,30 @@ describe("sqlite schema plan", () => {
           .executeTakeFirst(),
       ).toMatchObject({ id: "attempt-1", delivery_id: "delivery-1", state: "failed" });
 
+      // 0003 repairs the missing column with `DEFAULT '{}'`, so every historical
+      // event keeps an empty normalized object. Reads must rebuild it from the
+      // columns ingest has always written instead of throwing — `claimNext`
+      // parses the event inside its transaction, so one poisoned legacy row
+      // would otherwise abort the batch on every tick and starve new alerts.
+      const repositories = createSqliteRepositories(new SqliteRepositoryContext({ db }));
+      await expect(repositories.intake.get("event-1")).resolves.toMatchObject({
+        normalized: {
+          title: "CPU high",
+          message: "CPU high",
+          severity: "critical",
+          status: "firing",
+          fingerprint: "fingerprint-1",
+          labels: {},
+          occurredAt: "2026-10-14T00:00:00.000Z",
+        },
+      });
+      await expect(repositories.history.getEventDetail("event-1")).resolves.toMatchObject({
+        event: { id: "event-1" },
+      });
+      await expect(repositories.deliveries.claimNext({ limit: 10 })).resolves.toMatchObject([
+        { event: { id: "event-1" } },
+      ]);
+
       await db
         .insertInto("suppressions")
         .values({
@@ -367,7 +391,6 @@ describe("sqlite schema plan", () => {
       // This is the same database path a suppression detail page follows:
       // `get` the rule, then list its hits through the joined history query. It
       // must work on a database that was already on 0001 before the app upgrade.
-      const repositories = createSqliteRepositories(new SqliteRepositoryContext({ db }));
       await expect(repositories.feishuApps.list()).resolves.toEqual([]);
       await expect(repositories.oncall.listForDelivery("delivery-1")).resolves.toEqual([]);
       await expect(repositories.suppressions.get("suppression-1")).resolves.toMatchObject({

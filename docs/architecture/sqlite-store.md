@@ -53,6 +53,11 @@ SQLite 层是 Tocsin 的持久化适配器。对外暴露一个 `SqliteStore`，
    完整 baseline；已部署库通过 `0002_suppressions.ts`、`0003_complete_legacy_schema.ts` 等
    forward step 补齐。所有 step 都通过 `migrateSqliteDatabase()` 执行并记录到
    `schema_migrations`；不要再把新表/新列折进已经被部署记录的 `0001`。
+   `0003` 用 `DEFAULT '{}'` 补 `events.normalized_json`，历史事件因此保留空对象
+   占位符；读取层会把精确的 `'{}'` 识别为占位符，并用 ingest 同一 INSERT 写入的
+   `title`/`message`/`severity`/`status`/`fingerprint`/`labels_json`/`occurred_at`
+   重建规范化事件，不写库也不额外回填。其它非法 JSON 仍然抛错，避免掩盖损坏。
+   决策记录见 `docs/planning/decisions/legacy-normalized-event-repair.md`。
 4. **校验只发生在真正边界。** JSON 列、enum、布尔列、写入前领域对象等跨序列化/不可信
    边界的数据做运行时校验；内部输入 DTO 和投影保持 TypeScript interface。
 5. **直接触碰环境 API 的模块才加 import protection。** connection/migrate/context/store
