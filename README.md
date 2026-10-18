@@ -6,9 +6,9 @@ Tocsin 的目标不是做 SaaS 平台，也不是做通用工作流引擎。它�
 
 > 当前状态：**MVP baseline 已完成，但还不是稳定发布版**。核心架构、控制台、SQLite 持久化、认证、
 > 配置、投递与 UI 基础都已落地，Source → Webhook → Event → Route → Destination → Delivery → Worker →
-> History 主链路与 Docker 运行形态可用；仍缺少浏览器 E2E、Docker smoke 自动化、稳定的 migration
-> 兼容承诺和公开管理 API，所以请按“可试用的自托管 MVP”而不是“生产就绪的稳定版”来评估。发布硬化清单
-> 见 `docs/release/mvp-rc-checklist.md`。
+> History 主链路与 Docker 运行形态可用；仍缺少接入 CI 的浏览器 E2E 与 Docker smoke、稳定的
+> migration 兼容承诺和公开管理 API，所以请按“可试用的自托管 MVP”而不是“生产就绪的稳定版”来评估。
+> 发布硬化清单见 `docs/release/mvp-rc-checklist.md`。
 
 ## 为什么需要 Tocsin
 
@@ -86,7 +86,7 @@ docs
 要求：
 
 - Node.js `26.x`（以仓库根目录的 `.node-version` 为准）
-- pnpm `12.10.1`（由 `package.json` 的 `packageManager` 声明）
+- pnpm `12.14.0`（由 `package.json` 的 `packageManager` 声明）
 
 工程化统一由 [Vite+](https://vite.plus) 的 `vp` CLI 提供：Vite、Vitest、Oxlint、Oxfmt 和任务编排都在一个入口下。`vite-plus` 是仓库根目录的 devDependency，用 `vp` 前先在根目录安装一次依赖。
 
@@ -208,8 +208,8 @@ TLS 与 secret 注入。生产部署、反向代理、环境变量与健康检�
 - 整理生产部署文档：Docker、反向代理、数据卷、备份恢复、升级步骤。
   （已完成：`docs/release/docker-production-deployment.md`、`docs/release/backup-restore-upgrade.md`）
 - 明确 migration 与版本升级策略，保证 SQLite schema 向前兼容。
-  （升级/回滚后果已写入 `docs/release/backup-restore-upgrade.md`；baseline 冻结与 forward-only
-  migration 仍未落地）
+  （升级/回滚后果已写入 `docs/release/backup-restore-upgrade.md`；migration plan 已有 `0001`
+  baseline + `0002`/`0003` forward step，后续 schema 变更按 forward-only 处理）
 - 增加 webhook、worker、delivery、auth 的运行时观测日志。
 - 增加配置和敏感字段的安全测试，防止 token hash、destination secret、raw secret config 泄露到客户端。
 - 明确默认 retention 策略，限制 raw payload 与 delivery history 的 SQLite 增长。
@@ -235,7 +235,6 @@ TLS 与 secret 注入。生产部署、反向代理、环境变量与健康检�
 
 这些能力为未来保留空间，但不是 MVP 承诺：
 
-- Silence、suppression、maintenance window。
 - Alert grouping、per-fingerprint mute、重复告警聚合。
 - Incident lifecycle、on-call scheduling、escalation policy。
 - 多实例部署、分布式队列、Postgres/Redis/Kafka/Temporal 等外部中间件。

@@ -10,7 +10,7 @@ repository 分层、事务边界，以及 Better Auth schema 的生成/落库方
 
 ## 1. 概述
 
-SQLite 层是 Tocsin 的持久化适配器。对外暴露一个 `SqliteStore`，内部由 9 个 repository
+SQLite 层是 Tocsin 的持久化适配器。对外暴露一个 `SqliteStore`，内部由 10 个 repository
 组成：
 
 - `sources`
@@ -20,6 +20,7 @@ SQLite 层是 Tocsin 的持久化适配器。对外暴露一个 `SqliteStore`，
 - `deliveries`
 - `feishuApps`
 - `oncall`
+- `suppressions`
 - `history`
 - `settings`
 
@@ -48,9 +49,10 @@ SQLite 层是 Tocsin 的持久化适配器。对外暴露一个 `SqliteStore`，
 2. **按聚合纵切。** 每个聚合在
    `apps/console/src/infra/sqlite/repositories/<module>/` 下拆成
    `*.interface.ts`、`*.helpers.ts`、`*.repository.ts`。
-3. **MVP 使用一个显式 baseline。** 当前 schema 尚未发布稳定版本，因此把完整数据库形状
-   收敛在 `migrate/0001_initial_schema.ts`，通过 `migrateSqliteDatabase()` 执行并记录到
-   `schema_migrations`。发布后需要升级兼容时，再切回 forward-only migration。
+3. **MVP 使用 baseline + forward repair。** `migrate/0001_initial_schema.ts` 是全新数据库的
+   完整 baseline；已部署库通过 `0002_suppressions.ts`、`0003_complete_legacy_schema.ts` 等
+   forward step 补齐。所有 step 都通过 `migrateSqliteDatabase()` 执行并记录到
+   `schema_migrations`；不要再把新表/新列折进已经被部署记录的 `0001`。
 4. **校验只发生在真正边界。** JSON 列、enum、布尔列、写入前领域对象等跨序列化/不可信
    边界的数据做运行时校验；内部输入 DTO 和投影保持 TypeScript interface。
 5. **直接触碰环境 API 的模块才加 import protection。** connection/migrate/context/store
@@ -65,9 +67,11 @@ apps/console/src/infra/sqlite/
   connection.ts                 # 创建 Kysely SQLite handle
   schema.ts                     # Kysely database schema types
   transaction.ts                # Kysely transaction helper
-  migrate.ts                    # 兼容导出，转发到 migrate/
-  migrate/                      # MVP baseline schema plan
-    0001_initial_schema.ts      # 当前完整 baseline，编排下列 builder
+  migrate/                      # SQLite schema plan（baseline + forward steps）
+    0001_initial_schema.ts      # 全新库 baseline，编排下列 builder
+    0002_suppressions.ts        # forward step：suppressions 表
+    0003_complete_legacy_schema.ts # forward repair：对齐旧库的完整 schema
+    ensure-complete-schema.ts   # 0002/0003 共享的幂等 schema 修复
     schema.ts                   # Tocsin 业务表和索引
     better-auth.schema.ts       # Better Auth 表和索引的 Kysely builder
     better-auth.generated.sql   # Better Auth CLI 生成的 schema 参考
@@ -90,6 +94,7 @@ apps/console/src/infra/sqlite/
     delivery/
     feishu-app/
     oncall/
+    suppression/
     history/
     settings/
 ```
@@ -224,6 +229,7 @@ export interface SqliteStoreUnitOfWork {
   readonly deliveries: DeliveryRepository;
   readonly feishuApps: FeishuAppRepository;
   readonly oncall: OncallRepository;
+  readonly suppressions: SuppressionRepository;
   readonly history: HistoryRepository;
   readonly settings: SettingsRepository;
 }
@@ -284,14 +290,16 @@ export function transaction<T>(
 bundle 一起打包，不依赖部署环境里的源代码目录。测试或自定义工具可以通过 `options.plan`
 注入一个显式 schema plan。
 
-当前 MVP schema plan 只有一个 baseline step：
+当前 schema plan 有三个 step（`migrate/plan.ts`）：
 
 - `0001_initial_schema.ts`
+- `0002_suppressions.ts`
+- `0003_complete_legacy_schema.ts`
 
 `0001_initial_schema.ts` 只负责编排，不直接堆大量 DDL：
 
-- `tocsin-schema.ts` 创建 Tocsin 业务表、settings 默认值和业务索引。
-- `better-auth-schema.ts` 创建 Better Auth 所需表和索引。
+- `schema.ts` 创建 Tocsin 业务表、settings 默认值和业务索引。
+- `better-auth.schema.ts` 创建 Better Auth 所需表和索引。
 - `better-auth.generated.sql` 是 Better Auth CLI 生成的 schema 快照，用于人工和测试对照，
   不是运行时执行的 SQL。
 
@@ -315,9 +323,9 @@ Schema builder 优先使用 Kysely schema/query builder，因为这能让 DDL、
 更 type friendly。需要 SQLite 特定表达式或约束时，可以使用 Kysely `sql` escape hatch；它仍然
 通过 Kysely executor 执行，不暴露 raw driver。
 
-在 MVP 发布前，数据库不承诺升级旧开发库，允许直接修改 `0001_initial_schema.ts` 和相关 builder，
-让 baseline 始终代表当前最完整 schema。发布后如果需要兼容已有部署，应新增 forward-only step，
-并在需要操作历史列或中间状态时引入 migration-only schema 类型。
+`0001_initial_schema.ts` 仍代表全新库的完整 schema，但已经部署过的库必须靠 forward step 补齐。
+新增 schema 变更时，不要再编辑已提交的 migration，而是新增 step 并在 `migrate/plan.ts` 注册；
+需要操作历史列或中间状态时引入 migration-only schema 类型。
 
 ---
 
@@ -352,9 +360,9 @@ vp exec auth@latest generate \
 ```
 
 生成文件只是当前 auth schema 的参考，和 `better-auth-schema.ts` 放在同一目录，方便对照
-CLI 输出和手写 Kysely builder。运行时迁移仍由 `0001_initial_schema.ts` 调用
-`better-auth-schema.ts` 创建表；涉及默认值、约束、owner bootstrap 等 Tocsin 语义时，以 Tocsin
-builder 为准。
+CLI 输出和手写 Kysely builder。全新库的运行时迁移仍由 `0001_initial_schema.ts` 调用
+`better-auth.schema.ts` 创建表；已部署库由 `0002`/`0003` 补齐。涉及默认值、约束、owner
+bootstrap 等 Tocsin 语义时，以 Tocsin builder 为准。
 
 默认 runtime auth 配置在 `server/runtime/container.ts` 中通过：
 
@@ -432,7 +440,7 @@ raw driver 的 unknown row 返回；这些 helper 只作为低层兼容工具保
 重点测试：
 
 - `connection.test.ts`：验证文件数据库目录创建、Kysely handle 可执行查询。
-- `migrate.test.ts`：验证 baseline schema plan、账本、严格文件名、Better Auth 生成快照、
+- `migrate.test.ts`：验证 schema plan（0001–0003）、账本、严格文件名、Better Auth 生成快照、
   执行失败回滚、重复/未知 schema version 防护。
 - `transaction.test.ts`：验证 Kysely transaction rollback，以及嵌套 repository transaction
   复用当前 transaction context。
@@ -459,8 +467,8 @@ vp -C apps/console build
 
 新增表或改 schema：
 
-1. MVP 发布前，更新 `migrate/0001_initial_schema.ts`、`tocsin-schema.ts` 或
-   `better-auth-schema.ts`，让 baseline 代表当前完整 schema。
+1. 新增 forward step（例如 `0004_...ts`）并在 `migrate/plan.ts` 注册；不要编辑已提交的
+   `0001`–`0003`。
 2. 更新 `schema.ts` 的 Kysely table 类型。
 3. 更新对应 repository helper / implementation。
 4. 补充 schema plan 和 repository 测试。

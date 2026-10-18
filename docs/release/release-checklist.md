@@ -19,7 +19,7 @@
 | git tag                  | 一个都没有                                                       | `git tag -l` 输出为空，所以这次是**第一个** tag                          |
 | 版本号来源               | 只有根 `package.json`（当前 `0.1.0-beta.8`）                     | 启动日志的 `tocsin.runtime` 版本来自根 `package.json`（`apps/console/src/server/runtime/system-information.ts`） |
 | 容器镜像发布             | 没有自动化，只有手工 recipe                                       | 没有 CI 构建/推送步骤；`Justfile` 提供 `just docker-buildx <image> <tag>`（多平台构建并 `--push`）、`just docker-tag`、`just docker-push`，registry 与 tag 由人决定。`docker-compose.yml` 默认用本机构建的 `image: tocsin:local` |
-| E2E / Docker smoke 自动化 | 不存在                                                          | 仓库没有 playwright 或 smoke 脚本；`docs/release/mvp-rc-checklist.md` A 节两条仍未勾选 |
+| E2E / Docker smoke 自动化 | 脚本已有，CI 未接入                                            | `apps/console/e2e/alert-flow.spec.ts` + `apps/console/playwright.config.ts`；`scripts/docker-smoke.sh`；`just e2e` / `just docker-smoke`；`.github/workflows/ci.yml` 仍只有 quality job |
 
 结论：**首个 release 是一次全手工动作。** 不要假设打 tag 会产出镜像、Release note 或 changelog。
 
@@ -27,7 +27,7 @@
 
 1. **CI 绿在目标 commit 上。** 到 GitHub Actions 看 `CI` workflow 的 `check · test · build`，必须是
    `main` 最新 commit 上的成功记录。注意 CI **不**构建 Docker 镜像、**不**跑 E2E、**不**跑 compose
-   smoke，这些今天只能手工补。
+   smoke；本地可用 `just e2e` 与 `just docker-smoke` 执行，但发布前仍需人工触发。
 2. **本地跑完整 gate。** 在干净 worktree 上执行：
 
    ```bash
@@ -37,7 +37,8 @@
    vp run -r build
    ```
 
-3. **手工 Docker 冒烟（自动化落地前必须人工做一次）。**
+3. **手工 Docker 冒烟（脚本或手工二选一）。** 优先执行 `just docker-smoke`；注意 REL-3：当前脚本
+   使用全局卷名并 `down -v`，执行前确认没有真实数据卷。
 
    ```bash
    docker compose build
@@ -49,14 +50,15 @@
 
    必须显式传 `BETTER_AUTH_SECRET`：`docker-compose.yml` 里内置了一个公开的默认值，不覆盖也能启动。
 
-4. **手工走一遍产品验收路径。** `docs/release/mvp-rc-checklist.md`「验收标准」的 1–12 条目前没有自动化
-   守护，发布前按那份清单人工执行：setup/login → 建 Source → 复制 webhook URL → 建 Destination 并
-   preview/test → 建 Route → 发 webhook → 看 Event/Delivery → 失败 retry → 重启进程 → 导出配置不含明文
-   secret。
+4. **手工走一遍产品验收路径。** E2E 已覆盖 setup → Source → Destination → webhook → Event；Route、
+   Delivery/retry、过滤、重启、导出仍无自动化守护，发布前按 `docs/release/mvp-rc-checklist.md`
+   「验收标准」人工补走：setup/login → 建 Source → 复制 webhook URL → 建 Destination 并 preview/test →
+   建 Route → 发 webhook → 看 Event/Delivery → 失败 retry → 重启进程 → 导出配置不含明文 secret。
 5. **文档与版本一致。** 版本号、README 状态段落、部署/备份文档、`mvp-rc-checklist.md` 的结论日期要对齐
    本次 tag 的事实；不要留下“尚无部署文档”这类已经过时的说法。
-6. **数据兼容性自查。** 确认本次发布没有原地修改 SQLite baseline migration。当前 migration plan 只有
-   `0001_initial_schema`，runner 会跳过已应用的版本，所以**改 baseline 对任何已有数据库都是 no-op**；
+6. **数据兼容性自查。** 当前 migration plan 为 `0001_initial_schema` + `0002_suppressions` +
+   `0003_complete_legacy_schema`。runner 会跳过已应用的版本，所以**修改已提交的 migration 对任何已有
+   数据库都是 no-op**；本次发布若改 schema，必须新增 forward step 并在 `migrate/plan.ts` 注册。
    判断方法与后果见 `docs/release/backup-restore-upgrade.md`。
 
 ## 3. 打 tag（人工）
@@ -94,7 +96,7 @@ git push origin v0.1.0-beta.8
   `git log` 归纳本版本的主要变化，并在 GitHub 上创建 Release（这一步是人工操作，未在本仓库中固化）。
 - **保留回滚材料。** 上一个可用镜像标签 + 发布前的数据卷备份；步骤见
   `docs/release/backup-restore-upgrade.md`。
-- **记录本次的已知空白。** 至少包括：没有 release 自动化、没有 E2E、没有 Docker smoke 自动化、没有
+- **记录本次的已知空白。** 至少包括：没有 release 自动化、E2E 与 Docker smoke 脚本尚未接入 CI、没有
   稳定 public management REST API。
 
 ## 6. 已知空白（不要假装存在）
@@ -103,5 +105,6 @@ git push origin v0.1.0-beta.8
 - 没有自动化版本递增与 changelog。
 - 没有镜像仓库的自动化发布：只有 `Justfile` 里三条手工 recipe，没有 CI 任务，也没有既定的 registry
   或 tag 约定。
-- 没有 E2E 与 compose smoke 自动化，CI 覆盖不到浏览器路径和容器运行时。
+- E2E 与 compose smoke 脚本已存在（`just e2e` / `just docker-smoke`），但没有接入 CI，CI 覆盖不到
+  浏览器路径和容器运行时。
 - 没有发布说明模板，也没有“发布失败/撤回”的预案文档。

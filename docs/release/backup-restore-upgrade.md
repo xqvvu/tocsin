@@ -1,10 +1,11 @@
 # 备份、恢复、升级与回滚
 
 > 一句话结论：要备份的只有 `/data` 里的一个 SQLite 文件（外加 WAL/SHM 两个伴生文件）；升级与回滚的正确
-> 顺序是“先冷备份、再换镜像”；而当前 **migration 只有一个 baseline，runner 会跳过已应用的版本**，所以
-> **原地修改 baseline 对任何已有数据库都是 no-op** —— 这不是异常，是必须按事实处理的升级约束。
+> 顺序是“先冷备份、再换镜像”。当前 migration plan 是 `0001_initial_schema` baseline +
+> `0002_suppressions` 与 `0003_complete_legacy_schema` 两个 forward step；runner 会跳过已应用的版本，
+> 所以**原地修改已提交的 migration 对任何已有数据库都是 no-op**，schema 变更必须新增 forward step。
 
-核实时间 2026-10-13，核实基线 `origin/main` @ `4e17c28`。相关文件：
+核实时间 2026-10-18，核实基线 `origin/main` @ `a563ff7`。相关文件：
 `apps/console/src/infra/sqlite/connection.ts`、`apps/console/src/infra/sqlite/migrate/{plan,runner}.ts`、
 `apps/console/src/infra/sqlite/migrate/schema.ts`、`Dockerfile`、`scripts/docker-entrypoint.sh`。
 部署形态与变量见 `docs/release/docker-production-deployment.md`。
@@ -24,36 +25,33 @@
   1. 已经记录过的 version → **跳过**，不重跑。
   2. 库里存在当前构建不认识的 version → 直接抛错
      `SQLite database has applied migrations not present in this build: <versions>`，进程启动失败。
-- 当前 plan 只有一个条目：`0001_initial_schema`（`migrate/plan.ts`）。
+- 当前 plan 有三个条目（`migrate/plan.ts`）：`0001_initial_schema`、`0002_suppressions`、
+  `0003_complete_legacy_schema`。
 
-## 2. Migration 现状：单一 baseline 会被原地修改
+## 2. Migration 现状：baseline + forward repair
 
-`docs/architecture/sqlite-store.md` 明确说明：稳定版本发布前，整个 schema 收敛在
-`migrate/0001_initial_schema.ts` 这一个 baseline 里，发布后才切回 forward-only migration。这意味着
-**baseline 在发布前是被原地编辑的**，而不是靠新 migration 演进。
+`0001_initial_schema.ts` 是全新数据库的完整 baseline；`0002_suppressions.ts` 是新增抑制表的 forward
+step；`0003_complete_legacy_schema.ts` 对已应用过 `0001` 的旧库做幂等 repair（补 Feishu apps、on-call
+表、抑制列与索引等）。`0003` 可以重复执行，只补缺失对象，不覆盖已有数据。
 
-这不是推测，仓库里有实例：2026-10-12 的 `d6b4b58`（feat(console): add suppressions table and delivery
-suppression columns）在 `migrate/schema.ts` 里加了 `suppressions` 表与 delivery 的抑制列，**没有新增任何
-migration 文件**；`migrate/` 目录下至今只有 `0001_initial_schema.ts` 一个版本。
+因此升级行为分三种：
 
-因此升级行为分成两种，必须分开对待：
+| 场景                          | 行为                                                                 |
+| ----------------------------- | -------------------------------------------------------------------- |
+| 全新数据库                    | 依次应用 `0001` → `0002` → `0003`，schema 与当前代码一致              |
+| 已有 `0001` 的旧库            | 启动时应用尚未记录的 `0002` / `0003`；`0003` 补齐旧库缺失的表、列与索引 |
+| 已有 `0001` + `0002` 的库     | 只应用 `0003`                                                         |
 
-| 场景                              | 行为                                                                                             |
-| --------------------------------- | ------------------------------------------------------------------------------------------------ |
-| 全新数据库                        | baseline 全量执行，schema 与当前代码一致                                                          |
-| 在 baseline 被修改**之前**创建的库 | `schema_migrations` 里已经有 `0001`，runner 跳过，新表/新列**不会**被创建；启动能通过（迁移检查只看版本号），第一次读写缺失对象时才报运行时错误 |
-
-所以“升级镜像”在今天**不等于**“升级数据库”。
+所以“升级镜像”会执行尚未应用的 forward step；已经记录的 migration 不会重跑，**不要修改已提交的
+migration 文件**。若未来需要变更 schema，应新增 forward-only step 并在 `migrate/plan.ts` 注册。
 
 ### 现在能做的处理
 
-- 开发 / 试用环境：删库重建是最省事的做法，**但这是破坏性操作**。重建前先导出配置（Settings 页面的
+- 开发 / 试用环境：仍然可以删库重建，但**这是破坏性操作**。重建前先导出配置（Settings 页面的
   TOML/JSON 导出），重建后重新 setup 再导入；`docker compose down -v` 会删掉命名卷 `tocsin-data`，
   只有在确认数据可以丢弃时才用它。
-- 自托管生产环境：今天**没有**自动路径。可选做法只有“重建”或人工补 schema，仓库里没有任何补表工具或
-  校验命令；这就是为什么首个稳定版本之前必须冻结 baseline。
-- 第一个稳定版本发布后要恢复 forward-only migration（`sqlite-store.md` 的既定计划）。那一天起升级/回滚
-  语义会改变，本文需要同步更新。
+- 自托管生产环境：启动时会自动应用待执行的 forward step；若日志出现 migration 报错，先停止升级并
+  恢复冷备份，不要手工改 `schema_migrations`。
 
 ## 3. 备份
 
@@ -133,8 +131,8 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 
 - migration 在**容器启动时**执行（server entry 顶层 `await` 打开 store 后才开始服务）。迁移失败会让进程
   直接退出，容器按 `restart: unless-stopped` 反复重启 —— 这时先看日志里的 migration 报错，别让它一直重启。
-- 升级前必须读一遍本版本的 release 说明，确认是否动过 baseline（第 2 节）。动过 baseline 的版本对已有库
-  是“代码升级、schema 没升级”。
+- 升级前必须读一遍本版本的 release 说明，确认本次是否新增 migration step（第 2 节）。已应用的 migration
+  不会重跑，修改旧 migration 对已有库无效。
 - 老镜像 tag 不要删，回滚要用。
 
 ## 6. 回滚
@@ -165,7 +163,7 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 
 | # | 动作                                                         | 通过标准                                     |
 | - | ------------------------------------------------------------ | -------------------------------------------- |
-| 1 | 读本版本 release 说明，确认是否改了 baseline                  | 知道要不要重建库                             |
+| 1 | 读本版本 release 说明，确认是否新增 migration step            | 知道升级时会不会执行 schema 变更              |
 | 2 | 冷备份 `/data`                                                | 三个文件齐全、`integrity_check` 通过          |
 | 3 | 记录当前镜像 tag 与 compose 文件                              | 能原样回滚                                   |
 | 4 | 构建/获取新镜像并打版本 tag                                    | 镜像 tag 可区分版本                          |
@@ -176,8 +174,9 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 
 ## 8. 未验证与未知
 
-- 本仓库没有任何 E2E 或 Docker smoke 自动化（见 `docs/release/mvp-rc-checklist.md`），本文的
-  `docker compose cp` / 恢复步骤是标准工具用法，**没有在真实部署上演练过**；首次生产升级请把备份校验和
-  回滚演练当成独立动作。
+- 本仓库已有 E2E 与 Docker smoke 脚本（`apps/console/e2e`、`scripts/docker-smoke.sh`），但都未接入 CI；
+  本文的 `docker compose cp` / 恢复步骤是标准工具用法，**没有在真实部署上演练过**；首次生产升级请把
+  备份校验和回滚演练当成独立动作。
 - 在线备份的具体实现（helper 容器镜像、调度方式）没有仓库内的既定做法，需要运维自己选型。
-- baseline 何时冻结、`0002+` 何时出现，目前没有排期；冻结前本文第 2 节的结论一直成立。
+- `0001` baseline 与 `0002`/`0003` forward step 均已存在；后续 schema 变更应继续新增 forward step，
+  并按第 2 节的升级语义更新本文。

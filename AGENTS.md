@@ -483,13 +483,15 @@ authenticated dashboard operators; only true secrets stay out of browser state.
 ## SQLite And Migrations
 
 - Put SQLite schema code in `apps/console/src/infra/sqlite/migrate/`.
-- Apply migrations through `apps/console/src/infra/sqlite/migrate.ts`.
+- Apply migrations through the public API in
+  `apps/console/src/infra/sqlite/migrate/index.ts` (imported as `#/infra/sqlite/migrate`).
 - Record applied migrations in `schema_migrations`.
-- During MVP, the database schema is not stable yet. Keep one complete baseline
-  step, `migrate/0001_initial_schema.ts`, and update that baseline as the MVP
-  schema changes.
-- Once a public release needs upgrade compatibility, switch back to forward-only
-  migration steps and do not edit old committed migrations.
+- During MVP, the database schema is not stable yet. `migrate/0001_initial_schema.ts`
+  is the baseline for fresh databases; deployed databases are upgraded through
+  forward steps such as `0002_suppressions.ts` and `0003_complete_legacy_schema.ts`.
+  Never edit a migration that may already be recorded.
+- Add new schema changes as forward-only steps registered in `migrate/plan.ts`;
+  do not fold them into `0001`.
 - Prefer Kysely schema/query builders for schema code. Keep Better Auth CLI
   output beside the builders as a generated reference snapshot, not as runtime
   SQL that business code executes directly.
@@ -534,7 +536,7 @@ runner. `vite-plus` is a root devDependency; run `vp install` once from the
 workspace root before using it.
 
 - Runtime: Node `26.x`, pinned by the committed `.node-version`.
-- Package manager: `pnpm@12.6.0`, declared in root `package.json`.
+- Package manager: `pnpm@12.14.0`, declared in root `package.json`.
 - Install: `vp install` (or `vp install --frozen-lockfile` in CI).
 - Format: `vp fmt --write` to fix, `vp fmt --check` to verify.
 - Lint: `vp lint` (add `--fix` to write fixes).

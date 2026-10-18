@@ -49,12 +49,13 @@ workflow、compose smoke automation，以及 delivery history retention 之类�
 
 以下内容没有进入 MVP baseline。除非新的 PRD 明确接收，否则不要在发布硬化中顺手实现：
 
-- Silence、suppression、maintenance window。（2026-10-13 校正）抑制已经作为 post-MVP 切片**部分落地**：
+- Silence、suppression、maintenance window。（2026-10-18 校正）抑制已作为 post-MVP 切片落地：
   `@tocsin/core` 有抑制领域模型、匹配器与生命周期投影，`silence` 与 `maintenance_window` 是同一机制下
-  的两种 kind；SQLite 有 `suppressions` 表与 delivery 的抑制列，投递在入队与认领时会命中规则并落
-  `suppressed` 状态（不发送）。但**产品里还没有创建/管理抑制规则的入口**：没有 suppression service、
-  oRPC procedure、页面，投递侧只有状态展示，所以今天不能把它当作可用功能对外描述。PRD 与决策见
-  `docs/prd/alert-suppression.md`、`docs/prd/alert-suppression-decisions.md`。
+  的两种 kind；SQLite 有 `suppressions` 表（`0002_suppressions`）与 delivery 的抑制审计列，投递在入队与
+  认领时会命中规则并落 `suppressed` 状态（不发送）。dashboard 已有 suppression service、
+  `suppressions` oRPC namespace 与 `/suppressions` 页面，支持列表、创建、编辑、启停、删除和命中投递查看。
+  窗口结束后的通知型汇总仍不做。PRD 与决策见 `docs/prd/alert-suppression.md`、
+  `docs/prd/alert-suppression-decisions.md`。
 - Incident lifecycle、on-call scheduling、escalation policy。
 - 更多 destination/provider 适配器，除非为了修复现有主链路。
 - SaaS tenant、organization workspace、billing、多实例部署。
@@ -84,8 +85,7 @@ status / label / title / message），保存时不再只改每类第一条、保
 `feishu_card`，见 `packages/destinations/src/*/manifest.ts` 与
 `apps/console/src/features/destinations/model/destination-form.ts`），Email 的 `subjectTemplate` 与
 `htmlTemplate` 已是表单输入项，并带模板变量引用面板。issue
-https://github.com/xqvvu/vane/issues/47 的剩余范围无法在离线环境核对（GitHub 不可达），但清单原先描述的
-三个具体缺口已不再成立。
+https://github.com/xqvvu/tocsin/issues/47 已在 `xqvvu/tocsin` 关闭，清单原先描述的三个具体缺口均已不再成立。
 
 ### 发布硬化
 
@@ -94,12 +94,12 @@ https://github.com/xqvvu/vane/issues/47 的剩余范围无法在离线环境核�
 - `docs/release/release-checklist.md`：切第一个 tag 的人工流程，含“仓库没有任何 release 自动化”的事实。
 - `docs/release/docker-production-deployment.md`：反向代理/TLS、环境变量、数据卷、secret、健康检查，
   并把“没有 TLS 终止、没有 Docker secret 注入、compose 内置公开默认 `BETTER_AUTH_SECRET`”写成已知缺口。
-- `docs/release/backup-restore-upgrade.md`：SQLite 冷备份/恢复、升级、回滚，以及单一 baseline migration
-  的后果。
+- `docs/release/backup-restore-upgrade.md`：SQLite 冷备份/恢复、升级、回滚，以及 baseline + forward
+  repair migration（0001–0003）的升级约束。
 
-仍然缺的是自动化：仓库只有 `.github/workflows/ci.yml`（`check · test · build`，`push` 到 main 与
-`pull_request` 触发，tag 不触发任何东西），没有关键浏览器 E2E workflow，也没有 compose/Docker smoke
-automation；这两条继续留在下面的发布 gate 里。
+仍然缺的是自动化接入：仓库只有 `.github/workflows/ci.yml`（`check · test · build`，`push` 到 main 与
+`pull_request` 触发，tag 不触发任何东西）；E2E（`just e2e`）与 Docker smoke（`just docker-smoke`）脚本
+已存在，但都没有接入 CI，这两条继续留在下面的发布 gate 里。
 
 ### 运行时策略
 
@@ -141,7 +141,7 @@ raw payload retention 已可配置并在 intake 路径执行清理；服务端�
       仍未开始，保留在 E 节。
 - [x] 清理 `apps/console/README.md` starter 内容。
 - [x] 对齐 README、package metadata、workspace 中的 Node/vp 版本说明。
-      （2026-10-13 校正）README 里写成 pnpm `12.6.0`，实际 `packageManager` 是 `pnpm@12.10.1`，已修正。
+      （2026-10-18 校正）README 与 AGENTS.md 的 pnpm 版本已对齐 `packageManager` 的 `pnpm@12.14.0`。
 
 ### C. 产品与 UI 收尾
 
@@ -182,18 +182,18 @@ raw payload retention 已可配置并在 intake 路径执行清理；服务端�
   （2026-10-11 已完成，见 `docs/prd/destination-template-engine.md`；2026-10-13 校正：表单侧的模式选择也
   已落地，见上文的模板小节。）
 - Alert 操作增强：silence、suppression、maintenance window、per-fingerprint mute。
-  （2026-10-13 校正：抑制的领域模型、持久化与投递层执行已落地，`fingerprints` 也在 matcher 里；仍未落地的
-  是创建/管理入口（service、procedure、页面）与窗口结束后的通知型汇总。）
+  （2026-10-18 校正：领域模型、持久化、投递层执行、service/oRPC/页面均已落地；仍未落地的是窗口结束后的
+  通知型汇总和抑制 retention 清理。）
 - 搜索与排障体验：更强的 Events/Deliveries filter、时间范围、fingerprint 视图、route explain。
 - 自托管发布硬化：CI/E2E/Docker smoke、部署文档、备份恢复、升级回滚。
-  （2026-10-13 校正：部署、备份恢复、升级回滚文档与 release checklist 已完成；E2E 与 Docker smoke 自动化
-  仍未落地。）
+  （2026-10-18 校正：部署、备份恢复、升级回滚文档与 release checklist 已完成；E2E 与 Docker smoke 脚本
+  已落地，但尚未接入 CI。）
 - Adapter 贡献体验：fixture 体系、contributor guide、adapter scaffold。
   （2026-10-13 校正：destination 的 contributor guide 与 scaffold 已完成；provider 的 fixture 体系仍缺。）
 
 ## 验收标准
 
-MVP baseline 已能覆盖以下演示路径；发布前仍需要用自动化 E2E 和 Docker smoke 固化：
+MVP baseline 已能覆盖以下演示路径；发布前仍需要把已存在的 E2E 与 Docker smoke 接入发布 gate 并人工执行：
 
 1. 使用 Docker 或本地命令启动 Tocsin。
 2. 首次 setup owner/admin 并登录 dashboard。
@@ -208,6 +208,6 @@ MVP baseline 已能覆盖以下演示路径；发布前仍需要用自动化 E2E
 11. 发布 gate 中，CI、测试、build、Docker smoke 和 E2E 通过。
 12. 发布文档能指导用户完成自托管部署、备份、升级和恢复。
 
-> 第 12 条的文档已经就位（`docs/release/`），但**没有在真实部署上演练过**：仓库没有 E2E 与 Docker
-> smoke 自动化，备份/恢复/回滚步骤也只是标准工具用法，未在部署环境执行。首次发布前应把第 11、12 条当成
-> 人工验收项，而不是已完成项。
+> 第 12 条的文档已经就位（`docs/release/`），但**没有在真实部署上演练过**：仓库已有 E2E 与 Docker
+> smoke 脚本，但都不在 CI，备份/恢复/回滚步骤也只是标准工具用法，未在部署环境执行。首次发布前应把
+> 第 11、12 条当成人工验收项，而不是已完成项。

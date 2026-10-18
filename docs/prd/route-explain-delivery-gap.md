@@ -1,6 +1,6 @@
 # Route Explain 切片 B：投递缺口解释的「可解释边界」
 
-状态：**边界定稿，待实现**
+状态：**已实现（2026-10-18 复核）**
 输入：`docs/research/route-authoring-current-state.md` §4.2 / §4.3 / 候选切片 B；`docs/planning/next-round.md` §2.4
 口径：每个结论给出 `file:line`。**与调研文档不一致之处集中在第 4 节，请以代码为准。**
 依赖：切片 A 已合并（`1268cfa`），本切片复用同一块证据展示位。
@@ -26,7 +26,7 @@
 | R5 | route 已被删除 | ✅（本切片新增） | `deliveries.route_id` 外键 `onDelete("cascade")`，`schema.ts:119`；`route.repository.ts:166-169` 直接删路由 | route |
 | R6 | 幂等去重（同 source/key/route/destination 已投过） | ⚠️ 有窗口，**可能已过期** | 见 §3 | (route, destination) |
 | R7 | 该 (route, destination) 已存在投递（`skippedExisting`） | ✅ 等价于「有投递行」 | `delivery.repository.ts:84-87`、`listExistingTargetsForEvent` `:440-455` | (route, destination) |
-| R8 | `suppressed`（抑制）—— 尚未实现 | ✅ 未来 | `docs/prd/alert-suppression.md` §2.6 | (route, destination) |
+| R8 | `suppressed`（抑制）—— 已实现，且不进入缺口分类 | ✅ | `packages/core/src/delivery/delivery.ts:5-11,33-35`；`delivery.repository.ts` 的抑制入队/认领分支 | (route, destination) |
 
 **关键观察：R1–R4、R7 全部来自「读 `deliveries` 表 + 读 `routes`/`destinations` 现状」，是纯读路径。本切片不需要改 `enqueueForEvent`、不需要新表、不需要迁移。**
 
@@ -87,6 +87,6 @@
 
 1. **不承诺解释每一条缺口。** 超过去重窗口的缺口就是解释不了，UI 会这么说。
 2. **不改写入路径。** `enqueueForEvent` 不新增落库字段，`delivered`/`deduped`/`skippedExisting` 的返回值语义不变。
-3. **不加表、不做迁移。** 一旦牵涉 schema，就要面对 `AGENTS.md:488-490` 的「单 baseline」约束（详见 `docs/prd/alert-suppression-decisions.md` §5.2），本切片刻意避开。
-4. **不实现抑制相关文案。** R8 是占位：抑制落地后 `suppressed` 状态与 `suppress_reason` 会有自己的展示契约（`alert-suppression.md` §2.5），届时并入本表，不在本切片预先发明。
+3. **不加表、不做迁移。** 本切片仍不加表；当前 migration plan 已有 `0001`–`0003`，但本切片的解释数据全部来自既有表。
+4. **抑制不进入本表。** 抑制已实现为投递状态 `suppressed`；被抑制的投递是真实投递行，因此 `routeMatchGaps` 不会把它算作「命中但未投递」的缺口。
 5. **不承诺 `suppressed` 之后补投能救回。** 已核实 `listExistingTargetsForEvent` 不过滤 state（`delivery.repository.ts:446-447`），所以抑制行会让该目标永远算「已存在」；这是抑制 PRD 的语义决定（见决策备忘 OQ1），不是本切片能修的。

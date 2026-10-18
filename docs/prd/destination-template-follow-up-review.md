@@ -113,10 +113,9 @@ adapter manifest 元数据 **需要改动**：三个通道都要补 `modes` 声�
   `htmlTemplate` 经 `EmailConfigSchema` 的 `superRefine` 产出以字段名为前缀的诊断，与
   `template.text` 共用同一条 diagnostics 聚合路径。
 
-仍然没有做的部分（不是评审遗漏，是实现范围）：console 表单尚未提供 `slack_blocks` / `json_payload`
-的模式选择器，也没有 Email 两个新字段的输入项；这些模式与字段经 config JSON / API / TOML 可用。
-缺口由 https://github.com/xqvvu/vane/issues/47 跟踪。因此本评审「三片实现都必须各自携带……表单双向映射」
-这一条只完成了 Feishu 以外的 schema / 渲染 / preview / manifest / i18n / 测试部分。
+（2026-10-18 更新）console 表单缺口已关闭：`slack_blocks` / `json_payload` 已可在模式选择器中选择，
+Email 的 `subjectTemplate` / `htmlTemplate` 已有输入项；issue
+https://github.com/xqvvu/tocsin/issues/47 已关闭。本条评审的原始结论保留在正文，不回改。
 
 #16 / #17 / #18 / #19 已在 GitHub 关闭；父 issue #15（`Follow-up destination template modes`）仍为 open，
 上述表单缺口是它剩下的主要事项。
