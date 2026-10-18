@@ -2,6 +2,90 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 7 轮）
+
+- 时间：2026-10-18 19:12–20:00 CST（11:12–12:00Z）。
+- 基线：`origin/main` @ `0fda95c`；本轮合并后为 `65e6f33`（#122）、`2d73ec6`（#123）。
+- 本轮类型：**需求切片 + 文档修复**（非 full-audit）。最近全量审计为第 1 轮（13:30 CST），
+  距本轮开始 5 小时 42 分，仍不足 6 小时；backlog 有多个 ≥27 分候选，按第 1.5 步继续。
+- 车道轮转位置：本轮跑 `requirements` + `quality` + `docs-drift`（承接第 6 轮建议）。
+  `requirements` 与 `docs-drift` 已返回；`quality` 在收尾时仍在运行，发现留待下一轮记录。
+  下一轮建议 `release-infra` + `architecture`（`requirements` 每轮必跑）。
+- 工作树：写入隔离仍禁止本会话修改 `agent-iteration`；`agent-iteration` 仅用于并发锁，
+  实现与验证使用会话工作树 `exciting-chandrasekhar-f60fca`，收尾时删除其 `node_modules`。
+
+### 本轮交付
+
+- PR #122 `feat(console): preview destinations with a historical event sample`
+  （rebase 合并 `65e6f33`）。
+  - 预览对话框新增「样例来源」选择器：内置样例 + 最近 20 条历史 Event；选择后按同一份预览
+    请求（已保存 Destination / 新增草稿 / 编辑草稿）重放 `sampleEventId`。
+  - 对话框展示当前样例来源与接收时间；空态、加载失败与清除后回退内置样例均有提示。
+  - 新增 `recentEventsQueryOptions`（复用 `operations.list`，对话框打开时才加载）；
+    无服务端 procedure、schema 或持久化变更。
+  - 新增中文 mini-PRD `docs/prd/destination-historical-event-preview.md`；中英文案同步。
+  - 新增 2 条对话框测试；console 511 tests 全绿；`vp check` 0 errors、`vp run -r build` 通过。
+- PR #123 `docs: correct stale auth, template, and release claims`（rebase 合并 `2d73ec6`）。
+  - 更正「应用没有内置登录限流」：Better Auth production 默认启用（10s/100，登录 10s/3）。
+  - 补 `TOCSIN_DESTINATION_TIMEOUT_MS` 环境变量；RC checklist 顶部与已勾选 smoke gate 对齐。
+  - post-MVP、template follow-up、adapter-extensibility 更新为四种模板模式已交付。
+  - 更正 destination registry audit 缺失、console `typecheck` 命令、`auth`→`session` 命名空间、
+    ADR 0007 命名空间清单。
+  - `vp fmt --check` 通过。
+
+### requirements lane
+
+新增 6 条候选（已写入 backlog），本轮最高分 **REQ-31（29）**：
+
+- **REQ-31（29）**：排障搜索覆盖事件/投递 ID。`eventSearchPredicate` 只匹配
+  title/message/fingerprint，列表与 total 共用（`history.repository.ts:397-410`）；URL `q` 已存在。
+- **REQ-32（28）**：解析失败事件的诊断可见性。审计事件已写 providerMetadata
+  （`intake.service.ts:191-239`），但列表、详情、筛选均不可见
+  （`event-raw-tab.tsx:13-28`、`EventListItem` 无该字段）。
+- **REQ-33（27）**：绝对时间窗口过滤；仓储只有 `since` 没有上界（`history.interface.ts:23-49`）。
+- **REQ-34（27）**：筛选结果导出 CSV；只读 export procedure + CSV 注入转义，上限 5000 行。
+- **REQ-35（27）**：运维列表自动刷新；全仓无 `refetchInterval`，Deliveries 连手动刷新都没有
+  （`deliveries-page-toolbar.tsx:21-46`）。
+- **REQ-36（27）**：事件列表标签可见性；`EventListItem` 不含 labels（`history.repository.ts:52-77`）。
+- 附带核实：RC checklist 声称 Delivery 详情可 retry，实际只在列表有
+  （`delivery-actions.tsx:25-38`、`delivery-detail-page.tsx:48-56`），留作文档/质量项。
+
+### docs-drift lane
+
+10 处断言过期，全部已在 #123 更正：
+
+- HIGH：`docker-production-deployment.md:114` 称没有内置登录限流，实际 Better Auth production
+  默认启用（`auth-options.ts:47-52` 未关闭）。
+- MEDIUM：RC checklist 顶部仍称缺 compose smoke automation（同文 `:124` 已勾选）。
+- MEDIUM：post-MVP 规划仍把模板引擎、抑制、时间范围列为待讨论方向。
+- MEDIUM：template follow-up issues 称三种模式未实现；adapter-extensibility 称模板只覆盖 Feishu、
+  destinations registry 无 audit。
+- MEDIUM：两处 `vp -C apps/console run typecheck` 不存在（console 无该 script）。
+- LOW：`auth.getDashboardSession` 应为 `session.*`（frontend-architecture、
+  import-boundaries、application-container）；ADR 0007 命名空间清单缺
+  `integrations`/`suppressions`；部署文档缺 `TOCSIN_DESTINATION_TIMEOUT_MS`。
+
+### quality lane
+
+本轮结束时该车道仍在运行，未返回结果；不阻塞交付，下一轮继续并补记发现。
+
+### 本轮未做 / 备注
+
+- 未做浏览器实测：本机 5173 端口是另一个 Nuxt 项目，没有运行中的 Tocsin console dev server。
+- Obsidian 同步跳过：本会话没有 `obsidian-vault` skill。
+- 无 EXPERT_PANEL 事项。
+- 仓库禁止 squash merge，两个 PR 均以 rebase 合并。
+
+### 下一轮优先项
+
+1. REQ-31（29）：搜索覆盖事件/投递 ID。
+2. REQ-27（28）：Deliveries 列表告警身份。
+3. REQ-32（28）：解析失败事件的诊断可见性。
+4. REL-3（28）：Docker smoke 卷/镜像/项目/端口隔离。
+5. REQ-22/REQ-24/REQ-12/REQ-13（28）：既有高价值切片。
+6. REQ-25（27）、REQ-33/34/35/36（27）。
+7. 补齐 quality lane 发现并记录。
+
 ## 2026-10-18（第 6 轮）
 
 - 时间：2026-10-18 18:16–19:00 CST（10:16–11:00Z）。

@@ -90,7 +90,7 @@
 | DOC-11 | `adapter-contribution-experience.md` 的「不存在」盘点部分过期 | docs drift | 24 | candidate | — | F4/F6/F7/F8、S0 已有落地；需状态注记 |
 | DOC-12 | `route-authoring-current-state.md` 去重证据断言过期 | docs drift | 23 | candidate | — | `delivery_dedupe_keys` 已落库并有 prune 窗口（`schema.ts:164-185`） |
 | REQ-25 | 抑制规则试跑预览（dry-run） | requirements lane | 27 | candidate | — | PRD 承诺 `preview` 与范围预览，代码只有 list/get/hits；复用 `evaluateSuppressionMatch` + `listRecent`；`alert-suppression.md:97,209,238` |
-| REQ-26 | Destination 用真实历史 Event 预览 | requirements lane | 29 | candidate | — | 服务端 `sampleEventId` 已实现，UI 从未传；`destinations-page.tsx:179-188`、`destination.service.ts:197-212` |
+| REQ-26 | Destination 用真实历史 Event 预览 | requirements lane | 29 | shipped | #122 | 预览对话框新增样例来源选择器（内置 + 最近 20 条历史 Event），三个预览入口均可重放；`recentEventsQueryOptions`、`destination-notices.tsx`、`destinations-page.tsx`；PRD `docs/prd/destination-historical-event-preview.md` |
 | REQ-27 | Deliveries 列表显示告警身份 | requirements lane | 28 | candidate | — | 只显示 source + eventId；join 已有 events；`delivery-event-cell.tsx:1-18`、`history.repository.ts:218-237` |
 | REQ-28 | 投递历史目标/路由名称快照 | requirements lane | 21 | candidate | — | 需 forward-only 0004 迁移；`history-retention-and-snapshots.md:47-83` |
 | REQ-29 | 抑制规则保留期清理 | requirements lane | 24 | candidate | — | PRD 故事 28 未实现；设置项 + 有界 prune；`alert-suppression.md:105,224,237` |
@@ -111,24 +111,33 @@
 | FIX-10 | 未使用的生产依赖 | architecture lane | 20 | candidate | — | `@faker-js/faker`、`@tanstack/match-sorter-utils` 全仓无 import；确认后移除或降为 devDependency |
 | DOC-13 | import boundaries 文档 4 处与代码不一致 | architecture lane | 24 | candidate | — | `tanstack-start-import-boundaries.md:69,75-77,112,120`；`application-container.md:115`；`orpc-api-layer.md:198` |
 | DOC-14 | sqlite-store 文档缺 suppressions 信息 | architecture lane | 23 | candidate | — | `sqlite-store.md:138-155,189-198`；代码已有 `schema.ts:33,130`、`store.ts:45` |
+| REQ-31 | 排障搜索覆盖事件/投递 ID | requirements lane | 29 | candidate | — | `eventSearchPredicate` 只匹配 title/message/fingerprint；列表与 total 共用；URL `q` 已存在；`history.repository.ts:397-410` |
+| REQ-32 | 解析失败事件的诊断可见性 | requirements lane | 28 | candidate | — | 审计事件已写 providerMetadata，但列表/详情/筛选都看不到；`intake.service.ts:191-239`、`event-raw-tab.tsx:13-28` |
+| REQ-33 | 绝对时间窗口过滤 | requirements lane | 27 | candidate | — | URL `from`/`to`，与 `range` 互斥；仓储只有 `since` 没有上界；`operations.ts:26-28`、`history.interface.ts:23-49` |
+| REQ-34 | 筛选结果导出 CSV | requirements lane | 27 | candidate | — | 只读 `operations.export`，上限 5000 行，CSV 公式注入转义；`packages/api/src/contract/operations.ts:36-88` |
+| REQ-35 | 运维列表自动刷新 | requirements lane | 27 | candidate | — | 15/30/60s 开关；全仓无 `refetchInterval`；Deliveries 连手动刷新都没有（`deliveries-page-toolbar.tsx:21-46`） |
+| REQ-36 | 事件列表标签可见性 | requirements lane | 27 | candidate | — | `EventListItem` 无 labels；`history.repository.ts:52-77`；详情已有全量标签（`event-normalized-tab.tsx:66`） |
+| DOC-15 | 部署文档称「没有内置登录限流」 | docs drift | 27 | shipped | #123 | Better Auth production 默认启用限流（10s/100，登录 10s/3）；同时补 `TOCSIN_DESTINATION_TIMEOUT_MS` |
+| DOC-16 | RC checklist/post-MVP/template follow-up 状态过期 | docs drift | 26 | shipped | #123 | compose smoke 已存在、模板四种模式已交付、抑制主体已交付 |
+| DOC-17 | adapter-extensibility 称无 registry audit 且模板模式未扩展 | docs drift | 25 | shipped | #123 | `registry.ts:83` 已有 `audit()`；四种模式已落地 |
+| DOC-18 | 架构文档 typecheck 命令与 session namespace 过期 | docs drift | 24 | shipped | #123 | 两处 `vp -C apps/console run typecheck` 改为 `vp check`；`auth.*` 改 `session.*`；ADR 0007 命名空间补齐 |
 
 ## 下一轮优先项
 
-1. **REQ-26**（29）：Destination 用真实历史 Event 预览；服务端 `sampleEventId` 已实现，
-   纯前端接入，文档用户故事 10–13 直接兑现。
+1. **REQ-31**（29）：排障搜索覆盖事件/投递 ID；`q` 谓词已集中，改动小、值班收益高。
 2. **REQ-27**（28）：Deliveries 列表显示告警标题/严重程度/状态；与 Events 列表形态对齐，
    纯 DTO 投影 + UI。
-3. **REL-3**（28）：Docker smoke 卷/镜像/项目/端口隔离（N2）。这是任何 smoke CI 接入前的
+3. **REQ-32**（28）：解析失败事件的诊断可见性；解析失败审计已落库，缺投影与展示。
+4. **REL-3**（28）：Docker smoke 卷/镜像/项目/端口隔离（N2）。这是任何 smoke CI 接入前的
    阻断项；需本地 Docker 实测。
-4. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
 5. **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：既有高价值切片。
-6. **REL-6 + REL-7**（26/26）：Docker smoke 断言增强、E2E harness 就绪探针/隔离；AUTO_FIX。
-7. **Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并为一个 `test:` PR。
-8. **FIX-8**（26）：抑制 `createdBy` 永远为空。
-9. **DOC-4/DOC-6/DOC-11/DOC-12/DOC-13/DOC-14 + REL-12**：剩余文档漂移，可再合并一个
-    `docs:` PR。
-10. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
-11. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖；**REL-13**（LICENSE）需专家小组
+6. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
+7. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、事件标签可见性。
+8. **REL-6 + REL-7**（26/26）：Docker smoke 断言增强、E2E harness 就绪探针/隔离；AUTO_FIX。
+9. **Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并为一个 `test:` PR。
+10. **FIX-8**（26）、DOC-4/DOC-6/DOC-11/DOC-12/DOC-13/DOC-14 + REL-12：剩余修复与文档漂移。
+11. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
+12. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖；**REL-13**（LICENSE）需专家小组
     做法律/产品决策。ARCH-10/ARCH-11 等再次触碰对应文件时做。
 
 ## 已知过期输入
