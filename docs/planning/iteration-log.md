@@ -2,6 +2,114 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 14 轮）
+
+- 时间：2026-10-19 01:25 – 04:15 CST。
+- 基线：`origin/main` @ `871c629`；main 最近一次 CI 为 success，无遗留 open PR。
+- 本轮类型：**需求发现 + 小修复 + 三车道审计**（非 full-audit）。最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST，距今约 12 小时）；backlog 仍有大量 ≥27 分候选，
+  按第 1.5 步继续消化。
+- 车道轮转位置：本轮跑 `requirements` + `release-infra` + `security-exposure`，
+  三条车道全部返回（requirements 约 12 分钟、release-infra 约 6.5 分钟、
+  security-exposure 约 8 分钟）。下一轮建议 `requirements` + `docs-drift` + `quality`。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `festive-fermat-7d78d0`；收尾时删除其 `node_modules` 与 `agent-iteration`。
+
+### 本轮交付
+
+- PR #136（`fix(console): rebuild legacy normalized events on read`）—— **Q-20**。
+  - `0003` 用 `ADD COLUMN normalized_json TEXT NOT NULL DEFAULT '{}'` 修复旧库，
+    历史事件的规范化对象恒为 `{}`，`eventFromRow` 解析抛 ZodError。
+  - 受影响：事件/投递详情、事件重放、路由重放预览、oncall；更严重的是
+    `claimNext` 在事务内解析事件，一条旧 pending 会让整批回滚并在每个 tick 重复，
+    永久饿死新告警。
+  - 修复：`normalized_json` 精确等于 `'{}'` 时，用 ingest 同一 INSERT 写入的
+    `title/message/severity/status/fingerprint/labels_json/occurred_at` 重建；
+    其它非法 JSON 仍抛错。无写库、无迁移、完全可逆。
+  - 新增 `docs/planning/decisions/legacy-normalized-event-repair.md`，并在
+    `docs/architecture/sqlite-store.md` 记录占位符语义。
+  - 验证：`vp check` 0 errors（12 条既有 warning，新增 warning 已修）；`vp run -r test`
+    4/4（console 555）；`vp run -r build` 通过；CI 绿后 rebase 合并。
+
+### requirements lane
+
+新增 8 条候选（已写入 backlog）：
+
+- **REQ-57（29）**：Route 全空条件（catch-all）保存护栏。空规则会匹配所有告警，
+  表单没有任何确认；抑制表单已有同类先例（`route.ts:17-49`、`route-form.ts:8-15`、
+  `route-forms.tsx:231-238,463-470`、`suppression-forms.tsx:224-226,467-488`）。
+- **REQ-58（28）**：失败投递区分「等待重试」与「重试耗尽」。列表 DTO 缺
+  `maxAttempts`；`operations.ts:86-113`、`history.repository.ts:224-244,284-297`。
+- **REQ-59（27）**：配置对象 → 过滤后历史一键钻取；复用现有 URL 参数
+  （`operation-search.ts:12-23`、`source-actions.tsx:46-160`、`routes-section.tsx:185-265`）。
+- **REQ-60（26）**：停用对象滞留投递的列表可见性与恢复预警
+  （`delivery.repository.ts:215-232`、`delivery-retention-notice.tsx:1-20`）。
+- **REQ-61（26）**：从投递详情按目标一键静默
+  （`delivery-detail-page.tsx:38-60`、`suppression-from-event-dialog.tsx:38-68`）。
+- **REQ-62（25）**：Dashboard 账户安全：修改密码与会话撤销
+  （`dashboard-user-menu-impl.tsx:80-111`、`auth-options.ts:67-69`）。
+- **REQ-63（25）**：Source 接入鉴权状态可见（仅派生布尔值）
+  （`source.ts:9-14`、`edit-source-form.tsx:38-52`、`intake.service.ts:344-374`）。
+- **REQ-64（25）**：Event/Delivery 详情 Tab 写入 URL
+  （`event-detail-view.tsx:25-27`、`delivery-detail-view.tsx:23-25`）。
+
+### release-infra lane
+
+- REL-3/6/7/10/2/5 状态未变。新证据：
+  - `docker compose -p tocsin-smoke config` 实测仍解析为 `image: tocsin:local`、
+    `source: tocsin-data`；`-p` 不隔离显式卷名和镜像 tag（`docker-compose.yml:7,35-37`、
+    `docker-smoke.sh:16-17,29,37`）。
+  - `scripts/docker-smoke.sh:37` 先 `down -v`、`:42` 才抓日志，失败时日志必丢；
+    三处 curl 无超时；`:92` 只用 `test -f`（REL-6 补充）。
+  - E2E 实测：`playwright test --list` 通过，但完整运行因缺
+    `chromium_headless_shell-1248`（缓存为 1234）立即失败；`just e2e` 没有安装步骤
+    （`Justfile:78-79`）。Playwright 1.64.1 先启动 webServer 再跑 globalSetup，
+    `global-setup.ts:13-18` 在服务已打开并迁移后删库（REL-7 补充）。
+  - `backup-restore-upgrade.md:123` 的 registry 升级路径使用 `--build`，与 `:170`
+    检查表矛盾（REL-10 补充）。
+  - **DOC-28（24，新增）**：`mvp-rc-checklist.md:18-19,125,216` 对 E2E/compose smoke
+    是否进 CI 的表述互相矛盾。
+- CI flaky 核查：main 近 25 次 24 success + 1 cancelled（concurrency），无 failure/rerun。
+
+### security-exposure lane
+
+- **SEC-5（HIGH，新增）**：自定义 header 值在配置导出中明文出现。
+  `destinationSecretPaths` 只把 `isSensitiveKey(headerName)` 命中的 header 加入 secret
+  path（`config-portability.ts:334-347,391-404`），而 manifest 把整个 header map 声明为
+  `valueSensitive` / `secretFields.path = "headers"`（`generic-webhook/manifest.ts:32-38,63-68`）。
+  `X-Custom-Auth: Bearer ...` 会明文进入导出文件；编辑 DTO 同样回显
+  （`destination.helpers.ts:395-413`）。需 EXPERT_PANEL 决定导出语义。
+- **SEC-6（23，新增）**：`tokenHash` 不在 `isSensitiveKey` 覆盖内（纵深防御，当前无输出路径）。
+- SEC-2/3/4 状态未变；import protection 构建无违规；其余 DTO、webhook 输入边界未发现新缺口；
+  `xqvvu/vane` 仅存在于历史日志/backlog 文本，无有效链接。
+
+### EXPERT_PANEL
+
+- **Q-20**：安全与可靠性专家、产品与运维专家均推荐 A（仅读取容错）；独立评估者推荐
+  C（回填 + 容错），备选 A。按「有分歧选最保守且可逆」实施 A。
+  决策记录：`docs/planning/decisions/legacy-normalized-event-repair.md`。
+  - 回滚：`git revert`，无数据库操作。
+  - 残余风险：未来若出现直读 `normalized_json` 的消费者，需重新评估回填。
+- **SEC-5** 于第 15 轮进入 EXPERT_PANEL（导出文件兼容性 + 脱敏语义），本轮不动。
+- REL-13（LICENSE）继续 `blocked-autonomous`。
+
+### 其他
+
+- Obsidian 同步：从 `~/Library/Application Support/obsidian/obsidian.json` 发现 vault
+  根目录 `~/Library/Mobile Documents/iCloud~md~obsidian/Documents`，现有 Tocsin 笔记在
+  `Vane/` 下，沿用 `Vane <Title>.md` 命名与底部 `## Related` wikilink 风格。已同步
+  `Vane SQLite Store`、`Vane Iteration Backlog`、`Vane Iteration Log`，并新建
+  `Vane Legacy Normalized Event Repair`、更新 `Vane Index`。
+- 本轮文档变更（决策记录、架构说明、backlog/log）随 PR #136 提交。
+
+### 下一轮优先项
+
+1. **SEC-5（HIGH）**：自定义 header 导出泄露；先跑 EXPERT_PANEL 再实现。
+2. **REQ-57（29）**：Route catch-all 保存护栏。
+3. **REQ-53（29）**：加急记录审计字段。
+4. **Q-21（28）**：搜索输入上限。
+5. 其余见 `iteration-backlog.md` 的「下一轮优先项」。
+
 ## 2026-10-19（第 13 轮）
 
 - 时间：2026-10-19 00:25 – 01:05 CST。
