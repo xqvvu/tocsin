@@ -8,6 +8,17 @@ import { AppIntlProvider } from "#/i18n/provider";
 
 describe("settings time zone combobox", () => {
   beforeEach(() => {
+    // TanStack Virtual measures its viewport with `clientHeight`/`clientWidth`
+    // (it switched from the offset metrics in 3.19). jsdom reports both as 0,
+    // so without these the virtualizer believes the list has no viewport and
+    // renders no rows at all. Keep the offset metrics too: element measurement
+    // still reads them.
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.dataset.slot === "time-zone-virtualized-list" ? 288 : 32;
+    });
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(320);
     vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
       this: HTMLElement,
     ) {
