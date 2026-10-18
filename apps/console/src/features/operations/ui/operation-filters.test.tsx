@@ -87,6 +87,20 @@ describe("operation filters by page scope", () => {
 
     expect(screen.getByTitle("Clear Route")).toBeTruthy();
   });
+
+  it("advertises the extra delivery search fields on the deliveries page", () => {
+    renderFilters("deliveries", {}, "toolbar");
+
+    expect(
+      screen.getByPlaceholderText("title, message, fingerprint, ID, error, destination, or route"),
+    ).toBeTruthy();
+  });
+
+  it("keeps the event search placeholder scoped to event fields", () => {
+    renderFilters("events", {}, "toolbar");
+
+    expect(screen.getByPlaceholderText("title, message, fingerprint, or ID")).toBeTruthy();
+  });
 });
 
 function renderFilters(

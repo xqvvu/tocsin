@@ -88,7 +88,11 @@ export function OperationFilters({
             id="operation-search"
             value={search.q ?? ""}
             disabled={pending}
-            placeholder={t("operations.filters.searchPlaceholder")}
+            placeholder={
+              scope === "deliveries"
+                ? t("operations.filters.searchPlaceholderDeliveries")
+                : t("operations.filters.searchPlaceholder")
+            }
             className="h-8 pl-7"
             onChange={(event) => onChange({ q: event.currentTarget.value })}
             aria-label={t("operations.filters.search")}
