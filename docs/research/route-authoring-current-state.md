@@ -117,7 +117,8 @@
 | 匹配了哪些 route、每个条件是否通过 | `events.route_matches_json`（`EventRecord.routeMatches`） |
 | 某条投递由哪条 route 产生 | `deliveries.route_id`（可空，`ON DELETE CASCADE`） |
 | 投递详情里的 route 定义 | `history.getEventDetail` 的 `DeliveryDetail.route`（`packages/core/src/operations.ts:87`）；`delivery.repository.ts:379` 按 `job.routeId` 现读 |
-| 被去重/被跳过的证据 | **不存在持久化字段**（仅 API 返回值） |
+| 被去重（幂等键已占用）的证据 | `delivery_dedupe_keys`（`source_id`、`idempotency_key`、`route_id`、`destination_id`、`first_event_id`、`created_at`，有 prune 窗口；`schema.ts:164-185`、`delivery.repository.ts:95,109`） |
+| 被跳过（`skipExisting`）的证据 | **不存在持久化字段**（仅 API 返回值） |
 
 ---
 
@@ -186,7 +187,7 @@
 ## 用户无法回答的问题（基于代码事实）
 
 1. **「这条告警明明命中 1 条路由，为什么一条投递都没有？」**
-   `enqueueForEvent` 的去重（`delivery_dedupe_keys`）与 `skipExisting` 只回传计数、不落库（`delivery.repository.ts:81-107`；`AcceptedWebhook` 非持久化）；Event detail 无对应证据位。
+   `enqueueForEvent` 的 `skipExisting` 仍只回传计数、不落库（`delivery.repository.ts:81-107`；`AcceptedWebhook` 非持久化）；去重证据已持久化在 `delivery_dedupe_keys`（`schema.ts:164-185`、`delivery.repository.ts:95,109`），但 Event detail 仍无对应证据位。
 
 2. **「label 没匹配上——事件里 `service` 到底是什么值？」**
    `evaluateLabels`（`route.ts:172-181`）的 detail 只含期望值；UI 原样渲染英文 detail（`event-detail-route-matches-table.tsx` `RouteCheckBadge`）。

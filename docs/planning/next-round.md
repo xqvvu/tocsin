@@ -1,6 +1,11 @@
 # 下一轮工作决策备忘（Next Round Decision Memo）
 
-- 基线：`origin/main` @ `7b5d501`（PR #62 合并后），工作树 `/Users/chuanhu9/devs/vane/.wt/a`
+- 基线：`origin/main` @ `2f48153`（第 9 轮迭代合并后）；工作树由自主迭代 routine 按轮重建，
+  见 `docs/planning/iteration-log.md`
+- 状态校正（2026-10-18）：S0 已由 `a460a6f` 修复（`config-portability.ts:358-370` 的穷尽
+  switch 会让新 kind 编译失败而不是静默漏脱敏）；route explain、destination registry audit、
+  adapter test-kit 与 console 的 `iconName` 消费也已落地。
+  本文是历史决策备忘，续做前请按当前 `origin/main` 与 `docs/planning/iteration-backlog.md` 复核。
 - 性质：**决策备忘，不是执行任务。** 本文只回答「下一步做什么、按什么顺序、谁来做、卡在哪」。
 - 输入文档（第一轮设计产出，均在 main 上）：
   1. `docs/research/route-authoring-current-state.md`（Route Explain 现状 + 候选切片 A/B/C）

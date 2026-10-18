@@ -20,8 +20,9 @@ Destination 模板预览目前只能用内置样例 Event 渲染。内置样例�
   `resolvePreviewSample` 会读取历史 Event、脱敏 raw payload 与 headers，并把
   `sample.kind` 标记为 `historical_event`。
 
-但控制台从未传过这个参数：`destinations-page.tsx` 的三个预览入口都只传 `sampleStatus`，
-预览对话框也不展示当前样例来源。用户故事 11 因此没有真正交付。
+在此前的实现里，控制台从未传过这个参数：`destinations-page.tsx` 的三个预览入口都只传
+`sampleStatus`，预览对话框也不展示当前样例来源。本切片已补齐这条链路（见下文范围与
+验收标准），用户故事 11 现已交付。
 
 ## 用户故事
 

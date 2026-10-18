@@ -147,6 +147,7 @@ export interface SqliteDatabaseSchema {
   oncall_pings: OncallPingsTable;
   oncall_ping_dedupe_keys: OncallPingDedupeKeysTable;
   settings: SettingsTable;
+  suppressions: SuppressionsTable;
   schema_migrations: SchemaMigrationsTable;
   user: BetterAuthUserTable;
   session: BetterAuthSessionTable;
@@ -195,6 +196,7 @@ export interface OpenSqliteStoreOptions {
     attempt: () => string;
     feishuApp: () => string;
     oncallPing: () => string;
+    suppression: () => string;
   }>;
 }
 

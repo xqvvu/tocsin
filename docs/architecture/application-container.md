@@ -112,7 +112,7 @@ Middleware 分两层：`apps/console/src/middlewares/request-logging.middleware.
 Dashboard context 与 webhook context 是两条不同认证边界：
 
 - Dashboard procedures 在实现处 `.use(requireDashboard())` 注入 `context.dashboardRequest`。该 middleware 内部调用 `requireDashboardRequestContext()`，使用 Better Auth session，并拒绝非 owner/admin 用户。
-- Public auth probes（如 `session.getDashboardSession`）不能挂会提前抛错的 dashboard middleware；它们可以在 handler 内直接调用 `requireDashboardRequestContext()`，捕获 auth error 后返回 `null`。
+- Public auth probes（如 `session.getDashboardSession`）不能挂会提前抛错的 dashboard middleware；它们可以在 handler 内直接调用宽容版 `findDashboardContext()`，把 auth 错误折成 `null` 后返回。
 - Webhook API route 调用 `createWebhookRequestContext()`，只读取 Source token / 额外共享密钥，不读取 dashboard session。上游监控系统不需要也不应该拥有浏览器 session。
 
 `server/runtime/dashboard-auth.ts` 已删除。session 类型和 auth error 在 `dashboard-session.ts`，实际鉴权逻辑在 `request-context.ts`。
