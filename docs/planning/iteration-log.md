@@ -2,6 +2,90 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 6 轮）
+
+- 时间：2026-10-18 18:16–19:00 CST（10:16–11:00Z）。
+- 基线：`origin/main` @ `e4dcab9`；本轮合并后为 `73e0691`（#118）、`ecb8a8e`（#119）。
+- 本轮类型：**需求切片 + 小修复**（非 full-audit）。最近全量审计为第 1 轮（13:30 CST），
+  距本轮开始不足 6 小时；backlog 有多个 ≥27 分候选，按第 1.5 步规则继续。
+- 车道轮转位置：本轮跑 `requirements` + `release-infra` + `architecture`。
+  `requirements` 与 `release-infra` 已返回；`architecture` 超时未返回，下一轮补跑
+  `architecture` + `docs-drift` + `quality`（`release-infra` 已覆盖）。
+- 工作树：写入隔离仍禁止本会话修改 `agent-iteration`；`agent-iteration` 仅用于并发锁，
+  实现与验证使用会话工作树 `compassionate-blackburn-817360`，收尾时删除两者。
+
+### 本轮交付
+
+- PR #118 `feat(console): surface retention-pruned raw payloads explicitly`
+  （rebase 合并 `73e0691`）。
+  - `EventDetail` 新增派生字段 `rawPayloadPruned`；`isPrunedRawPayload` 精确匹配
+    `{retentionPruned:true}` 哨兵，真实载荷带同名字段不误判。
+  - Raw 标签页在已清理时显示「原始数据已按保留策略清理」说明，不再把哨兵当 JSON 渲染。
+  - 新增中文 mini-PRD `docs/prd/raw-payload-pruned-state.md`；中英文案同步。
+  - 新增 7 条测试；console 503 tests 全绿；`vp check` 0 errors、build 通过。
+- PR #119 `test(console): cover resolver failures on the delivery send path`
+  （rebase 合并 `ecb8a8e`）。
+  - 覆盖 `resolveDestinationConfig` 的 `DomainValidationError`（最终失败、不重试）与
+    未知异常（脱敏后记录）两条此前无测试的分支。
+
+### requirements lane
+
+新增 6 条候选（已写入 backlog），本轮最高分 **REQ-26（29）**：
+
+- **REQ-26（29）**：Destination 用真实历史 Event 预览。服务端 `previewDestination` 已接受
+  `sampleEventId` 并能读取历史事件（`destination.service.ts:197-212`），但控制台从未传参
+  （`destinations-page.tsx:179-188`）；预览对话框也不显示样例来源。纯前端切片。
+- **REQ-27（28）**：Deliveries 列表只显示 source + eventId，不显示告警标题/严重程度/状态，
+  而筛选面板允许按 severity/status 过滤（`delivery-event-cell.tsx:1-18`、
+  `history.repository.ts:218-237`、`operation-filters.tsx:248-308`）。
+- **REQ-25（27）**：抑制规则试跑预览。PRD 承诺 `preview` 与范围预览
+  （`alert-suppression.md:97,209,238`），代码只有 list/get/hits；
+  `urgent-impact-preview.tsx` 只按 destinationIds 缩小目标，不评估事件。
+- 中长期：REQ-28（21，投递历史名称快照，需 forward-only 0004）、REQ-29（24，抑制保留期清理）、
+  REQ-30（25，配置页搜索/过滤）。
+- 合并建议：REQ-21 扩为 `deliveryOutcome + routeMatch=none|any`；REQ-9/REQ-12/Route 最近活动
+  共用 `ConfigurationActivitySummary` DTO。已写入对应 backlog 备注。
+- 附带确认：FIX-8（抑制 `createdBy` 永远为空）仍是 REQ-25 的前置项。
+
+### release-infra lane
+
+复核 REL-1..5 仍存在，修正一处旧结论：**当前 token 已有 `workflow` scope**，
+REL-1 的阻碍是发布 gate 设计与 spec 覆盖，不是权限。新增发现：
+
+- **N2（升级 REL-3 到 28）**：`docker-compose.yml:7,32-37` 固定镜像 `tocsin:local` 与全局卷名
+  `tocsin-data`；`docker-smoke.sh:16-17,29,37` 固定项目名/端口并复用同一 compose 文件。
+  正常栈运行时 smoke 会挂载真实 SQLite 卷（双 worker 竞争）并覆盖镜像 tag，
+  `down -v` 会删除真实数据卷。应先加 `docker-compose.smoke.yml` override。
+- **N1（REL-6，26）**：smoke 断言弱于 checklist：`test -f` 无法区分命名卷与匿名卷；
+  `curl -f` 不校验 HTML；没有 restart 持久化验证（`docker-smoke.sh:91-98`）。
+- **N3（REL-7，26）**：E2E 等 `/api/health` 而非 `/api/ready`；固定 4173 端口与
+  `/tmp/tocsin-e2e.sqlite`；`global-setup.ts:14-21` 重复默认值；未固定 locale。
+- **N4（REL-8，23）**：没有任何门禁同时覆盖「生产构建 + 真实操作链路」。
+- **N5（REL-9，25）**：migration 测试全部使用 `:memory:`，文件库/WAL/校验和未覆盖。
+- **N6（REL-10，25）**：备份恢复 runbook 未删除快照中不存在的旧 `-wal`/`-shm`。
+- **N7（REL-11，22）**、**N9（REL-12，24）**、**N10（REL-13，blocked-autonomous）**、
+  **N8/N11（REL-14，20）**：workflow 校验、Node 版本文档、LICENSE 缺失、发布卫生项。
+- 已核实非问题：CI 权限最小化、Node 版本接线、migration 升级单测、health/ready 语义。
+
+### 本轮未做 / 备注
+
+- 未做浏览器实测：本机没有运行中的 Tocsin console dev server。
+- Obsidian 同步跳过：本会话没有 `obsidian-vault` skill。
+- 无 EXPERT_PANEL 事项；REL-13（LICENSE）记录为 `blocked-autonomous`，需后续专家小组
+  做法律/产品决策。
+- 仓库禁止 squash merge，两个 PR 均以 rebase 合并。
+
+### 下一轮优先项
+
+1. REQ-26（29）：Destination 历史 Event 预览（纯前端）。
+2. REQ-27（28）：Deliveries 列表告警身份。
+3. REL-3（28）：Docker smoke 卷/镜像/项目/端口隔离。
+4. REQ-25（27）：抑制规则试跑预览。
+5. REL-6 + REL-7（26/26）：smoke 断言与 E2E harness 隔离。
+6. Q-12/Q-13/Q-4/Q-5：纯测试补齐。
+7. FIX-8（26）、DOC-4/6/11/12 + REL-12。
+8. 补跑 `architecture` lane；REL-1/REL-4 在扩 spec 后再接 CI。
+
 ## 2026-10-18（第 5 轮）
 
 - 时间：2026-10-18 17:25–18:05 CST（09:25–10:05Z）。
