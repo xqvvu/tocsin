@@ -15,8 +15,9 @@ Docker runtime 形态。
 再用 `to-issues` 拆分新需求。
 
 它不等于稳定公开发布已经完成。截至 2026-10-13，发布文档（release checklist、Docker 生产部署、
-备份/恢复/升级/回滚）与 README 的状态措辞已经补齐，见 `docs/release/`；仍然缺的是关键浏览器 E2E
-workflow、compose smoke automation，以及 delivery history retention 之类的长期可靠性策略。
+备份/恢复/升级/回滚）与 README 的状态措辞已经补齐，见 `docs/release/`；仍然缺的是把关键浏览器
+E2E 与 compose smoke automation 接入 CI（脚本已存在并在本机实测通过，见下方 gate），以及
+delivery history retention 之类的长期可靠性策略。
 
 ## 已完成的 MVP 能力
 

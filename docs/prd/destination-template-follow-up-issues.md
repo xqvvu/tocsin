@@ -2,9 +2,14 @@
 
 Parent issue: https://github.com/xqvvu/tocsin/issues/15
 
-本文档把 `Follow-up destination template modes` 拆成后续可领取的垂直切片。当前不直接实现
-Slack blocks、Email HTML 或 generic webhook JSON 模板；这些模式需要先基于 Feishu 模板引擎的
-落地结果确认边界，再逐个进入 AFK 实现。
+本文档把 `Follow-up destination template modes` 拆成后续可领取的垂直切片。
+
+**状态（2026-10-18 核实）：三种模式均已实现。** Slack `slack_blocks`
+（`packages/destinations/src/slack/schema.ts`）、Email `subjectTemplate` / `htmlTemplate`
+（`packages/destinations/src/email/schema.ts`）与 generic webhook `json_payload`
+（`packages/destinations/src/generic-webhook/schema.ts`）均已落地，共享模式定义见
+`packages/destinations/src/template.ts`。本文档保留为历史切片记录，下方未勾选的验收项是当时的
+交付清单，未逐条回填。
 
 ## 1. Review Follow-Up Destination Template Requirements
 

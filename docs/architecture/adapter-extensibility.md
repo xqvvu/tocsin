@@ -123,8 +123,9 @@ Adapter runtime 只接收已经解析、已经校验的 typed config。`secretRe
 安全摘要和 redaction helper，不做自定义 redaction policy DSL。
 
 `configSchema` 是运行时默认值的唯一真相。Manifest 的 `defaultValue` 只是 UI 初始化提示；
-新增或调整默认值时，通过 adapter 自测或 catalog 投影测试覆盖，不维护 destination registry
-audit。
+新增或调整默认值时，通过 adapter 自测或 catalog 投影测试覆盖。destinations registry 也提供
+`audit()`（`packages/destinations/src/registry.ts`），默认 registry 的 manifest 与 config
+schema 一致性由 `registry.test.ts` 强制。
 
 持久化的 Source/Destination config 必须始终 schema-valid。UI 可以有本地草稿，但 SQLite
 和可移植配置导入不保存 invalid draft。
@@ -198,8 +199,8 @@ worker 拥有策略"的既有分工一致。
 `messageTemplate` 已由 Destination config 内联的 `template` 模型替代，不做迁移兼容。模板仍然只
 允许安全、确定性的变量插值，不执行用户提供的 JavaScript、表达式、SQL、shell 或任意动态代码。
 
-第一阶段实现共享模板模型、渲染器和诊断能力，并覆盖 Feishu `text` 与 `feishu_card`。Slack、
-Email 和 generic webhook 可以先保留文本模式，后续再扩展到平台原生结构化模板：
+共享模板模型、渲染器和诊断能力已覆盖下列模式（2026-10-18 核实；四种模式的联合定义见
+`packages/destinations/src/template.ts`）：
 
 - Feishu：支持文本消息和交互式卡片，卡片结构需要 adapter 级 schema 校验与预览。
 - Slack：支持普通文本和 Block Kit 风格的结构化消息。

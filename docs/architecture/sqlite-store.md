@@ -451,7 +451,7 @@ raw driver 的 unknown row 返回；这些 helper 只作为低层兼容工具保
 修改 SQLite 层后至少运行：
 
 ```bash
-vp -C apps/console run typecheck
+vp check
 vp -C apps/console test run
 ```
 

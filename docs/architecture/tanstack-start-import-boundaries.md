@@ -66,7 +66,7 @@ LogTape 的 environment-neutral logger/context 接口，运行时由 server entr
 - 不在 module 初始化阶段调用 runtime/container、打开数据库、读取 secret 或创建 service。
 - 不把 `#/server/orpc/*`、`#/infra/*`、Better Auth server runtime 或 `node:*` 带进任何 client-safe import chain。
 
-Public procedure（`health`、`i18n`、`auth.getDashboardSession`）不挂 `requireDashboard()`。`i18n.getRequestLocale` 在 handler 内直接 import `getApplicationContainer()`；`auth.getDashboardSession` 捕获 auth error 后返回 nullable state。
+Public procedure（`health`、`i18n`、`session.getDashboardSession`）不挂 `requireDashboard()`。`i18n.getRequestLocale` 在 handler 内直接 import `getApplicationContainer()`；`session.getDashboardSession` 捕获 auth error 后返回 nullable state。
 
 Private dashboard procedures 一律 `.use(requireDashboard())`，并在 contract 上声明 `dashboardAuth.error`：
 
@@ -109,7 +109,7 @@ Feature 的 `api/*.queries.ts` / `api/*.mutations.ts` 导入 `#/lib/orpc`，并�
 
 跨 client/server 的 oRPC contract、error map、procedure input/output schema 与 client 类型放在 `@tocsin/api`：
 
-- `packages/api/src/contract/`：按 namespace 拆分的 contract（`auth`、`destinations`、`health`、`i18n`、`operations`、`portability`、`routes`、`settings`、`sources`）。
+- `packages/api/src/contract/`：按 namespace 拆分的 contract（`session`、`destinations`、`health`、`i18n`、`integrations`、`operations`、`portability`、`routes`、`settings`、`sources`、`suppressions`）。
 - `packages/api/src/errors/`：共享 `dashboardAuth` error map。
 - `packages/api/src/schemas/`：procedure input/output schema。
 - `packages/api/src/client.ts`：`RPCClient = RouterContractClient<typeof contract>`，由 `server/orpc/router.ts` 的 `satisfies` 检查实现是否漂移。
