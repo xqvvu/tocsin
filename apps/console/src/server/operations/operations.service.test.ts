@@ -122,6 +122,94 @@ describe("operations service", () => {
   });
 });
 
+describe("operations service time range", () => {
+  it("resolves the relative window against the injected clock for both lists", async () => {
+    let nextId = 0;
+    const store = await openSqliteStore({
+      databasePath: ":memory:",
+      now: () => "2026-10-12T10:00:00.000Z",
+      ids: {
+        source: () => "source-1",
+        destination: () => "destination-1",
+        route: () => "route-1",
+        event: () => `event-${++nextId}`,
+        delivery: () => `delivery-${++nextId}`,
+        attempt: () => `attempt-${++nextId}`,
+      },
+    });
+    const service = new OperationsService({
+      store,
+      oncall: new OncallService({ store }),
+      // Pinned so the boundary is a fact of the test, not of the wall clock.
+      now: () => new Date("2026-10-12T10:00:00.000Z"),
+    });
+
+    await store.sources.create({
+      id: "source-1",
+      name: "Generic source",
+      provider: "generic",
+      tokenHash: "token-hash",
+    });
+    await store.destinations.create({
+      id: "destination-1",
+      name: "Ops webhook",
+      kind: "generic_webhook",
+    });
+    await store.routes.create({
+      id: "route-1",
+      name: "Critical",
+      rule: { severities: ["critical"] },
+      destinationIds: ["destination-1"],
+    });
+
+    const eventAt = (title: string, receivedAt: string) =>
+      store.intake.recordEvent({
+        sourceId: "source-1",
+        idempotencyKey: title,
+        receivedAt,
+        normalized: {
+          title,
+          message: title,
+          severity: "critical",
+          status: "firing",
+          fingerprint: `fp-${title}`,
+          labels: {},
+          occurredAt: receivedAt,
+        },
+        rawPayload: {},
+      });
+
+    const oldEvent = await eventAt("old", "2026-10-12T09:00:00.000Z");
+    const recentEvent = await eventAt("recent", "2026-10-12T09:50:00.000Z");
+
+    for (const [event, at] of [
+      [oldEvent, "2026-10-12T09:00:00.000Z"],
+      [recentEvent, "2026-10-12T09:50:00.000Z"],
+    ] as const) {
+      await store.deliveries.enqueueForEvent({
+        event,
+        matches: [{ routeId: "route-1", destinationIds: ["destination-1"] }],
+        dedupeWindowStartsAt: at,
+        now: at,
+      });
+    }
+
+    const all = await service.listOperations({ limit: 10 });
+    expect(all.events.total).toBe(2);
+    expect(all.deliveries.total).toBe(2);
+
+    // 15 minutes before the pinned clock is 09:45, so the 09:00 pair drops out
+    // of both lists while the 09:50 pair stays.
+    const recent = await service.listOperations({ limit: 10, range: "15m" });
+    expect(recent.events.items.map((event) => event.id)).toEqual([recentEvent.id]);
+    expect(recent.events.total).toBe(1);
+    expect(recent.deliveries.items.map((delivery) => delivery.eventId)).toEqual([recentEvent.id]);
+    expect(recent.deliveries.total).toBe(1);
+
+    await store.close();
+  });
+});
+
 function oncallPing(): OncallPing {
   return {
     id: "ping-1",

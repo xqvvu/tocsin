@@ -45,3 +45,38 @@ describe("delivery page in the operation search", () => {
     expect(merged.eventPage).toBe(3);
   });
 });
+
+describe("time range in the operation search", () => {
+  it("accepts every supported window and rejects an unknown one", () => {
+    // The URL is user-editable; an unknown window must fall back to "all time"
+    // instead of reaching the server as an unvalidated string.
+    for (const range of ["15m", "1h", "6h", "24h", "7d"]) {
+      expect(DashboardOperationSearchSchema.parse({ range }).range).toBe(range);
+    }
+
+    expect(DashboardOperationSearchSchema.parse({ range: "30d" }).range).toBe("");
+  });
+
+  it("keeps the default window out of the URL", () => {
+    expect(pruneSearch({ range: "" }).range).toBeUndefined();
+    expect(pruneSearch({ range: "1h" }).range).toBe("1h");
+  });
+
+  it("resets both lists to their first page when the window changes", () => {
+    const merged = mergeOperationSearch(
+      { eventPage: 4, deliveryPage: 3, range: "24h" },
+      { range: "1h" },
+    );
+
+    expect(merged.range).toBe("1h");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+
+  it("keeps the window while paging", () => {
+    const merged = mergeOperationSearch({ range: "1h", eventPage: 2 }, { eventPage: 3 });
+
+    expect(merged.range).toBe("1h");
+    expect(merged.eventPage).toBe(3);
+  });
+});

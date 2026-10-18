@@ -16,6 +16,17 @@ import type { SourceSummary } from "#core/source/source";
 
 export type IsoDateTimeString = string;
 
+/**
+ * Relative windows the Events and Deliveries lists can be narrowed to.
+ *
+ * The window is resolved server-side against the request time, so the value
+ * stays stable in the URL while the absolute lower bound moves forward on each
+ * request. An empty value means "all time" and is not represented here.
+ */
+export const OperationTimeRangeSchema = z.enum(["15m", "1h", "6h", "24h", "7d"]);
+
+export type OperationTimeRange = z.infer<typeof OperationTimeRangeSchema>;
+
 export interface NumberedPage<T> {
   items: T[];
   total: number;

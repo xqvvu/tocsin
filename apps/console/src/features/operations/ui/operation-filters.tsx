@@ -149,6 +149,7 @@ export function OperationFilters({
                 status: "",
                 destinationId: "",
                 deliveryState: "",
+                range: "",
                 q: "",
               })
             }
@@ -312,6 +313,41 @@ function OperationFiltersPanel({
           </SelectContent>
         </Select>
       </UiField>
+      <UiField>
+        <FieldLabel htmlFor="operation-range">{t("operations.filters.timeRange")}</FieldLabel>
+        <Select
+          id="operation-range"
+          items={[
+            { value: null, label: t("operations.filters.anyTime") },
+            { value: "15m", label: t("operations.filters.timeRangeOptions.15m") },
+            { value: "1h", label: t("operations.filters.timeRangeOptions.1h") },
+            { value: "6h", label: t("operations.filters.timeRangeOptions.6h") },
+            { value: "24h", label: t("operations.filters.timeRangeOptions.24h") },
+            { value: "7d", label: t("operations.filters.timeRangeOptions.7d") },
+          ]}
+          value={search.range || null}
+          disabled={pending}
+          onValueChange={(value) =>
+            onChange({
+              range: (value ?? "") as DashboardOperationSearch["range"],
+            })
+          }
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={t("operations.filters.anyTime")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value={null}>{t("operations.filters.anyTime")}</SelectItem>
+              <SelectItem value="15m">{t("operations.filters.timeRangeOptions.15m")}</SelectItem>
+              <SelectItem value="1h">{t("operations.filters.timeRangeOptions.1h")}</SelectItem>
+              <SelectItem value="6h">{t("operations.filters.timeRangeOptions.6h")}</SelectItem>
+              <SelectItem value="24h">{t("operations.filters.timeRangeOptions.24h")}</SelectItem>
+              <SelectItem value="7d">{t("operations.filters.timeRangeOptions.7d")}</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </UiField>
       <UiField className={compact ? "sm:col-span-2" : undefined}>
         <FieldLabel htmlFor="operation-delivery-state">
           {t("operations.filters.deliveryState")}
@@ -423,6 +459,15 @@ function activeFilterChips(
       label: t("operations.filters.deliveryState"),
       valueLabel: t(`common.deliveryState.${search.deliveryState}`),
       clear: { deliveryState: "" },
+    });
+  }
+
+  if (search.range) {
+    chips.push({
+      key: "range",
+      label: t("operations.filters.timeRange"),
+      valueLabel: t(`operations.filters.timeRangeOptions.${search.range}`),
+      clear: { range: "" },
     });
   }
 

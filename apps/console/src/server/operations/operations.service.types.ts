@@ -5,6 +5,7 @@ import type {
   NormalizedEvent,
   NumberedPage,
   OncallPing,
+  OperationTimeRange,
 } from "@tocsin/core";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
@@ -17,6 +18,11 @@ export interface OperationsPager {
 export interface OperationsServiceOptions {
   store: SqliteStore;
   oncall: OperationsPager;
+  /**
+   * Clock used to resolve relative time windows. Injectable so tests can pin
+   * the boundary instead of racing the wall clock.
+   */
+  now?: () => Date;
 }
 
 export interface ListOperationsInput {
@@ -26,6 +32,7 @@ export interface ListOperationsInput {
   status?: NormalizedEvent["status"];
   destinationId?: string;
   deliveryState?: DeliveryState;
+  range?: OperationTimeRange;
   q?: string;
   eventPage?: number;
   deliveryPage?: number;

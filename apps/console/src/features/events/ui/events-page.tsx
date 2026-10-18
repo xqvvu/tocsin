@@ -56,6 +56,7 @@ export function EventsPage({ search, filters, onSearchChange }: EventsPageProps)
       status: "",
       destinationId: "",
       deliveryState: "",
+      range: "",
       q: "",
     });
   }

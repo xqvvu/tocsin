@@ -60,6 +60,7 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
       status: "",
       destinationId: "",
       deliveryState: "",
+      range: "",
       q: "",
     });
   }

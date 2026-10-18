@@ -92,6 +92,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("events.status", "=", query.status);
     }
 
+    if (query.since) {
+      builder = builder.where("events.received_at", ">=", query.since);
+    }
+
     if (query.q) {
       const q = `%${query.q}%`;
 
@@ -262,6 +266,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("deliveries.state", "=", query.state);
     }
 
+    if (query.since) {
+      builder = builder.where("deliveries.created_at", ">=", query.since);
+    }
+
     if (query.q) {
       const q = `%${query.q}%`;
 
@@ -305,6 +313,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.status) {
       builder = builder.where("events.status", "=", query.status);
+    }
+
+    if (query.since) {
+      builder = builder.where("events.received_at", ">=", query.since);
     }
 
     if (query.q) {
@@ -358,6 +370,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.state) {
       builder = builder.where("deliveries.state", "=", query.state);
+    }
+
+    if (query.since) {
+      builder = builder.where("deliveries.created_at", ">=", query.since);
     }
 
     if (query.q) {
