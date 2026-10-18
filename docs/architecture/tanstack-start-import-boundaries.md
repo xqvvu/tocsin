@@ -62,19 +62,22 @@ LogTape 的 environment-neutral logger/context 接口，运行时由 server entr
 因此 client-safe code 只 import `#/lib/orpc`，由 TanStack Start 的 build 剥掉 server 分支；`#/server/orpc/**` 属于 server-only implementer，静态 imports 规则是：
 
 - `server/orpc/os.ts` 只组装 `implement(contract)` 与全局 procedure middleware，不接触 store。
-- 每个 feature router 只做 input 适配、取 service、调业务方法；service 通过 `context.dashboardRequest.container` 或 handler 内的窄 runtime accessor 获取。
+- 每个 feature router 只做 input 适配、取 service、调业务方法；service 通过
+  `withDashboardService(...)` 注入的 `context.service` 获取，需要 container 本身时才读取
+  `context.dashboardRequest.container`。
 - 不在 module 初始化阶段调用 runtime/container、打开数据库、读取 secret 或创建 service。
 - 不把 `#/server/orpc/*`、`#/infra/*`、Better Auth server runtime 或 `node:*` 带进任何 client-safe import chain。
 
 Public procedure（`health`、`i18n`、`session.getDashboardSession`）不挂 `requireDashboard()`。`i18n.getRequestLocale` 在 handler 内直接 import `getApplicationContainer()`；`session.getDashboardSession` 捕获 auth error 后返回 nullable state。
 
-Private dashboard procedures 一律 `.use(requireDashboard())`，并在 contract 上声明 `dashboardAuth.error`：
+Private dashboard procedures 在 contract 上声明 `dashboardAuth.error`，并用
+`withDashboardService(...)` 声明依赖；handler 只调用 `context.service`：
 
 ```ts
 export const sourcesRouter = os.sources.router({
-  create: os.sources.create.use(requireDashboard()).handler(async ({ context, input }) =>
-    (await context.dashboardRequest!.container.createSourceService()).createSource(input),
-  ),
+  create: os.sources.create
+    .use(withDashboardService((container) => container.createSourceService()))
+    .handler(async ({ context, input }) => context.service.createSource(input)),
 });
 ```
 
@@ -117,7 +120,7 @@ Feature 的 `api/*.queries.ts` / `api/*.mutations.ts` 导入 `#/lib/orpc`，并�
 command schema、input validator、DTO 和投影类型放在 `@tocsin/core`：
 
 - `packages/core/src/configuration/configuration-commands.ts`：Source/Destination/Route/Settings、TOML/JSON import/export command schema。
-- `packages/core/src/operations/operations.ts`：Events/Deliveries list/detail DTO、worker health/run result projection。
+- `packages/core/src/operations.ts`：Events/Deliveries list/detail DTO、worker health/run result projection。
 - 既有 Source、Destination、Route、Delivery、Event schema 分别放在 `packages/core/src/<module>/`。
 
 `@tocsin/api` 与 `@tocsin/core` 必须保持 env-neutral，不得导入：

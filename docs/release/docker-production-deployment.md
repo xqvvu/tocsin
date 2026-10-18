@@ -25,7 +25,7 @@
 ## 2. 镜像与容器事实
 
 - **构建**：多阶段构建。build 阶段用 `ghcr.io/voidzero-dev/vite-plus:1.1.0`，按 `.node-version`
-  （当前 `26.11.1`）装 Node 与依赖，产物是 `apps/console/.output`；runtime 阶段是
+  （当前 `26.12.0`）装 Node 与依赖，产物是 `apps/console/.output`；runtime 阶段是
   `debian:trixie-slim` + 从 build 阶段拷来的 node 二进制，只安装 `gosu`、`curl`、`libatomic1`、
   `ca-certificates`。
 - **启动命令**：`node .output/server/index.mjs`（Nitro node-server preset）。容器内监听

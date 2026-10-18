@@ -195,7 +195,7 @@ export const sourcesRouter = os.sources.router({
 
 ### 4.3 middleware
 
-四个文件，都在 `server/orpc/middlewares/`：
+三个实现文件（另有 `dashboard-context.test.ts`），都在 `server/orpc/middlewares/`：
 
 - `request-id.ts`：用 `middlewares/request-logging.middleware.ts` 的 `resolveRequestId()` 解析
   request id（复用请求中间件已归一化的 `x-request-id` / `x-correlation-id`），写入

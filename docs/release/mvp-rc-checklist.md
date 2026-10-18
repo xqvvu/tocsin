@@ -186,6 +186,8 @@ raw payload retention 已可配置并在 intake 路径执行清理；服务端�
   （2026-10-18 校正：领域模型、持久化、投递层执行、service/oRPC/页面均已落地；仍未落地的是窗口结束后的
   通知型汇总和抑制 retention 清理。）
 - 搜索与排障体验：更强的 Events/Deliveries filter、时间范围、fingerprint 视图、route explain。
+  （2026-10-18 校正：Events/Deliveries 筛选、相对时间范围、按事件/投递 ID 搜索与 route explain
+  均已落地；仍未实现的是 fingerprint 聚合视图、绝对时间窗口与筛选结果导出。）
 - 自托管发布硬化：CI/E2E/Docker smoke、部署文档、备份恢复、升级回滚。
   （2026-10-18 校正：部署、备份恢复、升级回滚文档与 release checklist 已完成；E2E 与 Docker smoke 脚本
   已落地，但尚未接入 CI。）
