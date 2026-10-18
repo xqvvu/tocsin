@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 2 轮）
+
+- 时间：2026-10-18 14:30–14:40 CST（06:30–06:40Z）。
+- 基线：`origin/main` @ `6ea9ec1`；本轮合并后为 `411846e`。
+- 工作树：`/Users/chuanhu9/devs/tocsin/.claude/worktrees/cranky-bell-ed610f`。
+- 本轮类型：**escalated-fix + requirements**（非 full-audit）。
+- 最近全量审计：2026-10-18 第 1 轮（约 13:30 CST）；下次全量审计最早在 19:30 CST 之后。
+- 车道轮转位置：本轮已跑 `requirements`；下轮从 `quality` → `architecture` 继续，之后
+  `release-infra` → `docs-drift` → `security-exposure`。
+- 并发锁：未使用。routine 指定的 `agent-iteration` 工作树被本会话写入隔离拦截，
+  改用会话独占工作树 `cranky-bell-ed610f`；下一轮仍应在可用工作树内先检查/创建锁。
+
+### EXPERT_PANEL：SEC-1
+
+- 三位专家（安全与可靠性 / 产品与运维 / 独立评估者）独立评审后一致同意实施。
+- 最终选择：`isSensitiveKey` 归一化键名 + 精确集合 + 凭据词尾规则；`redactText`
+  的正则由同一规则程序化生成，支持带引号 JSON；保留 `tokenCount` / `maxTokens` /
+  `privateKeyId` 可见。
+- 决策记录：`docs/planning/decisions/secret-redaction-coverage.md`。
+- 附带发现：FastGPT 探测错误在逐键脱敏后仍会暴露上游 code/message，改为原始错误
+  呈凭据形状时整体隐藏（`packages/providers/src/fastgpt/parse.ts`）。
+- 证据：`packages/core/src/redaction.ts:5-8`、`config-portability.ts:302-326`、
+  `configuration.integration.test.ts:29-89`。
+
+### EXPERT_PANEL：Q-1
+
+- 三位专家一致同意实施。
+- 最终选择：共享层 `createTimeoutFetch`（10s 默认，传 signal + race deadline，
+  覆盖响应体），`DestinationErrorKind` 产生 `timeout` + `retryable`；环境变量
+  `TOCSIN_DESTINATION_TIMEOUT_MS`（1–30000ms）注入 worker、destination test 与
+  Feishu app 测试。
+- 取舍：上限取 30s（产品/运维专家）而非 60s（安全专家），保守且低于 5 分钟 stale 窗口。
+- 决策记录：`docs/planning/decisions/outbound-http-timeout.md`。
+- 证据：`packages/destinations/src/utils.ts:75-82`、`types.ts:51-57`、
+  `delivery-worker.service.ts:40,75-77`。
+
+### requirements lane
+
+新增 5 条候选（已写入 backlog）：
+
+- **REQ-7（29）**：停用目标造成投递静默滞留。`claimNext` 跳过停用目标/路由
+  （`delivery.repository.ts:219-226`），但 enqueue 不检查（`:97-168`）；投递 DTO 已有
+  `destination.enabled` / `route.enabled`（`packages/core/src/operations.ts:110-121`），
+  UI 未展示（`delivery-summary-tab.tsx:14-65`；`routes-section.tsx:319-338`）。
+- **REQ-8（28）**：Deliveries 按 `created_at` 排序/过滤（`history.repository.ts:240,269-271`），
+  表格却展示 `updated_at`（`deliveries-table.tsx:106-108`），重试后的旧投递会从时间窗口消失。
+- **REQ-9（27）**：告警源缺少「最近接收时间」，无法区分上游安静与 Webhook 失效
+  （`packages/core/src/source/source.ts:13-18`；`sources-section.tsx:38-77`）。
+- **REQ-10（27）**：Event/Delivery 详情互链缺失，三处入口都是纯文本
+  （`delivery-summary-tab.tsx:30-43`；`event-detail-deliveries-table.tsx:52-77`；
+  `delivery-event-cell.tsx:9-17`）。
+- **REQ-11（25）**：Worker/队列健康只有手动运行响应可见（`packages/api/src/contract/operations.ts:84-87`），
+  RC checklist `:160` 声称已有 health/last-run，但后台 runner 状态不可见。
+
+附带发现：`next-round.md` 的 A/B/D2/D3/F3/F4/F7 切片已在当前代码落地，续做 DOC-4 时一并更新；
+`zh-Hans.json:545` 的「来源」与 AGENTS.md「告警源」不一致（FIX-7）；RC 剩余 gate 主要是
+E2E（REL-1）、provider fixtures（REL-2）与备份恢复演练。
+
+### 本轮交付
+
+- PR #107 `fix(core): widen secret redaction coverage`（rebase 合并 `03caa9b`）。
+  - 验证：`vp check` 0 errors；`vp run -r test` 全绿；`vp run -r build` 通过。
+- PR #108 `fix(destinations): bound outbound requests with a deadline`（rebase 合并 `411846e`）。
+  - 验证：`vp check` 0 errors；`vp run -r test` 全绿；`vp run -r build` 通过。
+
+### 下一轮优先项
+
+1. FIX-2 + FIX-3：搜索覆盖 fingerprint，并转义 LIKE 通配符。
+2. REQ-5：Deliveries 按路由过滤 + 筛选面板按页面能力渲染。
+3. DOC-1/2/3/4/5：一批高价值文档更正。
+4. FIX-6：导入配置拒绝字面量 `[REDACTED]`。
+5. REL-1：下一轮交 EXPERT_PANEL 裁决 E2E / Docker smoke 接入 CI。
+
 ## 2026-10-18（第 1 轮）
 
 - 基线：`origin/main` @ `db54860`（本轮开始时为 `2c10265`，期间主分支合入依赖升级）。
