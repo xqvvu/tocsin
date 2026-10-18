@@ -4,6 +4,7 @@ import { DeliveryDetailSummary } from "#/features/deliveries/ui/delivery-detail-
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
 import { DeliveryJsonBlock } from "#/features/deliveries/ui/delivery-json-block";
 import { DeliveryPingsTable } from "#/features/deliveries/ui/delivery-pings-table";
+import { DeliveryRetentionNotice } from "#/features/deliveries/ui/delivery-retention-notice";
 import { DeliverySummaryTab } from "#/features/deliveries/ui/delivery-summary-tab";
 import { DeliverySuppressionNotice } from "#/features/deliveries/ui/delivery-suppression-notice";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -16,6 +17,8 @@ export function DeliveryDetailView({ detail }: { detail: DeliveryDetailData }) {
       <DeliveryDetailSummary detail={detail} />
 
       {detail.job.state === "suppressed" ? <DeliverySuppressionNotice detail={detail} /> : null}
+
+      <DeliveryRetentionNotice detail={detail} />
 
       <Tabs
         defaultValue="summary"

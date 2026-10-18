@@ -324,13 +324,24 @@ function RouteDestinationsCell({
   destinations: DestinationSummary[];
 }) {
   const t = useTranslations();
-  const names = destinationIds.map((id) => {
-    return destinations.find((destination) => destination.id === id)?.name ?? id;
+  const resolved = destinationIds.map((id) => {
+    return destinations.find((destination) => destination.id === id);
   });
+  const names = resolved.map((destination, index) => destination?.name ?? destinationIds[index]);
+  const disabledCount = resolved.filter(
+    (destination) => destination && !destination.enabled,
+  ).length;
 
   return (
     <div className="min-w-0">
-      <div className="font-medium">{destinationIds.length}</div>
+      <div className="flex items-center gap-1.5">
+        <span className="font-medium">{destinationIds.length}</span>
+        {disabledCount > 0 ? (
+          <Badge variant="outline" title={t("routing.table.destinations.disabledHint")}>
+            {t("routing.table.destinations.disabledCount", { count: disabledCount })}
+          </Badge>
+        ) : null}
+      </div>
       <div className="text-muted-foreground mt-0.5 truncate text-[11px]" title={names.join(", ")}>
         {names.length > 0 ? names.join(", ") : t("routing.table.noDestinations")}
       </div>
