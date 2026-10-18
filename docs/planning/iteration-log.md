@@ -2,6 +2,76 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 4 轮）
+
+- 时间：2026-10-18 15:54–17:20 CST（07:54–09:20Z）。
+- 基线：`origin/main` @ `364270b`；本轮合并后为 `6002c9f`（#113）、`f21ccb6`（#114）。
+- 本轮类型：**需求切片 + 小修复**（非 full-audit）。最近全量审计为第 1 轮（13:30 CST），
+  距今 < 6 小时；backlog 有 ≥27 分候选，按第 1.5 步规则继续，不重跑全量审计。
+- 车道轮转位置：本轮跑 `requirements` + `quality` + `release-infra`。`requirements`、
+  `release-infra` 已返回；`quality` 超时未返回（连续第 2 轮），下一轮补跑或拆小任务。
+- 工作树：写入隔离仍禁止本会话修改 `agent-iteration`，改用会话工作树
+  `elated-franklin-f012b3`；`agent-iteration` 的并发锁已获取，收尾时删除工作树与锁。
+
+### 本轮交付
+
+- PR #113 `feat(console): scope operation filters and add route filtering`
+  （rebase 合并 `6002c9f`）。
+  - `OperationFilters` 新增 `scope`：Events 只渲染搜索、告警源、严重程度、状态、时间范围；
+    Deliveries 额外渲染目标、路由、投递状态。修复 Events 页两个静默 no-op。
+  - Deliveries 新增 URL `routeId`，贯穿 contract → service → repository 的列表与计数谓词；
+    路由下拉复用 `routesQueryOptions()`，保留停用路由以便查历史投递。
+  - 新增中文 mini-PRD `docs/prd/operation-filter-scope.md`；中英文文案同步。
+  - 新增 7 条测试；console 498 tests 全绿；`vp check` 0 errors、build 通过。
+- PR #114 `fix(console): reject redacted placeholders when importing configuration`
+  （rebase 合并 `f21ccb6`）。
+  - 导入在 feishu appSecret、source/destination `secret_refs` 环境值、kind-owned secret 路径、
+    source 顶层敏感键四个位置拒绝字面量 `[REDACTED]`；抛错回滚事务。
+  - 新增集成测试覆盖四类位置并断言 sources/destinations/feishu apps/settings 均未被修改；
+    console 499 tests 全绿。
+
+### requirements lane
+
+新增 4 条候选（已写入 backlog）：
+
+- **REQ-16（28）**：Event 详情一键按 fingerprint 静默；纯前端切片，复用抑制表单预填与
+  claim-time 抑制校验（`event-detail-page.tsx:49-59`、`suppression-forms.tsx:67-100`）。
+- **REQ-17（27）**：加急呼叫失败的全局可观测与再呼叫；投递成功但电话全失败时没有任何信号
+  （`oncall-execution.ts:136-159`、`delivery-execution.ts:104-118`）。
+- **REQ-18（27）**：按当前失败筛选批量重试投递；复用 `retryNow` 语义
+  （`delivery.repository.ts:411-440`），需确认框与硬上限。
+- **REQ-19（26）**：Events/Deliveries 按标签键值过滤；`json_each(labels_json)` 精确匹配，
+  建议 REQ-5 合入后再做（同文件）。
+- 附带 **FIX-8（26）**：抑制 `createdBy` 永远为空（`suppression.service.ts:53-71`）。
+
+### release-infra lane
+
+- **REL-3 升级到 27**：`docker-compose.yml:32-37` 显式全局卷名，配合
+  `docker-smoke.sh:16,36-37` 的 `down -v`，会删除正常部署的 `tocsin-data` 卷；
+  应在任何 Docker smoke 接入 CI 之前修复。
+- **REL-1 证据补全**：`ci.yml:16-51` 无 e2e job；`vite.config.ts:51` 排除 `e2e/**`；
+  全仓无 `playwright install`；`playwright.config.ts:7-9` 注释误称已有 workflow。
+- 新增 **REL-4（25）**：E2E spec 只覆盖 setup/source/destination/webhook/events，
+  未创建 Route、未验证 Delivery/retry/filter/重启/导出（`alert-flow.spec.ts:27`）。
+- 新增 **REL-5（24）**：build 产物启动与文件型 SQLite migration 无 CI smoke。
+- 新增 **DOC-9（27）**：发布文档声称没有 E2E/smoke、迁移只有 0001，与代码不符。
+- **REL-2 规模量化**：6 个 adapter 测试文件、19 个内联 payload、31 个用例。
+
+### 本轮未做
+
+- `quality` 车道超时未返回（连续第 2 轮）。
+- 未做浏览器实测：本机无运行中的 Tocsin console dev server。
+- Obsidian 同步跳过：本会话没有 `obsidian-vault` skill。
+
+### 下一轮优先项
+
+1. REQ-16（28）：Event 详情一键静默。
+2. REQ-8（28）：Deliveries 按最后活动过滤/排序。
+3. REQ-12 / REQ-13（28）：Destination 最近投递健康或 Source 接入自检。
+4. REL-3（27）：Docker smoke 卷隔离（需本地 Docker 实测）。
+5. DOC-9 + DOC-1..5/10：发布与架构文档批量更正。
+6. 补跑 quality lane（拆小任务避免再次超时）。
+
 ## 2026-10-18（第 3 轮）
 
 - 时间：2026-10-18 14:52–16:00 CST（06:52–08:00Z）。
