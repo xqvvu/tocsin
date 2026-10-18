@@ -2,6 +2,78 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 12 轮）
+
+- 时间：2026-10-18 23:25 – 2026-10-19 00:10 CST（15:25–16:10Z）。
+- 基线：`origin/main` @ `d09c5e2`；main 最近一次 CI 为 success，无遗留 open PR。
+- 本轮类型：**需求切片 + 小修复**（非 full-audit）。最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）；backlog 仍有多个 ≥27 分候选，按第 1.5 步继续消化，
+  不重跑全量审计。
+- 车道轮转位置：本轮跑 `requirements` + `docs-drift` + `architecture`。
+  `docs-drift` 返回 19 条发现；`requirements` 与 `architecture` 运行约 35 分钟无输出，
+  按车道限时规则停止，留待下一轮补跑。下一轮建议 `requirements` + `architecture`
+  + `quality`（`requirements` 每轮必跑）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `eloquent-heyrovsky-98a971`；收尾时删除该工作树的 `node_modules` 与 `agent-iteration`。
+
+### 本轮交付
+
+- PR #131（rebase 合并 `04a408e`）`feat(console): show external message reference on delivery detail`。
+  - **REQ-47**：投递详情「摘要」新增「外部消息引用」，展示可复制的
+    `providerReference.value` 与机器类型（如 `feishu_message_id`）；无引用显示 `-`
+    且不渲染复制按钮。扩展 `DeliveryDetailTerm` 的 `copyValue/copyLabel/hint`，
+    复用 `CopyableCodeLine`。
+  - 新增中文 mini-PRD `docs/prd/delivery-provider-reference.md`；中英文案同步；
+    新增 2 条摘要测试。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test`
+    console 546 + providers 183 + destinations 31 全绿；`vp run -r build` 通过。
+- PR #132（rebase 合并 `605cb13`）`fix(console): use 告警源 consistently in Chinese source copy`。
+  - **FIX-7**：事件列头、路由来源条件、抑制匹配器、通知目标模板变量分组共 10 处
+    中文文案统一为「告警源」；保留「模板来源/样例来源」。
+  - 验证：`vp check` 0 errors；`vp run -r test` 4/4 通过（console 544）。
+  - 纯文案改动，无行为变更。
+
+### docs-drift lane
+
+共 19 条，已整理为 backlog `DOC-21..DOC-27` 并复核 `DOC-11`：
+
+- **HIGH DOC-21（27）**：`docs/release/mvp-rc-checklist.md:164` 声称 dedupe cleanup
+  已改为有界批；实际 `delivery.helpers.ts:98-99` 的 `pruneDedupeKeys` 无 `LIMIT`，
+  仍是无界 `DELETE`，且与同文件 `:108-109` 自相矛盾。
+- **DOC-22（25）**：`docs/planning/next-round.md` 仍把 S0 与抑制写成未决缺口；
+  S0 已在 `config-portability.ts:358-370` 修复，抑制已于 2026-10-12 拍板并落地。
+- **DOC-23（24）**：`frontend-architecture.md:37-108` 与 `application-container.md:57`
+  的文件树/路由/工厂清单过期（缺 suppressions/integrations/oncall、csrf；
+  `auth/router.ts` 实为 `session/router.ts`）。
+- **DOC-24（24）**：`alert-suppression.md:238` 承诺不存在的 `preview` 过程
+  （contract `suppressions.ts:21-63` 无此项，实为 REQ-25）；`:275-294` AC 全未勾选；
+  `:289` 仍写「四状态」。
+- **DOC-25（23）**：`post-mvp-planning.md:215` 称缺投递缺口解释，实际
+  `routeMatchGaps` + `event-detail-route-gaps.tsx` 已上线；retention 已决定不自动清理。
+- **DOC-26（22）**：`delivery-retention-notice.md:10-12`（#111）、
+  `event-fingerprint-silence.md:5-7`（#116）、`raw-payload-pruned-state.md:9-12`（#118）
+  仍用现在时描述已修复的问题。
+- **DOC-27（20）**：ADR 0008 的 setup-vp/vite-plus 版本、ADR 0003 与 restructure-plan
+  的 `server/functions/`、`route-authoring-current-state.md:3` 的旧 `devs/vane` 路径过期。
+- 已确认：`docs/**` 中不再有 `xqvvu/vane` 链接；RC checklist 其余 `[x]` 均有代码支撑；
+  两个未勾选项（E2E 接入 CI、provider fixtures）仍准确。
+
+`requirements` 与 `architecture` 车道本轮未返回结果，未新增 REQ/ARCH 候选；
+backlog 中既有候选全部复核为仍成立（`requirements` 车道因超时未能逐条复核）。
+
+### EXPERT_PANEL
+
+- 本轮无新增 EXPERT_PANEL 事项；未触碰 schema/迁移、secret 处理、投递/路由/auth 语义。
+- REL-13（LICENSE）继续 `blocked-autonomous`。
+
+### 下一轮优先项
+
+1. **REL-3**（28，P0）：Docker smoke 隔离。
+2. **REQ-48**（28）：配置删除影响预检。
+3. **DOC-21**（27）：RC checklist 的 dedupe cleanup 断言；纯文档更正。
+4. **补跑 requirements + architecture 车道**（本轮均超时无输出）。
+5. 其余见 `iteration-backlog.md` 的「下一轮优先项」。
+
 ## 2026-10-18（第 11 轮）
 
 - 时间：2026-10-18 22:32–23:17 CST（14:32–15:17Z）。
