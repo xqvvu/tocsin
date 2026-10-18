@@ -2,6 +2,104 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 9 轮）
+
+- 时间：2026-10-18 20:34–21:15 CST（12:34–13:15Z）。
+- 基线：`origin/main` @ `2b6422e`（main CI 最近一次 success）。
+- 本轮类型：**需求切片**（非 full-audit）。最近全量审计仍是第 1 轮（13:30 CST），已超过
+  6 小时；但 backlog 有多个 ≥27 分候选且无遗留 open PR，按第 1.5 步优先消化高价值候选。
+- 车道轮转位置：本轮跑 `requirements` + `docs-drift` + `architecture`。
+  `requirements` 与 `docs-drift` 已返回；`architecture` 超过 30 分钟仍无输出，按记忆中的
+  车道限时停止，发现留待下一轮补跑。下一轮建议 `architecture` + `quality`
+  （`requirements` 每轮必跑）。
+- 工作树：写入隔离仍禁止本会话修改 `agent-iteration`；`agent-iteration` 仅用于并发锁，
+  实现与验证使用会话工作树 `heuristic-elgamal-310055`；收尾时删除该工作树的
+  `node_modules` 与 `agent-iteration` 工作树。
+
+### 本轮交付
+
+- PR #126 `feat(console): retry failed deliveries from the detail page`（open，CI green 后 rebase 合并）。
+  - 详情页工具栏新增 `DeliveryRetryButton`：仅 `failed` 态渲染，复用
+    `operations.retryDelivery`；成功后提示「投递已重新入队」并失效 operations 查询，
+    失败时展示服务端可读原因；请求进行中禁用。
+  - 非失败状态不渲染，避免用户点击后才收到状态错误（仓储只允许失败态重试，
+    `delivery.repository.ts:417-419`）。
+  - 新增中文 mini-PRD `docs/prd/delivery-detail-retry.md`；中英文案同步。
+  - 新增 4 条组件测试；console 517 tests 全绿；`vp check` 0 errors（11 条既有 warning）；
+    `vp run -r build` 通过。
+  - 未做浏览器实测：本机 5173 端口属于其他项目，没有运行中的 Tocsin console dev server。
+
+### requirements lane
+
+新增 5 条候选（已写入 backlog）：
+
+- **REQ-42（29）**：告警送达时效剖面。详情摘要与 attempts 表只有原始时间戳，没有排队/
+  发送/端到端耗时；DTO 已含 `createdAt/finishedAt`（`operations.ts:107-126`、
+  `delivery-summary-tab.tsx:13-66`、`delivery-attempts-table.tsx:29-45`）。纯前端派生。
+- **REQ-43（29）**：attempt 响应体/错误全文查看。响应体被截到 120 字并塞进 tooltip
+  （`delivery-attempts-table.tsx:56,75-77`、`operation-format.ts:49-56`），而 DTO 已有
+  完整且已脱敏的 `error`/`responseBody`（`operations.ts:109-116`）。
+- **REQ-44（27）**：未匹配路由事件直接补路由。事件详情只有静默/重放/返回
+  （`event-detail-page.tsx:57-71`）；新建路由表单没有初始 rule 入口
+  （`route-forms.tsx:50-90`）；明确不追溯 intake 快照。
+- **REQ-45（27）**：当前筛选窗口内的投递失败聚合。只有逐行列表；需只读 summary
+  procedure + Top N 目标/错误分组（`operations.ts:36-88`、`history.repository.ts:212-290`）。
+- **REQ-46（27）**：事件排障摘要一键复制。当前只能复制单个标识符
+  （`event-detail-term.tsx:7-44`）；摘要字段均已在页面
+  （`event-detail-summary.tsx:11-71`）。
+
+### docs-drift lane
+
+8 处断言过期（均写入 backlog，前 7 条为已存在的 DOC/REL 项复核）：
+
+- **DOC-11（高）**：`adapter-contribution-experience.md` 的「不存在」盘点大面积过期：
+  contributor guide/scaffold 已存在（`docs/contributing/destination-adapter.md:1`、
+  `scripts/new-destination-adapter.mjs:1`、`justfile:71-72`），test-kit 已导出
+  （`packages/destinations/src/test-kit/index.ts:1`），registry audit 已消费 `secretFields`
+  （`registry.ts:83,103`），`iconName` 已被 console 消费
+  （`destination-kind-icon.tsx:26-30`），S0 已改为穷尽 switch（`config-portability.ts:358-370`）。
+- **DOC-4（高）**：`next-round.md:3` 基线 `7b5d501` 与工作树路径过期；`:206-221` 仍把 S0
+  列为待做第一步，实际已由 `a460a6f` 修复。
+- **DOC-13（高）**：import boundaries 文档 4 处与代码不一致：procedure 示例应使用
+  `withDashboardService`（`sources/router.ts:5,9-11`）；core operations 路径应为
+  `packages/core/src/operations.ts:39`；public probe 使用 `findDashboardContext()`
+  （`session/router.ts:26`）；middleware 是 3 个文件而非 4 个。
+- **DOC-6（高）**：`application-container.md:56-69` 与 `frontend-architecture.md:37-108`
+  文件树仍缺 session/suppressions router、dashboard-context middleware、auth/integrations/
+  suppressions feature 与三个 repository。
+- **REL-12（中）**：`docker-production-deployment.md:28` 写 Node `26.11.1`，实际
+  `.node-version` 为 `26.12.0`。
+- **DOC-12（中）**：`route-authoring-current-state.md:120,189` 称去重证据不落库；
+  实际 `delivery_dedupe_keys` 已持久化（`schema.ts:164-185`、
+  `delivery.repository.ts:95,109`）。`skipExisting` 仍只回传计数，需要拆成两行。
+- **DOC-14（中）**：`sqlite-store.md:138-155` 的 schema 列表缺 `suppressions`，
+  `:189-198` 的 id 工厂缺 `suppression`（`schema.ts:33`、`store.ts:45`）。
+- **DOC-19（新，26）**：`mvp-rc-checklist.md:188` 仍把时间范围、ID 搜索、route explain
+  列为下一轮候选，实际均已落地；fingerprint 视图仍未做。
+- **DOC-20（新，22）**：`destination-historical-event-preview.md:24` 仍称控制台从未传
+  `sampleEventId`，与顶部「已实现」矛盾（PR #122 后遗留）。
+
+### architecture lane
+
+超过 30 分钟仍无输出，按车道限时停止，发现留待下一轮补跑（连续第 3 个未返回的车道）。
+
+### 本轮未做 / 备注
+
+- Obsidian 同步跳过：本会话没有 `obsidian-vault` skill。
+- 无 EXPERT_PANEL 事项。
+- 仓库禁止 squash merge，PR 以 rebase 合并。
+
+### 下一轮优先项
+
+1. **REQ-42/REQ-43**（29）：投递详情时效剖面、attempt 响应体全文；同一页面、纯前端。
+2. **REQ-37**（29）：投递搜索覆盖失败原因/目标/路由。
+3. **REQ-27**（28）：Deliveries 列表告警身份。
+4. **REQ-32**（28）：解析失败事件的诊断可见性。
+5. **REL-3**（28）：Docker smoke 卷/镜像/项目/端口隔离。
+6. **REQ-22/REQ-24/REQ-12/REQ-13**（28）：既有高价值切片。
+7. 补跑 `architecture` + `quality` 车道。
+8. DOC-4/6/11/12/13/14/19/20 + REL-12：文档批量更正，可合并一个 `docs:` PR。
+
 ## 2026-10-18（第 8 轮）
 
 - 时间：2026-10-18 20:04–20:35 CST（12:04–12:35Z）。
