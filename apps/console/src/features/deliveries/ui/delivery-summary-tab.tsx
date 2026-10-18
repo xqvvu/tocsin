@@ -44,6 +44,13 @@ export function DeliverySummaryTab({ detail }: { detail: DeliveryDetailData }) {
           mono
         />
         <DeliveryDetailTerm
+          label={t("deliveries.detail.terms.providerReference")}
+          value={detail.providerReference?.value ?? "-"}
+          copyValue={detail.providerReference?.value}
+          copyLabel={t("deliveries.detail.actions.copyProviderReference")}
+          hint={detail.providerReference?.type}
+        />
+        <DeliveryDetailTerm
           label={t("deliveries.detail.terms.state")}
           value={t(`common.deliveryState.${detail.job.state}`)}
         />

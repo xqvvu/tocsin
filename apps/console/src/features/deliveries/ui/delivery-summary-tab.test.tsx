@@ -48,6 +48,36 @@ describe("delivery summary tab", () => {
     expect(screen.queryByText("Send time")).toBeTruthy();
     expect(screen.getAllByText("-").length).toBeGreaterThanOrEqual(3);
   });
+
+  it("shows the target-system message reference with its type and a copy action", () => {
+    renderSummary(
+      detailFixture({
+        createdAt: "2026-10-12T10:00:00.000Z",
+        finishedAt: "2026-10-12T10:00:20.000Z",
+        providerReference: { type: "feishu_message_id", value: "om_abc123" },
+      }),
+      [],
+    );
+
+    expect(screen.getByText("External reference")).toBeTruthy();
+    expect(screen.getByText("om_abc123")).toBeTruthy();
+    // Machine-readable type stays untranslated so it matches adapter output.
+    expect(screen.getByText("feishu_message_id")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy external reference" })).toBeTruthy();
+  });
+
+  it("does not offer a copy action when the delivery has no message reference", () => {
+    renderSummary(
+      detailFixture({
+        createdAt: "2026-10-12T10:00:00.000Z",
+        finishedAt: "2026-10-12T10:00:20.000Z",
+      }),
+      [],
+    );
+
+    // A copy button that copies the literal "-" placeholder is worse than none.
+    expect(screen.queryByRole("button", { name: "Copy external reference" })).toBeNull();
+  });
 });
 
 function renderSummary(detail: DeliveryDetailData, attempts: DeliveryAttempt[]): void {
@@ -61,6 +91,7 @@ function renderSummary(detail: DeliveryDetailData, attempts: DeliveryAttempt[]):
 function detailFixture(overrides: {
   createdAt: string;
   finishedAt: string | null;
+  providerReference?: DeliveryDetailData["providerReference"];
 }): DeliveryDetailData {
   return {
     job: {
@@ -103,7 +134,7 @@ function detailFixture(overrides: {
     destinationMetadata: {},
     route: null,
     renderedPayload: null,
-    providerReference: null,
+    providerReference: overrides.providerReference ?? null,
     attempts: [],
     pings: [],
   } as unknown as DeliveryDetailData;
