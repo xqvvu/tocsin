@@ -97,11 +97,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
     }
 
     if (query.q) {
-      const q = `%${query.q}%`;
-
-      builder = builder.where((eb) =>
-        eb.or([eb("events.title", "like", q), eb("events.message", "like", q)]),
-      );
+      builder = builder.where(eventSearchPredicate(query.q));
     }
 
     const rows = await builder.execute();
@@ -271,11 +267,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
     }
 
     if (query.q) {
-      const q = `%${query.q}%`;
-
-      builder = builder.where((eb) =>
-        eb.or([eb("events.title", "like", q), eb("events.message", "like", q)]),
-      );
+      builder = builder.where(eventSearchPredicate(query.q));
     }
 
     const rows = await builder.execute();
@@ -320,11 +312,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
     }
 
     if (query.q) {
-      const q = `%${query.q}%`;
-
-      builder = builder.where((eb) =>
-        eb.or([eb("events.title", "like", q), eb("events.message", "like", q)]),
-      );
+      builder = builder.where(eventSearchPredicate(query.q));
     }
 
     const row = await builder.executeTakeFirst();
@@ -377,11 +365,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
     }
 
     if (query.q) {
-      const q = `%${query.q}%`;
-
-      builder = builder.where((eb) =>
-        eb.or([eb("events.title", "like", q), eb("events.message", "like", q)]),
-      );
+      builder = builder.where(eventSearchPredicate(query.q));
     }
 
     const row = await builder.executeTakeFirst();
@@ -398,4 +382,29 @@ function countMatchedRoutes(routeMatchesJson: string | null): number {
   return decodeSchemaJson(RouteMatchResultsSchema, routeMatchesJson).filter(
     (match) => match.matched,
   ).length;
+}
+
+/**
+ * The search box searches title, message, and fingerprint
+ * (`operations.filters.searchPlaceholder`). Every list and count query shares
+ * this one predicate so a page and its `total` cannot disagree.
+ */
+function eventSearchPredicate(term: string) {
+  const pattern = escapeLikeTerm(term);
+
+  return sql<boolean>`(
+    events.title LIKE ${pattern} ESCAPE '\\'
+    OR events.message LIKE ${pattern} ESCAPE '\\'
+    OR events.fingerprint LIKE ${pattern} ESCAPE '\\'
+  )`;
+}
+
+/**
+ * SQLite reads `%` and `_` as wildcards and `\` as the escape character. The
+ * operator search is a literal substring search, so escape all three before
+ * wrapping the term; otherwise `%` matches every row and `cpu_high` also
+ * matches `cpu-high`.
+ */
+function escapeLikeTerm(term: string): string {
+  return `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
 }

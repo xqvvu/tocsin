@@ -1,0 +1,144 @@
+import { describe, expect, it } from "vite-plus/test";
+
+import { createSqliteDatabase } from "#/infra/sqlite/connection";
+import { SqliteRepositoryContext } from "#/infra/sqlite/context";
+import { migrateSqliteDatabase } from "#/infra/sqlite/migrate";
+import { createSqliteRepositories } from "#/infra/sqlite/store";
+
+const NOW = "2026-10-12T10:00:00.000Z";
+
+async function repositoryWithSearchFixtures(): Promise<
+  ReturnType<typeof createSqliteRepositories>["history"]
+> {
+  const db = createSqliteDatabase({ databasePath: ":memory:" });
+  await migrateSqliteDatabase(db);
+
+  await db
+    .insertInto("sources")
+    .values({
+      id: "src-1",
+      name: "Prometheus",
+      provider: "generic",
+      token_hash: "hash",
+      created_at: NOW,
+      updated_at: NOW,
+    })
+    .execute();
+
+  await db
+    .insertInto("destinations")
+    .values({
+      id: "dest-1",
+      name: "Pager",
+      kind: "generic_webhook",
+      created_at: NOW,
+      updated_at: NOW,
+    })
+    .execute();
+
+  const event = (id: string, fingerprint: string, title: string, message: string) => ({
+    id,
+    source_id: "src-1",
+    fingerprint,
+    severity: "critical" as const,
+    status: "firing" as const,
+    title,
+    message,
+    labels_json: "{}",
+    normalized_json: "{}",
+    provider_metadata_json: "{}",
+    raw_payload_json: "{}",
+    raw_headers_json: "{}",
+    received_at: NOW,
+    occurred_at: NOW,
+    created_at: NOW,
+  });
+
+  await db
+    .insertInto("events")
+    .values([
+      event("event-fingerprint", "fp-cpu-high", "Disk full", "root volume"),
+      event("event-underscore", "fp-underscore", "cpu_high", "usage"),
+      event("event-hyphen", "fp-hyphen", "cpu-high", "usage"),
+      event("event-percent", "fp-percent", "100% packet loss", "loss"),
+      event("event-message", "fp-message", "Memory", "oom"),
+    ])
+    .execute();
+
+  await db
+    .insertInto("deliveries")
+    .values(
+      [
+        "event-fingerprint",
+        "event-underscore",
+        "event-hyphen",
+        "event-percent",
+        "event-message",
+      ].map((eventId) => ({
+        id: `delivery-${eventId}`,
+        event_id: eventId,
+        destination_id: "dest-1",
+        state: "pending" as const,
+        created_at: NOW,
+        updated_at: NOW,
+      })),
+    )
+    .execute();
+
+  return createSqliteRepositories(new SqliteRepositoryContext({ db })).history;
+}
+
+function ids(items: Array<{ id: string }>): string[] {
+  return items.map((item) => item.id).sort();
+}
+
+describe("history search", () => {
+  it("matches the event fingerprint promised by the search placeholder", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const page = await repository.listEvents({ q: "fp-cpu" });
+
+    expect(ids(page.items)).toEqual(["event-fingerprint"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("matches the fingerprint from the deliveries list too", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const page = await repository.listDeliveries({ q: "fp-cpu" });
+
+    expect(ids(page.items)).toEqual(["delivery-event-fingerprint"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("keeps title and message matches working", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "disk" });
+    const deliveries = await repository.listDeliveries({ q: "oom" });
+
+    expect(ids(events.items)).toEqual(["event-fingerprint"]);
+    expect(ids(deliveries.items)).toEqual(["delivery-event-message"]);
+  });
+
+  it("treats % as a literal character instead of a wildcard", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "%" });
+    const deliveries = await repository.listDeliveries({ q: "%" });
+
+    expect(ids(events.items)).toEqual(["event-percent"]);
+    expect(events.total).toBe(1);
+    expect(ids(deliveries.items)).toEqual(["delivery-event-percent"]);
+    expect(deliveries.total).toBe(1);
+  });
+
+  it("treats _ as a literal character instead of a single-character wildcard", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "cpu_high" });
+
+    expect(ids(events.items)).toEqual(["event-underscore"]);
+    expect(events.total).toBe(1);
+  });
+});
