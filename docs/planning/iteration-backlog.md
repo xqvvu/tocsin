@@ -21,6 +21,11 @@
 | REQ-3 | Route 样例 Event 干跑预览 | post-MVP 方向 2 | 27 | candidate | — | 必须复用 core matcher；不写 events/deliveries |
 | REQ-6 | Fingerprint 聚合排障视图 | post-MVP 方向 4 | 27 | candidate | — | 只读聚合 + 精确下钻；注意 GROUP BY 成本 |
 | REQ-4 | 过滤态空状态与一键重置 | 运维摩擦 | 26 | candidate | — | 区分「无数据」与「筛选无匹配」 |
+| REQ-20 | 配置导入预检与变更摘要 | requirements lane | 27 | candidate | — | 只读 preview procedure + 导入前 create/update/unchanged 摘要；`config-portability.service.ts:140-245` |
+| REQ-21 | Events 按投递结果筛选（无投递/失败/被抑制） | requirements lane | 27 | candidate | — | URL `deliveryOutcome`；EXISTS/NOT EXISTS；`history.repository.ts:47-77` 已有统计 |
+| REQ-22 | 补投预览目标级明细与执行范围一致 | requirements lane | 28 | candidate | — | Event 预览已有 `targets` 未渲染；Route 预览只显示前 10 条却执行全部（`route-replay-prompt.tsx:161-162`） |
+| REQ-23 | Raw payload 保留策略清理的显式状态 | requirements lane | 28 | candidate | — | 哨兵 `{retentionPruned:true}` 被当普通 JSON 渲染（`intake.helpers.ts:23-25`、`event-raw-tab.tsx:10-17`） |
+| REQ-24 | 抑制窗口汇总（影响面复盘） | requirements lane | 28 | candidate | — | 新增只读 summary procedure；`suppression-detail-page.tsx:35-43` 只有 hits.total |
 | REQ-7 | 停用目标造成投递静默滞留 | requirements lane | 29 | shipped | #111 | 投递详情滞留警示 + 路由列表停用目标徽标；`DeliveryRetentionNotice`；PRD `docs/prd/delivery-retention-notice.md` |
 | REQ-8 | Deliveries 按最后活动过滤与排序 | requirements lane | 28 | candidate | — | 列表按 `created_at`（`history.repository.ts:240,269-271`），表格展示 `updated_at` |
 | REQ-9 | 告警源最近接收时间 | requirements lane | 27 | candidate | — | `SourceSummary` 无时间字段；聚合 `MAX(events.received_at)` |
@@ -30,7 +35,7 @@
 | REQ-13 | 告警源接入自检 dry-run | requirements lane | 28 | candidate | — | provider manifest `testPayload` 无消费者；`source-actions.tsx:21-163`、`packages/api/src/contract/sources.ts:24-45` |
 | REQ-14 | Raw/debug JSON 搜索与折叠 | requirements lane | 27 | candidate | — | `event-json-block.tsx:14-47`、`delivery-json-block.tsx:14-47`；post-MVP 方向 4 `:133` |
 | REQ-15 | 存储容量与历史增长信号 | requirements lane | 26 | candidate | — | 只读 PRAGMA/COUNT；`settings.ts:5-9`、`operational-summary.tsx:30-58` |
-| REQ-16 | Event 详情一键按 fingerprint 静默 | requirements lane | 28 | candidate | — | 纯前端切片；复用抑制表单预填 source+fingerprint；`event-detail-page.tsx:49-59`、`suppression-forms.tsx:67-100` |
+| REQ-16 | Event 详情一键按 fingerprint 静默 | requirements lane | 28 | shipped | #116 | 工具栏「静默此指纹」对话框；复用创建表单预填 source+fingerprint；PRD `docs/prd/event-fingerprint-silence.md` |
 | REQ-17 | 加急呼叫失败的全局可观测与再呼叫 | requirements lane | 27 | candidate | — | 投递成功但电话全失败时无信号；`oncall-execution.ts:136-159`、`delivery-execution.ts:104-118`；需只读投影 |
 | REQ-18 | 按当前失败筛选批量重试投递 | requirements lane | 27 | candidate | — | 复用 `retryNow` 语义；需确认框 + 硬上限 200；`delivery.repository.ts:411-440` |
 | REQ-19 | Events/Deliveries 按标签键值过滤 | requirements lane | 26 | candidate | — | `json_each(labels_json)` 精确匹配；建议 REQ-5 合入后再做（同文件） |
@@ -48,10 +53,16 @@
 | Q-1 | 出站 HTTP 无超时，单个挂起目标会卡住单进程 worker | 质量 lane | — | shipped | #108 | EXPERT_PANEL 一致：共享层 10s deadline，`timeout`/可重试；决策 `docs/planning/decisions/outbound-http-timeout.md` |
 | Q-2 | 出站响应体无上限 | 质量 lane | 26 | candidate | — | 与 inbound 的 body limit 对齐 |
 | Q-3 | Provider `*Result` 函数对非对象 payload 直接 throw | 质量 lane | 25 | candidate | — | 边界契约不一致 |
-| Q-4 | Destination service NOT_FOUND 分支无测试 | 质量 lane | 26 | candidate | — | 五个方法缺少 missing-id 用例 |
-| Q-5 | History repository 查询覆盖薄 | 质量 lane | 27 | candidate | — | sourceId、组合筛选、越界页、损坏 `route_matches_json` |
+| Q-4 | Destination service NOT_FOUND 分支无测试 | 质量 lane | 26 | candidate | — | 实测 6 个分支：update/delete/getTemplateDraft/test/preview/previewUpdate + sampleEventId；`configuration.integration.test.ts` 无 missing-id 用例 |
+| Q-5 | History repository 查询覆盖薄 | 质量 lane | 27 | candidate | — | sourceId、组合筛选、越界页均无测试；损坏 `route_matches_json` 会让整页抛错（`history.repository.ts:385-393`） |
 | Q-6 | 超时 `errorKind` 未持久化，Deliveries 只显示英文 `lastError` | Q-1 panel | 24 | candidate | — | `delivery-execution.ts:134-141`；需 forward-only 加列 + UI 文案映射 |
 | Q-7 | 同批投递串行发送，慢投递仍造成队头阻塞 | Q-1 panel | 20 | candidate | — | `delivery-worker.service.ts:75-77`；超时已缓解，并发化需单独设计 |
+| Q-8 | `markSucceeded` 抛错会被当作发送失败并重试，导致重复发送/重复 page | quality lane | 26 | candidate | — | `delivery-execution.ts:72` 的 try 覆盖 93-102；`delivery-execution.test.ts:292-317` 无持久化失败注入 |
+| Q-9 | 同批 attempt 共用 run 开始时间，`finishedAt == startedAt`，退避可能已过期 | quality lane | 24 | candidate | — | `delivery-worker.service.ts:48,76,79`；`delivery-execution.ts:101,140,175,224` |
+| Q-10 | claim 后单条 execute 抛错会中断整批，剩余投递滞留 `running` | quality lane | 24 | candidate | — | `delivery-worker.service.ts:55-77,85-93`；无 post-claim 部分失败测试 |
+| Q-11 | `resolveDestinationConfig` 两条错误分支无测试 | quality lane | 24 | candidate | — | `delivery-execution.ts:72-78,142-159`；AUTO_FIX 补两条 fake resolver 用例 |
+| Q-12 | `testDestination` 失败分支的脱敏 DTO 无测试 | quality lane | 24 | candidate | — | `destination.service.ts:187-194`；现有 fetch 永远 `ok: true` |
+| Q-13 | worker 脱敏测试未注入 secret，只依赖驱动错误文本 | quality lane | 20 | candidate | — | `delivery-worker.service.test.ts:840-854`；应注入带 secret 的 fake store 错误 |
 | REL-1 | CI 未接入 E2E | RC checklist A | 24 | candidate | — | `ci.yml:16-51` 仅 quality job；`vite.config.ts:51` 排除 `e2e/**`；`Justfile:77-84` 仅本地；全仓无 `playwright install`；`playwright.config.ts:7-9` 注释误称已有 workflow |
 | REL-2 | Provider payload fixture 目录 | RC checklist E | 27 | candidate | — | 6 个 adapter 测试文件、19 个内联 payload、31 个用例；`packages/providers/src/` 无 fixture 目录 |
 | REL-3 | Docker smoke 使用全局卷名，`down -v` 会删正常数据卷 | 发布 lane | 27 | candidate | — | `docker-compose.yml:32-37` 显式 `name: tocsin-data`；`docker-smoke.sh:16,36-37` `down -v` 会删真实卷；应加 compose override |
@@ -66,32 +77,35 @@
 | ARCH-7 | routes/suppressions section 内联 cell/actions/empty state | architecture lane | 23 | candidate | — | `routes-section.tsx:161,273,286,319,341`、`suppressions-section.tsx:173,194,200,247,260,363` |
 | ARCH-8 | public i18n router 内联 locale 业务逻辑 | architecture lane | 22 | candidate | — | `server/orpc/features/i18n/router.ts:13-25`；缺 request-locale service |
 | ARCH-9 | `locale-cookie.ts` 直接用浏览器 API 且被 server router 导入 | architecture lane | 23 | candidate | — | `locale-cookie.ts:29-35,37-47`；拆 `.client` 实现，neutral 部分保留 |
-| DOC-1 | RC checklist 断言「抑制没有 UI 入口」 | docs drift | 27 | candidate | — | `docs/release/mvp-rc-checklist.md:55-56`；实际 service/router/UI 全在 |
-| DOC-2 | 4 处 `xqvvu/vane` 仓库链接过期 | docs drift | 25 | candidate | — | ADR 0010、RC checklist、两份模板 PRD |
-| DOC-3 | 模板表单「只支持 Feishu 模式」等三处限制已过期 | docs drift | 26 | candidate | — | manifest 驱动模式选择器、Email 字段均已落地 |
+| DOC-1 | RC checklist 断言「抑制没有 UI 入口」 | docs drift | 27 | shipped | #117 | 两处校正为已实现，写明剩余未落地项 |
+| DOC-2 | 4 处 `xqvvu/vane` 仓库链接过期 | docs drift | 25 | shipped | #117 | 全部改为 `xqvvu/tocsin`；issue #47 标注已关闭 |
+| DOC-3 | 模板表单「只支持 Feishu 模式」等三处限制已过期 | docs drift | 26 | shipped | #117 | 三份文档更新为 manifest 驱动模式选择器与 Email 字段已落地 |
 | DOC-4 | `next-round.md` 基线 `7b5d501` 过期，S0 已修复 | docs drift | 25 | candidate | — | 更新基线；标注 `a460a6f` 已修复；A/B/D2/D3/F3/F4/F7 也已在当前代码落地 |
-| DOC-5 | 迁移计划仍写「只有 0001 baseline」 | docs drift | 25 | candidate | — | 已有 `0002_suppressions`、`0003_complete_legacy_schema` |
-| DOC-6 | 架构文档文件树漂移（`migrate.ts`、`auth/router.ts`、缺 suppressions） | docs drift | 24 | candidate | — | `sqlite-store.md`、`application-container.md`、`frontend-architecture.md` |
-| DOC-7 | 抑制 PRD/决策文档状态仍写「草案/待拍板」 | docs drift | 24 | candidate | — | E1–E3 已落地 |
-| DOC-8 | README/AGENTS.md 的 pnpm 版本过期 | docs drift | 23 | candidate | — | `package.json` 现为 `pnpm@12.14.0`（本轮依赖升级后） |
-| DOC-9 | 发布文档声称没有 E2E/smoke、迁移只有 0001 | release-infra lane | 27 | candidate | — | `release-checklist.md:22,58-60,97,106-107`、`backup-restore-upgrade.md:27,32,37,179`、`mvp-rc-checklist.md:100-102,189-190,211-212`；实际有 E2E/smoke 与 0001-0003 |
-| DOC-10 | `route-explain-delivery-gap.md` 仍称「待实现」 | requirements lane | 24 | candidate | — | `docs/prd/route-explain-delivery-gap.md:3`；实现已落地 `event-detail-route-gaps.tsx:27-103` |
+| DOC-5 | 迁移计划仍写「只有 0001 baseline」 | docs drift | 25 | shipped | #117 | AGENTS、sqlite-store、发布与备份文档统一为 0001–0003 |
+| DOC-6 | 架构文档文件树漂移（`migrate.ts`、`auth/router.ts`、缺 suppressions） | docs drift | 24 | candidate | — | `sqlite-store.md` 已随 #117 修迁移/仓库树；`application-container.md`、`frontend-architecture.md` 仍待改 |
+| DOC-7 | 抑制 PRD/决策文档状态仍写「草案/待拍板」 | docs drift | 24 | shipped | #117 | 状态头与迁移约束已更新 |
+| DOC-8 | README/AGENTS.md 的 pnpm 版本过期 | docs drift | 23 | shipped | #117 | 对齐 `pnpm@12.14.0` |
+| DOC-9 | 发布文档声称没有 E2E/smoke、迁移只有 0001 | release-infra lane | 27 | shipped | #117 | 区分脚本已存在与 CI 未接入；rel 文档更新 |
+| DOC-10 | `route-explain-delivery-gap.md` 仍称「待实现」 | requirements lane | 24 | shipped | #117 | 状态与 R8 说明已对齐代码 |
+| DOC-11 | `adapter-contribution-experience.md` 的「不存在」盘点部分过期 | docs drift | 24 | candidate | — | F4/F6/F7/F8、S0 已有落地；需状态注记 |
+| DOC-12 | `route-authoring-current-state.md` 去重证据断言过期 | docs drift | 23 | candidate | — | `delivery_dedupe_keys` 已落库并有 prune 窗口（`schema.ts:164-185`） |
 
 ## 下一轮优先项
 
-1. **REQ-16**（28）：Event 详情一键按 fingerprint 静默；纯前端切片，复用现有抑制表单与
-   claim-time 抑制校验，风险最低。
-2. **REQ-8**（28）：Deliveries 按最后活动过滤/排序；与已合入的 `routeId` 同改
-   `history.repository.ts`，可复用本轮筛选面板。
-3. **REQ-12**（28）/ **REQ-13**（28）：Destination 最近投递健康，或 Source 接入自检 dry-run；
-   两者都需要一个新 summary/service 边界，二选一。
-4. **REL-3**（27）：Docker smoke 卷隔离。风险高于普通修复（会误删真实数据卷），
+1. **REQ-23**（28）：Raw payload 保留策略清理的显式状态；小切片、纯派生字段 + UI，
+   直接消除 `{retentionPruned:true}` 被误读为上游 payload 的排障陷阱。
+2. **REQ-22**（28）：补投预览目标级明细与执行范围一致；纯前端切片，修掉 Route 预览
+   “显示 10 条却执行全部”的信任问题。
+3. **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：抑制窗口汇总、Destination 最近投递健康、
+   Source 接入自检，三者都需要新 summary/service 边界，选一个推进。
+4. **REQ-8**（28）：Deliveries 按最后活动过滤/排序；与已合入的 `routeId` 同改
+   `history.repository.ts`。
+5. **REL-3**（27）：Docker smoke 卷隔离。风险高于普通修复（会误删真实数据卷），
    应在任何「Docker smoke 接入 CI」之前完成；需本地 Docker 实测。
-5. **DOC-9**（27）+ **DOC-1/2/3/4/5/10**：一批高价值文档更正，可合并为一个 `docs:` PR。
-6. **FIX-8**（26）：抑制 `createdBy` 永远为空。
-7. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（Route / Delivery / retry / filter）。
-8. **quality lane**：第 4 轮 quality 车道未在时限内返回（连续第 2 轮），下一轮优先补跑，
-   或把车道拆成更小的只读任务（单包/单目录）以避免超时。
+6. **Q-11/Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并为一个 `test:` PR。
+7. **FIX-8**（26）：抑制 `createdBy` 永远为空。
+8. **DOC-4/DOC-6/DOC-11/DOC-12**：剩余文档漂移，可再合并一个 `docs:` PR。
+9. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（Route / Delivery / retry / filter）。
 
 ## 已知过期输入
 

@@ -2,6 +2,84 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 5 轮）
+
+- 时间：2026-10-18 17:25–18:05 CST（09:25–10:05Z）。
+- 基线：`origin/main` @ `3e62eb7`；本轮合并后为 `a563ff7`（#116），#117 待合并。
+- 本轮类型：**需求切片 + 小修复**（非 full-audit）。最近全量审计为第 1 轮（13:30 CST），
+  距今 < 6 小时；backlog 有 ≥27 分候选，按第 1.5 步规则继续。
+- 车道轮转位置：本轮跑 `requirements` + `quality`（拆窄后首次返回）+ `docs-drift`。
+  下一轮建议 `release-infra` + `architecture`（`quality` 已覆盖，按 6 小时窗口轮转）。
+- 工作树：写入隔离仍禁止本会话修改 `agent-iteration`，实现使用会话工作树
+  `practical-shannon-179ae9`；`agent-iteration` 的并发锁已获取，收尾时删除。
+
+### 本轮交付
+
+- PR #116 `feat(console): silence an event fingerprint from its detail page`
+  （rebase 合并 `a563ff7`）。
+  - 事件详情工具栏新增「静默此指纹」，打开复用 `CreateSuppressionForm` 的对话框，
+    预填当前告警源 + 指纹 + 两小时窗口；告警源/目标按需加载，失败有可读提示。
+  - 新增纯函数 `suppressionDefaultsFromEvent` 与 `CreateSuppressionForm.defaultValues`。
+  - 新增中文 mini-PRD `docs/prd/event-fingerprint-silence.md`；中英文案同步。
+  - 新增 2 条测试；console 501 tests 全绿；`vp check` 0 errors、build 通过。
+- PR #117 `docs: correct migration, suppression, and release status claims`（待合并）。
+  - 更正 DOC-1/2/3/5/7/8/9/10：抑制已实现、migration 为 0001–0003、E2E/smoke 脚本存在但未接
+    CI、route explain 已实现、4 处仓库链接、pnpm 版本。
+  - 同步修正 `AGENTS.md` 的 migration 契约与不存在的 `migrate.ts` 入口。
+
+### requirements lane
+
+新增 5 条候选（已写入 backlog）：
+
+- **REQ-20（27）**：配置导入预检与变更摘要；导入实际是 upsert，UI 文案却称“替换”
+  （`config-portability.service.ts:140-245`、`portable-config-form.tsx:47-54`）。
+- **REQ-21（27）**：Events 按投递结果筛选（无投递/失败/被抑制）；事件列表已 join deliveries
+  统计（`history.repository.ts:47-77`），但查询契约无此维度。
+- **REQ-22（28）**：补投预览目标级明细与执行范围一致；Event 预览已有 `targets` 未渲染，
+  Route 预览只显示前 10 条却执行全部（`event-replay-action.tsx:153-175`、
+  `route-replay-prompt.tsx:161-162`）。
+- **REQ-23（28）**：Raw payload 保留策略清理的显式状态；哨兵 `{retentionPruned:true}` 被当普通
+  JSON 展示（`intake.helpers.ts:23-25`、`event-raw-tab.tsx:10-17`）。
+- **REQ-24（28）**：抑制窗口影响面汇总；详情页只有 `hits.total`，无事件/目标/最近命中汇总
+  （`suppression-detail-page.tsx:35-43`、`suppressions.ts:24-30`）。
+
+### quality lane（拆窄后返回）
+
+6 条新发现（Q-8–Q-13，已写入 backlog），并修正 Q-4 为 6 个 NOT_FOUND 分支：
+
+- **Q-8（26）**：`markSucceeded` 抛错被当成发送失败并重试，可能重复发送/重复 page
+  （`delivery-execution.ts:72,93-102,142-159`）。
+- **Q-9（24）**：同批 attempt 共用 run 开始时间，`finishedAt == startedAt`，退避可能已过期
+  （`delivery-worker.service.ts:48,76,79`）。
+- **Q-10（24）**：claim 后单条 execute 抛错会中断整批，剩余投递滞留 `running`
+  （`delivery-worker.service.ts:55-77,85-93`）。
+- **Q-11/Q-12/Q-13（24/24/20）**：resolver 错误分支、destination test 失败脱敏、worker
+  脱敏测试注入不足；均为 AUTO_FIX 补测试候选。
+
+### docs-drift lane
+
+- DOC-1/2/3/5/7/8/9/10 复核为已过期并已在本轮 #117 更正。
+- DOC-6 部分完成（`sqlite-store.md` 迁移与仓库树）；`application-container.md`、
+  `frontend-architecture.md` 的文件树仍待改。
+- 新增 **DOC-11（24）**（`adapter-contribution-experience.md` 的“不存在”盘点部分过期）与
+  **DOC-12（23）**（`route-authoring-current-state.md` 去重证据断言过期）。
+
+### 本轮未做
+
+- 未做浏览器实测：本机只有无关的 5173 监听，没有 Tocsin console dev server。
+- Obsidian 同步跳过：本会话没有 `obsidian-vault` skill。
+- 无 EXPERT_PANEL 事项。
+
+### 下一轮优先项
+
+1. REQ-23（28）：Raw payload 保留策略清理状态。
+2. REQ-22（28）：补投预览目标级明细与执行范围一致。
+3. REQ-24 / REQ-12 / REQ-13（28）：三选一的新 summary/service 切片。
+4. REQ-8（28）：Deliveries 按最后活动过滤/排序。
+5. Q-11/Q-12/Q-13 + Q-4/Q-5：合并一个 `test:` PR。
+6. DOC-4/DOC-6/DOC-11/DOC-12：剩余文档漂移。
+7. REL-3（27）：Docker smoke 卷隔离。
+
 ## 2026-10-18（第 4 轮）
 
 - 时间：2026-10-18 15:54–17:20 CST（07:54–09:20Z）。
