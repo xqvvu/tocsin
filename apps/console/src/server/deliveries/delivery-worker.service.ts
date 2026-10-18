@@ -73,7 +73,15 @@ export class DeliveryWorker {
       };
 
       for (const delivery of claimed) {
-        addOutcome(result, await this.execution.execute(delivery, now, presentation));
+        addOutcome(
+          result,
+          await this.execution.execute(
+            delivery,
+            now,
+            presentation,
+            () => options.now ?? this.now(),
+          ),
+        );
       }
 
       result.finishedAt = options.now ?? this.now();

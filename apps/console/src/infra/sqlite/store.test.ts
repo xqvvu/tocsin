@@ -407,6 +407,10 @@ describe("sqlite store", () => {
       responseBody: "accepted token=delivery-secret password: hidden",
       renderedPayload: { ok: true },
       providerReference: { type: "feishu_message_id", value: "om_abc123" },
+      // The worker reports when the send actually ran; the claim timestamp is
+      // only a fallback, so the persisted attempt must move forward.
+      startedAt: "2026-06-07T00:00:02.000Z",
+      finishedAt: "2026-06-07T00:00:05.000Z",
     });
     const detail = await store.deliveries.get(updated.id);
 
@@ -419,6 +423,8 @@ describe("sqlite store", () => {
         state: "succeeded",
         responseStatus: 202,
         responseBody: "accepted token=[REDACTED] password: [REDACTED]",
+        startedAt: "2026-06-07T00:00:02.000Z",
+        finishedAt: "2026-06-07T00:00:05.000Z",
       },
     ]);
 

@@ -68,7 +68,16 @@ export class DeliveryExecution {
     delivery: ClaimedDelivery,
     now: string,
     presentation?: DestinationPresentation,
+    /**
+     * Wall clock for this attempt. `now` is the batch timestamp and stays the
+     * fallback for deterministic callers; the worker passes a live clock so the
+     * attempt's start and finish reflect the actual send instead of the batch
+     * claim, which used to make `finishedAt - startedAt` always zero.
+     */
+    clock: () => string = () => now,
   ): Promise<DeliveryExecutionOutcome> {
+    const startedAt = clock();
+
     try {
       const config = this.resolveDestinationConfig
         ? await this.resolveDestinationConfig({
@@ -91,6 +100,8 @@ export class DeliveryExecution {
       );
 
       if (sendResult.ok) {
+        const finishedAt = clock();
+
         await this.store.deliveries.markSucceeded({
           deliveryId: delivery.job.id,
           attemptId: delivery.attempt.id,
@@ -98,7 +109,8 @@ export class DeliveryExecution {
           providerReference: sendResult.providerReference,
           responseStatus: sendResult.statusCode ?? undefined,
           responseBody: redactOptionalText(sendResult.responseBody),
-          finishedAt: now,
+          startedAt,
+          finishedAt,
         });
 
         if (this.triggerPings && sendResult.providerReference) {
@@ -106,7 +118,7 @@ export class DeliveryExecution {
             await this.triggerPings({
               delivery,
               providerReference: sendResult.providerReference,
-              now,
+              now: finishedAt,
             });
           } catch (error) {
             deliveryLogger.warn("Urgent paging trigger failed for {deliveryId}", {
@@ -137,7 +149,8 @@ export class DeliveryExecution {
         responseBody: redactOptionalText(sendResult.responseBody),
         errorKind: sendResult.errorKind,
         retryHint: sendResult.retryHint,
-        finishedAt: now,
+        startedAt,
+        finishedAt: clock(),
       });
     } catch (error) {
       if (error instanceof DomainValidationError) {
@@ -145,7 +158,8 @@ export class DeliveryExecution {
           error: error.message,
           errorKind: "configuration_error",
           retryHint: "not_retryable",
-          finishedAt: now,
+          startedAt,
+          finishedAt: clock(),
         });
       }
 
@@ -155,7 +169,8 @@ export class DeliveryExecution {
         error: safeError.errorMessage,
         errorKind: "unknown_error",
         errorName: safeError.errorName,
-        finishedAt: now,
+        startedAt,
+        finishedAt: clock(),
       });
     }
   }
@@ -169,6 +184,7 @@ export class DeliveryExecution {
       retryHint?: DestinationRetryHint;
       responseStatus?: number;
       responseBody?: string;
+      startedAt: string;
       finishedAt: string;
     },
   ): Promise<"retrying" | "failed"> {
@@ -180,6 +196,7 @@ export class DeliveryExecution {
       retryAt,
       responseStatus: input.responseStatus,
       responseBody: redactOptionalText(input.responseBody),
+      startedAt: input.startedAt,
       finishedAt: input.finishedAt,
     });
     const outcome = updated.state === "pending" ? "retrying" : "failed";

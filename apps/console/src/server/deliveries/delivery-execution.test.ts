@@ -61,10 +61,72 @@ describe("delivery execution", () => {
         },
         responseStatus: 202,
         responseBody: "accepted token=[REDACTED]",
+        startedAt: now,
         finishedAt: now,
       },
     ]);
     expect(failed).toEqual([]);
+  });
+
+  it("records the send's own start and finish instead of the batch timestamp", async () => {
+    const succeeded: Parameters<DeliveryRepository["markSucceeded"]>[0][] = [];
+    const failed: Parameters<DeliveryRepository["markFailed"]>[0][] = [];
+    const store = createExecutionStore({ succeeded, failed });
+    const destinations = {
+      async send() {
+        return {
+          ok: true,
+          statusCode: 200,
+          responseBody: null,
+          renderedPayload: {},
+        };
+      },
+    } satisfies Pick<DestinationRegistry, "send">;
+    const execution = new DeliveryExecution({ store, destinations });
+    const attempts = ["2026-06-09T08:00:02.000Z", "2026-06-09T08:00:06.500Z"];
+
+    await expect(
+      execution.execute(createClaimedDelivery(), now, undefined, () => attempts.shift()!),
+    ).resolves.toBe("succeeded");
+
+    expect(succeeded).toEqual([
+      expect.objectContaining({
+        startedAt: "2026-06-09T08:00:02.000Z",
+        finishedAt: "2026-06-09T08:00:06.500Z",
+      }),
+    ]);
+  });
+
+  it("keeps the send's own start time on a failed attempt", async () => {
+    const succeeded: Parameters<DeliveryRepository["markSucceeded"]>[0][] = [];
+    const failed: Parameters<DeliveryRepository["markFailed"]>[0][] = [];
+    const store = createExecutionStore({ succeeded, failed, failedState: "pending" });
+    const destinations = {
+      async send() {
+        return {
+          ok: false,
+          statusCode: null,
+          responseBody: null,
+          renderedPayload: {},
+          errorMessage: "upstream unavailable",
+          errorKind: "network_error",
+          retryHint: "retryable",
+        };
+      },
+    } satisfies Pick<DestinationRegistry, "send">;
+    const execution = new DeliveryExecution({ store, destinations });
+    const attempts = ["2026-06-09T08:00:03.000Z", "2026-06-09T08:00:09.000Z"];
+
+    await expect(
+      execution.execute(createClaimedDelivery(), now, undefined, () => attempts.shift()!),
+    ).resolves.toBe("retrying");
+
+    expect(failed).toEqual([
+      expect.objectContaining({
+        startedAt: "2026-06-09T08:00:03.000Z",
+        finishedAt: "2026-06-09T08:00:09.000Z",
+      }),
+    ]);
   });
 
   it("passes the destination provider reference through on success", async () => {
@@ -220,6 +282,7 @@ describe("delivery execution", () => {
         retryAt: "2026-06-09T08:01:00.000Z",
         responseStatus: 503,
         responseBody: "unavailable password: [REDACTED]",
+        startedAt: now,
         finishedAt: now,
       },
     ]);
@@ -257,6 +320,7 @@ describe("delivery execution", () => {
         retryAt: null,
         responseStatus: 400,
         responseBody: "bad config",
+        startedAt: now,
         finishedAt: now,
       },
     ]);
@@ -294,6 +358,7 @@ describe("delivery execution", () => {
         error: "Unknown Feishu app reference: app-1",
         // Configuration errors are not retryable even with attempts left.
         retryAt: null,
+        startedAt: now,
         finishedAt: now,
       },
     ]);
@@ -327,6 +392,7 @@ describe("delivery execution", () => {
         attemptId: "attempt-1",
         error: "vault unavailable token=[REDACTED]",
         retryAt: null,
+        startedAt: now,
         finishedAt: now,
       },
     ]);
@@ -354,6 +420,7 @@ describe("delivery execution", () => {
         attemptId: "attempt-1",
         error: "network down token=[REDACTED]",
         retryAt: null,
+        startedAt: now,
         finishedAt: now,
       },
     ]);
