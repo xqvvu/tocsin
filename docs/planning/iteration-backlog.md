@@ -21,13 +21,17 @@
 | REQ-3 | Route 样例 Event 干跑预览 | post-MVP 方向 2 | 27 | candidate | — | 必须复用 core matcher；不写 events/deliveries |
 | REQ-6 | Fingerprint 聚合排障视图 | post-MVP 方向 4 | 27 | candidate | — | 只读聚合 + 精确下钻；注意 GROUP BY 成本 |
 | REQ-4 | 过滤态空状态与一键重置 | 运维摩擦 | 26 | candidate | — | 区分「无数据」与「筛选无匹配」 |
-| REQ-7 | 停用目标造成投递静默滞留 | requirements lane | 29 | candidate | — | `delivery.repository.ts:219-226` vs `:97-168`；DTO 已有 `enabled`，UI 未展示 |
+| REQ-7 | 停用目标造成投递静默滞留 | requirements lane | 29 | shipped | #111 | 投递详情滞留警示 + 路由列表停用目标徽标；`DeliveryRetentionNotice`；PRD `docs/prd/delivery-retention-notice.md` |
 | REQ-8 | Deliveries 按最后活动过滤与排序 | requirements lane | 28 | candidate | — | 列表按 `created_at`（`history.repository.ts:240,269-271`），表格展示 `updated_at` |
 | REQ-9 | 告警源最近接收时间 | requirements lane | 27 | candidate | — | `SourceSummary` 无时间字段；聚合 `MAX(events.received_at)` |
 | REQ-10 | Event/Delivery 详情互链 | requirements lane | 27 | candidate | — | 三个入口目前是纯文本：投递详情、事件投递表、投递列表事件列 |
 | REQ-11 | Worker/队列健康只读投影 | requirements lane | 25 | candidate | — | health 仅出现在手动 `runDeliveryWorker` 响应；RC checklist `:160` 声称已有 |
-| FIX-2 | 搜索框承诺指纹但只搜 title/message | 代码核实 | 29 | candidate | — | `zh-Hans.json:616` vs `history.repository.ts:95-100,265-270,310-315,363-368` |
-| FIX-3 | 搜索未转义 LIKE 通配符 | 质量 lane | 27 | candidate | — | `q:"%"` 匹配全部；`q:"cpu_high"` 匹配 `cpu-high` |
+| REQ-12 | Destination 列表最近投递健康 | requirements lane | 28 | candidate | — | 需新 summary DTO；`destination.ts:64-66`、`destinations-section.tsx:56-104`；AGENTS.md 要求先有 DTO |
+| REQ-13 | 告警源接入自检 dry-run | requirements lane | 28 | candidate | — | provider manifest `testPayload` 无消费者；`source-actions.tsx:21-163`、`packages/api/src/contract/sources.ts:24-45` |
+| REQ-14 | Raw/debug JSON 搜索与折叠 | requirements lane | 27 | candidate | — | `event-json-block.tsx:14-47`、`delivery-json-block.tsx:14-47`；post-MVP 方向 4 `:133` |
+| REQ-15 | 存储容量与历史增长信号 | requirements lane | 26 | candidate | — | 只读 PRAGMA/COUNT；`settings.ts:5-9`、`operational-summary.tsx:30-58` |
+| FIX-2 | 搜索框承诺指纹但只搜 title/message | 代码核实 | 29 | shipped | #110 | 与 FIX-3 同一 PR；统一 `title/message/fingerprint` 谓词，列表与 total 共用 |
+| FIX-3 | 搜索未转义 LIKE 通配符 | 质量 lane | 27 | shipped | #110 | 转义 `%` `_` `\` 并使用 `ESCAPE '\'`；新增 `search.test.ts` |
 | FIX-4 | 删除不存在的 Source/Destination/Route 返回成功 | 质量 lane | 26 | candidate | — | contract 已声明 NOT_FOUND；与 suppression 行为不一致 |
 | FIX-5 | `operations-panel.tsx`/`detail-panel.tsx` 为死代码 | 架构 lane | 24 | candidate | — | 无任何 importer；删除可减少筛选面板歧义 |
 | FIX-6 | 导入配置不识别字面量 `[REDACTED]`，可能覆盖真实凭据 | SEC-1 panel | 27 | candidate | — | `config-portability.service.ts:171-190`；建议拒绝并提示改用 `secret_refs`，事务回滚 |
@@ -50,6 +54,11 @@
 | ARCH-2 | `suppression-forms.tsx` 699 行含两个导出组件 | 架构 lane | 25 | candidate | — | 同上 |
 | ARCH-3 | `delivery-state-badge.tsx` 三个导出组件 | 架构 lane | 23 | candidate | — | 低优先级 |
 | ARCH-4 | `system-information.ts` 五层相对路径导入根 `package.json` | 架构 lane | 23 | candidate | — | 走配置别名或单点 server adapter |
+| ARCH-5 | service 直接构造并抛 `RecordNotFoundError` | architecture lane | 24 | candidate | — | `destination.service.ts:35,138,158,202,250,374`、`oncall.service.ts:7,59,73`；仓库已有 `requireDestination` |
+| ARCH-6 | `/api/ready` 入口直接访问 SQLite store | architecture lane | 24 | candidate | — | `routes/api/ready.ts:10,19,22,26`；入口过厚，缺 readiness service |
+| ARCH-7 | routes/suppressions section 内联 cell/actions/empty state | architecture lane | 23 | candidate | — | `routes-section.tsx:161,273,286,319,341`、`suppressions-section.tsx:173,194,200,247,260,363` |
+| ARCH-8 | public i18n router 内联 locale 业务逻辑 | architecture lane | 22 | candidate | — | `server/orpc/features/i18n/router.ts:13-25`；缺 request-locale service |
+| ARCH-9 | `locale-cookie.ts` 直接用浏览器 API 且被 server router 导入 | architecture lane | 23 | candidate | — | `locale-cookie.ts:29-35,37-47`；拆 `.client` 实现，neutral 部分保留 |
 | DOC-1 | RC checklist 断言「抑制没有 UI 入口」 | docs drift | 27 | candidate | — | `docs/release/mvp-rc-checklist.md:55-56`；实际 service/router/UI 全在 |
 | DOC-2 | 4 处 `xqvvu/vane` 仓库链接过期 | docs drift | 25 | candidate | — | ADR 0010、RC checklist、两份模板 PRD |
 | DOC-3 | 模板表单「只支持 Feishu 模式」等三处限制已过期 | docs drift | 26 | candidate | — | manifest 驱动模式选择器、Email 字段均已落地 |
@@ -61,16 +70,15 @@
 
 ## 下一轮优先项
 
-1. **REQ-7**（29）：停用目标/路由造成的投递静默滞留，在路由列表与投递详情给出派生警示；
-   纯前端复用现有 DTO，单轮可交付。
-2. **FIX-2 + FIX-3**（29/27）：搜索框承诺指纹却只搜 title/message，且 LIKE 通配符未转义。
-   两者同属「搜索兑现承诺」，可作为一个小的修复 PR；与 REQ-1 共享 `history.repository.ts`。
-3. **REQ-8**（28）或 **REQ-5**（28）：Deliveries 按最后活动过滤/排序，或按路由过滤 +
+1. **REQ-8**（28）或 **REQ-5**（28）：Deliveries 按最后活动过滤/排序，或按路由过滤 +
    筛选面板按页面能力渲染。两者都改 `history.repository.ts` / 筛选面板，二选一即可。
+2. **REQ-12**（28）/ **REQ-13**（28）：Destination 最近投递健康，或 Source 接入自检 dry-run；
+   两者都需要一个新 summary/service 边界，二选一。
+3. **FIX-6**（27）：导入配置拒绝字面量 `[REDACTED]`，避免覆盖真实凭据。
 4. **DOC-1 / DOC-2 / DOC-3 / DOC-4 / DOC-5**：一批高价值文档更正，可合并为一个 `docs:` PR。
-5. **FIX-6**（27）：导入配置拒绝字面量 `[REDACTED]`，避免覆盖真实凭据。
-6. **REL-1**（24）：下一轮交 EXPERT_PANEL 裁决，把 E2E / Docker smoke 接入 CI；
-   实现前先在本地跑通。
+5. **REL-1**（24）：交 EXPERT_PANEL 裁决，把 E2E / Docker smoke 接入 CI；实现前先在本地跑通。
+6. **quality lane 补跑**：第 3 轮 quality 车道未在时限内返回，下一轮优先补跑
+   （先查 backlog 是否已有等价项，避免重复）。
 
 ## 已知过期输入
 

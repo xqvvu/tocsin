@@ -2,6 +2,78 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 3 轮）
+
+- 时间：2026-10-18 14:52–16:00 CST（06:52–08:00Z）。
+- 基线：`origin/main` @ `4abcfe7`；本轮合并后为 `1458a7a`。
+- 本轮类型：**需求切片 + 小修复**（非 full-audit）；最近全量审计为第 1 轮（13:30 CST），
+  但 backlog 有 ≥27 分候选，按第 1.5 步规则继续。
+- 车道轮转位置：本轮跑 `requirements` + `quality` + `architecture`。`requirements` 与
+  `architecture` 已返回；`quality` 超时未返回，下一轮补跑 `quality` → `release-infra` →
+  `docs-drift` → `security-exposure`。
+- 工作树：写入隔离仍禁止本会话修改 `agent-iteration`，改用会话工作树
+  `great-darwin-b34359`；`agent-iteration` 的并发锁已获取，结束前删除。
+
+### 本轮交付
+
+- PR #110 `fix(console): honor fingerprint search and escape LIKE wildcards`
+  （rebase 合并 `dcfced9`）。
+  - 搜索谓词统一覆盖 `title` / `message` / `fingerprint`，四处列表/计数共用；
+    `%`、`_`、`\` 转义并 `ESCAPE '\'`。
+  - 新增 `search.test.ts`（5 条），验证指纹命中、`%`/`_` 字面量与 total 一致性。
+- PR #111 `feat(console): warn when disabled targets hold deliveries`
+  （rebase 合并 `1458a7a`）。
+  - 新增 `DeliveryRetentionNotice`：pending 投递在目标/路由停用时说明滞留原因并给出配置页链接。
+  - 路由列表通知目标列显示「N 个目标已停用」徽标。
+  - 新增中文 mini-PRD `docs/prd/delivery-retention-notice.md`；中英文文案同步。
+- 验证：两个 PR 均通过 `vp check`（0 errors）、`vp run -r test`（console 491 tests）、
+  `vp run -r build`，CI green 后合并。
+
+### requirements lane
+
+新增 4 条候选（已写入 backlog）：
+
+- **REQ-12（28）**：Destination 列表最近投递健康；`DestinationListItemSchema:64-66` 无健康字段，
+  `destinations-section.tsx:56-104` 无投递结果列；AGENTS.md 要求先有 server-side summary DTO。
+- **REQ-13（28）**：告警源接入自检 dry-run；所有 provider manifest 声明 `testPayload: true`
+  （`packages/providers/src/types.ts:62`）但无消费者，Sources 只有编辑/轮换/启停/删除
+  （`source-actions.tsx:21-163`）。
+- **REQ-14（27）**：Raw/debug JSON 搜索与折叠；`event-json-block.tsx:14-47` 与
+  `delivery-json-block.tsx:14-47` 仅渲染 + 复制；post-MVP 方向 4 `:133` 已列入。
+- **REQ-15（26）**：存储容量与历史增长信号；Settings 只有 locale/timeZone/retention
+  （`packages/api/src/schemas/settings.ts:5-9`），无行数/体积；`history-retention-and-snapshots.md:22,90` 列为未做。
+
+### architecture lane
+
+新增 5 条候选：
+
+- **ARCH-5（24）**：service 直接构造并抛 `RecordNotFoundError`
+  （`destination.service.ts:35,138,158,202,250,374`、`oncall.service.ts:7,59,73`），
+  仓库已有 `requireDestination`（`destination.helpers.ts:224`）。
+- **ARCH-6（24）**：`/api/ready` 直接访问 SQLite store（`routes/api/ready.ts:10,19,22,26`），
+  入口过厚，缺 readiness service。
+- **ARCH-7（23）**：`routes-section.tsx`、`suppressions-section.tsx` 内联多个 cell/actions/empty state。
+- **ARCH-8（22）**：public i18n router 内联 cookie/header locale 解析
+  （`server/orpc/features/i18n/router.ts:13-25`）。
+- **ARCH-9（23）**：`locale-cookie.ts:29-35,37-47` 直接使用 `document`/`navigator`，
+  无 client-only 标记且被 server router 导入。
+- 其余契约项（容器装配、无 service 单例、无 DI、`withDashboardService`、core 环境中性、
+  route loader 边界、`vp` 工具链）均 clean。
+
+### 本轮未做
+
+- `quality` 车道超时未返回；未发现需要 EXPERT_PANEL 的新事项。
+- 浏览器验证：本机无运行中的 Tocsin console dev server（5173 属于其他项目），未做浏览器实测。
+
+### 下一轮优先项
+
+1. REQ-8 或 REQ-5（28）：Deliveries 按最后活动过滤/排序，或按路由过滤 + 筛选面板按页面能力渲染。
+2. REQ-12 或 REQ-13（28）：Destination 最近投递健康，或 Source 接入自检 dry-run。
+3. FIX-6（27）：导入配置拒绝字面量 `[REDACTED]`。
+4. DOC-1/2/3/4/5：一批高价值文档更正，可合并为一个 `docs:` PR。
+5. REL-1（24）：交 EXPERT_PANEL 裁决 E2E / Docker smoke 接入 CI。
+6. 补跑 quality lane。
+
 ## 2026-10-18（第 2 轮）
 
 - 时间：2026-10-18 14:30–14:40 CST（06:30–06:40Z）。
