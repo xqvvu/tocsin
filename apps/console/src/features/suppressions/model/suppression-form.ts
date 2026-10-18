@@ -127,6 +127,36 @@ export function defaultSuppressionWindow(now: Date = new Date()): {
   };
 }
 
+/**
+ * Prefills the create form when the operator silences one event's fingerprint.
+ *
+ * Both the source and the fingerprint are set on purpose: fingerprints are only
+ * unique within a provider, so silencing the fingerprint alone could mute a
+ * different upstream system's alert that happens to share the same string.
+ */
+export function suppressionDefaultsFromEvent(input: {
+  name: string;
+  sourceId: string;
+  fingerprint: string;
+  now?: Date;
+}): SuppressionFormValues {
+  const window = defaultSuppressionWindow(input.now);
+
+  return {
+    name: input.name,
+    kind: "silence",
+    reason: "",
+    enabled: true,
+    startsAt: window.startsAt,
+    endsAt: window.endsAt,
+    matcher: {
+      ...emptySuppressionMatcher(),
+      sourceIds: [input.sourceId],
+      fingerprints: [input.fingerprint],
+    },
+  };
+}
+
 /** ISO instant → the local `datetime-local` value the input expects. */
 export function datetimeLocalFromIso(iso: string): string {
   const date = new Date(iso);
