@@ -31,6 +31,7 @@ export interface ListOperationsInput {
   severity?: NormalizedEvent["severity"];
   status?: NormalizedEvent["status"];
   destinationId?: string;
+  routeId?: string;
   deliveryState?: DeliveryState;
   range?: OperationTimeRange;
   q?: string;

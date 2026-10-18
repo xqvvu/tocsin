@@ -55,6 +55,7 @@ export function EventsPage({ search, filters, onSearchChange }: EventsPageProps)
       severity: "",
       status: "",
       destinationId: "",
+      routeId: "",
       deliveryState: "",
       range: "",
       q: "",
@@ -72,6 +73,7 @@ export function EventsPage({ search, filters, onSearchChange }: EventsPageProps)
           />
           <OperationFilters
             configuration={operationConfiguration}
+            scope="events"
             search={search}
             pending={pending}
             onChange={onSearchChange}

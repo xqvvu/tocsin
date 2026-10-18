@@ -1,7 +1,5 @@
 import { RiPlayLine, RiTimeLine } from "@remixicon/react";
 
-import type { DestinationSummary, SourceSummary } from "@tocsin/core";
-
 import { ContentPanel } from "#/components/common/content-panel";
 import { Button } from "#/components/ui/button";
 import { DeliveriesTable } from "#/features/deliveries/ui/deliveries-table";
@@ -13,14 +11,12 @@ import type {
   Operations,
 } from "#/features/operations/model/operation-types";
 import { DetailPanel } from "#/features/operations/ui/detail-panel";
+import type { OperationFilterConfiguration } from "#/features/operations/ui/operation-filters";
 import { OperationFilters } from "#/features/operations/ui/operation-filters";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export interface OperationsPanelProps {
-  configuration: {
-    sources: SourceSummary[];
-    destinations: DestinationSummary[];
-  };
+  configuration: OperationFilterConfiguration;
   /** Client-safe destination catalog projected to kind → manifest `iconName`. */
   destinationIconNames: ReadonlyMap<string, string | undefined>;
   operations: Operations;
@@ -68,6 +64,9 @@ export function OperationsPanel({
     >
       <OperationFilters
         configuration={configuration}
+        // This transitional panel shows both tables; the delivery filters
+        // apply to the deliveries half.
+        scope="deliveries"
         search={search}
         pending={pending}
         onChange={onFilterChange}
