@@ -11,6 +11,7 @@ import {
   DeliveryExecution,
   type DeliveryExecutionStore,
 } from "#/server/deliveries/delivery-execution";
+import { DomainValidationError } from "#/server/runtime/domain-errors";
 
 const now = "2026-06-09T08:00:00.000Z";
 
@@ -256,6 +257,76 @@ describe("delivery execution", () => {
         retryAt: null,
         responseStatus: 400,
         responseBody: "bad config",
+        finishedAt: now,
+      },
+    ]);
+  });
+
+  it("treats an unresolvable destination reference as a final configuration failure", async () => {
+    const succeeded: Parameters<DeliveryRepository["markSucceeded"]>[0][] = [];
+    const failed: Parameters<DeliveryRepository["markFailed"]>[0][] = [];
+    const store = createExecutionStore({ succeeded, failed, failedState: "failed" });
+    let sendCalls = 0;
+    const destinations = {
+      async send() {
+        sendCalls += 1;
+        throw new Error("send should not run without a resolved config");
+      },
+    } satisfies Pick<DestinationRegistry, "send">;
+    const execution = new DeliveryExecution({
+      store,
+      destinations,
+      resolveDestinationConfig: async () => {
+        throw new DomainValidationError("Unknown Feishu app reference: app-1");
+      },
+    });
+
+    await expect(
+      execution.execute(createClaimedDelivery({ attemptCount: 1, maxAttempts: 3 }), now),
+    ).resolves.toBe("failed");
+
+    expect(sendCalls).toBe(0);
+    expect(succeeded).toEqual([]);
+    expect(failed).toEqual([
+      {
+        deliveryId: "delivery-1",
+        attemptId: "attempt-1",
+        error: "Unknown Feishu app reference: app-1",
+        // Configuration errors are not retryable even with attempts left.
+        retryAt: null,
+        finishedAt: now,
+      },
+    ]);
+  });
+
+  it("records a resolver failure as a redacted unknown error", async () => {
+    const succeeded: Parameters<DeliveryRepository["markSucceeded"]>[0][] = [];
+    const failed: Parameters<DeliveryRepository["markFailed"]>[0][] = [];
+    const store = createExecutionStore({ succeeded, failed, failedState: "failed" });
+    const destinations = {
+      async send() {
+        throw new Error("send should not run without a resolved config");
+      },
+    } satisfies Pick<DestinationRegistry, "send">;
+    const execution = new DeliveryExecution({
+      store,
+      destinations,
+      resolveDestinationConfig: async () => {
+        throw new Error("vault unavailable token=resolver-token");
+      },
+    });
+
+    await expect(
+      execution.execute(createClaimedDelivery({ attemptCount: 3, maxAttempts: 3 }), now),
+    ).resolves.toBe("failed");
+
+    expect(succeeded).toEqual([]);
+    expect(failed).toEqual([
+      {
+        deliveryId: "delivery-1",
+        attemptId: "attempt-1",
+        error: "vault unavailable token=[REDACTED]",
+        retryAt: null,
         finishedAt: now,
       },
     ]);
