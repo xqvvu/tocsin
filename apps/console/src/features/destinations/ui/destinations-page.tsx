@@ -1,5 +1,5 @@
 import { RiRefreshLine } from "@remixicon/react";
-import { useSuspenseQueries } from "@tanstack/react-query";
+import { useQuery, useSuspenseQueries } from "@tanstack/react-query";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -23,9 +23,20 @@ import type {
 import { DestinationsPageToolbar } from "#/features/destinations/ui/destinations-page-toolbar";
 import { DestinationsSection } from "#/features/destinations/ui/destinations-section";
 import { feishuAppsQueryOptions } from "#/features/integrations/api/feishu-app.queries";
+import { recentEventsQueryOptions } from "#/features/operations/api/operations.queries";
 import { routesQueryOptions } from "#/features/routes/api/route.queries";
 import { useTranslations } from "#/i18n/use-i18n";
 import { DashboardContentLayout } from "#/shell/dashboard-layout";
+
+/**
+ * What produced the preview currently on screen. The dialog re-runs the same
+ * preview when the operator swaps in a historical Event sample, so the
+ * destination identity and the drafted config have to be remembered.
+ */
+type PreviewRequest =
+  | { source: "destination"; id: string }
+  | { source: "draft"; input: PreviewDestinationFormInput }
+  | { source: "update"; input: PreviewEditDestinationFormInput };
 
 export function DestinationsPage() {
   const t = useTranslations();
@@ -53,7 +64,12 @@ export function DestinationsPage() {
   } = useDestinationMutations();
   const [destinationPreviewNotice, setDestinationPreviewNotice] =
     React.useState<DestinationPreviewNotice | null>(null);
+  const [previewRequest, setPreviewRequest] = React.useState<PreviewRequest | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = React.useState(false);
+  const recentEventsQuery = useQuery({
+    ...recentEventsQueryOptions(),
+    enabled: previewDialogOpen,
+  });
   const [editingDestinationId, setEditingDestinationId] = React.useState<string | null>(null);
   const [destinationEditorOpen, setDestinationEditorOpen] = React.useState(false);
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
@@ -103,27 +119,41 @@ export function DestinationsPage() {
     return runAction(action, fn, { refresh: true });
   }
 
-  function previewDraft(input: PreviewDestinationFormInput) {
-    return runAction("preview-destination-draft", async () => {
-      const result = await previewDestinationDraft(input);
+  /**
+   * Run one preview with an explicit sample. `null` selects the built-in
+   * sample; an event id renders the stored Event through the destination, which
+   * is what makes the preview trustworthy for adapter-specific payloads.
+   */
+  function runPreview(request: PreviewRequest, sampleEventId: string | null) {
+    const sampleArgs = sampleEventId ? { sampleEventId } : {};
+
+    return runAction(`preview-destination-${request.source}`, async () => {
+      const result =
+        request.source === "destination"
+          ? await previewDestination({ id: request.id, ...sampleArgs })
+          : request.source === "draft"
+            ? await previewDestinationDraft({ ...request.input, ...sampleArgs })
+            : await previewDestinationUpdate({
+                id: request.input.id,
+                name: request.input.name,
+                config: request.input.config,
+                sampleStatus: request.input.sampleStatus,
+                ...sampleArgs,
+              });
+
+      setPreviewRequest(request);
       setDestinationPreviewNotice(result);
       setPreviewDialogOpen(true);
       return result;
     });
   }
 
+  function previewDraft(input: PreviewDestinationFormInput) {
+    return runPreview({ source: "draft", input }, null);
+  }
+
   function previewEdit(input: PreviewEditDestinationFormInput) {
-    return runAction(`preview-destination-update-${input.id}`, async () => {
-      const result = await previewDestinationUpdate({
-        id: input.id,
-        name: input.name,
-        config: input.config,
-        sampleStatus: input.sampleStatus,
-      });
-      setDestinationPreviewNotice(result);
-      setPreviewDialogOpen(true);
-      return result;
-    });
+    return runPreview({ source: "update", input }, null);
   }
 
   return (
@@ -161,6 +191,15 @@ export function DestinationsPage() {
             onOpenChange={(open) => {
               setPreviewDialogOpen(open);
             }}
+            sampleEvents={recentEventsQuery.data?.events.items ?? []}
+            sampleEventsPending={recentEventsQuery.isPending}
+            sampleEventsError={recentEventsQuery.isError}
+            sampleChangeDisabled={pending}
+            onSampleChange={(sampleEventId) => {
+              if (previewRequest) {
+                void runPreview(previewRequest, sampleEventId);
+              }
+            }}
           />
           <DestinationsSection
             destinations={destinations}
@@ -177,14 +216,7 @@ export function DestinationsPage() {
               })
             }
             onPreview={(destination) =>
-              void runAction(`preview-destination-${destination.id}`, async () => {
-                const result = await previewDestination({
-                  id: destination.id,
-                });
-                setDestinationPreviewNotice(result);
-                setPreviewDialogOpen(true);
-                return result;
-              })
+              void runPreview({ source: "destination", id: destination.id }, null)
             }
             onEdit={(destinationId) => {
               setEditingDestinationId(destinationId);

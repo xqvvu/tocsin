@@ -39,6 +39,20 @@ export function operationsQueryOptions(filters: OperationFilterData) {
   });
 }
 
+/**
+ * Recent events for pickers that need a real sample (for example the
+ * destination preview). The operations list projection also returns a delivery
+ * page, which the picker ignores; reusing the procedure keeps the read surface
+ * small until a dedicated events-only list is worth adding.
+ */
+export function recentEventsQueryOptions(limit = 20) {
+  return orpc.operations.list.queryOptions({
+    input: { limit },
+    queryKey: [...operationsQueryKeys.all, "recent-events", limit] as const,
+    staleTime: 30_000,
+  });
+}
+
 export function eventDetailQueryOptions(eventId: string) {
   return orpc.operations.getEventDetail.queryOptions({
     input: { id: eventId },

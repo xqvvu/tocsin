@@ -1,7 +1,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { TemplateDiagnostic } from "@tocsin/core";
+import type { DestinationPreviewSample, TemplateDiagnostic } from "@tocsin/core";
 
 import {
   CodeBlock,
@@ -18,12 +18,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "#/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "#/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import type {
   DestinationPreviewNotice,
   DestinationTestNotice,
 } from "#/features/destinations/model/destination-types";
 import { TemplateDiagnosticsList } from "#/features/destinations/ui/template-diagnostics-list";
+import { useOperationDateFormatter } from "#/features/operations/model/operation-format";
 import { useTranslations } from "#/i18n/use-i18n";
 
 type TranslationFn = ReturnType<typeof useTranslations>;
@@ -56,17 +65,51 @@ export function showDestinationTestToast(notice: DestinationTestNotice, t: Trans
   toast.error(title, { description });
 }
 
+/** Value of the "built-in sample" entry in the preview sample picker. */
+const BUILT_IN_SAMPLE_VALUE = "built-in";
+
+export interface DestinationPreviewSampleEvent {
+  id: string;
+  title: string;
+  sourceName: string;
+  receivedAt: string;
+}
+
 export function DestinationPreviewDialog({
   notice,
   open,
   onOpenChange,
+  sampleEvents = [],
+  sampleEventsPending = false,
+  sampleEventsError = false,
+  sampleChangeDisabled = false,
+  onSampleChange,
 }: {
   notice: DestinationPreviewNotice | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Recent events the operator can use as a real sample. */
+  sampleEvents?: readonly DestinationPreviewSampleEvent[];
+  sampleEventsPending?: boolean;
+  sampleEventsError?: boolean;
+  sampleChangeDisabled?: boolean;
+  /** Omit to keep the dialog read-only; provided enables the sample picker. */
+  onSampleChange?: (sampleEventId: string | null) => void;
 }) {
   const t = useTranslations();
   const previewTabs = React.useMemo(() => createPreviewTabs(notice, t), [notice, t]);
+  const selectedSampleValue =
+    notice?.sample.kind === "historical_event" ? notice.sample.eventId : BUILT_IN_SAMPLE_VALUE;
+  const sampleItems = React.useMemo(
+    () => [
+      { value: BUILT_IN_SAMPLE_VALUE, label: t("destinations.notice.previewSampleBuiltIn") },
+      ...sampleEvents.map((event) => ({
+        value: event.id,
+        label: `${event.title} · ${event.sourceName}`,
+      })),
+    ],
+    [sampleEvents, t],
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -76,6 +119,45 @@ export function DestinationPreviewDialog({
             {notice ? t("destinations.notice.previewTitle", { name: notice.destination.name }) : ""}
           </DialogTitle>
           <DialogDescription>{t("destinations.notice.previewDescription")}</DialogDescription>
+          {onSampleChange && notice ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-2 text-xs">
+              <label className="text-muted-foreground" htmlFor="destination-preview-sample">
+                {t("destinations.notice.previewSampleLabel")}
+              </label>
+              <Select
+                id="destination-preview-sample"
+                items={sampleItems}
+                value={selectedSampleValue}
+                disabled={sampleChangeDisabled || sampleEventsPending}
+                onValueChange={(value) => {
+                  onSampleChange(value === BUILT_IN_SAMPLE_VALUE ? null : String(value));
+                }}
+              >
+                <SelectTrigger size="sm" className="w-full sm:w-72">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {sampleItems.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <PreviewSampleSummary sample={notice.sample} />
+              {sampleEventsError ? (
+                <span className="text-destructive">
+                  {t("destinations.notice.previewSampleLoadFailed")}
+                </span>
+              ) : !sampleEventsPending && sampleEvents.length === 0 ? (
+                <span className="text-muted-foreground">
+                  {t("destinations.notice.previewSampleEmpty")}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </DialogHeader>
         {notice ? (
           <Tabs defaultValue="payload" className="min-h-0">
@@ -95,6 +177,28 @@ export function DestinationPreviewDialog({
         ) : null}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PreviewSampleSummary({ sample }: { sample: DestinationPreviewSample }) {
+  const t = useTranslations();
+  const dateFormatter = useOperationDateFormatter();
+
+  if (sample.kind === "built_in") {
+    return (
+      <span className="text-muted-foreground">
+        {t("destinations.notice.previewSampleBuiltInHint")}
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-muted-foreground">
+      {t("destinations.notice.previewSampleHistoricalHint", {
+        source: sample.source.name,
+        receivedAt: sample.receivedAt ? dateFormatter.formatDateTime(sample.receivedAt) : "—",
+      })}
+    </span>
   );
 }
 
