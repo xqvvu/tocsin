@@ -24,8 +24,9 @@ env-neutral、`server/` 按能力分目录、dynamic import 只作边界适配�
 不拆分独立后端服务。
 
 1. **新增 `packages/api` 承载公开契约。** `contract/` 按 namespace 拆分 oRPC contract
-   （`auth`、`destinations`、`health`、`i18n`、`operations`、`portability`、
-   `routes`、`settings`、`sources`），`errors/` 放共享 `dashboardAuth` error map，
+   （当前为 `session`、`destinations`、`health`、`i18n`、`integrations`、`operations`、
+   `portability`、`routes`、`settings`、`sources`、`suppressions`），`errors/` 放共享
+   `dashboardAuth` error map，
    `schemas/` 放 procedure input/output schema，`client.ts` 导出
    `RPCClient = RouterContractClient<typeof contract>`。该包保持 env-neutral，不 import
    `node:*`、`#/server/*`、`#/infra/*` 或带 import protection 的模块。

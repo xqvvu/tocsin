@@ -373,7 +373,7 @@ export const sourceMutations = {
 - `apps/console/src/server/orpc/errors.test.ts`：通过真实的 `RPCHandler` 验证领域错误映射，
   覆盖 `RecordNotFoundError -> 404`、`InvalidDeliveryStateError -> 409`、`z.ZodError -> 400`
   （message 可读）、未知错误仍是 500、service 抛出的 `ORPCError` 不被改写。
-- `vp -C apps/console run typecheck`：契约与实现是否对齐由类型检查兜底。
+- `vp check`：契约与实现是否对齐由类型检查兜底（console 没有单独的 `typecheck` script）。
 - `vp -C apps/console build`：验证 import protection 仍然成立，client bundle 不含 SQLite。
 - `apps/console/src/server/orpc/openapi-post-only.test.ts`：遍历 contract，守卫所有 procedure
   均未声明 HTTP method；并验证输入 schema 接受 JSON number、拒绝 numeric string。这样未来

@@ -64,6 +64,11 @@ PRD 都应该保持 Tocsin 的核心约束：单进程、SQLite-first、自托�
 
 ### 1. Destination 结构化模板引擎
 
+**已交付（2026-10-18 核实）。** 四种模板模式（text / feishu_card / slack_blocks / json_payload）、
+Email 的 `subjectTemplate` / `htmlTemplate`、预览与 TOML 表示均已落地，取舍见
+[ADR 0010](../adr/0010-destination-template-object-root-payload-and-html-escaping.md)。
+以下保留为当时的候选范围记录。
+
 问题：MVP 的文本模板能力已经足够覆盖基础消息，但不能表达飞书卡片、Slack blocks、Email HTML
 或通用 webhook 的结构化 JSON payload。下一轮模板工作应把旧的 `messageTemplate` 收敛为统一
 `template` 配置模型。
@@ -105,6 +110,10 @@ PRD 都应该保持 Tocsin 的核心约束：单进程、SQLite-first、自托�
 
 ### 3. Alert Suppression 与 Maintenance Window
 
+**已交付主体能力（2026-10-18 核实）。** `suppressions` 表、service、oRPC、Dashboard 页面与
+`suppressed` 投递状态均已落地；试跑预览与保留期清理等剩余增量见
+`docs/planning/iteration-backlog.md`（REQ-25 / REQ-29）。以下保留为当时的候选范围记录。
+
 问题：MVP 会忠实投递重复 firing 告警，但真实运维需要临时静默噪声、维护窗口和按 fingerprint 抑制。
 
 候选范围：
@@ -122,6 +131,10 @@ PRD 都应该保持 Tocsin 的核心约束：单进程、SQLite-first、自托�
 - SaaS-style team ownership。
 
 ### 4. 搜索、过滤与历史排障
+
+**部分交付（2026-10-18 核实）。** 时间范围过滤（`docs/prd/operations-time-range.md`）、
+source/severity/status/destination/route/state 组合过滤与按路由过滤已落地；fingerprint 聚合、
+raw/debug JSON 搜索、delivery history retention 仍待做（见 backlog REQ-6 / REQ-14 / REQ-8）。
 
 问题：Events 和 Deliveries 已经可查看，但生产排障需要更强的过滤、时间范围、fingerprint 聚合和历史保留策略。
 
@@ -193,14 +206,16 @@ PRD 都应该保持 Tocsin 的核心约束：单进程、SQLite-first、自托�
 
 ## 建议优先级
 
-建议下一轮先讨论 **Destination 结构化模板引擎**。理由：
+（2026-10-18 更新）方向 1 已交付，方向 3 主体已交付，方向 4 已部分交付；它们不再占用“下一轮讨论”的
+位置。剩余工作以 `docs/planning/iteration-backlog.md` 中的切片为准。
 
-- 它直接把 MVP 的文本模板能力收敛到结构化 `template` model。
-- 飞书、Slack、Email、generic webhook 都会从中受益。
-- 它能保持在现有 `@tocsin/destinations` 和 console feature 边界内，不需要改变部署架构。
-- 它会自然产生清晰 issue：core schema、template renderer、Feishu card、Slack blocks、Email HTML、UI preview、TOML、测试。
+新的优先级建议：
 
-第二优先级建议是 **Route Authoring 与 Explain**，因为它提升用户对告警路由的信任。
+1. **Route Authoring 与 Explain 的剩余切片**：它是“提升用户对告警路由的信任”的主线，方向 2 中
+   explain 已落地，仍缺投递缺口解释、规则编辑一致性等增量。
+2. **方向 4 的剩余排障能力**：fingerprint 聚合、raw/debug JSON 搜索、delivery history retention。
+3. **方向 5 自托管发布硬化与方向 6 Adapter 贡献体验**：按 backlog 中的 release-infra 与
+   architecture 条目推进。
 
 ## 下一步工作流
 

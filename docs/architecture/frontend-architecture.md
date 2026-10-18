@@ -313,7 +313,7 @@ oRPC procedure 规则：
 - 所有输入用 schema 校验。
 - 每个 private dashboard procedure 在 contract 上声明 `dashboardAuth.error`，并在实现处
   `.use(requireDashboard())` 重新建立 dashboard request context、验证 session/角色。public
-  procedure（`health`、`i18n`、`auth.getDashboardSession`）不挂该 middleware。
+  procedure（`health`、`i18n`、`session.getDashboardSession`）不挂该 middleware。
 - 每个 webhook API route 都用 Source token 或 Tocsin 侧额外共享密钥认证，不依赖 dashboard session。
 - 返回值是 client-safe DTO，不返回 repository row、raw secret config、database object 或
   service 实例。

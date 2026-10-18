@@ -75,6 +75,7 @@ docker compose logs --tail=50 console
 | `BETTER_AUTH_ALLOWED_HOSTS`       | 无                    | 可选，逗号/换行分隔的 Host 白名单（走 PVC、反代、临时域名时使用）           |
 | `BETTER_AUTH_TRUSTED_ORIGINS`     | 无                    | 可选，逗号/换行分隔的额外可信 Origin（CSRF/origin 检查）                    |
 | `TOCSIN_DATABASE_PATH`            | `/data/tocsin.sqlite` | SQLite 文件路径；应用自身缺省是 `<cwd>/data.sqlite`，容器里由镜像覆盖       |
+| `TOCSIN_DESTINATION_TIMEOUT_MS`   | `10000`               | 出站投递 HTTP deadline，范围 1–30000；compose 未透传，需 override 才能设置  |
 | `TOCSIN_LOG_LEVEL`                | `info`                | `trace` / `debug` / `info` / `warning` / `error` / `fatal` / `off`          |
 | `TOCSIN_LOG_FORMAT`               | `auto`                | `auto` / `json` / `text`；production build 下 `auto` 输出 JSON Lines        |
 | `TOCSIN_MAX_WEBHOOK_BYTES`        | `1048576`（1 MiB）    | 入站 webhook 上限，最大 `10485760`（10 MiB）                                |
@@ -111,7 +112,9 @@ docker compose logs --tail=50 console
   `BETTER_AUTH_ALLOWED_HOSTS` 与 `BETTER_AUTH_TRUSTED_ORIGINS`。
 - **注意：compose 文件目前不透传这两个变量。** 使用它们需要自建 `docker-compose.override.yml`（或直接改
   你的部署清单）把 `BETTER_AUTH_ALLOWED_HOSTS` / `BETTER_AUTH_TRUSTED_ORIGINS` 加进 `environment`。
-- 只有代理端口对外；容器端口保持在内网。应用没有内置的登录限流或 WAF 能力，需要限流就在代理层做。
+- 只有代理端口对外；容器端口保持在内网。应用没有 WAF。登录与 auth 端点由 Better Auth 的内置限流
+  保护：production 默认启用（10 秒 100 次，`/sign-in/email` 额外限制为 10 秒 3 次）。计数器默认在
+  进程内存中，单进程部署下有效；重启会清空。代理层仍应承担全局限流、可信 IP 头与整体防护。
 
 ## 6. 数据卷
 
