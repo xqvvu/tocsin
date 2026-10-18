@@ -22,11 +22,12 @@
     `{retentionPruned:true}` 哨兵，真实载荷带同名字段不误判。
   - Raw 标签页在已清理时显示「原始数据已按保留策略清理」说明，不再把哨兵当 JSON 渲染。
   - 新增中文 mini-PRD `docs/prd/raw-payload-pruned-state.md`；中英文案同步。
-  - 新增 7 条测试；console 503 tests 全绿；`vp check` 0 errors、build 通过。
+  - 新增 6 条测试；console 507 tests 全绿；`vp check` 0 errors、build 通过。
 - PR #119 `test(console): cover resolver failures on the delivery send path`
   （rebase 合并 `ecb8a8e`）。
   - 覆盖 `resolveDestinationConfig` 的 `DomainValidationError`（最终失败、不重试）与
     未知异常（脱敏后记录）两条此前无测试的分支。
+  - 新增 2 条测试；console 509 tests 全绿；`vp check` 0 errors、build 通过。
 
 ### requirements lane
 
