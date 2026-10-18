@@ -54,6 +54,13 @@ export interface EventListItem {
 
 export interface EventDetail {
   event: EventRecord;
+  /**
+   * True when the retention sweep replaced `event.rawPayload` and
+   * `event.rawHeaders` with their cleared placeholders. The placeholders are a
+   * persistence detail, not provider data, so the UI must explain the prune
+   * instead of rendering them as JSON.
+   */
+  rawPayloadPruned: boolean;
   source: SourceSummary;
   routeMatches: RouteMatchResult[];
   /**

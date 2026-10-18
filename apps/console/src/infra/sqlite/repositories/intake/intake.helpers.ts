@@ -24,6 +24,25 @@ export const PRUNED_RAW_PAYLOAD = {
   retentionPruned: true,
 };
 
+/**
+ * Whether a stored raw payload is the retention prune sentinel rather than
+ * provider data. Callers that read the event back (for example the detail
+ * projection) use this to expose an explicit "pruned" state, because rendering
+ * the sentinel itself would look like a payload the upstream actually sent.
+ *
+ * The match is deliberately exact: a real payload that merely carries a
+ * `retentionPruned` key alongside other fields is still provider data.
+ */
+export function isPrunedRawPayload(value: unknown): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const entries = Object.entries(value);
+
+  return entries.length === 1 && entries[0][0] === "retentionPruned" && entries[0][1] === true;
+}
+
 export function eventFromRow(row: EventRow): EventRecord {
   return EventRecordSchema.parse({
     id: row.id,

@@ -34,6 +34,7 @@ function detail(overrides: Partial<EventDetailData["event"]> = {}): EventDetailD
       },
       ...overrides,
     },
+    rawPayloadPruned: false,
     source: { id: "source-1", name: "FastGPT 模型探测", provider: "fastgpt", enabled: true },
     routeMatches: [],
     routeMatchesProvenance: "intake_snapshot",

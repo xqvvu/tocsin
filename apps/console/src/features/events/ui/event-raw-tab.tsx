@@ -1,9 +1,14 @@
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { EventJsonBlock } from "#/features/events/ui/event-json-block";
+import { EventRawPrunedNotice } from "#/features/events/ui/event-raw-pruned-notice";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function EventRawTab({ detail }: { detail: EventDetailData }) {
   const t = useTranslations();
+
+  if (detail.rawPayloadPruned) {
+    return <EventRawPrunedNotice />;
+  }
 
   return (
     <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3">
