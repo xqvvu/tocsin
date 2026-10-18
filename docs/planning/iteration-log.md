@@ -12,7 +12,8 @@
   与 `release-infra` 先返回，`architecture` 在收尾阶段返回；下一轮建议
   `quality` + `docs-drift`（`requirements` 每轮必跑）。
 - 工作树：写入隔离仍禁止本会话修改 `agent-iteration`；`agent-iteration` 仅用于并发锁，
-  实现与验证使用会话工作树 `compassionate-blackburn-817360`，收尾时删除两者。
+  实现与验证使用会话工作树 `compassionate-blackburn-817360`。工作树已清理：
+  `agent-iteration` 已删除，会话工作树的 `node_modules` 已删除，本轮三个 agent 分支已删除。
 
 ### 本轮交付
 
