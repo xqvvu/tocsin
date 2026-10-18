@@ -1942,6 +1942,93 @@ describe("configuration capabilities", () => {
     await store.close();
   });
 
+  it("rejects the redaction placeholder wherever a credential would be stored", async () => {
+    const { store, services } = await createTestContext();
+    const settings = [
+      "[settings]",
+      'schema_version = "tocsin.config.v1"',
+      "include_secrets = false",
+      "raw_payload_retention_days = 14",
+      "",
+    ];
+
+    // A redacted export renders the secret as `[REDACTED]`; importing that
+    // literal would replace the stored credential and break delivery later.
+    const envPlaceholder = [
+      ...settings,
+      "[[destinations]]",
+      'id = "destination-slack"',
+      'name = "Slack SRE"',
+      'kind = "slack"',
+      "enabled = true",
+      "",
+      "[destinations.secret_refs.webhookUrl]",
+      'env = "SLACK_WEBHOOK_URL"',
+      "",
+    ].join("\n");
+
+    await expect(
+      services.portability.importToml(envPlaceholder, {
+        env: { SLACK_WEBHOOK_URL: "[REDACTED]" },
+      }),
+    ).rejects.toThrow("destination secret at webhookUrl is the redaction placeholder [REDACTED]");
+
+    const configPlaceholder = [
+      ...settings,
+      "[[destinations]]",
+      'id = "destination-slack"',
+      'name = "Slack SRE"',
+      'kind = "slack"',
+      "enabled = true",
+      "",
+      "[destinations.config]",
+      'webhookUrl = "[REDACTED]"',
+      "",
+    ].join("\n");
+
+    await expect(services.portability.importToml(configPlaceholder)).rejects.toThrow(
+      "destination secret at webhookUrl is the redaction placeholder [REDACTED]",
+    );
+
+    const sourcePlaceholder = [
+      ...settings,
+      "[[sources]]",
+      'id = "source-1"',
+      'name = "Signed source"',
+      'provider = "generic"',
+      "enabled = true",
+      "",
+      "[sources.config]",
+      'signingSecret = "[REDACTED]"',
+      "",
+    ].join("\n");
+
+    await expect(services.portability.importToml(sourcePlaceholder)).rejects.toThrow(
+      "source secret at signingSecret is the redaction placeholder [REDACTED]",
+    );
+
+    const feishuAppPlaceholder = [
+      ...settings,
+      "[[feishu_apps]]",
+      'id = "app-1"',
+      'name = "Feishu bot"',
+      'app_id = "cli_test"',
+      'app_secret = "[REDACTED]"',
+      "",
+    ].join("\n");
+
+    await expect(services.portability.importToml(feishuAppPlaceholder)).rejects.toThrow(
+      'Feishu app "Feishu bot" secret is the redaction placeholder [REDACTED]',
+    );
+
+    expect(await store.sources.list()).toEqual([]);
+    expect(await store.destinations.list()).toEqual([]);
+    expect(await store.feishuApps.list()).toEqual([]);
+    expect((await store.settings.get()).rawPayloadRetentionDays).toBe(30);
+
+    await store.close();
+  });
+
   it("rejects route configuration that references unknown destinations", async () => {
     const { store, services } = await createTestContext();
     const destination = await services.destinations.createDestination({

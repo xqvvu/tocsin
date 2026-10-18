@@ -5,6 +5,7 @@ import {
   isSensitiveKey,
   isSafeSecretPath,
   CONFIG_SCHEMA_VERSION,
+  REDACTED_VALUE,
   ConfigurationSchema,
   configurationToTomlDocument,
   tomlDocumentToConfiguration,
@@ -148,14 +149,26 @@ export function resolveDestinationSecretRefs(
   destination: PortableDestination,
   options: ImportConfigurationOptions = {},
 ): PortableDestination {
-  return resolvePortableSecretRefs(destination, options, "destination");
+  const resolved = resolvePortableSecretRefs(destination, options, "destination");
+
+  assertNoRedactedSecrets(resolved.config, destinationSecretPaths(destination), "destination");
+
+  return resolved;
 }
 
 export function resolveSourceSecretRefs(
   source: PortableSource,
   options: ImportConfigurationOptions = {},
 ): PortableSource {
-  return resolvePortableSecretRefs(source, options, "source");
+  const resolved = resolvePortableSecretRefs(source, options, "source");
+
+  assertNoRedactedSecrets(
+    resolved.config,
+    Object.keys(resolved.config).filter((key) => isSensitiveKey(key)),
+    "source",
+  );
+
+  return resolved;
 }
 
 export interface ResolvedFeishuApp {
@@ -191,12 +204,44 @@ export function resolveFeishuAppSecretRefs(
     );
   }
 
+  assertNotRedactedSecret(value, `Feishu app "${app.name}" secret`);
+
   return {
     id: app.id,
     name: app.name,
     appId: app.appId,
     appSecret: value,
   };
+}
+
+/**
+ * A redacted export renders every credential as the literal `[REDACTED]`.
+ * Importing that placeholder would overwrite the stored credential with a
+ * value that can never authenticate, and the failure would only surface later
+ * as a delivery error. Reject it at the boundary instead.
+ */
+function assertNotRedactedSecret(value: string, label: string): void {
+  if (value.trim() === REDACTED_VALUE) {
+    throw new DomainValidationError(
+      `${label} is the redaction placeholder ${REDACTED_VALUE}; provide the real value or reference an environment variable through secret_refs`,
+    );
+  }
+}
+
+function assertNoRedactedSecrets(
+  config: JsonObject,
+  paths: readonly string[],
+  resource: "source" | "destination",
+): void {
+  for (const path of paths) {
+    const value = getJsonPath(config, path);
+
+    if (typeof value === "string" && value.trim() === REDACTED_VALUE) {
+      throw new DomainValidationError(
+        `${resource} secret at ${path} is the redaction placeholder ${REDACTED_VALUE}; provide the real value or reference an environment variable through secret_refs`,
+      );
+    }
+  }
 }
 
 function resolvePortableSecretRefs<T extends { config: JsonObject; secretRefs: SecretReferences }>(
@@ -221,6 +266,8 @@ function resolvePortableSecretRefs<T extends { config: JsonObject; secretRefs: S
         `Missing environment variable for ${resource} secret: ${envName}`,
       );
     }
+
+    assertNotRedactedSecret(value, `${resource} secret at ${path}`);
 
     setJsonPath(config, path, value);
   }
