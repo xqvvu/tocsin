@@ -15,7 +15,7 @@
 
 ### 本轮交付
 
-- PR（待编号）`feat(console): show delivery timing and full attempt diagnostics`。
+- PR #128 `feat(console): show delivery timing and full attempt diagnostics`。
   - **REQ-42**：投递详情摘要新增创建/结束时间与排队、发送、端到端耗时；
     attempts 表新增「耗时」列。纯派生自既有 `DeliveryDetail` DTO。
   - **REQ-43**：尝试记录的错误/响应单元格改为可点开对话框，完整展示已脱敏
