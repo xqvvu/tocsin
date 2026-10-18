@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import type { RouteDefinition } from "@tocsin/core";
+import type { DestinationSummary, RouteDefinition } from "@tocsin/core";
 
 import { RoutesSection } from "#/features/routes/ui/routes-section";
 import { AppIntlProvider } from "#/i18n/provider";
@@ -28,7 +28,14 @@ const route: RouteDefinition = {
   destinationIds: ["destination-1"],
 };
 
-function renderSection() {
+const enabledDestination: DestinationSummary = {
+  id: "destination-1",
+  name: "Pager",
+  kind: "generic_webhook",
+  enabled: true,
+};
+
+function renderSection(destinations: DestinationSummary[] = [enabledDestination]) {
   return render(
     <AppIntlProvider locale="en-US">
       <div className="flex h-dvh flex-col">
@@ -43,7 +50,7 @@ function renderSection() {
               enabled: true,
             } as never,
           ]}
-          destinations={[{ id: "destination-1", name: "Pager" } as never]}
+          destinations={destinations}
           editingRoute={null}
           pending={false}
           onEdit={noop}
@@ -86,5 +93,19 @@ describe("routes section table layout", () => {
     expect(rule!.className).not.toContain("flex-wrap");
     expect(rule!.getAttribute("title")).toContain("Message contains: timeout, volume");
     expect(rule!.querySelectorAll("[data-slot=badge]").length).toBe(12);
+  });
+
+  it("marks a target list that includes a disabled destination", () => {
+    renderSection([{ ...enabledDestination, enabled: false }]);
+
+    // A disabled target still receives enqueued deliveries, but the worker
+    // cannot claim them; the route list must not look fully operational.
+    expect(screen.getByText("1 disabled")).toBeTruthy();
+  });
+
+  it("leaves a fully enabled target list unmarked", () => {
+    renderSection();
+
+    expect(screen.queryByText("1 disabled")).toBeNull();
   });
 });
