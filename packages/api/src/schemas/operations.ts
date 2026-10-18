@@ -57,6 +57,11 @@ export const EventDetailDeliverySchema = DeliveryJobSchema.extend({
 
 export const EventDetailSchema = z.object({
   event: EventRecordSchema,
+  /**
+   * Derived from the retention prune sentinel so the UI can explain a cleared
+   * payload instead of rendering the sentinel as provider data.
+   */
+  rawPayloadPruned: z.boolean(),
   source: SourceSummarySchema,
   routeMatches: z.array(RouteMatchResultSchema),
   routeMatchesProvenance: RouteMatchProvenanceSchema,

@@ -459,6 +459,8 @@
   "events.detail.notFoundDescription": "The event may have been deleted or the URL points to a different Tocsin database",
   "events.detail.notFoundTitle": "Event not found",
   "events.detail.rawNotice": "Raw provider data is displayed only after server-side redaction",
+  "events.detail.rawPruned.description": "The raw payload and headers were pruned after the configured retention window — normalized fields and deliveries are unaffected",
+  "events.detail.rawPruned.title": "Raw data was cleared by the retention policy",
   "events.detail.routeCheck.contains": "expected to contain {value}, event carried {actual}",
   "events.detail.routeCheck.expectedOnly": "expected {value}",
   "events.detail.routeCheck.label": "label {key} expected {value}, event carried {actual}",

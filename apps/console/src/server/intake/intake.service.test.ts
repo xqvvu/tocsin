@@ -283,13 +283,20 @@ describe("webhook intake service", () => {
       receivedAt: now,
     });
 
-    expect((await store.history.getEventDetail(old.eventId))?.event.rawPayload).toEqual({
+    const prunedDetail = await store.history.getEventDetail(old.eventId);
+    const retainedDetail = await store.history.getEventDetail(fresh.eventId);
+
+    expect(prunedDetail?.event.rawPayload).toEqual({
       retentionPruned: true,
     });
-    expect((await store.history.getEventDetail(old.eventId))?.event.rawHeaders).toEqual({});
-    expect((await store.history.getEventDetail(fresh.eventId))?.event.rawPayload).toMatchObject({
+    expect(prunedDetail?.event.rawHeaders).toEqual({});
+    // The sentinel is a persistence detail; the detail projection must expose
+    // it as an explicit state so the UI does not render it as provider data.
+    expect(prunedDetail?.rawPayloadPruned).toBe(true);
+    expect(retainedDetail?.event.rawPayload).toMatchObject({
       title: "Fresh alert",
     });
+    expect(retainedDetail?.rawPayloadPruned).toBe(false);
 
     await store.close();
   });

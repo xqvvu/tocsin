@@ -459,6 +459,8 @@
   "events.detail.notFoundDescription": "该事件可能已被删除，或 URL 指向了另一个 Tocsin 数据库",
   "events.detail.notFoundTitle": "事件不存在",
   "events.detail.rawNotice": "Raw provider data 仅在服务端脱敏后显示",
+  "events.detail.rawPruned.description": "该事件的原始载荷与请求头已超过保留窗口并被清理，标准化字段与投递记录不受影响",
+  "events.detail.rawPruned.title": "原始数据已按保留策略清理",
   "events.detail.routeCheck.contains": "期望包含 {value}，事件实际为 {actual}",
   "events.detail.routeCheck.expectedOnly": "期望 {value}",
   "events.detail.routeCheck.label": "标签 {key} 期望 {value}，事件实际为 {actual}",

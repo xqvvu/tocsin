@@ -20,6 +20,7 @@ import {
   deliveryTargetKey,
   routeMatchGaps,
 } from "#/infra/sqlite/repositories/history/route-match-gaps";
+import { isPrunedRawPayload } from "#/infra/sqlite/repositories/intake/intake.helpers";
 import type { SqliteIntakeRepository } from "#/infra/sqlite/repositories/intake/intake.repository";
 import type { RouteRepository } from "#/infra/sqlite/repositories/route/route.interface";
 import {
@@ -199,6 +200,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     return {
       event,
+      rawPayloadPruned: isPrunedRawPayload(event.rawPayload),
       source,
       routeMatches,
       routeMatchesProvenance,
