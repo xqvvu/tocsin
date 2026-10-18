@@ -98,8 +98,9 @@
 - Obsidian 同步：从 `~/Library/Application Support/obsidian/obsidian.json` 发现 vault
   根目录 `~/Library/Mobile Documents/iCloud~md~obsidian/Documents`，现有 Tocsin 笔记在
   `Vane/` 下，沿用 `Vane <Title>.md` 命名与底部 `## Related` wikilink 风格。已同步
-  `Vane SQLite Store`、`Vane Iteration Backlog`、`Vane Iteration Log`，并新建
-  `Vane Legacy Normalized Event Repair`、更新 `Vane Index`。
+  `Vane SQLite 存储层`（仓库文档的中文镜像）、`Vane Iteration Backlog`、
+  `Vane Iteration Log`，并新建 `Vane Legacy Normalized Event Repair`、更新
+  `Vane Index`。过期的英文摘要 `Vane SQLite Store` 已改为指向中文镜像的指针。
 - 本轮文档变更（决策记录、架构说明、backlog/log）随 PR #136 提交。
 
 ### 下一轮优先项
