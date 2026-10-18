@@ -341,6 +341,7 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
           response_status: input.responseStatus ?? null,
           response_body: redactNullableText(input.responseBody),
           error: null,
+          ...(input.startedAt === undefined ? {} : { started_at: input.startedAt }),
           finished_at: finishedAt,
         })
         .where("id", "=", input.attemptId)
@@ -386,6 +387,7 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
           response_status: input.responseStatus ?? null,
           response_body: redactNullableText(input.responseBody),
           error: redactText(input.error),
+          ...(input.startedAt === undefined ? {} : { started_at: input.startedAt }),
           finished_at: finishedAt,
         })
         .where("id", "=", input.attemptId)

@@ -2,6 +2,97 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-18（第 10 轮）
+
+- 时间：2026-10-18 21:26–22:2x CST（13:26–14:2xZ）。
+- 基线：`origin/main` @ `d465145`（main CI 最近一次 success）。
+- 本轮类型：**需求切片 + 小修复**（非 full-audit）。最近全量审计仍是第 1 轮（13:30 CST）；
+  backlog 有多个 ≥27 分候选且无遗留 open PR，按第 1.5 步优先消化高价值候选。
+- 车道轮转位置：本轮跑 `requirements` + `architecture` + `quality`，三条均返回。
+  下一轮建议 `docs-drift` + `release-infra`（`requirements` 每轮必跑）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证使用会话工作树
+  `great-davinci-b285f3`；收尾时删除该工作树的 `node_modules` 与 `agent-iteration`。
+
+### 本轮交付
+
+- PR（待编号）`feat(console): show delivery timing and full attempt diagnostics`。
+  - **REQ-42**：投递详情摘要新增创建/结束时间与排队、发送、端到端耗时；
+    attempts 表新增「耗时」列。纯派生自既有 `DeliveryDetail` DTO。
+  - **REQ-43**：尝试记录的错误/响应单元格改为可点开对话框，完整展示已脱敏
+    `error` / `responseBody`；JSON 响应格式化高亮，错误与响应体均可复制。
+  - **Q-9（顺带修复）**：`DeliveryExecution.execute` 增加实时时钟，
+    `markSucceeded/markFailed` 持久化真实 `startedAt`；attempt 的起止时间不再等于批次时间，
+    退避也以真实完成时间为基准。否则新增耗时列会恒为 `0ms`。
+  - 新增中文 mini-PRD `docs/prd/delivery-detail-diagnostics.md`；中英文案同步。
+  - 新增/更新测试：耗时格式化 7 条、耗时派生 7 条、详情摘要 2 条、attempts 表 4 条、
+    执行器时钟 2 条、store 持久化断言 1 条。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test`
+    console 539 tests + providers 183 + destinations 31 全绿；`vp run -r build` 通过。
+  - 未做浏览器实测：本机没有运行中的 Tocsin console dev server。
+
+### requirements lane
+
+新增 5 条候选（已写入 backlog）：
+
+- **REQ-47（29）**：投递详情展示外部消息引用。DTO 已返回 `providerReference`
+  且注明非 secret（`packages/api/src/schemas/operations.ts:115-117`），详情页未渲染；
+  纯前端 + 复制。
+- **REQ-48（28）**：配置删除影响预检。删除确认只有静态文案
+  （`source-actions.tsx:143-146`、`destination-actions.tsx:132-137`、
+  `routes-section.tsx:249-252`），而删除会级联清理历史与路由引用；需只读 preview procedure。
+- **REQ-49（27）**：可移植配置覆盖抑制规则。`ConfigurationSchema` 只含
+  settings/feishuApps/sources/destinations/routes（`packages/core/src/config.ts:85-90`），
+  备份/迁移会静默丢失静默窗口。
+- **REQ-50（26）**：投递详情内联目标诊断与测试。详情工具栏只有重试/返回
+  （`delivery-detail-page.tsx:46-64`），可复用 `destinations.test` 与 `destinationMetadata`。
+- **REQ-51（23）**：接入侧拒绝与鉴权失败可观测。`invalid_token`/`source_disabled` 等只写日志
+  （`intake.service.ts:64-76,317-327`）；需 forward-only 0004 + 有界遥测 + Sources 列。
+- 已确认「补发被抑制投递」仍是 PRD 明确非目标，不立项。
+
+### architecture lane
+
+- 新增 **ARCH-13（22）**：`ConfigPortabilityService` 在 `:99,109` 直接写死 `process.env`，
+  options 无 `readEnv`，container 无法注入测试环境；与显式依赖约定不符。
+- 新增 **ARCH-14（18）**：`migrate/runner.ts:1` 的 `server-only` 标记冗余；该文件自身不使用
+  服务端 API，约束已由上层传递，按 AGENTS 应移除。
+- 复核：ARCH-1..12、FIX-5/FIX-9/FIX-10、DOC-6、SEC-3 全部仍成立。
+- 已核实清洁：service 无 `ORPCError`/无单例/显式构造、客户端无 server 导入、
+  11 个 router 与 contract 名称一致、repository 三件套齐全、container 无请求级数据。
+
+### quality lane
+
+- 复核：Q-5 影响面比原记录更大（损坏 `route_matches_json` 会让 Events 与 Deliveries
+  双列表 500，worker claim 与投递详情同样受影响）；Q-7/Q-8/Q-9/Q-10/Q-13 仍成立；
+  Q-11 已由 #119 修复。Q-13 的断言实际恒真（驱动错误文本本身不含 secret）。
+- 新增 6 条候选：
+  - **Q-14（24）**：退避翻倍与上限分支未测（`delivery-execution.ts:219-222`）。
+  - **Q-15（24）**：重试/加急按钮完成后未断言恢复可用（`finally` 无守护）。
+  - **Q-16（23）**：分页 parity 测试自证（`deliveries-pagination-parity.test.tsx:44-45,64-66`,
+    两次渲染同一 helper，EventsTable 从未渲染）。
+  - **Q-17（25）**：投递详情页 null / 重试门槛无测试（`delivery-detail-page.tsx:25-35,58`）。
+  - **Q-18（22）**：抑制提示降级数据分支未测（`delivery-suppression-notice.tsx:33,36-45`）。
+  - **Q-19（24）**：列表页重试/手动 worker 错误路径无测试（`deliveries-page.tsx:75-90`）。
+- 次要观察：worker `getHealth()` 失败后保留上一次成功的 `lastRun`，建议明确语义；
+  `history.helpers.ts` 的 cursor 编解码已无引用，可随 Q-5 一并清理。
+
+### 本轮未做 / 备注
+
+- 无 EXPERT_PANEL 事项。Q-9 属「修正与契约不一致的行为」，已带回归测试随本 PR 交付。
+- 为控制轮次范围，本轮只开一个 PR，未再开第二个小修复 PR。
+- Obsidian 同步跳过：本会话没有 `obsidian-vault` skill。
+- 仓库禁止 squash merge，PR 以 rebase 合并。
+
+### 下一轮优先项
+
+1. **REQ-47**（29）：投递详情展示外部消息引用。
+2. **REQ-37**（29）：投递搜索覆盖失败原因/目标/路由。
+3. **REQ-48**（28）：配置删除影响预检。
+4. **REQ-27**（28）：Deliveries 列表告警身份。
+5. **REQ-32**（28）：解析失败事件的诊断可见性。
+6. **REL-3**（28）：Docker smoke 卷/镜像/项目/端口隔离。
+7. 补跑 `docs-drift` + `release-infra` 车道。
+8. **Q-14..Q-19 + Q-12/Q-13 + Q-4/Q-5**：合并一个 `test:` PR。
+
 ## 2026-10-18（第 9 轮）
 
 - 时间：2026-10-18 20:34–21:15 CST（12:34–13:15Z）。

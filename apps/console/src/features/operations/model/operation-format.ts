@@ -55,6 +55,62 @@ export function summarizeResponseBody(value: string | null): string {
   return normalized.length > 120 ? `${normalized.slice(0, 117)}...` : normalized;
 }
 
+/**
+ * Compact, operator-facing duration. Units stay untranslated because `ms`,
+ * `s`, `m`, `h`, and `d` are the tokens an on-call engineer already reads in
+ * logs and dashboards.
+ *
+ * Returns `null` for an unusable input so callers can render their own empty
+ * marker instead of showing `NaN` or a negative duration.
+ */
+export function formatDurationBetween(startIso: string, endIso: string | null): string | null {
+  if (!endIso) {
+    return null;
+  }
+
+  const start = Date.parse(startIso);
+  const end = Date.parse(endIso);
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) {
+    return null;
+  }
+
+  return formatDurationMs(end - start);
+}
+
+export function formatDurationMs(durationMs: number): string | null {
+  if (!Number.isFinite(durationMs) || durationMs < 0) {
+    return null;
+  }
+
+  if (durationMs < 1000) {
+    return `${Math.round(durationMs)}ms`;
+  }
+
+  const totalSeconds = durationMs / 1000;
+
+  if (totalSeconds < 59.95) {
+    return `${totalSeconds.toFixed(1)}s`;
+  }
+
+  const seconds = Math.round(totalSeconds);
+  const minutes = Math.floor(seconds / 60);
+
+  if (minutes < 60) {
+    return `${minutes}m ${String(seconds % 60).padStart(2, "0")}s`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+
+  if (hours < 24) {
+    return `${hours}h ${String(minutes % 60).padStart(2, "0")}m`;
+  }
+
+  const days = Math.floor(hours / 24);
+
+  return `${days}d ${String(hours % 24).padStart(2, "0")}h`;
+}
+
 interface DateFormatOptions {
   locale?: string;
   timeZone?: string;

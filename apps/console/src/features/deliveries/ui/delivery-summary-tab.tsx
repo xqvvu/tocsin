@@ -1,3 +1,4 @@
+import { summarizeDeliveryTiming } from "#/features/deliveries/model/delivery-diagnostics";
 import { DeliveryDetailSectionHeader } from "#/features/deliveries/ui/delivery-detail-section-header";
 import { DeliveryDetailTerm } from "#/features/deliveries/ui/delivery-detail-term";
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
@@ -6,6 +7,7 @@ import { useTranslations } from "#/i18n/use-i18n";
 
 export function DeliverySummaryTab({ detail }: { detail: DeliveryDetailData }) {
   const t = useTranslations();
+  const timing = summarizeDeliveryTiming(detail.job, detail.attempts);
 
   return (
     <section className="border-border bg-background flex min-h-0 min-w-0 flex-col overflow-hidden border">
@@ -48,6 +50,32 @@ export function DeliverySummaryTab({ detail }: { detail: DeliveryDetailData }) {
         <DeliveryDetailTerm
           label={t("deliveries.detail.terms.attempts")}
           value={`${detail.job.attemptCount}/${detail.job.maxAttempts}`}
+        />
+        <DeliveryDetailTerm
+          label={t("deliveries.detail.terms.created")}
+          value={<OperationTimestamp format="dateTime" value={detail.job.createdAt} />}
+        />
+        <DeliveryDetailTerm
+          label={t("deliveries.detail.terms.finished")}
+          value={
+            detail.job.finishedAt ? (
+              <OperationTimestamp format="dateTime" value={detail.job.finishedAt} />
+            ) : (
+              "-"
+            )
+          }
+        />
+        <DeliveryDetailTerm
+          label={t("deliveries.detail.terms.queueLatency")}
+          value={timing.queueLatency ?? "-"}
+        />
+        <DeliveryDetailTerm
+          label={t("deliveries.detail.terms.sendDuration")}
+          value={timing.sendDuration ?? "-"}
+        />
+        <DeliveryDetailTerm
+          label={t("deliveries.detail.terms.endToEndDuration")}
+          value={timing.endToEndDuration ?? "-"}
         />
         <DeliveryDetailTerm
           label={t("deliveries.detail.terms.nextAttempt")}

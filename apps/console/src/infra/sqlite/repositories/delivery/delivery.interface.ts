@@ -136,6 +136,8 @@ export interface MarkDeliverySucceededInput {
   providerReference?: ProviderReference;
   responseStatus?: number;
   responseBody?: string;
+  /** When the send actually started; omitted callers keep the claim timestamp. */
+  startedAt?: IsoDateTimeString;
   finishedAt?: IsoDateTimeString;
 }
 
@@ -146,6 +148,8 @@ export interface MarkDeliveryFailedInput {
   retryAt: IsoDateTimeString | null;
   responseStatus?: number;
   responseBody?: string;
+  /** When the send actually started; omitted callers keep the claim timestamp. */
+  startedAt?: IsoDateTimeString;
   finishedAt?: IsoDateTimeString;
 }
 

@@ -58,7 +58,7 @@
 | Q-6 | 超时 `errorKind` 未持久化，Deliveries 只显示英文 `lastError` | Q-1 panel | 24 | candidate | — | `delivery-execution.ts:134-141`；需 forward-only 加列 + UI 文案映射 |
 | Q-7 | 同批投递串行发送，慢投递仍造成队头阻塞 | Q-1 panel | 20 | candidate | — | `delivery-worker.service.ts:75-77`；超时已缓解，并发化需单独设计 |
 | Q-8 | `markSucceeded` 抛错会被当作发送失败并重试，导致重复发送/重复 page | quality lane | 26 | candidate | — | `delivery-execution.ts:72` 的 try 覆盖 93-102；`delivery-execution.test.ts:292-317` 无持久化失败注入 |
-| Q-9 | 同批 attempt 共用 run 开始时间，`finishedAt == startedAt`，退避可能已过期 | quality lane | 24 | candidate | — | `delivery-worker.service.ts:48,76,79`；`delivery-execution.ts:101,140,175,224` |
+| Q-9 | 同批 attempt 共用 run 开始时间，`finishedAt == startedAt`，退避可能已过期 | quality lane | 24 | shipped | 本轮 | `DeliveryExecution.execute` 增加实时时钟，`markSucceeded/markFailed` 持久化真实 `startedAt`；耗时列不再恒为 0 |
 | Q-10 | claim 后单条 execute 抛错会中断整批，剩余投递滞留 `running` | quality lane | 24 | candidate | — | `delivery-worker.service.ts:55-77,85-93`；无 post-claim 部分失败测试 |
 | Q-11 | `resolveDestinationConfig` 两条错误分支无测试 | quality lane | 24 | shipped | #119 | 两条 fake resolver 用例：配置错误最终失败、未知错误脱敏 |
 | Q-12 | `testDestination` 失败分支的脱敏 DTO 无测试 | quality lane | 24 | candidate | — | `destination.service.ts:187-194`；现有 fetch 永远 `ok: true` |
@@ -126,32 +126,46 @@
 | REQ-39 | 静默窗口剩余时间与一键续期 | requirements lane | 27 | candidate | — | 列表/详情只显示起止时间（`suppressions-section.tsx:247-258`、`suppression-detail-page.tsx:83-92`）；core 已有派生状态（`suppression.ts:79-96`） |
 | REQ-40 | 详情返回保留列表筛选 | requirements lane | 26 | candidate | — | 详情返回固定跳 `/events`、`/deliveries`（`event-detail-page.tsx:63-69`、`delivery-detail-page.tsx:49-55`），筛选与分页丢失 |
 | REQ-41 | 告警源接入指引 | requirements lane | 26 | candidate | — | 创建提示只有 URL/Token（`source-token-notice-panel.tsx:16-79`），provider catalog 无接入步骤/示例（`packages/providers/src/types.ts:68-79`）；Generic 文案还声称支持 JSON 字段映射 |
-| REQ-42 | 告警送达时效剖面 | requirements lane | 29 | candidate | — | 详情摘要与 attempts 表只有原始时间戳，无排队/发送/端到端耗时；DTO 已含 `createdAt/finishedAt`（`operations.ts:107-126`）；`delivery-summary-tab.tsx:13-66`、`delivery-attempts-table.tsx:29-45` |
-| REQ-43 | attempt 响应体/错误全文查看 | requirements lane | 29 | candidate | — | attempts 表把响应体截到 120 字并塞进 tooltip（`delivery-attempts-table.tsx:56,75-77`、`operation-format.ts:49-56`）；DTO 已有完整且已脱敏的 `error`/`responseBody`（`operations.ts:109-116`） |
+| REQ-42 | 告警送达时效剖面 | requirements lane | 29 | shipped | 本轮 | 摘要新增创建/结束时间与排队、发送、端到端耗时；attempts 表新增耗时列；PRD `docs/prd/delivery-detail-diagnostics.md`；同时修复 Q-9 |
+| REQ-43 | attempt 响应体/错误全文查看 | requirements lane | 29 | shipped | 本轮 | 尝试错误/响应单元格可点开对话框，完整展示已脱敏 error/responseBody，JSON 格式化并支持复制 |
 | REQ-44 | 未匹配路由事件直接补路由 | requirements lane | 27 | candidate | — | 事件详情只有静默/重放/返回（`event-detail-page.tsx:57-71`）；新建路由表单无初始 rule 入口（`route-forms.tsx:50-90`）；默认不追溯 intake 快照 |
 | REQ-45 | 当前筛选窗口投递失败聚合 | requirements lane | 27 | candidate | — | 只有逐行列表；需只读 summary procedure + Top N 目标/错误分组（`operations.ts:36-88`、`history.repository.ts:212-290`） |
 | REQ-46 | 事件排障摘要一键复制 | requirements lane | 27 | candidate | — | 只能复制单个标识符（`event-detail-term.tsx:7-44`）；摘要所需字段均已在页面（`event-detail-summary.tsx:11-71`） |
 | DOC-19 | RC checklist 仍把已交付排障能力列为下一轮候选 | docs drift | 26 | shipped | #127 | `mvp-rc-checklist.md:188` 补状态：筛选/时间范围/ID 搜索/route explain 已落地；fingerprint 视图等仍未做 |
 | DOC-20 | `destination-historical-event-preview.md` 现状陈述与已实现状态矛盾 | docs drift | 22 | shipped | #127 | 现状陈述改为过去时，与顶部「已实现」一致 |
+| REQ-47 | 投递详情展示外部消息引用 | requirements lane | 29 | candidate | — | DTO 已返回 `providerReference` 且标注非 secret（`packages/api/src/schemas/operations.ts:115-117`），详情页未渲染；纯前端 + 复制 |
+| REQ-48 | 配置删除影响预检 | requirements lane | 28 | candidate | — | 删除确认只有静态文案（`source-actions.tsx:143-146`、`destination-actions.tsx:132-137`、`routes-section.tsx:249-252`）；需只读 preview procedure 并模拟引用清理 |
+| REQ-49 | 可移植配置覆盖抑制规则 | requirements lane | 27 | candidate | — | `ConfigurationSchema` 只含 settings/feishuApps/sources/destinations/routes（`packages/core/src/config.ts:85-90`）；备份/迁移会静默丢失静默窗口 |
+| REQ-50 | 投递详情内联目标诊断与测试 | requirements lane | 26 | candidate | — | 详情工具栏无目标测试入口（`delivery-detail-page.tsx:46-64`）；可复用 `destinations.test` 与详情 DTO 的 `destinationMetadata` |
+| REQ-51 | 接入侧拒绝与鉴权失败可观测 | requirements lane | 23 | candidate | — | `invalid_token`/`source_disabled` 等只写日志（`intake.service.ts:64-76,317-327`）；需 forward-only 0004 + 有界遥测 + Sources 列 |
+| ARCH-13 | ConfigPortabilityService 直接读 `process.env` | architecture lane | 22 | candidate | — | `config-portability.service.ts:99,109` 写死 `process.env`；options 无 readEnv，container 无法注入测试环境 |
+| ARCH-14 | `migrate/runner.ts` 冗余 server-only 标记 | architecture lane | 18 | candidate | — | `runner.ts:1` 自身不使用服务端 API，服务端约束已由上层传递；与 AGENTS 标记规则不符 |
+| Q-14 | 退避翻倍与上限分支未测 | quality lane | 24 | candidate | — | `delivery-execution.ts:219-222`；现有测试全用 60s/60s 且 attemptCount=1 |
+| Q-15 | 重试/加急按钮完成后未断言恢复可用 | quality lane | 24 | candidate | — | `delivery-retry-button.tsx:39-40`、`delivery-buzz-button.tsx:34-35`；删掉 `finally` 后测试仍绿 |
+| Q-16 | 分页 parity 测试自证 | quality lane | 23 | candidate | — | `deliveries-pagination-parity.test.tsx:44-45,64-66,75-76` 两次渲染同一 helper，EventsTable 从未渲染 |
+| Q-17 | 投递详情页 null / 重试门槛无测试 | quality lane | 25 | candidate | — | `delivery-detail-page.tsx:25-35,58`；仓库无 `delivery-detail-page.test.tsx` |
+| Q-18 | 抑制提示降级数据分支未测 | quality lane | 22 | candidate | — | `delivery-suppression-notice.tsx:33,36-45`；现有测试只覆盖字段齐全的数据 |
+| Q-19 | 列表页重试/手动 worker 错误路径无测试 | quality lane | 24 | candidate | — | `deliveries-page.tsx:75-90` 的 catch；`DeliveryActions` 无测试文件 |
 
 ## 下一轮优先项
 
-1. **REQ-38**（29）：投递详情页重试闭环；纯前端 + 现有 oRPC，RC checklist 已承诺。
+1. **REQ-47**（29）：投递详情展示外部消息引用；DTO 已有、纯前端，可与加急记录联动。
 2. **REQ-37**（29）：投递搜索覆盖失败原因/目标/路由；与 REQ-31 同文件，谓词已集中。
-3. **REQ-27**（28）：Deliveries 列表显示告警标题/严重程度/状态；与 Events 列表形态对齐，
-   纯 DTO 投影 + UI。
-4. **REQ-32**（28）：解析失败事件的诊断可见性；解析失败审计已落库，缺投影与展示。
-5. **REL-3**（28）：Docker smoke 卷/镜像/项目/端口隔离（N2）。这是任何 smoke CI 接入前的
-   阻断项；需本地 Docker 实测（本机已确认 `docker`/`just` 可用）。
-6. **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：既有高价值切片。
-7. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
-8. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、事件标签可见性。
-9. **REQ-39/REQ-40/REQ-41**（27/26/26）：静默续期、详情返回保筛选、告警源接入指引。
-10. **REL-6 + REL-7**（26/26）：Docker smoke 断言增强、E2E harness 就绪探针/隔离；AUTO_FIX。
-11. **Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并为一个 `test:` PR。
-12. **FIX-8**（26）、DOC-4/DOC-6/DOC-11/DOC-12/DOC-13/DOC-14 + REL-12：剩余修复与文档漂移。
-13. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
-14. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（第 8 轮已确认最小 CI 方案：
+3. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
+4. **REQ-27**（28）：Deliveries 列表显示告警标题/严重程度/状态；纯 DTO 投影 + UI。
+5. **REQ-32**（28）：解析失败事件的诊断可见性；解析失败审计已落库，缺投影与展示。
+6. **REL-3**（28）：Docker smoke 卷/镜像/项目/端口隔离；任何 smoke CI 接入前的阻断项。
+7. **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：既有高价值切片。
+8. **REQ-49**（27）：可移植配置覆盖抑制规则；schema + portability service + 导入确认。
+9. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
+10. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、事件标签可见性。
+11. **REQ-39/REQ-40/REQ-41**（27/26/26）：静默续期、详情返回保筛选、告警源接入指引。
+12. **Q-14..Q-19 + Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并一个 `test:` PR；
+    Q-16 需重写为真正渲染两个列表的 parity 断言。
+13. **ARCH-13 + ARCH-14 + FIX-8**：显式 env 注入、冗余标记清理、抑制 `createdBy`。
+14. **REL-6 + REL-7**（26/26）：Docker smoke 断言增强、E2E harness 就绪探针/隔离；AUTO_FIX。
+15. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
+16. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（第 8 轮已确认最小 CI 方案：
     setup vp → playwright install chromium → `CI=true playwright test`，无新服务/secret）；
     **REL-13**（LICENSE）需专家小组做法律/产品决策。ARCH-10/ARCH-11 等再次触碰对应文件时做。
 
