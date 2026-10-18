@@ -44,7 +44,10 @@ export interface DeliveryListQuery {
   state?: DeliveryState;
   /** Inclusive lower bound on `deliveries.created_at`, as an ISO timestamp. */
   since?: string;
-  /** Literal substring over title, message, fingerprint, and event/delivery ids. */
+  /**
+   * Literal substring over the event fields, event/delivery ids, the latest
+   * delivery error, and the destination or route name.
+   */
   q?: string;
   page?: number;
   limit?: number;

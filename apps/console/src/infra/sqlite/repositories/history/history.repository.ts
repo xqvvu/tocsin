@@ -418,9 +418,13 @@ function eventSearchPredicate(term: string) {
 }
 
 /**
- * Delivery search covers the event fields above plus both identifiers: the
- * delivery id itself and the id of the event it belongs to. Like the event
- * predicate, list and count queries share it.
+ * Delivery search covers the event fields above, both identifiers (the
+ * delivery id itself and the id of the event it belongs to), and the three
+ * facts the deliveries table displays: the latest error, the destination name,
+ * and the route name. Destination and route are matched through correlated
+ * `EXISTS` subqueries so the count query keeps its existing joins and cannot
+ * count duplicated rows. Like the event predicate, list and count queries
+ * share it.
  */
 function deliverySearchPredicate(term: string) {
   const pattern = escapeLikeTerm(term);
@@ -431,6 +435,17 @@ function deliverySearchPredicate(term: string) {
     OR events.title LIKE ${pattern} ESCAPE '\\'
     OR events.message LIKE ${pattern} ESCAPE '\\'
     OR events.fingerprint LIKE ${pattern} ESCAPE '\\'
+    OR deliveries.last_error LIKE ${pattern} ESCAPE '\\'
+    OR EXISTS (
+      SELECT 1 FROM destinations AS searched_destinations
+      WHERE searched_destinations.id = deliveries.destination_id
+        AND searched_destinations.name LIKE ${pattern} ESCAPE '\\'
+    )
+    OR EXISTS (
+      SELECT 1 FROM routes AS searched_routes
+      WHERE searched_routes.id = deliveries.route_id
+        AND searched_routes.name LIKE ${pattern} ESCAPE '\\'
+    )
   )`;
 }
 

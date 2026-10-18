@@ -27,10 +27,31 @@ async function repositoryWithSearchFixtures(): Promise<
 
   await db
     .insertInto("destinations")
+    .values([
+      {
+        id: "dest-1",
+        name: "Pager",
+        kind: "generic_webhook" as const,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+      {
+        id: "dest-2",
+        name: "Feishu OnCall",
+        kind: "generic_webhook" as const,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+    ])
+    .execute();
+
+  await db
+    .insertInto("routes")
     .values({
-      id: "dest-1",
-      name: "Pager",
-      kind: "generic_webhook",
+      id: "route-1",
+      name: "Critical path",
+      rule_json: "{}",
+      destination_ids_json: '["dest-1"]',
       created_at: NOW,
       updated_at: NOW,
     })
@@ -65,6 +86,7 @@ async function repositoryWithSearchFixtures(): Promise<
       // Opaque ids that are not substrings of each other, so an identifier
       // lookup can only hit through the intended branch.
       event("evt-opaque-7f3a", "fp-opaque", "Node down", "node"),
+      event("event-feishu", "fp-feishu", "Edge latency", "latency"),
     ])
     .execute();
 
@@ -81,7 +103,9 @@ async function repositoryWithSearchFixtures(): Promise<
         id: `delivery-${eventId}`,
         event_id: eventId,
         destination_id: "dest-1",
+        route_id: eventId === "event-fingerprint" ? "route-1" : null,
         state: "pending" as const,
+        last_error: eventId === "event-message" ? "connection refused" : null,
         created_at: NOW,
         updated_at: NOW,
       })),
@@ -90,6 +114,16 @@ async function repositoryWithSearchFixtures(): Promise<
         event_id: "evt-opaque-7f3a",
         destination_id: "dest-1",
         state: "pending" as const,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+      {
+        // Manual delivery (no route) to another destination.
+        id: "dlv-manual-feishu",
+        event_id: "event-feishu",
+        destination_id: "dest-2",
+        state: "failed" as const,
+        last_error: "signature mismatch",
         created_at: NOW,
         updated_at: NOW,
       },
@@ -155,6 +189,35 @@ describe("history search", () => {
 
     expect(ids(events.items)).toEqual(["event-fingerprint"]);
     expect(ids(deliveries.items)).toEqual(["delivery-event-message"]);
+  });
+
+  it("matches the latest error shown in the deliveries table", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const page = await repository.listDeliveries({ q: "connection refused" });
+
+    expect(ids(page.items)).toEqual(["delivery-event-message"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("matches the destination name shown in the deliveries table", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const page = await repository.listDeliveries({ q: "OnCall" });
+
+    expect(ids(page.items)).toEqual(["dlv-manual-feishu"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("matches the route name and leaves manual deliveries alone", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const page = await repository.listDeliveries({ q: "Critical path" });
+
+    // Manual deliveries have no route, so the correlated route subquery
+    // cannot match them.
+    expect(ids(page.items)).toEqual(["delivery-event-fingerprint"]);
+    expect(page.total).toBe(1);
   });
 
   it("treats % as a literal character instead of a wildcard", async () => {
