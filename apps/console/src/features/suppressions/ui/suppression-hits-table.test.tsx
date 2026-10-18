@@ -63,6 +63,9 @@ function hitsFixture(): NumberedPage<DeliveryListItem> {
       {
         id: "delivery-1",
         eventId: "event-1",
+        eventTitle: "Disk full",
+        eventSeverity: "critical",
+        eventStatus: "firing",
         sourceName: "Prometheus",
         destinationName: "Ops group",
         destinationKind: "feishu",

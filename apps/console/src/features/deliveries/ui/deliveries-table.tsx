@@ -70,7 +70,13 @@ export function DeliveriesTable({
         id: "event",
         header: t("deliveries.table.headers.event"),
         cell: ({ row }) => (
-          <DeliveryEventCell eventId={row.original.eventId} sourceName={row.original.sourceName} />
+          <DeliveryEventCell
+            eventId={row.original.eventId}
+            eventTitle={row.original.eventTitle}
+            eventSeverity={row.original.eventSeverity}
+            eventStatus={row.original.eventStatus}
+            sourceName={row.original.sourceName}
+          />
         ),
       },
       {

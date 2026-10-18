@@ -224,6 +224,9 @@ export class SqliteHistoryRepository implements HistoryRepository {
       .select([
         "deliveries.id as id",
         "deliveries.event_id as event_id",
+        "events.title as event_title",
+        "events.severity as event_severity",
+        "events.status as event_status",
         "sources.name as source_name",
         "destinations.name as destination_name",
         "destinations.kind as destination_kind",
@@ -282,6 +285,9 @@ export class SqliteHistoryRepository implements HistoryRepository {
       items: rows.map((row) => ({
         id: row.id,
         eventId: row.event_id,
+        eventTitle: row.event_title,
+        eventSeverity: row.event_severity,
+        eventStatus: row.event_status,
         sourceName: row.source_name,
         destinationName: row.destination_name,
         destinationKind: row.destination_kind ?? undefined,
