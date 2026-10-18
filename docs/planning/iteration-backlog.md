@@ -80,7 +80,7 @@
 | DOC-1 | RC checklist 断言「抑制没有 UI 入口」 | docs drift | 27 | shipped | #117 | 两处校正为已实现，写明剩余未落地项 |
 | DOC-2 | 4 处 `xqvvu/vane` 仓库链接过期 | docs drift | 25 | shipped | #117 | 全部改为 `xqvvu/tocsin`；issue #47 标注已关闭 |
 | DOC-3 | 模板表单「只支持 Feishu 模式」等三处限制已过期 | docs drift | 26 | shipped | #117 | 三份文档更新为 manifest 驱动模式选择器与 Email 字段已落地 |
-| DOC-4 | `next-round.md` 基线 `7b5d501` 过期，S0 已修复 | docs drift | 25 | candidate | — | 更新基线；标注 `a460a6f` 已修复；A/B/D2/D3/F3/F4/F7 也已在当前代码落地 |
+| DOC-4 | `next-round.md` 基线 `7b5d501` 过期，S0 已修复 | docs drift | 25 | shipped | #127 | 更新基线；标注 `a460a6f` 已修复；route explain/registry audit/test-kit/iconName 已落地 |
 | DOC-5 | 迁移计划仍写「只有 0001 baseline」 | docs drift | 25 | shipped | #117 | AGENTS、sqlite-store、发布与备份文档统一为 0001–0003 |
 | DOC-6 | 架构文档文件树漂移（`migrate.ts`、`auth/router.ts`、缺 suppressions） | docs drift | 24 | candidate | — | `sqlite-store.md` 已随 #117 修迁移/仓库树；`application-container.md`、`frontend-architecture.md` 仍待改 |
 | DOC-7 | 抑制 PRD/决策文档状态仍写「草案/待拍板」 | docs drift | 24 | shipped | #117 | 状态头与迁移约束已更新 |
@@ -88,7 +88,7 @@
 | DOC-9 | 发布文档声称没有 E2E/smoke、迁移只有 0001 | release-infra lane | 27 | shipped | #117 | 区分脚本已存在与 CI 未接入；rel 文档更新 |
 | DOC-10 | `route-explain-delivery-gap.md` 仍称「待实现」 | requirements lane | 24 | shipped | #117 | 状态与 R8 说明已对齐代码 |
 | DOC-11 | `adapter-contribution-experience.md` 的「不存在」盘点部分过期 | docs drift | 24 | candidate | — | F4/F6/F7/F8、S0 已有落地；需状态注记 |
-| DOC-12 | `route-authoring-current-state.md` 去重证据断言过期 | docs drift | 23 | candidate | — | `delivery_dedupe_keys` 已落库并有 prune 窗口（`schema.ts:164-185`） |
+| DOC-12 | `route-authoring-current-state.md` 去重证据断言过期 | docs drift | 23 | shipped | #127 | 拆成「去重已落库」与「skipExisting 仅计数」两行（`delivery_dedupe_keys`，`schema.ts:164-185`） |
 | REQ-25 | 抑制规则试跑预览（dry-run） | requirements lane | 27 | candidate | — | PRD 承诺 `preview` 与范围预览，代码只有 list/get/hits；复用 `evaluateSuppressionMatch` + `listRecent`；`alert-suppression.md:97,209,238` |
 | REQ-26 | Destination 用真实历史 Event 预览 | requirements lane | 29 | shipped | #122 | 预览对话框新增样例来源选择器（内置 + 最近 20 条历史 Event），三个预览入口均可重放；`recentEventsQueryOptions`、`destination-notices.tsx`、`destinations-page.tsx`；PRD `docs/prd/destination-historical-event-preview.md` |
 | REQ-27 | Deliveries 列表显示告警身份 | requirements lane | 28 | candidate | — | 只显示 source + eventId；join 已有 events；`delivery-event-cell.tsx:1-18`、`history.repository.ts:218-237` |
@@ -101,7 +101,7 @@
 | REL-9 | migration 仅 `:memory:` 覆盖，无文件库/WAL/校验和测试 | release-infra lane | 25 | candidate | — | `migrate.test.ts` 全部内存库；WAL 仅文件库（`connection.ts:29-31`）；runner 无 checksum |
 | REL-10 | 备份恢复 runbook 存在 stale WAL 风险 | release-infra lane | 25 | candidate | — | 快照无伴生文件时未删除旧 `-wal`/`-shm`（`backup-restore-upgrade.md:92-99`） |
 | REL-11 | `.github/**` 被排除在 fmt/lint 外且无 actionlint | release-infra lane | 22 | candidate | — | `vite.config.ts:10,28,63` |
-| REL-12 | 发布文档 Node 版本过期 | release-infra lane | 24 | candidate | — | `docker-production-deployment.md:28` 写 `26.11.1`，实际 `.node-version` 为 `26.12.0` |
+| REL-12 | 发布文档 Node 版本过期 | release-infra lane | 24 | shipped | #127 | `docker-production-deployment.md:28` 已改为 `26.12.0` |
 | REL-13 | 公开仓库缺少 LICENSE 与 package `license` 字段 | release-infra lane | — | blocked-autonomous | — | PUBLIC 仓库、`licenseInfo: null`；属法律/产品决策，需专家小组，不可自动代选 |
 | REL-14 | 发布卫生项（task cache / 供应链 / 构建上下文） | release-infra lane | 20 | candidate | — | Vite Task 缓存未持久化；node-gyp/actions 未固定；`.dockerignore` 未排除 `.output`；低优先 |
 | ARCH-10 | `destination-form.tsx` 单体 1390 行 | architecture lane | 23 | candidate | — | `destination-form.tsx:82-1292`；适配器/模板/预览内联；建议与模板编辑器改造一起拆 |
@@ -109,8 +109,8 @@
 | ARCH-12 | `hashSourceToken` 放在 intake service 并被跨服务导入 | architecture lane | 22 | candidate | — | `intake.service.ts:329-331`、`source.service.ts:18`、`config-portability.service.ts:33`；建议移到窄模块 |
 | FIX-9 | `server/runtime/store.ts` 为死代码 | architecture lane | 24 | candidate | — | 无生产 importer，唯一引用是自身测试；`application-container.md:50` 仍声称存在 |
 | FIX-10 | 未使用的生产依赖 | architecture lane | 20 | candidate | — | `@faker-js/faker`、`@tanstack/match-sorter-utils` 全仓无 import；确认后移除或降为 devDependency |
-| DOC-13 | import boundaries 文档 4 处与代码不一致 | architecture lane | 24 | candidate | — | `tanstack-start-import-boundaries.md:69,75-77,112,120`；`application-container.md:115`；`orpc-api-layer.md:198` |
-| DOC-14 | sqlite-store 文档缺 suppressions 信息 | architecture lane | 23 | candidate | — | `sqlite-store.md:138-155,189-198`；代码已有 `schema.ts:33,130`、`store.ts:45` |
+| DOC-13 | import boundaries 文档 4 处与代码不一致 | architecture lane | 24 | shipped | #127 | `withDashboardService` 示例、core operations 路径、`findDashboardContext()`、middleware 数量均已更正 |
+| DOC-14 | sqlite-store 文档缺 suppressions 信息 | architecture lane | 23 | shipped | #127 | schema 列表补 `suppressions`，id 工厂补 `suppression` |
 | REQ-31 | 排障搜索覆盖事件/投递 ID | requirements lane | 29 | shipped | #125 | 事件谓词加 `events.id` + 所属投递 `EXISTS`；投递谓词加 `deliveries.id`/`events.id`；列表与 total 同谓词；PRD `docs/prd/operation-search-identifiers.md` |
 | REQ-32 | 解析失败事件的诊断可见性 | requirements lane | 28 | candidate | — | 审计事件已写 providerMetadata，但列表/详情/筛选都看不到；`intake.service.ts:191-239`、`event-raw-tab.tsx:13-28` |
 | REQ-33 | 绝对时间窗口过滤 | requirements lane | 27 | candidate | — | URL `from`/`to`，与 `range` 互斥；仓储只有 `since` 没有上界；`operations.ts:26-28`、`history.interface.ts:23-49` |
@@ -131,8 +131,8 @@
 | REQ-44 | 未匹配路由事件直接补路由 | requirements lane | 27 | candidate | — | 事件详情只有静默/重放/返回（`event-detail-page.tsx:57-71`）；新建路由表单无初始 rule 入口（`route-forms.tsx:50-90`）；默认不追溯 intake 快照 |
 | REQ-45 | 当前筛选窗口投递失败聚合 | requirements lane | 27 | candidate | — | 只有逐行列表；需只读 summary procedure + Top N 目标/错误分组（`operations.ts:36-88`、`history.repository.ts:212-290`） |
 | REQ-46 | 事件排障摘要一键复制 | requirements lane | 27 | candidate | — | 只能复制单个标识符（`event-detail-term.tsx:7-44`）；摘要所需字段均已在页面（`event-detail-summary.tsx:11-71`） |
-| DOC-19 | RC checklist 仍把已交付排障能力列为下一轮候选 | docs drift | 26 | candidate | — | `mvp-rc-checklist.md:188`；时间范围、ID 搜索、route explain 已落地；fingerprint 视图仍未做 |
-| DOC-20 | `destination-historical-event-preview.md` 现状陈述与已实现状态矛盾 | docs drift | 22 | candidate | — | 顶部标已实现，`:24` 仍称控制台从未传参；PR #122 后遗留 |
+| DOC-19 | RC checklist 仍把已交付排障能力列为下一轮候选 | docs drift | 26 | shipped | #127 | `mvp-rc-checklist.md:188` 补状态：筛选/时间范围/ID 搜索/route explain 已落地；fingerprint 视图等仍未做 |
+| DOC-20 | `destination-historical-event-preview.md` 现状陈述与已实现状态矛盾 | docs drift | 22 | shipped | #127 | 现状陈述改为过去时，与顶部「已实现」一致 |
 
 ## 下一轮优先项
 
