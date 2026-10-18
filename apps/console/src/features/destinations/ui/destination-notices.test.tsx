@@ -91,6 +91,78 @@ describe("destination notices", () => {
     ).toBeTruthy();
   });
 
+  it("lets the operator preview with a historical Event sample", async () => {
+    const onSampleChange = vi.fn<(sampleEventId: string | null) => void>();
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <DestinationPreviewDialog
+          open
+          onOpenChange={() => {}}
+          notice={createPreviewNotice()}
+          sampleEvents={[
+            {
+              id: "event-1",
+              title: "Disk full",
+              sourceName: "Grafana",
+              receivedAt: "2026-01-01T00:00:00.000Z",
+            },
+          ]}
+          onSampleChange={onSampleChange}
+        />
+      </AppIntlProvider>,
+    );
+
+    const picker = screen.getByRole("combobox", { name: "Sample source" });
+    expect(picker.textContent).toContain("Built-in sample");
+    expect(screen.getByText(/Rendered from the built-in sample/)).toBeTruthy();
+
+    fireEvent.click(picker);
+    const option = await screen.findByRole("option", { name: "Disk full · Grafana" });
+    fireEvent.pointerDown(option);
+    fireEvent.click(option);
+
+    expect(onSampleChange).toHaveBeenCalledWith("event-1");
+  });
+
+  it("names the historical Event and its source once that sample is in use", () => {
+    render(
+      <AppIntlProvider locale="en-US">
+        <DestinationPreviewDialog
+          open
+          onOpenChange={() => {}}
+          notice={createPreviewNotice({
+            sample: {
+              kind: "historical_event",
+              eventId: "event-1",
+              source: {
+                id: "source-1",
+                name: "Grafana prod",
+                provider: "grafana",
+                enabled: true,
+              },
+              receivedAt: "2026-01-01T00:00:00.000Z",
+            },
+          })}
+          sampleEvents={[
+            {
+              id: "event-1",
+              title: "Disk full",
+              sourceName: "Grafana prod",
+              receivedAt: "2026-01-01T00:00:00.000Z",
+            },
+          ]}
+          onSampleChange={() => {}}
+        />
+      </AppIntlProvider>,
+    );
+
+    expect(screen.getByRole("combobox", { name: "Sample source" }).textContent).toContain(
+      "Disk full · Grafana prod",
+    );
+    expect(screen.getByText(/Rendered from a historical Event · Grafana prod/)).toBeTruthy();
+  });
+
   it("shows destination test response bodies in a toast", () => {
     const t = ((key: string, values?: Record<string, unknown>) => {
       if (key === "destinations.notice.testFailedTitle") {
