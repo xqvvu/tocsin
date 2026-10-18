@@ -77,6 +77,11 @@ export const EventDetailSchema = z.object({
 export const DeliveryListItemSchema = z.object({
   id: z.string().min(1),
   eventId: z.string().min(1),
+  // Alert identity is part of the list projection: the join already exists in
+  // `listDeliveries`, so carrying these fields costs no extra query.
+  eventTitle: z.string(),
+  eventSeverity: AlertSeveritySchema,
+  eventStatus: AlertStatusSchema,
   sourceName: z.string().min(1),
   destinationName: z.string().min(1),
   // Optional for the same reason as the core interface: rows read back from

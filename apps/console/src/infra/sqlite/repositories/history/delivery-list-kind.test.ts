@@ -103,6 +103,9 @@ describe("delivery schemas expose destinationKind", () => {
   const listItem = {
     id: "del-1",
     eventId: "evt-1",
+    eventTitle: "Disk full",
+    eventSeverity: "critical" as const,
+    eventStatus: "firing" as const,
     sourceName: "Prometheus",
     destinationName: "Pager",
     routeName: null,

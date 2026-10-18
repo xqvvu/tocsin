@@ -86,6 +86,13 @@ export interface EventDetailDelivery extends DeliveryJob {
 export interface DeliveryListItem {
   id: string;
   eventId: string;
+  /**
+   * Alert identity projected alongside the delivery so the list can answer
+   * "which alert is this, and is it still firing?" without a second lookup.
+   */
+  eventTitle: string;
+  eventSeverity: NormalizedEvent["severity"];
+  eventStatus: NormalizedEvent["status"];
   sourceName: string;
   destinationName: string;
   /**
