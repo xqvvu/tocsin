@@ -70,6 +70,7 @@ export function CreateSuppressionForm({
   destinations,
   layout = "panel",
   pending,
+  defaultValues,
   onSubmit,
 }: {
   showHeader?: boolean;
@@ -77,6 +78,8 @@ export function CreateSuppressionForm({
   destinations: DestinationListItem[];
   layout?: "dialog" | "panel";
   pending: boolean;
+  /** Overrides parts of the blank create defaults, e.g. when silencing an event. */
+  defaultValues?: Partial<SuppressionFormValues>;
   onSubmit: (input: SuppressionFormSubmission) => void;
 }) {
   const t = useTranslations();
@@ -95,6 +98,7 @@ export function CreateSuppressionForm({
         startsAt: window.startsAt,
         endsAt: window.endsAt,
         matcher: emptySuppressionMatcher(),
+        ...defaultValues,
       }}
       submitLabel={t("suppressions.form.create.submit")}
       submitIcon={<RiAddLine data-icon="inline-start" aria-hidden />}

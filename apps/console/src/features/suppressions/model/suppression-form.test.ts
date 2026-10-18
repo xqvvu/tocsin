@@ -4,6 +4,7 @@ import {
   datetimeLocalFromIso,
   emptySuppressionMatcher,
   isoFromDatetimeLocal,
+  suppressionDefaultsFromEvent,
   suppressionFormDefaultsFromRule,
   suppressionMatcherFromValues,
   suppressionMatcherIsEmpty,
@@ -37,6 +38,26 @@ describe("suppression form model", () => {
     expect(local).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
     expect(isoFromDatetimeLocal(local)).toBe(iso);
     expect(isoFromDatetimeLocal("not a date")).toBeNull();
+  });
+
+  it("prefills the event's source and fingerprint when silencing one alert", () => {
+    const defaults = suppressionDefaultsFromEvent({
+      name: "Silence: Disk full",
+      sourceId: "source-1",
+      fingerprint: "disk:full",
+      now: new Date("2026-10-18T09:00:00.000Z"),
+    });
+
+    expect(defaults.name).toBe("Silence: Disk full");
+    expect(defaults.kind).toBe("silence");
+    expect(defaults.enabled).toBe(true);
+    expect(defaults.matcher.sourceIds).toEqual(["source-1"]);
+    expect(defaults.matcher.fingerprints).toEqual(["disk:full"]);
+    expect(defaults.matcher.destinationIds).toEqual([]);
+    expect(defaults.matcher.titleContains).toEqual([]);
+    expect(suppressionMatcherIsEmpty(defaults.matcher)).toBe(false);
+    expect(defaults.startsAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(Date.parse(defaults.endsAt)).toBeGreaterThan(Date.parse(defaults.startsAt));
   });
 
   it("keeps every matcher dimension when editing an existing rule", () => {

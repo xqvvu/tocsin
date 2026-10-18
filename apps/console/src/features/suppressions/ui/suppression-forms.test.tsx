@@ -105,6 +105,52 @@ describe("suppression create form", () => {
     expect(screen.queryByText("This silences everything")).toBeNull();
   });
 
+  it("submits the prefilled source and fingerprint without touching the form", async () => {
+    const onSubmit = vi.fn<(input: SuppressionFormSubmission) => void>();
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <CreateSuppressionForm
+          sources={sources}
+          destinations={destinations}
+          pending={false}
+          defaultValues={{
+            name: "Silence: Disk full",
+            startsAt: "2026-10-18T09:00",
+            endsAt: "2026-10-18T11:00",
+            matcher: {
+              sourceIds: ["source-grafana"],
+              destinationIds: [],
+              severities: [],
+              statuses: [],
+              fingerprints: ["disk:full"],
+              labels: [],
+              titleContains: [],
+              messageContains: [],
+            },
+          }}
+          onSubmit={onSubmit}
+        />
+      </AppIntlProvider>,
+    );
+
+    expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("Silence: Disk full");
+    fireEvent.click(screen.getByRole("button", { name: "Create suppression" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({
+      name: "Silence: Disk full",
+      matcher: {
+        sourceIds: ["source-grafana"],
+        fingerprints: ["disk:full"],
+      },
+    });
+    expect(screen.queryByText("This silences everything")).toBeNull();
+  });
+
   it("warns how many automatically paging destinations the rule would mute", () => {
     renderCreateForm();
 
