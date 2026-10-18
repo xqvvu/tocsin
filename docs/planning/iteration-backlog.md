@@ -111,7 +111,7 @@
 | FIX-10 | 未使用的生产依赖 | architecture lane | 20 | candidate | — | `@faker-js/faker`、`@tanstack/match-sorter-utils` 全仓无 import；确认后移除或降为 devDependency |
 | DOC-13 | import boundaries 文档 4 处与代码不一致 | architecture lane | 24 | candidate | — | `tanstack-start-import-boundaries.md:69,75-77,112,120`；`application-container.md:115`；`orpc-api-layer.md:198` |
 | DOC-14 | sqlite-store 文档缺 suppressions 信息 | architecture lane | 23 | candidate | — | `sqlite-store.md:138-155,189-198`；代码已有 `schema.ts:33,130`、`store.ts:45` |
-| REQ-31 | 排障搜索覆盖事件/投递 ID | requirements lane | 29 | candidate | — | `eventSearchPredicate` 只匹配 title/message/fingerprint；列表与 total 共用；URL `q` 已存在；`history.repository.ts:397-410` |
+| REQ-31 | 排障搜索覆盖事件/投递 ID | requirements lane | 29 | shipped | #125 | 事件谓词加 `events.id` + 所属投递 `EXISTS`；投递谓词加 `deliveries.id`/`events.id`；列表与 total 同谓词；PRD `docs/prd/operation-search-identifiers.md` |
 | REQ-32 | 解析失败事件的诊断可见性 | requirements lane | 28 | candidate | — | 审计事件已写 providerMetadata，但列表/详情/筛选都看不到；`intake.service.ts:191-239`、`event-raw-tab.tsx:13-28` |
 | REQ-33 | 绝对时间窗口过滤 | requirements lane | 27 | candidate | — | URL `from`/`to`，与 `range` 互斥；仓储只有 `since` 没有上界；`operations.ts:26-28`、`history.interface.ts:23-49` |
 | REQ-34 | 筛选结果导出 CSV | requirements lane | 27 | candidate | — | 只读 `operations.export`，上限 5000 行，CSV 公式注入转义；`packages/api/src/contract/operations.ts:36-88` |
@@ -121,24 +121,32 @@
 | DOC-16 | RC checklist/post-MVP/template follow-up 状态过期 | docs drift | 26 | shipped | #123 | compose smoke 已存在、模板四种模式已交付、抑制主体已交付 |
 | DOC-17 | adapter-extensibility 称无 registry audit 且模板模式未扩展 | docs drift | 25 | shipped | #123 | `registry.ts:83` 已有 `audit()`；四种模式已落地 |
 | DOC-18 | 架构文档 typecheck 命令与 session namespace 过期 | docs drift | 24 | shipped | #123 | 两处 `vp -C apps/console run typecheck` 改为 `vp check`；`auth.*` 改 `session.*`；ADR 0007 命名空间补齐 |
+| REQ-37 | 投递搜索覆盖失败原因/目标/路由 | requirements lane | 29 | candidate | — | `deliverySearchPredicate` 已覆盖 ID/标题/消息/指纹，但表格展示的 `lastError`、目标名、路由名不可搜；`history.repository.ts:425-435`、`deliveries-table.tsx:97-101` |
+| REQ-38 | 投递详情页重试闭环 | requirements lane | 29 | candidate | — | RC checklist `:152` 声称详情可 retry，实际只在列表（`delivery-actions.tsx:20-33`、`delivery-detail-page.tsx:47-56`）；复用 `operations.retryDelivery` |
+| REQ-39 | 静默窗口剩余时间与一键续期 | requirements lane | 27 | candidate | — | 列表/详情只显示起止时间（`suppressions-section.tsx:247-258`、`suppression-detail-page.tsx:83-92`）；core 已有派生状态（`suppression.ts:79-96`） |
+| REQ-40 | 详情返回保留列表筛选 | requirements lane | 26 | candidate | — | 详情返回固定跳 `/events`、`/deliveries`（`event-detail-page.tsx:63-69`、`delivery-detail-page.tsx:49-55`），筛选与分页丢失 |
+| REQ-41 | 告警源接入指引 | requirements lane | 26 | candidate | — | 创建提示只有 URL/Token（`source-token-notice-panel.tsx:16-79`），provider catalog 无接入步骤/示例（`packages/providers/src/types.ts:68-79`）；Generic 文案还声称支持 JSON 字段映射 |
 
 ## 下一轮优先项
 
-1. **REQ-31**（29）：排障搜索覆盖事件/投递 ID；`q` 谓词已集中，改动小、值班收益高。
-2. **REQ-27**（28）：Deliveries 列表显示告警标题/严重程度/状态；与 Events 列表形态对齐，
+1. **REQ-38**（29）：投递详情页重试闭环；纯前端 + 现有 oRPC，RC checklist 已承诺。
+2. **REQ-37**（29）：投递搜索覆盖失败原因/目标/路由；与 REQ-31 同文件，谓词已集中。
+3. **REQ-27**（28）：Deliveries 列表显示告警标题/严重程度/状态；与 Events 列表形态对齐，
    纯 DTO 投影 + UI。
-3. **REQ-32**（28）：解析失败事件的诊断可见性；解析失败审计已落库，缺投影与展示。
-4. **REL-3**（28）：Docker smoke 卷/镜像/项目/端口隔离（N2）。这是任何 smoke CI 接入前的
-   阻断项；需本地 Docker 实测。
-5. **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：既有高价值切片。
-6. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
-7. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、事件标签可见性。
-8. **REL-6 + REL-7**（26/26）：Docker smoke 断言增强、E2E harness 就绪探针/隔离；AUTO_FIX。
-9. **Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并为一个 `test:` PR。
-10. **FIX-8**（26）、DOC-4/DOC-6/DOC-11/DOC-12/DOC-13/DOC-14 + REL-12：剩余修复与文档漂移。
-11. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
-12. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖；**REL-13**（LICENSE）需专家小组
-    做法律/产品决策。ARCH-10/ARCH-11 等再次触碰对应文件时做。
+4. **REQ-32**（28）：解析失败事件的诊断可见性；解析失败审计已落库，缺投影与展示。
+5. **REL-3**（28）：Docker smoke 卷/镜像/项目/端口隔离（N2）。这是任何 smoke CI 接入前的
+   阻断项；需本地 Docker 实测（本机已确认 `docker`/`just` 可用）。
+6. **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：既有高价值切片。
+7. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
+8. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、事件标签可见性。
+9. **REQ-39/REQ-40/REQ-41**（27/26/26）：静默续期、详情返回保筛选、告警源接入指引。
+10. **REL-6 + REL-7**（26/26）：Docker smoke 断言增强、E2E harness 就绪探针/隔离；AUTO_FIX。
+11. **Q-12/Q-13 + Q-4/Q-5**：纯测试补齐，可合并为一个 `test:` PR。
+12. **FIX-8**（26）、DOC-4/DOC-6/DOC-11/DOC-12/DOC-13/DOC-14 + REL-12：剩余修复与文档漂移。
+13. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
+14. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（第 8 轮已确认最小 CI 方案：
+    setup vp → playwright install chromium → `CI=true playwright test`，无新服务/secret）；
+    **REL-13**（LICENSE）需专家小组做法律/产品决策。ARCH-10/ARCH-11 等再次触碰对应文件时做。
 
 ## 已知过期输入
 
