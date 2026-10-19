@@ -23,6 +23,16 @@ import { cn } from "#/lib/utils";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+
+function readPersistedSidebarState(): boolean | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const match = document.cookie.match(/(?:^|;\s*)sidebar_state=(true|false)(?:;|$)/);
+
+  return match ? match[1] === "true" : null;
+}
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
@@ -69,6 +79,23 @@ function SidebarProvider({
   // We use openProp and setOpenProp for control from outside the component.
   const [_open, _setOpen] = React.useState(defaultOpen);
   const open = openProp ?? _open;
+
+  // Restore the persisted state after hydration. Reading the cookie in the
+  // state initializer would render a collapsed sidebar on the first client
+  // pass while the server rendered it expanded, so apply it once mounted.
+  React.useEffect(() => {
+    if (openProp !== undefined) {
+      return;
+    }
+
+    const persisted = readPersistedSidebarState();
+    if (persisted !== null) {
+      // Syncing once from the cookie after mount is the point of this effect;
+      // reading it during render would desync hydration.
+      // oxlint-disable-next-line react/set-state-in-effect
+      _setOpen(persisted);
+    }
+  }, [openProp]);
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value;
