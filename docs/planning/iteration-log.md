@@ -2,6 +2,67 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 24 轮）
+
+- 时间：2026-10-20 00:39 – 01:xx CST。
+- 基线：`origin/main` @ `ee86534`；本轮合并 #168。
+- 类型：EXPERT_PANEL 语义修复 + 三车道审计（非 full-audit）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）；backlog 有大量 ≥27 分候选，按第 1.5 步继续。
+- 车道：`requirements` + `quality` + `ui-triage`（决策 `defer`）；下一轮建议
+  `requirements` + `security-exposure` + `release-infra`。
+- `ui-triage`：`defer` —— 距第 23 轮浏览器实测仅约 24 分钟，自评审后无 UI 合并；
+  建议直接实现 UI-1（搜索吞字符），而不是再次评审。
+- `last_ui_review_at`：2026-10-20 00:18（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `zen-panini-2e1e3e`。依赖 `vp install --frozen-lockfile` 后完整可用。
+
+### 本轮交付
+
+- PR #168 `fix(console): stop repeating urgent calls when persistence fails` —— **Q-30**。
+  - 服务商已受理加急呼叫后，`markFired` 写库失败不再落入可重试分支；幂等重试一次，
+    仍失败则写终态 `retryAt: null`，错误文案明确「呼叫已发出、状态写入失败」。
+  - 兜底写入也失败时只记录日志并返回 `failed`，不抛错中断批次；不修改
+    `reclaimStaleRunning`、不新增状态或 schema。
+  - 新增 `oncall-execution.test.ts` 覆盖三条路径；决策记录
+    `docs/planning/decisions/oncall-fired-persistence-failure.md`。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4
+    （console 117 files / 612 tests）；`vp run -r build` 通过。
+
+### EXPERT_PANEL：Q-30
+
+- **安全与可靠性专家**：重复电话为 P0；受理后的持久化必须移出重试路径，兜底写入也
+  必须被捕获；`markFired` 幂等可重试一次；不建议把 `reclaimStaleRunning` 改为终态
+  （会把重复呼叫换成漏呼）。建议 Q-8 同批修复。
+- **产品与运维专家**：重复电话 P0、重复聊天 P2；终态 `failed` 可能误导值班手动再呼，
+  因此错误文案必须写明已呼叫；Q-8 应单独处理（投递成功还承载自动加急语义）。
+- **独立评估者**：方案可测；只作用于 `result.ok` 分支，呼叫前失败仍可重试；残留的
+  崩溃窗口需记录、不能宣称严格 at-most-once；回滚为单提交 revert。
+- **分歧处理**：Q-8 是否同批存在分歧，按最保守且可逆原则选择单独处理。三位专家对
+  「已呼叫则不得重排、不得抛错」一致。
+- 决策记录：`docs/planning/decisions/oncall-fired-persistence-failure.md`。
+
+### 车道发现
+
+- **requirements**：复核 REQ-73（28）、REQ-48（25）、REQ-52（28）仍有效；新增
+  REQ-108（多值属性筛选，28）、REQ-109（事件标签一键静默，29）、REQ-110（静默即将
+  到期提示，28）。首选 REQ-109：纯前端、复用现有静默表单与 matcher、无契约/迁移。
+- **quality**：确认 Q-30/Q-8/Q-26/Q-31/Q-10/Q-27/Q-28 仍有效；补充 Q-10 的新证据
+  （`settings.get()` 在 `claimNext` 之后，读取失败会让整批滞留 `running`）；新增
+  Q-36（自动加急部分入队被静默吞掉，22）、Q-37（oncall dedupe cleanup 无界 DELETE，
+  20）；第 23 轮新增的抑制命中列表未发现新缺陷。
+- **ui-triage**：`defer`，理由见上。
+
+### 发布（第 9.5 步）
+
+- 本轮发布评估顺延到下一轮：等待 #168 合并与 main CI 后已超出 75 分钟预算，
+  按单轮预算规则只完成当前 PR 的交付。
+
+### 其他
+
+- 本轮未执行浏览器验证：改动为服务端 oncall 语义，由新增执行层测试覆盖。
+- Obsidian 同步：见文末或按 AGENTS.md 处理。
+- 工作树：结束前删除会话工作树 `node_modules` 与 `agent-iteration`。
+
 ## 2026-10-19（第 23 轮）
 
 - 时间：2026-10-19 18:25 – 21:20 CST。严重超出 75 分钟预算（车道合计运行约 99 分钟），
