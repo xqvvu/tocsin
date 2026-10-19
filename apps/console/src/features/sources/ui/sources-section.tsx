@@ -1,7 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 
-import type { RouteDefinition, SourceSummary } from "@tocsin/core";
+import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
 import { OperationsTable } from "#/components/common/operations-table";
@@ -17,6 +17,7 @@ import { useTranslations } from "#/i18n/use-i18n";
 export interface SourcesSectionProps {
   sources: SourceSummary[];
   routes: RouteDefinition[];
+  destinations: DestinationSummary[];
   pending: boolean;
   onEdit: (sourceId: string) => void;
   onToggle: (source: SourceSummary) => void;
@@ -27,6 +28,7 @@ export interface SourcesSectionProps {
 export function SourcesSection({
   sources,
   routes,
+  destinations,
   pending,
   onEdit,
   onToggle,
@@ -51,7 +53,9 @@ export function SourcesSection({
         id: "routes",
         header: t("sources.table.headers.routes"),
         cell: ({ row }) => (
-          <SourceRouteCoverageCell coverage={sourceRouteCoverage(row.original.id, routes)} />
+          <SourceRouteCoverageCell
+            coverage={sourceRouteCoverage(row.original.id, routes, destinations)}
+          />
         ),
       },
       {
@@ -65,7 +69,9 @@ export function SourcesSection({
         cell: ({ row }) => (
           <SourceActions
             source={row.original}
-            enabledRouteCount={sourceRouteCoverage(row.original.id, routes).enabledRouteCount}
+            enabledRouteCount={
+              sourceRouteCoverage(row.original.id, routes, destinations).enabledRouteCount
+            }
             pending={pending}
             onEdit={onEdit}
             onToggle={onToggle}
@@ -75,7 +81,7 @@ export function SourcesSection({
         ),
       },
     ],
-    [onDelete, onEdit, onRotateToken, onToggle, pending, routes, t],
+    [destinations, onDelete, onEdit, onRotateToken, onToggle, pending, routes, t],
   );
 
   return (
