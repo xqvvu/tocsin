@@ -2,6 +2,99 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 22 轮）
+
+- 时间：2026-10-19 17:27 – 18:15 CST。
+- 基线：`origin/main` @ `2cdaee1`；本轮合并后为 `f2a2ef6`（#161）、`e5947f6`（#162）、
+  `3295013`（#163 release）。
+- 本轮类型：**需求切片 + P0 小修复 + 三车道审计 + 发布**（非 full-audit）。最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）；backlog 有大量 ≥27 分候选，按第 1.5 步继续。
+- 车道轮转位置：本轮跑 `requirements` + `release-infra` + `docs-drift`，三条车道均返回。
+  下一轮建议 `requirements` + `security-exposure` + `quality`。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `sharp-chatterjee-8bb6fe`；依赖链接再次残缺，整体删除后 `vp install --frozen-lockfile` 解决。
+- 验证：两个代码 PR 均通过 `vp check`（0 errors，11 条既有 warning）、`vp run -r test`
+  （console 116 files / 611 tests）与 `vp run -r build`；Docker smoke 本地完整实跑通过。
+
+### 本轮交付
+
+- PR #161（`feat(console): surface active suppressions in the dashboard header`）—— **REQ-65**。
+  - Dashboard header 新增静默状态指示器：只统计 `active` 规则，显示「生效中的静默：N 条」并
+    链接 `/suppressions`；存在无条件规则时显示 destructive「全量静默生效中」，避免值班人员把
+    全量静默误判为系统健康。
+  - 状态每 30 秒按当前时间重算；加载中或查询失败时隐藏，不影响 dashboard。
+  - 纯派生逻辑在 `features/suppressions/model/suppression-summary.ts`，组件在
+    `features/suppressions/ui/active-suppression-indicator.tsx`，header 只做布局组合。
+  - PRD `docs/prd/active-suppression-indicator.md`；模型/组件测试覆盖空态、普通生效、全量静默、
+    查询失败与跳转目标。rebase 合并 `f2a2ef6`。
+  - 评审修复（`4e03231`）：把 catch-all 判定收敛到 core 的
+    `isUnconditionalSuppressionMatcher`，避免新增匹配维度时误标全量静默。
+- PR #162（`fix(release): isolate the docker smoke stack from production data`）——
+  **REL-3（P0）/ REL-20 / REL-15 / REL-10（部分）/ DOC-35 / DOC-42**。
+  - 新增 `docker-compose.smoke.yml`：smoke 使用独立的 `tocsin:smoke` 镜像与
+    `tocsin-smoke-data` 卷；脚本启动前后断言解析配置与 `/data` 实际挂载源，`down -v` 不再
+    可能删除生产 `tocsin-data`。
+  - 失败日志改为 teardown 前采集；curl 增加连接/总超时；根路径跟随 307 重定向并断言 HTML。
+  - `just docker-buildx` 增加 `--provenance=false --sbom=false`，修复阿里云 ACR 拒绝
+    BuildKit OCI attestation manifest；发布文档同步 registry/tag 约定、回滚镜像与
+    `up -d --build` 修正。rebase 合并 `e5947f6`。
+- PR #163（`chore(release): v0.1.0-beta.11`）：版本递增与发布文档同步，rebase 合并 `3295013`。
+
+### requirements / release-infra / docs-drift 车道
+
+- **requirements**：确认 REQ-65/73/48/52 仍有效；新增候选 REQ-103（27，生产 compose 默认安全
+  启动）、REQ-104（27，备份恢复演练脚本）、REQ-105（25，静默规则的失效引用）、REQ-106（24，
+  加急 ping 取消）、REQ-107（22，删除归档化，需 EXPERT_PANEL）。
+- **release-infra**：确认 REL-3 仍为 P0 并当轮修复；新增 REL-20（`just docker-buildx` 缺
+  `--provenance=false`，已修）；REL-6/REL-15/REL-18/REL-10/DOC-42 仍有效，其中
+  REL-15/REL-10（部分）/DOC-35/DOC-42 随 #162 修复；REL-1（E2E 接入 CI）、REL-8（生产构建
+  E2E）留待 EXPERT_PANEL；REL-4/5/7/17/11/19 待后续。
+- **docs-drift**：`xqvvu/vane` 文档引用已清理（仅保留真实 ACR 命名空间）；新增 DOC-43
+  （README 能力/结构）、DOC-44（投递搜索占位文案）、DOC-45（README Roadmap）；DOC-34/11/22/
+  23/24/25/26/27/36/37/38/39/40/41 仍有效，建议下一轮拆两个 `docs:` PR 分批清理。
+
+### EXPERT_PANEL
+
+- 本轮优先处理 P0 REL-3 与 REQ-65，未展开 Q-30 / SEC-7 / REQ-93；三项继续排在下一轮优先项。
+- REQ-107（配置删除归档化）涉及 schema/删除语义，转为 EXPERT_PANEL 候选，需先写决策记录。
+- REL-13（LICENSE）继续 `blocked-autonomous`。
+
+### 发布（第 9.5 步）
+
+- 三位专家一致通过发布：
+  - **发布经理**：自 beta.10 以来有 1 项用户可见变更（#161），RELEASE，建议 `0.1.0-beta.11`。
+  - **阻断审计**：main CI 绿（`e5947f6`）、无 open PR、migration 仍为 0001–0003 且无 schema
+    变更、目标 tag 未占用，PASS。
+  - **运维/回滚**：生产 compose/Dockerfile/env 未变化；SQLite 兼容；回滚只需换回
+    `0.1.0-beta.10` 镜像，SAFE。
+- Tag：`v0.1.0-beta.11`（annotated，指向 `3295013`）；GitHub Release 已创建（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.11`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:2c338841085b5fd7a36e19ca59165fd71e829613ffe58bf8f92c348120707fab`）。
+  - `docker login` 用 keychain 凭据返回 `unauthorized: authentication required`，但 buildx
+    `--push` 直接使用 credential store 成功；未把 Secret 写入命令、日志或文件。
+  - `docker buildx imagetools inspect` 已确认双平台。
+  - 回滚镜像：`0.1.0-beta.10`（digest `sha256:6acac322…`）。
+
+### 其他
+
+- 浏览器验证：未执行；指示器由 jsdom 组件测试与 model 单测覆盖。
+- Obsidian 同步已跳过：`obsidian-vault` skill 不在本会话可用 skill 列表。
+- 本轮 backlog/log 随 `docs(planning)` PR 提交。
+- 工作树已清理：删除会话工作树 `node_modules` 与 `agent-iteration`。
+
+### 下一轮优先项
+
+1. **EXPERT_PANEL**：Q-30、SEC-7、REQ-93；新增 REQ-107 需先出决策记录。
+2. **REQ-73（28）+ REQ-48（28）**：静默时间窗时区语义、配置删除影响预检（并入 REQ-105）。
+3. **REQ-52（28）**：模板 `tocsin.eventUrl` 与公开访问地址配置。
+4. **REQ-103/104（27）**：生产 compose 默认安全启动、备份/恢复演练脚本。
+5. **REL-1/REL-8**：E2E 接入 CI / 生产构建 E2E 的 panel 决策；REL-4/5/7 先扩 spec 与修 harness。
+6. **docs-drift 批次**：DOC-34/11/22/23/24/25/26/27/36/37/38/39/40/41/43/44/45，拆两个
+   `docs:` PR。
+7. **SEC-9 + Q-32 + Q-26**：构造时脱敏 `headersRecord`、`toLowerCase` 归一化、抑制窗口比较。
+8. **车道轮转（第 23 轮）**：`requirements` + `security-exposure` + `quality`。
+
 ## 2026-10-19（第 21 轮）
 
 - 时间：2026-10-19 16:58 – 17:25 CST。
