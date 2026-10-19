@@ -2,6 +2,7 @@ import { useRouterState } from "@tanstack/react-router";
 
 import { Separator } from "#/components/ui/separator";
 import { SidebarTrigger } from "#/components/ui/sidebar";
+import { ActiveSuppressionIndicator } from "#/features/suppressions/ui/active-suppression-indicator";
 import { useTranslations } from "#/i18n/use-i18n";
 import { dashboardNavItemForPath } from "#/shell/dashboard-navigation";
 
@@ -24,6 +25,10 @@ export function DashboardHeader() {
         <span className="truncate text-sm font-medium">
           {currentItem ? t(currentItem.labelKey) : t("shell.nav.consoleLabel")}
         </span>
+      </div>
+
+      <div className="ml-auto flex shrink-0 items-center">
+        <ActiveSuppressionIndicator />
       </div>
     </header>
   );

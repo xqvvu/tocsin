@@ -1024,6 +1024,8 @@
   "suppressions.hits.pagination.page": "Page {page} of {pageCount}",
   "suppressions.hits.pagination.previous": "Previous",
   "suppressions.hits.pagination.range": "{total} deliveries",
+  "suppressions.indicator.active": "Active suppressions: {count}",
+  "suppressions.indicator.catchAll": "All alerts are silenced",
   "suppressions.kind.maintenance_window": "Maintenance window",
   "suppressions.kind.silence": "Silence",
   "suppressions.matcher.destination": "Destination",

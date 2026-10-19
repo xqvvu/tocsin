@@ -1,4 +1,5 @@
-import type { SuppressionMatcher } from "@tocsin/core";
+import { suppressionStateAt } from "@tocsin/core";
+import type { Suppression, SuppressionMatcher } from "@tocsin/core";
 
 /**
  * Locale-agnostic copy and formatters for suppression matcher chips.
@@ -45,4 +46,48 @@ export function buildSuppressionMatcherChips(
 /** Tooltip / aria summary of a matcher; the empty matcher reads as "everything". */
 export function describeSuppressionMatcher(chips: string[], copy: SuppressionSummaryCopy): string {
   return chips.length === 0 ? copy.everything : chips.join("; ");
+}
+
+export interface ActiveSuppressionSummary {
+  activeCount: number;
+  /** Active rules whose matcher has no conditions and therefore silences everything. */
+  catchAllCount: number;
+  names: string[];
+}
+
+/**
+ * Project the rules that are in force at `now`.
+ *
+ * Only `active` counts: a scheduled rule has not started, an expired one can no
+ * longer silence, and a disabled one is intentionally off. `catchAllCount` is
+ * reported separately because an unconditional rule is the case that makes the
+ * rest of the console look healthy while nothing is delivered.
+ */
+export function summarizeActiveSuppressions(
+  suppressions: readonly Suppression[],
+  now: string,
+): ActiveSuppressionSummary {
+  const active = suppressions.filter(
+    (suppression) => suppressionStateAt(suppression, now) === "active",
+  );
+
+  return {
+    activeCount: active.length,
+    catchAllCount: active.filter((suppression) => isCatchAllMatcher(suppression.matcher)).length,
+    names: active.map((suppression) => suppression.name),
+  };
+}
+
+/** Mirrors the empty-matcher semantics of `formatSuppressionReason` in core. */
+export function isCatchAllMatcher(matcher: SuppressionMatcher): boolean {
+  return (
+    matcher.sourceIds.length === 0 &&
+    matcher.destinationIds.length === 0 &&
+    matcher.severities.length === 0 &&
+    matcher.statuses.length === 0 &&
+    matcher.fingerprints.length === 0 &&
+    matcher.labels.length === 0 &&
+    matcher.titleContains.length === 0 &&
+    matcher.messageContains.length === 0
+  );
 }
