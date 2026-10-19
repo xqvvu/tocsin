@@ -79,7 +79,9 @@
 ### 其他
 
 - 浏览器验证：未执行；指示器由 jsdom 组件测试与 model 单测覆盖。
-- Obsidian 同步已跳过：`obsidian-vault` skill 不在本会话可用 skill 列表。
+- Obsidian 同步：已按 AGENTS.md 从 Obsidian 配置发现真实 vault
+  （`~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Vane`），同步 backlog/log/PRD/
+  release 文档并更新 `Vane Index`；未使用硬编码 WSL 路径。
 - 本轮 backlog/log 随 `docs(planning)` PR 提交。
 - 工作树已清理：删除会话工作树 `node_modules` 与 `agent-iteration`。
 
