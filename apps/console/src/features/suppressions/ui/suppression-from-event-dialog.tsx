@@ -45,12 +45,15 @@ export function SuppressionFromEventDialog({
   source,
   label,
   disabled = false,
+  disabledReason,
 }: {
   event: EventRecord;
   source: SourceSummary;
   /** When set, the form silences this label value instead of the fingerprint. */
   label?: { key: string; value: string };
   disabled?: boolean;
+  /** Replaces the action title when disabled, to explain why it is unavailable. */
+  disabledReason?: string;
 }) {
   const t = useTranslations();
   const [open, setOpen] = React.useState(false);
@@ -80,6 +83,7 @@ export function SuppressionFromEventDialog({
         labelValue: label.value,
       })
     : t("suppressions.fromEvent.action");
+  const actionTitle = disabled && disabledReason ? disabledReason : actionLabel;
 
   // The event's source may be missing from the fetched list if it was deleted
   // after intake; keep it selectable so the prefilled matcher stays visible.
@@ -122,8 +126,8 @@ export function SuppressionFromEventDialog({
             variant="outline"
             size={label ? "icon-xs" : "sm"}
             disabled={disabled || pending}
-            title={actionLabel}
-            aria-label={label ? actionLabel : undefined}
+            title={actionTitle}
+            aria-label={label ? actionTitle : undefined}
             className={label ? "shrink-0" : "w-fit"}
           />
         }

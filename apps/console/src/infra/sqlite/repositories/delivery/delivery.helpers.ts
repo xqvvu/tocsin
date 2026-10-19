@@ -1,4 +1,4 @@
-import { decodeJson, DeliveryJobSchema, redactJsonValue, redactText } from "@tocsin/core";
+import { decodeJson, DeliveryJobSchema, redactJsonText, redactText } from "@tocsin/core";
 import type { DeliveryAttempt, DeliveryJob, JsonValue, ProviderReference } from "@tocsin/core";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
@@ -53,7 +53,7 @@ export function attemptFromRow(row: DeliveryAttemptRow): DeliveryAttempt {
  * since rotated.
  */
 export function decodeRenderedPayload(value: string | null): JsonValue | null {
-  return value === null ? null : redactJsonValue(decodeJson(value));
+  return value === null ? null : redactJsonText(decodeJson(value));
 }
 
 export function providerReferenceFromRow(

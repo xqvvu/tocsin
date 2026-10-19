@@ -132,6 +132,33 @@ describe("delivery route evidence", () => {
     expect(screen.getByText("The route no longer exists")).toBeTruthy();
   });
 
+  it("defers to the intake snapshot when the event content was redacted", () => {
+    const route = routeFixture(["critical"]);
+    const detail = detailFixture({
+      route: {
+        ...route,
+        rule: { ...route.rule, titleContains: ["Bearer abcdefgh1234"] },
+      },
+      routeMatches: [matchFixture()],
+    });
+    detail.event.normalized.title = "Disk failed Authorization: [REDACTED]";
+
+    renderEvidence(detail);
+
+    // Re-evaluating the rule against `[REDACTED]` would report a mismatch that
+    // never happened, so the page must say the evidence is unavailable instead.
+    expect(
+      screen.getByText(
+        "The event content was redacted, so the current rule cannot be re-evaluated here — the intake snapshot below is the authoritative evidence",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        "The current rule no longer matches this event — this delivery ran under the rule in force at the time",
+      ),
+    ).toBeNull();
+  });
+
   it("renders nothing for a manual delivery, which bypasses routing", () => {
     renderEvidence(
       detailFixture({

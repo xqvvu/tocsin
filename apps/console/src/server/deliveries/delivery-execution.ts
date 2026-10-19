@@ -1,6 +1,6 @@
 import { getLogger } from "@logtape/logtape";
 
-import { redactJsonValue, redactNormalizedEvent, redactText } from "@tocsin/core";
+import { redactJsonText, redactNormalizedEvent, redactText } from "@tocsin/core";
 import type {
   DestinationErrorKind,
   DestinationRetryHint,
@@ -95,7 +95,7 @@ export class DeliveryExecution {
           // outbound copy is projected so a credential in the alert body does
           // not leave the host.
           normalizedEvent: redactNormalizedEvent(delivery.event.normalized),
-          payload: redactJsonValue(delivery.event.rawPayload),
+          payload: redactJsonText(delivery.event.rawPayload),
           config,
           presentation,
         },

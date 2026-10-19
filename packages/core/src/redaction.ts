@@ -129,23 +129,50 @@ export function isSensitiveKey(key: string): boolean {
   return SENSITIVE_EXACT_KEYS.has(normalized) || SENSITIVE_KEY_SUFFIX_PATTERN.test(normalized);
 }
 
+/**
+ * Redacts header values for display or transport.
+ *
+ * A sensitive name replaces the whole value. Every other value still runs
+ * through text redaction, because a credential can sit in a header the
+ * denylist does not name (`X-Auth: Bearer ...`) and a header value is machine
+ * data where over-redaction costs little.
+ */
 export function redactHeaders(headers: Record<string, string>): Record<string, string> {
-  return mapValues(headers, (value, key) => (isSensitiveKey(String(key)) ? REDACTED_VALUE : value));
+  return mapValues(headers, (value, key) =>
+    isSensitiveKey(String(key)) ? REDACTED_VALUE : redactText(value),
+  );
 }
 
 export function redactJsonValue(value: JsonValue): JsonValue {
+  return redactJson(value, redactCredentialText);
+}
+
+/**
+ * Projects a JSON value with assignment-shape redaction in string leaves.
+ *
+ * `redactJsonValue` only applies value-shape rules to strings, because keys
+ * already name the sensitive fields in structured data and write-side
+ * redaction is permanent. Read and send boundaries need the wider net: a
+ * rendered payload or raw provider value can carry `{"text": "token=..."}`
+ * under a neutral key, which the value-shape rules alone do not catch.
+ */
+export function redactJsonText(value: JsonValue): JsonValue {
+  return redactJson(value, redactText);
+}
+
+function redactJson(value: JsonValue, redactString: (input: string) => string): JsonValue {
   if (Array.isArray(value)) {
-    return value.map(redactJsonValue);
+    return value.map((entry) => redactJson(entry, redactString));
   }
 
   if (typeof value === "object" && value !== null) {
     return mapValues(value as JsonObject, (entry, key) =>
-      isSensitiveKey(String(key)) ? REDACTED_VALUE : redactJsonValue(entry),
+      isSensitiveKey(String(key)) ? REDACTED_VALUE : redactJson(entry, redactString),
     ) as JsonObject;
   }
 
   if (typeof value === "string") {
-    return redactCredentialText(value);
+    return redactString(value);
   }
 
   return value;
@@ -218,8 +245,11 @@ export function redactEventRecord(event: EventRecord): EventRecord {
   return {
     ...event,
     normalized: redactNormalizedEvent(event.normalized),
-    providerMetadata: redactJsonValue(event.providerMetadata) as JsonObject,
-    rawPayload: redactJsonValue(event.rawPayload),
+    // The idempotency key is provider-supplied and rendered on the detail page.
+    // It is not used for matching at read time, so the DTO can redact it.
+    idempotencyKey: event.idempotencyKey === null ? null : redactText(event.idempotencyKey),
+    providerMetadata: redactJsonText(event.providerMetadata) as JsonObject,
+    rawPayload: redactJsonText(event.rawPayload),
     rawHeaders: redactHeaders(event.rawHeaders),
     routeMatches: event.routeMatches === null ? null : redactRouteMatchResults(event.routeMatches),
   };

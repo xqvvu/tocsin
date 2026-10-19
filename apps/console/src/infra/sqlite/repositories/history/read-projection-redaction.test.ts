@@ -134,6 +134,7 @@ describe("read projection redaction", () => {
       attemptId: "attempt-pre-projection",
       renderedPayload: {
         text: "Checkout failed Authorization: Bearer abcdefgh1234",
+        note: "password=stored-secret",
         token: "rendered-secret",
       },
       startedAt: now,
@@ -143,7 +144,8 @@ describe("read projection redaction", () => {
     const deliveryDetail = await store.deliveries.get(deliveryId);
 
     expect(deliveryDetail?.renderedPayload).toEqual({
-      text: "Checkout failed Authorization: Bearer [REDACTED]",
+      text: "Checkout failed Authorization: [REDACTED]",
+      note: "password=[REDACTED]",
       token: "[REDACTED]",
     });
     expect(deliveryDetail?.event.normalized.labels.authorization).toBe("[REDACTED]");
