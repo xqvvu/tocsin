@@ -99,7 +99,7 @@ Adapter 不接收 logger 或 metrics client，但结构化结果必须包含 con
 
 Core 中的 catalog item 以泛型 `Kind extends string = string` 表达，具体 provider/destination package 再收窄到 `SourceProvider` 或 `DestinationKind`。Config field path 不做从 Zod config schema 推导 dot path 的复杂静态类型，使用安全 path schema 加 registry audit 校验，避免贡献者被高级 TypeScript 类型困住。
 
-Destination send result 使用 `ok` discriminated union 替代 `success: boolean`。成功分支不携带错误字段；失败分支必须包含标准 error kind、retry hint 和安全错误消息。`statusCode` 与已脱敏 `responseBody` 是通用 nullable 字段，HTTP destination 填写实际值，非 HTTP transport 可为 `null`。
+Destination send result 使用 `ok` discriminated union 替代 `success: boolean`。成功分支不携带错误字段；失败分支必须包含标准 error kind、retry hint 和安全错误消息。`statusCode` 与已脱敏 `responseBody` 是通用 nullable 字段，HTTP destination 填写实际值，非 HTTP transport 可为 `null`。脱敏覆盖敏感键与高置信值形态（认证 scheme、URL userinfo、Slack/飞书 webhook URL），不承诺覆盖无前缀裸 token 或 generic webhook path/query 中的 secret。
 
 Destination send result 的两个分支都必须携带 safe `renderedPayload`。该字段是用于 preview 和 Delivery detail 的调试表达，不承诺等于实际 wire payload；即使渲染或发送失败，也应返回安全占位 payload，避免 UI 和 worker 处理 optional payload。
 

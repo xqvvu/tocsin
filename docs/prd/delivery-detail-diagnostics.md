@@ -14,8 +14,9 @@
   `packages/core/src/delivery/delivery.ts:36-38`）。
 - 尝试记录把响应体压缩到 120 字并塞进 `title` 提示（`operation-format.ts:49-56`、
   `delivery-attempts-table.tsx:56,75-77`）。长错误与结构化响应体无法阅读、无法复制，
-  而服务端 DTO 已提供完整且已脱敏的 `error` / `responseBody`
-  （`packages/core/src/operations.ts:109-116`）。
+  而服务端 DTO 已提供完整且经键值与高置信值形态脱敏的 `error` / `responseBody`
+  （`packages/core/src/operations.ts:109-116`）。脱敏不承诺覆盖无前缀裸 token 或
+  generic webhook path/query 中的 secret。
 
 ## 用户故事
 

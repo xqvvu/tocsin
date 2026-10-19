@@ -1,7 +1,10 @@
 import type { OncallPing } from "@tocsin/core";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
-import { providerReferenceFromRow } from "#/infra/sqlite/repositories/delivery/delivery.helpers";
+import {
+  providerReferenceFromRow,
+  redactNullableText,
+} from "#/infra/sqlite/repositories/delivery/delivery.helpers";
 import type {
   OncallPingDedupeKeyRow,
   OncallPingRow,
@@ -22,7 +25,8 @@ export function oncallPingFromRow(row: OncallPingRow): OncallPing {
     attemptCount: row.attempt_count,
     maxAttempts: row.max_attempts,
     nextAttemptAt: row.next_attempt_at,
-    lastError: row.last_error,
+    // Legacy rows may predate value-shape redaction, so re-check on read.
+    lastError: redactNullableText(row.last_error),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     firedAt: row.fired_at,

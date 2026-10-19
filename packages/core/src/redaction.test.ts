@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   REDACTED_VALUE,
   isSensitiveKey,
+  redactCredentialText,
   redactHeaders,
   redactJsonValue,
   redactText,
@@ -127,5 +128,83 @@ describe("redaction", () => {
     expect(redactText('headers: {"X-Auth-Token":"abc123"}')).toBe(
       `headers: {"X-Auth-Token":"${REDACTED_VALUE}"}`,
     );
+  });
+
+  // Built from parts so GitHub push protection does not classify the fixture
+  // as a live webhook URL or Slack token.
+  const slackWebhook = [
+    "https://hooks.slack.com",
+    "services",
+    "T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+  ].join("/");
+  const slackWebhookRedacted = ["https://hooks.slack.com", "services", "[REDACTED]"].join("/");
+  const slackToken = ["xoxb", "1234567890-abcdefghij"].join("-");
+
+  it.each([
+    [
+      "bearer scheme",
+      "request failed: Bearer eyJhbGciOiJIUzI1NiJ9.payload.sig",
+      "request failed: Bearer [REDACTED]",
+    ],
+    ["basic scheme", "proxy said Basic dXNlcjpwYXNzd29yZA==", "proxy said Basic [REDACTED]"],
+    ["slack app token", `token ${slackToken} rejected`, "token [REDACTED] rejected"],
+    [
+      "url userinfo password",
+      "failed POST https://svc:supersecret@hooks.example.test/path",
+      "failed POST https://svc:[REDACTED]@hooks.example.test/path",
+    ],
+    ["slack webhook path", `POST ${slackWebhook} failed`, `POST ${slackWebhookRedacted} failed`],
+    [
+      "feishu webhook path",
+      "POST https://open.feishu.cn/open-apis/bot/v2/hook/abcd-1234 failed",
+      "POST https://open.feishu.cn/open-apis/bot/v2/hook/[REDACTED] failed",
+    ],
+    [
+      "lark webhook path",
+      "POST https://open.larksuite.com/open-apis/bot/v2/hook/abcd-1234 failed",
+      "POST https://open.larksuite.com/open-apis/bot/v2/hook/[REDACTED] failed",
+    ],
+  ])("redacts credential-shaped text: %s", (_case, input, expected) => {
+    expect(redactText(input)).toBe(expected);
+    expect(redactCredentialText(input)).toBe(expected);
+  });
+
+  it.each([
+    ["severity id", "severity disk-space-low on node-1"],
+    ["token counter", "max_tokens: 4096, tokenCount: 5"],
+    ["invalid token wording", "response said invalid_token"],
+    ["plain prose", "send the Bearer token later"],
+    ["ordinary url", "GET https://example.test:8080/path failed"],
+    ["ssh user without password", "clone ssh://git@github.com/org/repo.git"],
+    ["slack prefix alone", "the xoxb- prefix marks a Slack bot"],
+  ])("keeps benign text visible: %s", (_case, input) => {
+    expect(redactText(input)).toBe(input);
+    expect(redactCredentialText(input)).toBe(input);
+  });
+
+  it("is idempotent across assignment and value-shape redaction", () => {
+    const input = `POST https://svc:supersecret@example.test failed: Authorization: Bearer abcdefgh1234; token=${slackToken}; url ${slackWebhook}`;
+    const once = redactText(input);
+
+    expect(redactText(once)).toBe(once);
+    expect(redactCredentialText(once)).toBe(once);
+  });
+
+  it("redacts credential-shaped strings inside JSON payloads", () => {
+    expect(
+      redactJsonValue({
+        message: "upstream rejected Bearer abcdefgh1234",
+        endpoint: "https://svc:supersecret@example.test/hook",
+        webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/abcd-1234",
+        severity: "disk-space-low",
+        tokenCount: 5,
+      }),
+    ).toEqual({
+      message: "upstream rejected Bearer [REDACTED]",
+      endpoint: "https://svc:[REDACTED]@example.test/hook",
+      webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/[REDACTED]",
+      severity: "disk-space-low",
+      tokenCount: 5,
+    });
   });
 });
