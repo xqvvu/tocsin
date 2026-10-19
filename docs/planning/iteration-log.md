@@ -2,6 +2,85 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 20 轮）
+
+- 时间：2026-10-19 16:00 – 17:00 CST。
+- 基线：`origin/main` @ `4897749`；本轮合并后为 `3511ec4`（#153）、`30ad630`（#154）。
+  执行期间另一会话把 main 推进到 `2666702`（`feat(console): move dashboard navigation into a
+  collapsible sidebar`，CI 绿）；发布 tag 仍指向打 tag 时的 CI 绿提交 `30ad630`。
+- 本轮类型：**需求切片 + 发布**（非 full-audit）。最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）；backlog 有大量 ≥27 分候选，按第 1.5 步继续。
+- 车道轮转位置：本轮启动 `requirements` + `quality` + `architecture` 三条车道，
+  均超过 30 分钟无输出，按车道限时规则停止，发现留待第 21 轮补跑。下一轮重跑同样三条。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `vibrant-newton-1dec39`；收尾时删除其 `node_modules` 与 `agent-iteration`。
+- 依赖：会话工作树 `node_modules` 链接再次残缺，整体删除后 `vp install --frozen-lockfile`
+  解决（与第 18/19 轮相同）。
+
+### 本轮交付
+
+- PR #153（`feat(console): compare raw and rendered payloads on delivery detail`）—— **REQ-87**。
+  - `DeliveryDetail` 新增派生字段 `rawPayloadPruned`（core 类型 + API schema），
+    仓储详情投影复用 `isPrunedRawPayload`，客户端不自行猜测。
+  - 「载荷」标签页改为原始告警载荷与渲染载荷左右对照；原始载荷已清理时左栏显示说明，
+    右栏仍保留渲染载荷；新增 `delivery-payload-tab` 与 `delivery-payload-pruned-notice`，
+    同步更新页面描述与中英文案。
+  - PRD `docs/prd/delivery-payload-comparison.md`；组件测试覆盖保留/已清理两态，
+    仓储测试覆盖清理前后 `rawPayloadPruned` 与渲染载荷不变。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4
+    （console 112 files / 594 tests）；`vp run -r build`；PR CI green；rebase 合并 `3511ec4`。
+
+### requirements / quality / architecture 车道
+
+- 三条车道均超过 30 分钟无输出，按第 7 轮起的车道限时规则停止；本轮未新增候选，
+  backlog 既有候选项未变动，留待第 21 轮重跑。
+- 已确认 backlog 中无 `planned` / `in-progress` 项，REQ-87 为当时最高分候选（28）。
+
+### EXPERT_PANEL
+
+- 本轮无新的 EXPERT_PANEL 决策；Q-30、SEC-7、REQ-93 仍排在下一轮优先项。
+- REL-13（LICENSE）继续 `blocked-autonomous`。
+
+### 发布（第 9.5 步）
+
+- 三位专家一致同意发布：
+  - **发布经理**：自上次发布以来有 25 条 `feat`/`fix` 用户可见变更，建议 `0.1.0-beta.9`。
+  - **阻断审计**：main CI 绿、无 open PR、无 `in-progress` 回归、无破坏性迁移、版本无冲突，PASS。
+  - **运维/回滚专家**：无新增必填环境变量；迁移 forward-only；新增可选
+    `TOCSIN_DESTINATION_TIMEOUT_MS`（默认 10s）是行为变化；回滚默认需恢复冷备份
+    （旧镜像可能不认识 0002/0003）。
+- PR #154（`chore(release): v0.1.0-beta.9`）：根 `package.json` 递增，同步
+  `docs/release/release-checklist.md` 与 `docs/release/backup-restore-upgrade.md` 的版本引用；
+  rebase 合并 `30ad630`。
+- Tag：`v0.1.0-beta.9`（annotated，指向 `30ad630`，仓库首个 tag；
+  `0.1.0-beta.8` 无对应 tag）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.9`
+  （linux/amd64 + linux/arm64，不推 latest）。
+  - 默认 `docker` driver 不支持多平台构建，已创建 `docker-container` driver 的
+    `tocsin-multi` builder；镜像与 manifest list 构建成功。
+  - **推送失败**：`insufficient_scope: authorization failed`。本机 docker credential store
+    只有 docker.io / dhi.io，没有 ACR 条目，环境中也没有 `ACR_USERNAME` / `ACR_PASSWORD`。
+    按规则保留 tag、不 force、不删除；下一轮重试推送（builder 已保留，可复用）。
+  - 回滚镜像 tag：`0.1.0-beta.8`（若 ACR 中存在）或恢复冷备份。
+
+### 其他
+
+- 浏览器验证：未执行；本切片行为由 jsdom 组件测试与 SQLite 仓储测试覆盖。
+- Obsidian 同步已跳过：`obsidian-vault` skill 不在本会话可用 skill 列表中。
+- backlog/log 的 PR 编号在 docs PR 创建后由后续提交补充（沿用既有 `docs(planning)` 惯例）。
+- 工作树已清理：删除会话工作树 `node_modules` 与 `agent-iteration`。
+
+### 下一轮优先项
+
+1. **ACR 镜像推送**：补齐 ACR 登录（`ACR_USERNAME`/`ACR_PASSWORD` 或 credential store）后，
+   复用 `tocsin-multi` builder 重推 `0.1.0-beta.9`，并用 `docker buildx imagetools inspect` 验证双平台。
+2. **EXPERT_PANEL**：Q-30（加急持久化失败重复呼叫）、SEC-7（归一化字段绕过脱敏）、
+   REQ-93（在线快照下载的敏感边界）。
+3. **REQ-65/66/73/58**（28）：全局静默提示、外部消息引用反查、静默时间窗时区语义、
+   失败投递区分等待重试与重试耗尽。
+4. **REQ-48**（28）：配置删除影响预检。
+5. **车道**：重跑 `requirements` + `quality` + `architecture`。
+
 ## 2026-10-19（第 19 轮）
 
 - 时间：2026-10-19 14:44 – 15:50 CST。
