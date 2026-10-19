@@ -187,9 +187,22 @@ export function destinationMetadataFromRuntime(destination: DestinationRuntimeCo
         metadata.chatId = operational.chatId;
       }
 
-      if (operational.urgentReceivers) {
-        metadata.urgentReceiverCount = operational.urgentReceivers.length;
-      }
+      // The urgent-ping explanation on the delivery page reconstructs the
+      // trigger's gates from this metadata, so project every gate input.
+      // Receiver count stays present even at zero to distinguish "not
+      // configured" from "unknown".
+      const urgent = configPlainObject(destination.config, "urgent");
+      const urgentSeverities = urgent ? configStringArray(urgent, "severities") : [];
+
+      metadata.urgentAutoEnabled = operational.urgentAutoEnabled === true;
+      metadata.urgentReceiverCount = operational.urgentReceivers?.length ?? 0;
+      // Mirror the schema default: an urgent block without explicit severities
+      // only pages critical alerts; no block means no auto paging at all.
+      metadata.urgentSeverities = urgent
+        ? urgentSeverities.length > 0
+          ? urgentSeverities
+          : ["critical"]
+        : [];
     }
 
     return metadata;

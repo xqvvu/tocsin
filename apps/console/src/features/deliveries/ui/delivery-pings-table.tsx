@@ -9,11 +9,13 @@ import {
 import { DeliveryDetailSectionHeader } from "#/features/deliveries/ui/delivery-detail-section-header";
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
 import { DeliveryPingStateBadge } from "#/features/deliveries/ui/delivery-state-badge";
+import { DeliveryUrgentPingExplanation } from "#/features/deliveries/ui/delivery-urgent-ping-explanation";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
 
-export function DeliveryPingsTable({ pings }: { pings: DeliveryDetailData["pings"] }) {
+export function DeliveryPingsTable({ detail }: { detail: DeliveryDetailData }) {
   const t = useTranslations();
+  const pings = detail.pings;
 
   return (
     <section className="flex h-full min-h-0 flex-col gap-2">
@@ -21,39 +23,39 @@ export function DeliveryPingsTable({ pings }: { pings: DeliveryDetailData["pings
         title={t("deliveries.detail.pingsTitle")}
         meta={t("deliveries.detail.summary.pings", { count: pings.length })}
       />
-      <div className="border-border bg-background min-h-0 flex-1 overflow-auto border">
-        <Table className="min-w-240 table-fixed">
-          <TableHeader className="bg-muted/50 text-muted-foreground sticky top-0 z-10">
-            <TableRow>
-              <TableHead className="w-[18%]">
-                {t("deliveries.detail.pingHeaders.receiver")}
-              </TableHead>
-              <TableHead className="w-[10%]">{t("deliveries.detail.pingHeaders.state")}</TableHead>
-              <TableHead className="w-[14%]">
-                {t("deliveries.detail.pingHeaders.trigger")}
-              </TableHead>
-              <TableHead className="w-[7%]">
-                {t("deliveries.detail.pingHeaders.attempts")}
-              </TableHead>
-              <TableHead className="w-[15%]">
-                {t("deliveries.detail.pingHeaders.created")}
-              </TableHead>
-              <TableHead className="w-[11%]">{t("deliveries.detail.pingHeaders.fired")}</TableHead>
-              <TableHead className="w-[11%]">
-                {t("deliveries.detail.pingHeaders.nextRetry")}
-              </TableHead>
-              <TableHead>{t("deliveries.detail.pingHeaders.error")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {pings.length === 0 ? (
+      {pings.length === 0 ? (
+        <DeliveryUrgentPingExplanation detail={detail} />
+      ) : (
+        <div className="border-border bg-background min-h-0 flex-1 overflow-auto border">
+          <Table className="min-w-240 table-fixed">
+            <TableHeader className="bg-muted/50 text-muted-foreground sticky top-0 z-10">
               <TableRow>
-                <TableCell className="text-muted-foreground" colSpan={8}>
-                  {t("deliveries.detail.pingsEmpty")}
-                </TableCell>
+                <TableHead className="w-[18%]">
+                  {t("deliveries.detail.pingHeaders.receiver")}
+                </TableHead>
+                <TableHead className="w-[10%]">
+                  {t("deliveries.detail.pingHeaders.state")}
+                </TableHead>
+                <TableHead className="w-[14%]">
+                  {t("deliveries.detail.pingHeaders.trigger")}
+                </TableHead>
+                <TableHead className="w-[7%]">
+                  {t("deliveries.detail.pingHeaders.attempts")}
+                </TableHead>
+                <TableHead className="w-[15%]">
+                  {t("deliveries.detail.pingHeaders.created")}
+                </TableHead>
+                <TableHead className="w-[11%]">
+                  {t("deliveries.detail.pingHeaders.fired")}
+                </TableHead>
+                <TableHead className="w-[11%]">
+                  {t("deliveries.detail.pingHeaders.nextRetry")}
+                </TableHead>
+                <TableHead>{t("deliveries.detail.pingHeaders.error")}</TableHead>
               </TableRow>
-            ) : (
-              pings.map((ping) => (
+            </TableHeader>
+            <TableBody>
+              {pings.map((ping) => (
                 <TableRow key={ping.id}>
                   <TableCell className="truncate font-mono text-xs" title={ping.receiver}>
                     {ping.receiver}
@@ -103,11 +105,11 @@ export function DeliveryPingsTable({ pings }: { pings: DeliveryDetailData["pings
                     {ping.lastError ?? t("common.placeholder.empty")}
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </section>
   );
 }

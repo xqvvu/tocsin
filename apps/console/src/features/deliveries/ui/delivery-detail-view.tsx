@@ -51,7 +51,7 @@ export function DeliveryDetailView({ detail }: { detail: DeliveryDetailData }) {
         </TabsContent>
 
         <TabsContent value="paging" className="min-h-0 overflow-hidden p-3">
-          <DeliveryPingsTable pings={detail.pings} />
+          <DeliveryPingsTable detail={detail} />
         </TabsContent>
 
         <TabsContent value="metadata" className="min-h-0 overflow-hidden p-3">
