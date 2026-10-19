@@ -416,6 +416,7 @@ describe("sqlite store", () => {
 
     expect(updated.state).toBe("succeeded");
     expect(detail?.renderedPayload).toEqual({ ok: true });
+    expect(detail?.rawPayloadPruned).toBe(false);
     expect(detail?.providerReference).toEqual({ type: "feishu_message_id", value: "om_abc123" });
     expect(detail?.attempts).toMatchObject([
       {
@@ -427,6 +428,15 @@ describe("sqlite store", () => {
         finishedAt: "2026-06-07T00:00:05.000Z",
       },
     ]);
+
+    // Pruning the event must not change what the operator sees for the
+    // rendered side of the payload comparison.
+    await store.intake.pruneAllRawPayloads({ before: "2026-06-08T00:00:00.000Z" });
+    const prunedDetail = await store.deliveries.get(updated.id);
+
+    expect(prunedDetail?.event.rawPayload).toEqual({ retentionPruned: true });
+    expect(prunedDetail?.rawPayloadPruned).toBe(true);
+    expect(prunedDetail?.renderedPayload).toEqual({ ok: true });
 
     await store.close();
   });

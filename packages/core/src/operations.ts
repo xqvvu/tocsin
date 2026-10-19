@@ -132,6 +132,13 @@ export interface DeliveryAttempt {
 export interface DeliveryDetail {
   job: DeliveryJob;
   event: EventRecord;
+  /**
+   * True when the retention sweep replaced the event's `rawPayload` with its
+   * cleared placeholder. The payload tab compares the raw event payload with
+   * the rendered one, so the sentinel must surface as an explicit pruned state
+   * instead of being rendered as if the upstream had sent it.
+   */
+  rawPayloadPruned: boolean;
   source: SourceSummary;
   destination: DestinationSummary;
   destinationMetadata: JsonObject;

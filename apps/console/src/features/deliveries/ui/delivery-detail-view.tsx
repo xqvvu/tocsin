@@ -3,6 +3,7 @@ import { DeliveryAttemptsTable } from "#/features/deliveries/ui/delivery-attempt
 import { DeliveryDetailSummary } from "#/features/deliveries/ui/delivery-detail-summary";
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
 import { DeliveryJsonBlock } from "#/features/deliveries/ui/delivery-json-block";
+import { DeliveryPayloadTab } from "#/features/deliveries/ui/delivery-payload-tab";
 import { DeliveryPingsTable } from "#/features/deliveries/ui/delivery-pings-table";
 import { DeliveryRetentionNotice } from "#/features/deliveries/ui/delivery-retention-notice";
 import { DeliverySummaryTab } from "#/features/deliveries/ui/delivery-summary-tab";
@@ -42,10 +43,7 @@ export function DeliveryDetailView({ detail }: { detail: DeliveryDetailData }) {
         </TabsContent>
 
         <TabsContent value="payload" className="min-h-0 overflow-hidden p-3">
-          <DeliveryJsonBlock
-            title={t("deliveries.detail.json.renderedPayload")}
-            value={detail.renderedPayload ?? {}}
-          />
+          <DeliveryPayloadTab detail={detail} />
         </TabsContent>
 
         <TabsContent value="attempts" className="min-h-0 overflow-hidden p-3">
