@@ -117,7 +117,7 @@ docker compose logs --tail=50 console
 # 1) 冷备份（见第 3 节）
 # 2) 取得/构建目标版本镜像，并显式打版本 tag
 #    仓库没有自动发布流程：可以本机构建，也可以用 `just docker-buildx <image> <tag>` 推到自己的 registry
-docker build -t tocsin:0.1.0-beta.10 .
+docker build -t tocsin:0.1.0-beta.11 .
 
 # 3) 让 compose 使用新镜像：改 compose 的 image 字段，或就地重建本地 tag
 #    不要用 `up -d --build`：它会从源码重建并覆盖 tocsin:local，绕过刚打的版本 tag
@@ -144,7 +144,7 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 
    ```bash
    # 把 compose 的 image 指回上一个版本 tag（例如
-   # registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.9）
+   # registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.10）
    docker compose up -d
    until curl -fsS --connect-timeout 5 --max-time 10 http://127.0.0.1:3000/api/ready; do sleep 2; done
    ```
