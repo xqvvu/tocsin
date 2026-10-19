@@ -120,10 +120,11 @@ docker compose logs --tail=50 console
 docker build -t tocsin:0.1.0-beta.10 .
 
 # 3) 让 compose 使用新镜像：改 compose 的 image 字段，或就地重建本地 tag
-docker compose up -d --build
+#    不要用 `up -d --build`：它会从源码重建并覆盖 tocsin:local，绕过刚打的版本 tag
+docker compose up -d
 
-# 4) 确认就绪与版本
-curl -fsS http://127.0.0.1:3000/api/ready
+# 4) 确认就绪与版本（首次启动可能需几十秒，建议轮询而不是只 curl 一次）
+until curl -fsS --connect-timeout 5 --max-time 10 http://127.0.0.1:3000/api/ready; do sleep 2; done
 docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime 行含版本与 SQLite 信息
 ```
 
@@ -142,9 +143,10 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 1. **只回滚镜像**（数据保留）：
 
    ```bash
-   # 把 compose 的 image 指回上一个版本 tag（例如 tocsin:0.1.0-beta.8）
+   # 把 compose 的 image 指回上一个版本 tag（例如
+   # registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.9）
    docker compose up -d
-   curl -fsS http://127.0.0.1:3000/api/ready
+   until curl -fsS --connect-timeout 5 --max-time 10 http://127.0.0.1:3000/api/ready; do sleep 2; done
    ```
 
    什么时候可行：新旧版本读写的数据形状一致。什么时候会失败：
@@ -175,6 +177,7 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 ## 8. 未验证与未知
 
 - 本仓库已有 E2E 与 Docker smoke 脚本（`apps/console/e2e`、`scripts/docker-smoke.sh`），但都未接入 CI；
+  Docker smoke 保留为本地人工 gate（使用独立的 `tocsin-smoke-data` 卷，不会触碰本文件操作的生产卷）。
   本文的 `docker compose cp` / 恢复步骤是标准工具用法，**没有在真实部署上演练过**；首次生产升级请把
   备份校验和回滚演练当成独立动作。
 - 在线备份的具体实现（helper 容器镜像、调度方式）没有仓库内的既定做法，需要运维自己选型。

@@ -83,17 +83,23 @@ e2e:
 e2e-ui:
     vp -C apps/console exec playwright test --ui
 
-# Build the image, bring the stack up, wait for readiness, tear it down.
+# Build the image, bring an isolated smoke stack up, wait for readiness, tear it down.
+# Loads docker-compose.smoke.yml so the real image tag and `tocsin-data` volume are untouched.
 # Slow on purpose (it builds an image) so it stays out of the fast CI gate.
 [group('Docker')]
 docker-smoke:
     bash scripts/docker-smoke.sh
 
 # Build and push a multi-platform image.
+# Aliyun ACR rejects the OCI attestation manifest BuildKit adds by default
+# (`unknown manifest class for application/vnd.oci.empty.v1+json`), so turn
+# provenance and SBOM manifests off.
 [group('Docker')]
 docker-buildx image tag:
     docker buildx build \
         --platform "linux/amd64,linux/arm64" \
+        --provenance=false \
+        --sbom=false \
         --tag "{{ image }}:{{ tag }}" \
         --push \
         .

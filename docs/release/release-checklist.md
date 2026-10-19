@@ -1,8 +1,8 @@
-# 发布 Checklist（首个 tagged release）
+# 发布 Checklist（人工 tagged release）
 
 > 一句话结论：Tocsin 目前**没有任何发布自动化** —— 仓库只有 `ci.yml`（`check · test · build`），没有
-> release workflow、没有 changelog 工具、没有任何 git tag；下面是从现在到第一个 tag 的**人工**流程，
-> 并且明确说明 tag 本身不会触发任何东西。
+> release workflow、没有 changelog 工具；tag 已由人工创建（`v0.1.0-beta.9`、`v0.1.0-beta.10`），
+> 并且 tag 本身不会触发任何东西。
 
 核实时间 2026-10-13，核实基线 `origin/main` @ `4e17c28`。本文只回答“怎么切一个 tag”；发布前的产品验收
 清单在 `docs/release/mvp-rc-checklist.md`，部署与数据操作见
@@ -37,18 +37,15 @@
    vp run -r build
    ```
 
-3. **手工 Docker 冒烟（脚本或手工二选一）。** 优先执行 `just docker-smoke`；注意 REL-3：当前脚本
-   使用全局卷名并 `down -v`，执行前确认没有真实数据卷。
+3. **Docker 冒烟。** 执行 `just docker-smoke`（底层是 `scripts/docker-smoke.sh`）。脚本加载
+   `docker-compose.smoke.yml`，使用独立的 `tocsin:smoke` 镜像与 `tocsin-smoke-data` 卷，结束时只删除
+   该卷，不会触碰真实部署的 `tocsin-data`。
 
    ```bash
-   docker compose build
-   BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up -d
-   curl -fsS http://127.0.0.1:3000/api/ready     # 期望 200 且 checks 全为 ok
-   docker compose logs --tail=50 console
-   docker compose down                            # 不加 -v，保留 tocsin-data volume
+   just docker-smoke
    ```
 
-   必须显式传 `BETTER_AUTH_SECRET`：`docker-compose.yml` 里内置了一个公开的默认值，不覆盖也能启动。
+   不要再用裸 `docker compose up` / `down -v` 做冒烟：基础 compose 文件固定了生产镜像名与卷名。
 
 4. **手工走一遍产品验收路径。** E2E 已覆盖 setup → Source → Destination → webhook → Event；Route、
    Delivery/retry、过滤、重启、导出仍无自动化守护，发布前按 `docs/release/mvp-rc-checklist.md`
@@ -73,8 +70,8 @@ git push origin v0.1.0-beta.10
 
 约定与限制，逐条说清：
 
-- tag 名采用 `v<根 package.json 的 version>`。仓库**没有任何既有 tag** 可以参考，所以这是本文新提出的
-  约定，不是历史惯例；如果要换命名，改这里和 Release 说明即可。
+- tag 名采用 `v<根 package.json 的 version>`。已有 `v0.1.0-beta.9` 与 `v0.1.0-beta.10` 两个
+  annotated tag，后续沿用同一约定；如果要换命名，改这里和 Release 说明即可。
 - 用 annotated tag（`-a`）以便携带一条发布说明；这是建议，仓库没有任何工具强制 tag 类型。
 - 版本号只存在于根 `package.json`，没有工具会替你递增。要发新版本时先改 `package.json`、提交、通过 CI，
   再在这个 commit 上打 tag。
@@ -85,10 +82,12 @@ git push origin v0.1.0-beta.10
   监听 tag。
 - **不会触发**：镜像构建、镜像推送、GitHub Release、changelog 生成、npm 发布（所有 workspace package
   都是 `private`）。
-- 因此容器镜像需要人工构建和命名。本机可以用 `docker build -t tocsin:0.1.0-beta.10 .`；要推到自己
-  的 registry 就用 `just docker-buildx <image> <tag>`（多平台 `linux/amd64,linux/arm64` + `--push`）或
-  `just docker-tag` + `just docker-push`，见根目录 `Justfile`。建议每个版本单独打镜像标签，因为
-  compose 默认的 `tocsin:local` 会被下一次 build 覆盖，回滚时没有旧镜像可用。
+- 因此容器镜像需要人工构建和命名。本机可以用 `docker build -t tocsin:0.1.0-beta.10 .`；要推到
+  registry 就用 `just docker-buildx <image> <tag>`（多平台 `linux/amd64,linux/arm64` + `--push`，
+  已关闭 provenance/SBOM 以兼容阿里云 ACR）或 `just docker-tag` + `just docker-push`，见根目录
+  `Justfile`。当前发布使用 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:<version>`，镜像 tag 不带
+  `v` 前缀。建议每个版本单独打镜像标签，因为 compose 默认的 `tocsin:local` 会被下一次 build 覆盖，
+  回滚时没有旧镜像可用。
 
 ## 5. 发布之后
 
@@ -105,6 +104,7 @@ git push origin v0.1.0-beta.10
 - 没有自动化版本递增与 changelog。
 - 没有镜像仓库的自动化发布：只有 `Justfile` 里三条手工 recipe，没有 CI 任务，也没有既定的 registry
   或 tag 约定。
-- E2E 与 compose smoke 脚本已存在（`just e2e` / `just docker-smoke`），但没有接入 CI，CI 覆盖不到
-  浏览器路径和容器运行时。
+- 浏览器 E2E 与 compose smoke 脚本已存在（`just e2e` / `just docker-smoke`），但都没有接入 CI，CI
+  覆盖不到浏览器路径和容器运行时。Docker smoke 按 `mvp-rc-checklist.md` 的决定保留为本地人工 gate；
+  E2E 是否接入 CI 仍待决策（REL-1）。
 - 没有发布说明模板，也没有“发布失败/撤回”的预案文档。

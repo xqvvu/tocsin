@@ -1,0 +1,14 @@
+# Isolation override for `scripts/docker-smoke.sh`.
+#
+# The base compose file pins the image tag and the data volume to the names a
+# real deployment uses (`tocsin:local`, `tocsin-data`). Without this override a
+# smoke run would share that volume and `down -v` would delete production data.
+services:
+  console:
+    image: tocsin:smoke
+    volumes:
+      - tocsin-smoke-data:/data
+
+volumes:
+  tocsin-smoke-data:
+    name: "tocsin-smoke-data"
