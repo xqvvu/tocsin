@@ -36,7 +36,12 @@ describe("suppression hits table", () => {
 
     expect(screen.getByText("Silenced deliveries")).toBeTruthy();
     expect(screen.getByText("Ops group")).toBeTruthy();
+    // The event cell carries the alert identity, not just the source name.
+    expect(screen.getByText("Disk full")).toBeTruthy();
+    expect(screen.getByText("Critical")).toBeTruthy();
+    expect(screen.getByText("Firing")).toBeTruthy();
     expect(screen.getByText("Prometheus")).toBeTruthy();
+    expect(screen.getByText("event-1")).toBeTruthy();
     // The state column renders the shared badge; a raw enum would say "suppressed".
     expect(screen.getByText("Suppressed")).toBeTruthy();
     expect(screen.queryByText("Failed")).toBeNull();
