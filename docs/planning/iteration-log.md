@@ -2,6 +2,103 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 26 轮）
+
+- 时间：2026-10-20 02:26 – 03:10 CST。
+- 基线：`origin/main` @ `db3ef12`；本轮合并 #176（`999252b`、`4c08f5d`）、#177
+  （`8dcff41`）、#178（`ed700d7`）。
+- 类型：EXPERT_PANEL 裁决落地（PR A）+ release-infra AUTO_FIX + 三车道审计（非
+  full-audit）；最近全量审计仍为第 1 轮（2026-10-18 13:30 CST）；backlog 有 ≥27 分
+  候选，按第 1.5 步继续。
+- 车道：`requirements` + `release-infra` + `ui-triage`（决策 `defer`）；下一轮建议
+  `requirements` + `docs-drift` + `ui-triage`。
+- `ui-triage`：`defer` —— 距第 23 轮浏览器实测约 2.1 小时，自评审后仅 2 个 UI 合并；
+  7 条未解决 UI 发现均为既有项；0 次浏览器验证记录。建议直接实现 UI-2/UI-4。
+- `last_ui_review_at`：2026-10-20 00:18（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `fervent-newton-85c914`。`node_modules` 链接残缺，整体删除后
+  `vp install --frozen-lockfile` 解决。
+
+### 本轮交付
+
+- PR #176 `fix(core): redact credential-shaped text and re-check rows on read` ——
+  **SEC-8 + SEC-10/15/16/18（第 25 轮 EXPERT_PANEL 决策 PR A）**。
+  - 新增 `redactCredentialText`：认证 scheme（Bearer/Basic/Token，值须 ≥8 字符且含
+    数字或符号）、`xox[baprs]-`、URL userinfo 密码、Slack/飞书/Lark webhook path；
+    组合进 `redactText` 与 `redactJsonValue`。
+  - 读取层在 `delivery.helpers`、`oncall.helpers`、`history.repository` 幂等复核旧行；
+    不做历史回填。parser 仍读原值，解析/匹配/去重/回放语义不变。
+  - 修复既有误伤：赋值正则补左词边界（`max_tokens: 4096`）；收紧认证值形态
+    （`Basic authentication failed` 保持可读）。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4
+    （console 621 tests）；`vp run -r build` exit 0。
+- PR #177 `chore(docker): exclude e2e artifacts from the build context` —— **REL-17**。
+  - `.dockerignore` 增加 `**/test-results`、`**/playwright-report`、`**/blob-report`、
+    `**/.playwright`、`.wt`，与 `.gitignore` 对齐；防止本地 trace（可能含 token）
+    进入镜像。
+  - 验证：`vp fmt --check`、`vp check` 0 errors。
+
+### requirements 车道
+
+新增 8 个候选（均通过 charter）：
+- REQ-111（27）初始化 Owner 密码确认与不可恢复提示；REQ-112（26）事件投递计数下钻；
+  REQ-113（26）复制筛选视图链接；REQ-114（25）重试前预览；REQ-115（25）首次部署空态与
+  「右侧栏」过期文案；REQ-116（25）每页条数；REQ-117（23）路由/静默创建失败保留表单；
+  REQ-118（22）provider 贡献指南与 scaffold。
+- 附带缺陷候选：Q-38（24）Source token 复制失败仍弹成功 toast
+  （`source-token-notice-panel.tsx:48-55,65-72`）；Q-39（20）错误页把
+  `[REDACTED_TRACE_ID: generated_server_side]` 当 trace ID 展示
+  （`dashboard-error.tsx:61-63`）。
+
+### release-infra 车道
+
+- RC gate 复核：E2E workflow FAIL（`.github/workflows` 仅 `ci.yml`）；E2E 覆盖 PARTIAL
+  （无 Route/Delivery/retry）；provider fixture FAIL；dedupe cleanup 无界 DELETE 仍成立；
+  Docker smoke 作为本地人工 gate PASS；main 无 required checks（ruleset 为空）。
+- E2E 接入 CI 可行且无需 service/secret：`playwright.config.ts` 已有 webServer/retries/
+  reporter；需显式安装 Chromium 1248，并在测试前清理 `/tmp/tocsin-e2e.sqlite`。
+- 建议独立 `e2e.yml`；提交前必须本地跑通 `playwright install chromium` +
+  `playwright test`。新增 REL-21/22/23/24 候选。
+
+### ui-triage
+
+`defer`，信号：距上次评审 2.1h（<48h）、评审后 2 个 UI 合并（<3）、7 条既有 UI 发现、
+0 次浏览器验证。建议直接实现 UI-2/UI-4，而不是重开评审。
+
+### EXPERT_PANEL
+
+本轮无新裁决；执行第 25 轮 `credential-redaction-boundaries` 的 PR A，PR B
+（SEC-7 + SEC-17）排入第 27 轮。
+
+### 发布（第 9.5 步）
+
+- 三位专家一致通过发布：
+  - **发布经理**：RELEASE；#176 属用户可见安全修复（诊断文本与 raw payload 字符串变化，
+    旧行读取即生效）；#177 仅构建上下文。建议 `0.1.0-beta.14`。
+  - **阻断审计**：APPROVE；main CI success、0 open PR、迁移零 diff、无 secret 误提交、
+    版本无冲突；`blocked-autonomous` 仅 LICENSE（非运行时）。
+  - **运维/回滚**：SAFE；镜像配置/SQLite/依赖零 diff；替换镜像即可；回滚
+    `0.1.0-beta.13`。
+- PR #178 `chore(release): v0.1.0-beta.14` rebase 合并 `ed700d7`；main CI success。
+- Tag：`v0.1.0-beta.14`（annotated，指向 `ed700d7`）；GitHub Release 已创建
+  （prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.14`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:3fcdfd188c05a55acefc019cf02205998845cc53515a7cb091822a5b55df8d3c`）。
+- 回滚镜像：`0.1.0-beta.13`（digest `sha256:3501c616…`）。
+
+### 其他
+
+- 本轮未做浏览器验证：改动为服务端脱敏与构建上下文，由 core/console 测试覆盖。
+- Obsidian 同步：`obsidian-vault` skill 未在当前会话暴露，按 AGENTS.md fallback
+  记录并跳过。
+- 工作树：结束前删除会话工作树 `node_modules` 与 `agent-iteration` 锁目录。
+
+### 下一轮优先项
+
+见 backlog「下一轮优先项」第 1–16 项；首位为 SEC-7 + SEC-17（PR B），其次 NEW-A、
+REQ-111。
+
 ## 2026-10-20（第 25 轮）
 
 - 时间：2026-10-20 01:37 – 03:05 CST。
