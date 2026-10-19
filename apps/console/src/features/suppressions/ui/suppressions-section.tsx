@@ -273,8 +273,8 @@ function SuppressionActions({
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const editLabel = t("suppressions.table.actions.edit");
   const toggleLabel = suppression.enabled
-    ? t("suppressions.table.actions.disableTitle")
-    : t("suppressions.table.actions.enableTitle");
+    ? t("suppressions.table.actions.disableTitle", { suppressionName: suppression.name })
+    : t("suppressions.table.actions.enableTitle", { suppressionName: suppression.name });
   const deleteLabel = t("suppressions.table.actions.deleteTitle", {
     suppressionName: suppression.name,
   });
