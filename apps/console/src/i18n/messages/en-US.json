@@ -668,6 +668,8 @@
   "operations.workerNotice.lastError": "Last error: {error}",
   "operations.workerNotice.title": "Worker run complete",
   "routeChecks.contains": "expected to contain {value}, event carried {actual}",
+  "routeChecks.disabled": "Disabled",
+  "routeChecks.enabled": "Enabled",
   "routeChecks.expectedOnly": "expected {value}",
   "routeChecks.fields.destination": "Destination",
   "routeChecks.fields.enabled": "Enabled",

@@ -41,6 +41,12 @@ export function RouteMatchCheckBadges({ checks }: { checks: RouteMatchCheck[] })
  * detail rather than being rewritten.
  */
 function describeRouteCheck(check: RouteMatchCheck, t: ReturnType<typeof useTranslations>): string {
+  // `enabled` is the route's own state, not a rule condition, so "no condition"
+  // would misdescribe a disabled route. State the fact instead.
+  if (check.field === "enabled") {
+    return check.matched ? t("routeChecks.enabled") : t("routeChecks.disabled");
+  }
+
   const actual = check.actual;
   const enumerable =
     (check.field === "severity" || check.field === "status") && actual !== undefined;

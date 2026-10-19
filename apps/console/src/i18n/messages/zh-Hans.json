@@ -668,6 +668,8 @@
   "operations.workerNotice.lastError": "最近错误：{error}",
   "operations.workerNotice.title": "Worker 运行完成",
   "routeChecks.contains": "期望包含 {value}，事件实际为 {actual}",
+  "routeChecks.disabled": "已停用",
+  "routeChecks.enabled": "已启用",
   "routeChecks.expectedOnly": "期望 {value}",
   "routeChecks.fields.destination": "通知目标",
   "routeChecks.fields.enabled": "启用",
