@@ -2,6 +2,92 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 25 轮）
+
+- 时间：2026-10-20 01:37 – 03:05 CST。
+- 基线：`origin/main` @ `5edc94c`；本轮合并 #171（`4bfed71`）、#172（`2807ce7`）。
+- 类型：需求切片 + 高危修复 + 三车道审计 + EXPERT_PANEL（非 full-audit）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）；backlog 有大量 ≥27 分候选，按第 1.5 步继续。
+- 车道：`requirements` + `security-exposure` + `ui-triage`（决策 `defer`）；下一轮建议
+  `requirements` + `release-infra`。
+- `ui-triage`：`defer` —— 距第 23 轮浏览器实测（2026-10-20 00:18）仅约 80 分钟，
+  自评审后零 UI 合并（6 个提交全是 docs/release/服务端修复）；建议直接实现已确认的 UI-1。
+- `last_ui_review_at`：2026-10-20 00:18（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `epic-carson-28ba8c`。依赖链接再次残缺，整体删除后 `vp install --frozen-lockfile` 解决。
+
+### 本轮交付
+
+- PR #171 `fix(console): keep operation search text local until typing pauses` —— **UI-1 + REQ-78**。
+  - 搜索框改为本地草稿 + 300ms 防抖后才写 URL；`pruneSearch` 保留输入中的空格，仅
+    `operationFiltersFromSearch` 在构造服务端谓词时 trim；重置筛选与搜索 chip 清除会取消
+    未提交草稿。修复快速输入 `Disk usage` 只剩 `se`、慢速输入丢空格、逐键请求三个问题。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4（console 616 tests）；
+    `vp run -r build` 通过。
+- PR #172 `feat(console): silence an event label from the label list` —— **REQ-109**。
+  - 每个标签旁新增图标按钮「静默标签 key=value」，复用既有创建静默对话框；新增
+    `suppressionDefaultsFromLabel`（source + `equals` 标签，指纹为空）；PRD
+    `docs/prd/event-label-silence.md`。
+  - 验证：`vp check` 0 errors；`vp run -r test` 4/4（console 614 tests）；
+    `vp run -r build` 通过。
+- 两个 PR 均 rebase 合并且 CI success，无 migration/contract 变化。
+
+### requirements 车道
+
+- REQ-109/108/110 复核仍成立；REQ-109 本轮已交付。
+- 新候选：
+  - **NEW-A（29）** 停用 Source/Route/Destination 前的断流影响确认：三个启停按钮单击即执行
+    （`source-actions.tsx:105-117`、`destinations-actions.tsx:94-106`、
+    `routes-section.tsx:208-217`），停用后接入拒绝（`intake.service.ts:69-72`）、路由停止匹配
+    （`:98-99`）、pending 投递不再 claim（`delivery.repository.ts:228-229`），控制台只会变安静。
+  - **NEW-B（27）** 静默窗口快捷时长：仅有 `datetime-local` 与固定 2 小时默认
+    （`suppression-form.ts:118-128`、`suppression-forms.tsx:310-338`）。
+  - **NEW-C（27）** 路由保存前「目标全停用」警示：选择器不显示启停状态
+    （`route-forms.tsx:987-1018`），全停用时路由可保存但永不投递。
+
+### security-exposure 车道
+
+- 复核 SEC-7/8/9/11/12/13/14/15/16 全部仍成立；SEC-10 与 SEC-16 实质重复，已合并。
+- 新发现：
+  - **SEC-17（24）** providerMetadata 入库/出站前无统一脱敏兜底：文档称已兜底
+    （`adapter-extensibility.md:260-261`），实际 `intake.service.ts:114` 原样落库；
+    grafana/alertmanager 的 `externalURL` 可含 userinfo 且 DTO 直接返回。
+  - **SEC-18（22）** raw payload 字符串叶子不做值形态扫描：`redaction.ts:74-86` 只按 key 判断。
+- per-kind 脱敏覆盖：kind 维度已由 registry parity 与导出测试锁住；缺口在「表面」——
+  列表 DTO 只测 slack、编辑草稿只测 feishu/generic、attempt/preview 无 per-kind 参数化。
+- 结论：本轮最值得的安全改动是 SEC-8 高置信值形态 helper，并可一并收敛
+  SEC-10/11/12/13/15/16 与两条新发现。
+
+### EXPERT_PANEL：SEC-7 + SEC-8
+
+- **安全与可靠性专家**：两项均成立；SEC-7 出站传播风险略高；必须补
+  `routeMatches[].checks[].actual` 投影；拒绝解析期脱敏与历史行回填。
+- **产品与运维专家**：两项都值得现在做，SEC-8 先行（只影响诊断信息）；接受「存储/备份
+  仍是原文」的残余风险，防护目标是通知外发与屏幕共享；误伤反例必须锁死。
+- **独立评估者**：SEC-8 可独立落地且可测；SEC-7 在补齐 8 类边界清单前不是可执行规格；
+  旧 `rendered_payload_json` 必须读取投影；配置导出/编辑器草稿必须显式排除。
+- **分歧处理**：PR 组织存在分歧（一个 PR 两 commit vs 两个 PR）。按最保守且可逆原则选择
+  **两个 PR、SEC-8 先行**；两项都只做读取/发送边界投影，不改存储。
+- 决策记录：`docs/planning/decisions/credential-redaction-boundaries.md`。
+- 实现排期：第 26 轮先 PR A（SEC-8 + SEC-10/15/16/18），再 PR B（SEC-7 + SEC-17）。
+
+### 其他
+
+- Q-30 已于第 24 轮闭环；本轮未新增 migration、未改投递/路由/auth 语义。
+- 本轮未做浏览器验证：改动为搜索交互与标签静默，由组件测试覆盖；UI-1 的浏览器证据来自
+  第 23 轮实测。
+- Obsidian 同步：见本节末尾。
+
+### 下一轮优先项
+
+1. SEC-8 / SEC-7 按决策记录实现（PR A → PR B）。
+2. NEW-A（29）停用配置前的断流影响确认。
+3. REQ-108（28）、REQ-73（28）、REQ-48（28）、REQ-52（28）、REQ-110（28）。
+4. NEW-B/NEW-C（27）、REQ-103/104（27）。
+5. SEC-9/SEC-13/SEC-14 等 AUTO_FIX 小项。
+6. 车道轮转：`requirements` + `release-infra` + `ui-triage`；`docs-drift`/`architecture`
+   留待第 27 轮。
+
 ## 2026-10-20（第 24 轮）
 
 - 时间：2026-10-20 00:39 – 01:20 CST。
