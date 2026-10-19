@@ -92,7 +92,9 @@ describe("operation filters by page scope", () => {
     renderFilters("deliveries", {}, "toolbar");
 
     expect(
-      screen.getByPlaceholderText("title, message, fingerprint, ID, error, destination, or route"),
+      screen.getByPlaceholderText(
+        "title, message, fingerprint, ID, error, destination, route, or external reference",
+      ),
     ).toBeTruthy();
   });
 

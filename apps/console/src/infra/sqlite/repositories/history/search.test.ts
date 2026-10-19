@@ -127,6 +127,17 @@ async function repositoryWithSearchFixtures(): Promise<
         created_at: NOW,
         updated_at: NOW,
       },
+      {
+        // Delivered through Feishu, so the provider returned a message id.
+        id: "dlv-provider-ref",
+        event_id: "event-feishu",
+        destination_id: "dest-1",
+        state: "succeeded" as const,
+        provider_ref_type: "feishu_message_id",
+        provider_ref_value: "om_ref_5d2f",
+        created_at: NOW,
+        updated_at: NOW,
+      },
     ])
     .execute();
 
@@ -218,6 +229,19 @@ describe("history search", () => {
     // cannot match them.
     expect(ids(page.items)).toEqual(["delivery-event-fingerprint"]);
     expect(page.total).toBe(1);
+  });
+
+  it("matches the external message reference shown on delivery detail", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const deliveries = await repository.listDeliveries({ q: "om_ref_5d2f" });
+    const events = await repository.listEvents({ q: "om_ref_5d2f" });
+
+    expect(ids(deliveries.items)).toEqual(["dlv-provider-ref"]);
+    expect(deliveries.total).toBe(1);
+    // The reference belongs to the delivery, not to the event payload, so the
+    // events list keeps its narrower search scope.
+    expect(events.total).toBe(0);
   });
 
   it("treats % as a literal character instead of a wildcard", async () => {

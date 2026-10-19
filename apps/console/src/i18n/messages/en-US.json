@@ -671,7 +671,7 @@
   "operations.filters.timeRangeOptions.7d": "Last 7 days",
   "operations.filters.search": "Search",
   "operations.filters.searchPlaceholder": "title, message, fingerprint, or ID",
-  "operations.filters.searchPlaceholderDeliveries": "title, message, fingerprint, ID, error, destination, or route",
+  "operations.filters.searchPlaceholderDeliveries": "title, message, fingerprint, ID, error, destination, route, or external reference",
   "operations.filters.severity": "Severity",
   "operations.filters.source": "Source",
   "operations.filters.status": "Status",
