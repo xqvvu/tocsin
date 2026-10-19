@@ -47,15 +47,26 @@ describe("delivery buzz button", () => {
     cleanup();
   });
 
-  it("pages an app-mode delivery and reports the queued receivers", async () => {
-    render(<DeliveryBuzzButton detail={detailFixture({ providerReference: reference })} />);
+  it("pages an app-mode delivery only after the operator confirms the receiver count", async () => {
+    render(
+      <DeliveryBuzzButton
+        detail={detailFixture({ providerReference: reference, urgentReceiverCount: 2 })}
+      />,
+    );
 
     const button = buttonFixture();
 
     expect(button.disabled).toBe(false);
     expect(screen.queryByText("deliveries.detail.buzz.unavailable")).toBeNull();
+    expect(screen.queryByText("deliveries.detail.buzz.noReceivers")).toBeNull();
 
     fireEvent.click(button);
+
+    expect(testState.buzzDelivery).not.toHaveBeenCalled();
+    expect(screen.getByText("deliveries.detail.buzz.confirmTitle")).toBeTruthy();
+    expect(screen.getByText("deliveries.detail.buzz.confirmDescription:2")).toBeTruthy();
+
+    fireEvent.click(confirmationButton("deliveries.detail.buzz.confirmAction"));
 
     await waitFor(() => {
       expect(testState.buzzDelivery).toHaveBeenCalledExactlyOnceWith({ id: "delivery-1" });
@@ -64,8 +75,31 @@ describe("delivery buzz button", () => {
     expect(testState.invalidateOperations).toHaveBeenCalled();
   });
 
+  it("does not page when the operator cancels the confirmation", async () => {
+    render(
+      <DeliveryBuzzButton
+        detail={detailFixture({ providerReference: reference, urgentReceiverCount: 2 })}
+      />,
+    );
+
+    fireEvent.click(buttonFixture());
+
+    expect(screen.getByText("deliveries.detail.buzz.confirmTitle")).toBeTruthy();
+
+    fireEvent.click(confirmationButton("deliveries.detail.buzz.cancel"));
+
+    await waitFor(() => {
+      expect(screen.queryByText("deliveries.detail.buzz.confirmTitle")).toBeNull();
+    });
+    expect(testState.buzzDelivery).not.toHaveBeenCalled();
+  });
+
   it("refuses to page a webhook delivery and explains why", () => {
-    render(<DeliveryBuzzButton detail={detailFixture({ providerReference: null })} />);
+    render(
+      <DeliveryBuzzButton
+        detail={detailFixture({ providerReference: null, urgentReceiverCount: 0 })}
+      />,
+    );
 
     const button = buttonFixture();
 
@@ -77,12 +111,35 @@ describe("delivery buzz button", () => {
     expect(testState.buzzDelivery).not.toHaveBeenCalled();
   });
 
+  it("disables paging when the destination has no urgent receivers", () => {
+    render(
+      <DeliveryBuzzButton
+        detail={detailFixture({ providerReference: reference, urgentReceiverCount: 0 })}
+      />,
+    );
+
+    const button = buttonFixture();
+
+    expect(button.disabled).toBe(true);
+    expect(screen.getByText("deliveries.detail.buzz.noReceivers")).toBeTruthy();
+    expect(screen.queryByText("deliveries.detail.buzz.unavailable")).toBeNull();
+
+    fireEvent.click(button);
+
+    expect(testState.buzzDelivery).not.toHaveBeenCalled();
+  });
+
   it("surfaces a refused page as an error toast", async () => {
     testState.buzzDelivery.mockRejectedValueOnce(new Error("already paged for this alert"));
 
-    render(<DeliveryBuzzButton detail={detailFixture({ providerReference: reference })} />);
+    render(
+      <DeliveryBuzzButton
+        detail={detailFixture({ providerReference: reference, urgentReceiverCount: 1 })}
+      />,
+    );
 
     fireEvent.click(buttonFixture());
+    fireEvent.click(confirmationButton("deliveries.detail.buzz.confirmAction"));
 
     await waitFor(() => {
       expect(testState.toast.error).toHaveBeenCalledWith(
@@ -96,15 +153,21 @@ describe("delivery buzz button", () => {
 const reference = { type: "feishu_message_id", value: "om_123" };
 
 function buttonFixture(): HTMLButtonElement {
-  return screen.getByRole("button") as HTMLButtonElement;
+  return screen.getByRole("button", { name: "deliveries.detail.buzz.action" }) as HTMLButtonElement;
+}
+
+function confirmationButton(name: string): HTMLButtonElement {
+  return screen.getByRole("button", { name }) as HTMLButtonElement;
 }
 
 function detailFixture(input: {
   providerReference: DeliveryDetailData["providerReference"];
+  urgentReceiverCount: number;
 }): DeliveryDetailData {
   return {
     job: { id: "delivery-1" },
     providerReference: input.providerReference,
+    destinationMetadata: { urgentReceiverCount: input.urgentReceiverCount },
     pings: [],
   } as unknown as DeliveryDetailData;
 }
