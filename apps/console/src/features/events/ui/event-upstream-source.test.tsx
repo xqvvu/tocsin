@@ -26,7 +26,7 @@ describe("event upstream source", () => {
     expect(alertLink.getAttribute("rel")).toBe("noopener noreferrer");
     expect(alertLink.textContent).toContain("alertmanager.example.test");
 
-    const generatorLink = screen.getByRole("link", { name: /告警生成器/ });
+    const generatorLink = screen.getByRole("link", { name: /规则来源/ });
     expect(generatorLink.getAttribute("href")).toBe(
       "https://prometheus.example.test/graph?g0.expr=up",
     );
