@@ -41,7 +41,7 @@
 | REQ-19 | Events/Deliveries 按标签键值过滤 | requirements lane | 26 | candidate | — | `json_each(labels_json)` 精确匹配；建议 REQ-5 合入后再做（同文件） |
 | FIX-2 | 搜索框承诺指纹但只搜 title/message | 代码核实 | 29 | shipped | #110 | 与 FIX-3 同一 PR；统一 `title/message/fingerprint` 谓词，列表与 total 共用 |
 | FIX-3 | 搜索未转义 LIKE 通配符 | 质量 lane | 27 | shipped | #110 | 转义 `%` `_` `\` 并使用 `ESCAPE '\'`；新增 `search.test.ts` |
-| FIX-4 | 删除不存在的 Source/Destination/Route 返回成功 | 质量 lane | 26 | candidate | — | contract 已声明 NOT_FOUND；与 suppression 行为不一致 |
+| FIX-4 | 删除不存在的 Source/Destination/Route 返回成功 | 质量 lane | 20 | candidate | — | 第 23 轮复核**已过期**：仓储 delete 均先 `requireSource`/`requireDestination`/`requireRoute`（`source.repository.ts:112-115`、`destination.repository.ts:101-104`、`route.repository.ts:166-169`），事务向上抛 `RecordNotFoundError`。剩余工作仅为补三条回归测试 |
 | FIX-5 | `operations-panel.tsx`/`detail-panel.tsx` 为死代码 | 架构 lane | 24 | candidate | — | 无任何 importer；删除可减少筛选面板歧义。同时删除 `OperationFilters` 只剩测试可达的 `rail`/`grid` 分支（`operation-filters.tsx:58,64-77`） |
 | FIX-6 | 导入配置不识别字面量 `[REDACTED]`，可能覆盖真实凭据 | SEC-1 panel | 27 | shipped | #114 | 四个凭据位置拒绝占位符，事务回滚；`config-portability.ts` 新增 `assertNotRedactedSecret` / `assertNoRedactedSecrets` |
 | FIX-7 | Sources 页中文仍把 Source 译作「来源」 | requirements lane | 23 | shipped | #132 | 事件列头、路由来源条件、抑制匹配器、模板变量分组统一为「告警源」；保留「模板来源/样例来源」 |
@@ -142,7 +142,7 @@
 | DOC-26 | 三个已交付 mini-PRD 仍用现在时描述问题 | docs drift | 22 | candidate | — | `delivery-retention-notice.md:10-12`（#111）、`event-fingerprint-silence.md:5-7`（#116）、`raw-payload-pruned-state.md:9-12`（#118）均已落地，缺状态注记 |
 | DOC-27 | 版本与路径类细节过期 | docs drift | 20 | candidate | — | ADR 0008 写 setup-vp@1.21.1 / vite-plus:1.0.0（实际 `ci.yml:32` 为 1.21.2、`Dockerfile:4` 为 1.1.0）；ADR 0003 与 restructure-plan 仍指 `server/functions/`；`route-authoring-current-state.md:3` 用旧 `devs/vane` 路径 |
 | REQ-47 | 投递详情展示外部消息引用 | requirements lane | 29 | shipped | #131 | 摘要字段展示可复制的引用值 + 机器类型；无引用显示 `-`；PRD `docs/prd/delivery-provider-reference.md` |
-| REQ-48 | 配置删除影响预检 | requirements lane | 28 | candidate | — | 删除确认只有静态文案（`source-actions.tsx:143-146`、`destination-actions.tsx:132-137`、`routes-section.tsx:249-252`）；需只读 preview procedure 并模拟引用清理 |
+| REQ-48 | 配置删除影响预检 | requirements lane | 25 | candidate | — | 第 23 轮复核：Source/Destination 删除只清路由引用，不检查 suppression JSON 引用（`source.service.ts:76-85`、`destination.service.ts:120-129`）；全量 25 分，仅 Source+Destination 约 27 分（60–75 分钟）；**不得自动删除失效 matcher ID**（可能把规则放宽为无条件静默），只做可见 + 预检 |
 | REQ-49 | 可移植配置覆盖抑制规则 | requirements lane | 27 | candidate | — | `ConfigurationSchema` 只含 settings/feishuApps/sources/destinations/routes（`packages/core/src/config.ts:85-90`）；备份/迁移会静默丢失静默窗口 |
 | REQ-50 | 投递详情内联目标诊断与测试 | requirements lane | 26 | candidate | — | 详情工具栏无目标测试入口（`delivery-detail-page.tsx:46-64`）；可复用 `destinations.test` 与详情 DTO 的 `destinationMetadata` |
 | REQ-51 | 接入侧拒绝与鉴权失败可观测 | requirements lane | 23 | candidate | — | `invalid_token`/`source_disabled` 等只写日志（`intake.service.ts:64-76,317-327`）；需 forward-only 0004 + 有界遥测 + Sources 列 |
@@ -224,7 +224,7 @@
 | REL-19 | 本地 E2E 失败无 trace | release-infra lane | 23 | candidate | — | 本地 `retries=0` + `trace: on-first-retry`；`playwright.config.ts:23,28` |
 | REL-20 | `just docker-buildx` 对 ACR 缺 `--provenance=false` | release-infra lane（第 22 轮） | 26 | shipped | #162 | ACR 拒绝 BuildKit OCI attestation manifest；Justfile 已加 `--provenance=false --sbom=false`，发布文档同步 ACR registry/tag 约定 |
 | DOC-33 | RC 未勾选 gate 实为 4 条而非 3 条 | release-infra lane | 21 | candidate | — | 漏算 provider 多版本 payload；`mvp-rc-checklist.md:123,165,171,172` |
-| Q-30 | 加急呼叫持久化失败会被当作可重试，导致重复呼叫 | quality lane | 26 | candidate | — | `markFired` 在外层 try 内（`oncall-execution.ts:98`），抛错后落可重试分支（`:115-130,161-180`）；电话已拨出，需单独捕获并视为终态 |
+| Q-30 | 加急呼叫持久化失败会被当作可重试，导致重复呼叫 | quality lane | 26 | candidate | — | `markFired` 在外层 try 内（`oncall-execution.ts:98`），抛错后落可重试分支（`:115-130,161-180`）；电话已拨出，需单独捕获并视为终态。第 23 轮复核：`reclaimStaleRunning` 还会在 5 分钟后重新 claim（`oncall.repository.ts:98-131`），与 Q-8 同源，建议同一 EXPERT_PANEL 裁决 |
 | Q-31 | `buzzDelivery` 部分入队失败仍会呼叫已入队 ping | quality lane | 23 | candidate | — | 逐条 `enqueueForDelivery` 无事务（`oncall.service.ts:91-109`）；操作员看到错误但已有 ping 落库并会被呼叫 |
 | Q-32 | `toLocaleLowerCase()` 受宿主 locale 影响 | quality lane | 22 | candidate | — | severity/status 归一化（`normalization.ts:5,23`）、contains 匹配（`route.ts:325,330`）、header 查找（`intake.service.ts:406,409`）；土耳其语环境 `INFO`→`ınfo` 会漏投 |
 | Q-33 | Webhook 鉴权顺序允许枚举 Source 存在/停用 | quality lane | 23 | candidate | — | 先查 source/启停再验 token（`intake.service.ts:62-77`），未知→404、已知错 token→401、停用→403；建议统一 401 |
@@ -276,6 +276,22 @@
 | DOC-43 | README 能力/结构清单过期 | docs-drift lane（第 22 轮） | 23 | candidate | — | 页面清单缺 Suppressions/Integrations（`README.md:34`）；仓储缺 feishu-app/oncall/suppression（`:36`）；仍写 server functions（`:55`） |
 | DOC-44 | 投递搜索占位文案文档落后 | docs-drift lane（第 22 轮） | 20 | candidate | — | `delivery-search-fields.md:48-49` 未提外部消息引用；`zh-Hans.json:674` 已更新（REQ-66） |
 | DOC-45 | README Roadmap 状态过期 | docs-drift lane（第 22 轮） | 24 | candidate | — | `README.md:197-204,228-230` 仍把已交付能力列为待完善；需逐条加状态而非整段删除 |
+| NEW-1 | 静默命中列表显示告警身份 | requirements lane（第 23 轮） | 28 | shipped | #166 | 事件列增加 severity 徽标 + 标题（链接事件）+ 源·状态·ID；复用 `DeliveryListItem` 既有字段；PRD `docs/prd/suppression-hit-event-identity.md` |
+| NEW-2 | Source 接入 URL 使用部署公开地址 | requirements lane（第 23 轮） | 25 | candidate | — | 复制出的 webhook URL 用浏览器 origin，SSH 隧道/反代下不可达（`source-webhook.ts:5-11`、`browser.ts:5-7`）；建议与 REQ-52 共用 `TOCSIN_PUBLIC_URL`，经 `i18n.getRequestLocale` 投影 |
+| SEC-11 | 任意认证头名不被 `redactHeaders` 脱敏 | security lane（第 23 轮） | — | candidate | — | MEDIUM：`X-Custom-Auth`/`X-Auth`/`Authentication`/`X-Signature` 值原样落库并展示（`intake.service.ts:80`、`event-raw-tab.tsx:23-26`）；按值形态二次脱敏或 allowlist，parser 也消费同一份 headers → EXPERT_PANEL |
+| SEC-12 | Destination endpoint URL 的 userinfo 密码进入客户端 DTO | security lane（第 23 轮） | — | candidate | — | LOW：`destination.helpers.ts:48-58,275-289`；`webhookurl` 已被定为 secret，但 endpoint 可见决策未覆盖 userinfo；建议投影时剥离 → EXPERT_PANEL |
+| SEC-13 | `isSensitiveKey` 残留缺口 | security lane（第 23 轮） | — | candidate | — | LOW：`secretAccessKey`/`aws_secret_access_key`/`sessionKey`/`pwd`/`pass`/`dsn`；精确键加入，避免 `pass` 词尾规则误伤 `bypass` |
+| SEC-14 | `request-context.ts` 缺 server-only 标记 | security lane（第 23 轮） | — | candidate | — | LOW：直接 import `@tanstack/react-start/server`；导入方均为 server middleware/route；需 build 验证 import protection |
+| SEC-15 | 三份文档称响应体/错误「已脱敏」但仅键值脱敏 | security lane（第 23 轮） | — | candidate | — | LOW：`adapter-extensibility.md:301`、ADR 0002 `:102`、`delivery-detail-diagnostics.md:17`；与 SEC-8 一并修 |
+| SEC-16 | 读取层不复核存量脱敏 | security lane（第 23 轮） | — | candidate | — | LOW：`delivery.helpers.ts:22,39,41`、`oncall.helpers.ts:22`、`intake.helpers.ts:61-63`；tagged release 无旧明文行，未打 tag 部署无法判定；读取层幂等重脱敏可解 → EXPERT_PANEL |
+| UI-1 | 列表搜索吞字符与空格、逐键请求 | ui-review（第 23 轮，浏览器实测） | 29 | candidate | — | HIGH：快速键入 `Disk usage` 只剩 `se`；`operation-filters.tsx:92-105` 直接写 URL、`operation-search.ts:74` trim 吃空格、loaderDeps 逐键查询；改本地草稿 + 300ms 防抖，空格只在查询构造处；同时消灭 REQ-78 |
+| UI-2 | 筛选无匹配与无数据空态相同 | ui-review（第 23 轮，浏览器实测） | 27 | candidate | — | = REQ-4；`events-empty-state.tsx:12-26`、`deliveries-empty-state.tsx:12-26` 无条件渲染；传 `hasActiveFilters` + 内联重置 |
+| UI-3 | Delivery Payload 标签名过期 | ui-review（第 23 轮） | 24 | candidate | — | 页面已左右对照，标签仍是「渲染 Payload」；`delivery-detail-view.tsx:34`、`zh-Hans.json:195` |
+| UI-4 | 移动端 Sheet 无可见关闭按钮 | ui-review（第 23 轮） | 24 | candidate | — | `sidebar.tsx:206-231` 用 `[&>button]:hidden` 隐藏内置关闭；加显式 `SheetClose` |
+| UI-5 | 折叠侧栏首屏闪动 | ui-review（第 23 轮） | 22 | candidate | — | `sidebar.tsx:80-98` cookie 在 mount 后恢复；宜在 loader/SSR 读 cookie 传 `defaultOpen` |
+| UI-6 | 两个同名 Toggle sidebar 控件 | ui-review（第 23 轮，a11y） | 22 | candidate | — | `dashboard-header.tsx:17` 与 `sidebar.tsx:307-334`；给 Rail 加 `aria-hidden` |
+| UI-7 | 空表仍渲染分页条 | ui-review（第 23 轮，浏览器实测） | 21 | candidate | — | `table-pagination.tsx:48-118`；`total === 0` 时隐藏 |
+| UI-8 | 中文登录页混用英文 dashboard | ui-review（第 23 轮，浏览器实测） | 22 | candidate | — | `zh-Hans.json` 改为「控制台」 |
 
 ## 发布记录
 

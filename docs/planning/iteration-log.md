@@ -2,6 +2,102 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 23 轮）
+
+- 时间：2026-10-19 18:25 – 21:20 CST。严重超出 75 分钟预算（车道合计运行约 99 分钟），
+  本轮未启动 EXPERT_PANEL 与发布评估。
+- 基线：`origin/main` @ `7bf1e59`；本轮合并 #166。
+- 类型：UI 切片 + 三车道审计（非 full-audit）；最近全量审计仍为第 1 轮（2026-10-18 13:30 CST）。
+- 车道：`requirements` + `security-exposure` + `ui-triage`/`ui-review`；下一轮建议
+  `requirements` + `quality` + `release-infra`。
+- `ui-triage`：`review_now`（三强信号全中：无 UI 评审记录、48h 内 26 个 UI 路径提交、
+  ≥2 个未解决纯 UI 发现；15 处日志记录浏览器验证未执行）。
+- `last_ui_review_at`：2026-10-20 00:18（浏览器实测完成；6180 文档凭据失效，改用隔离临时
+  实例 localhost:6190 + `/tmp` 空库，6180 与主库未触碰）。
+- 工作树：`agent-iteration` 仅用于并发锁与车道只读审计；实现与验证在会话工作树
+  `upbeat-tereshkova-a77d9a`。
+
+### 本轮交付
+
+- PR #166 `feat(console): show alert identity in suppression hit list` —— NEW-1（28）。
+  - 静默命中表事件列改为 severity 徽标 + 标题（链接事件）+ 告警源 · 状态 · 事件 ID；
+    新增 feature-local `suppression-hit-event-cell.tsx`，调整列宽；PRD
+    `docs/prd/suppression-hit-event-identity.md`。
+  - 无 contract/DTO/仓储变化：`DeliveryListItem` 已有 eventTitle/eventSeverity/eventStatus。
+  - 验证：`vp check`（0 errors）、`vp run -r test`（console 609 + 其余包全绿）、
+    `vp run -r build`；组件测试覆盖新字段与空态。
+
+### requirements 车道
+
+- REQ-73 成立未实现（28）：表单按浏览器时区解释 `datetime-local`
+  （`suppression-form.ts:118-128,160-184`），展示按设置时区（`operation-format.ts:11-28`）；
+  建议 `Intl.DateTimeFormat.formatToParts` 双向转换 + DST 修正，无存储变化。
+- REQ-48 + REQ-105 成立未实现（全量 25，仅 Source+Destination 约 27）：删除只清路由引用
+  （`source.service.ts:76-85`、`destination.service.ts:120-129`），suppression JSON 引用
+  不检查；不得自动删除失效 ID（可能放宽为无条件静默），只做可见 + 预检。
+- REQ-52 成立未实现（27）：`tocsin.eventUrl` 生产恒为空（`template.ts:369-399`、
+  `types.ts:33-40`）；建议新增 `TOCSIN_PUBLIC_URL` 并回退 BETTER_AUTH_URL/SERVER_URL。
+- 新候选：NEW-1（已交付 #166）、NEW-2（Source 接入 URL 用部署公开地址，25，
+  建议与 REQ-52 共用 `TOCSIN_PUBLIC_URL`）。
+
+### security-exposure 车道
+
+- SEC-7 真实 MEDIUM：raw 先脱敏、normalized 原样落库并出站
+  （`intake.service.ts:79-81,262-264`、`intake.repository.ts:48-51`、
+  `providers/generic/parse.ts:25-27`）→ EXPERT_PANEL。
+- SEC-8 真实 MEDIUM：`redactText` 仅键值式，裸 token/URL userinfo/webhook URL 穿透
+  （`redaction.ts:56-59`）→ EXPERT_PANEL。
+- SEC-9 LOW 加固：不得直接把 `headersRecord` 全量脱敏，shared-secret 认证需要原值
+  （`intake.service.ts:392-402`）；应拆窄字段。
+- SEC-10 LOW：读取层不复核；tagged release 无旧明文行。
+- 新增 SEC-11~SEC-16 已写入 backlog（任意认证头名、endpoint userinfo、isSensitiveKey
+  残留键、server-only 标记、文档漂移、读取层复核）。
+- 已核实无问题：Source/Feishu app DTO 无 secret、配置导出拒绝 includeSecrets、
+  header 只回显名称、session 投影剔除 token。
+
+### ui-review（浏览器实测）
+
+- **UI-1 HIGH**：搜索框吞字符与空格。快速键入 `Disk usage` 后只剩 `se`，URL `?q=se`；
+  慢速键入仍得到 `diskusage`。每次 onChange 立即导航（`operation-filters.tsx:92-105`），
+  `pruneSearch` 的 `trim` 吃掉尾随空格（`operation-search.ts:74`），loaderDeps 逐键触发
+  （`routes/_dashboard.events.tsx:16,43-47`）；一次键入 ≥10 次 `POST /api/operations/list`。
+  修复：本地草稿 + 300ms 防抖后写 URL，空格只在查询构造处处理。
+- **UI-2 MEDIUM**：筛选无匹配与无数据空态完全相同（`events-empty-state.tsx:12-26`、
+  `deliveries-empty-state.tsx:12-26`），运维可能误判为接入中断 = REQ-4。
+- **UI-3 MEDIUM**：Delivery Payload 标签名仍为「渲染 Payload」，页面已是左右对照
+  （`delivery-detail-view.tsx:34`、`en-US.json:195`、`zh-Hans.json:195`）。
+- **UI-4 MEDIUM**：移动端 Sheet 隐藏了关闭按钮（`sidebar.tsx:206-231`）。
+- **UI-5 MEDIUM**：折叠侧栏首屏先展开后收起（`sidebar.tsx:80-98`）。
+- **UI-6 LOW**：两个同名 “Toggle sidebar” 控件（`dashboard-header.tsx:17`、
+  `sidebar.tsx:307-334`）。
+- **UI-7 LOW**：空表仍渲染分页条（`table-pagination.tsx:48-118`）。
+- **UI-8 LOW**：中文登录页混用英文 “dashboard”（`zh-Hans.json`）。
+- 已完成：登录页 EN/ZH 桌面与 375px、axe（0 violations）、Events 有数据/筛选空态、
+  Deliveries 成功/失败列表、筛选 Popover；未完成：Route 筛选完整链路、Payload 窄屏、
+  静默指示器四态、移动端 Sheet/CLS 实测。
+- 推荐下一轮切片：UI-1（唯一浏览器实测确认的高危缺陷，30–45 分钟，同时消灭 REQ-78）。
+
+### EXPERT_PANEL
+
+- 未展开（预算用尽）。排队：Q-30 + Q-8（同一类：成功结果持久化失败触发重复外部副作用）、
+  SEC-7、SEC-8、REQ-93、SEC-11/12/16。
+
+### 其他
+
+- FIX-4 复核为过期：仓储 delete 已先 require*，事务向上抛 RecordNotFoundError；
+  剩余工作仅为补回归测试（backlog 已降为 20）。
+- 发布：本轮不发布（时间预算不足，且未做发布评估）。
+- Obsidian 同步：本轮跳过（预算用尽）。
+
+### 下一轮优先项
+
+1. EXPERT_PANEL：Q-30 + Q-8、SEC-7、SEC-8；决策记录落盘后再实现。
+2. 补做 UI 浏览器评审（隔离实例方案已跑通，记录端口/凭据/清理方式），更新
+   `last_ui_review_at`。
+3. REQ-73（28）、REQ-52 + NEW-2（27）、REQ-48 子集（27）。
+4. 安全小项：SEC-9 拆窄字段、SEC-13 精确键、SEC-14 标记、SEC-15 文档。
+5. docs-drift 批次与 FIX-4 回归测试。
+
 ## 2026-10-19（第 22 轮）
 
 - 时间：2026-10-19 17:27 – 18:15 CST。
