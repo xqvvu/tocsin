@@ -298,6 +298,18 @@
 | DOC-43 | README 能力/结构清单过期 | docs-drift lane（第 22 轮） | 23 | candidate | — | 页面清单缺 Suppressions/Integrations（`README.md:34`）；仓储缺 feishu-app/oncall/suppression（`:36`）；仍写 server functions（`:55`） |
 | DOC-44 | 投递搜索占位文案文档落后 | docs-drift lane（第 22 轮） | 20 | candidate | — | `delivery-search-fields.md:48-49` 未提外部消息引用；`zh-Hans.json:674` 已更新（REQ-66） |
 | DOC-45 | README Roadmap 状态过期 | docs-drift lane（第 22 轮） | 24 | candidate | — | `README.md:197-204,228-230` 仍把已交付能力列为待完善；需逐条加状态而非整段删除 |
+| DOC-46 | post-MVP 方向 5 仍整段列为候选 | docs-drift lane（第 27 轮） | 24 | candidate | — | `post-mvp-planning.md:156-174`；CI、Docker smoke、release 文档、脱敏日志均已落地，仅 E2E 未接 CI |
+| DOC-47 | post-MVP 方向 2 缺口描述过期 | docs-drift lane（第 27 轮） | 23 | candidate | — | `post-mvp-planning.md:211-215` 称缺投递缺口解释，实际 `route-match-gaps.ts:57` 与 `history.repository.ts:194` 已实现；仅剩样例 Event 干跑预览 |
+| DOC-48 | 四个已交付 mini-PRD 缺状态头 | docs-drift lane（第 27 轮） | 22 | candidate | — | `active-suppression-indicator.md`、`event-label-silence.md`、`delivery-payload-comparison.md`、`oncall-feishu-urgent.md` 仍用现在时称能力不存在 |
+| DOC-49 | RC 清单概览漏列三类剩余 gate | docs-drift lane（第 27 轮） | 23 | candidate | — | `mvp-rc-checklist.md:17-21,104` 称只剩 E2E，但 dedupe cleanup、provider fixture、多版本 payload 仍未勾选 |
+| DOC-50 | ADR 0008 / restructure-plan 版本与命令过期 | docs-drift lane（第 27 轮） | 22 | candidate | — | `adr/0008...:16,20` 写 vite-plus 1.0.0（实际 `pnpm-workspace.yaml:9` 1.3.0）；`console-server-restructure-plan.md:80` 的 `vp -C apps/console fmt:check` 不存在，`:49` 路径过期 |
+| DOC-51 | frontend-architecture 页面/feature 清单不全 | docs-drift lane（第 27 轮） | 22 | candidate | — | `frontend-architecture.md:17-18,138-148` 缺 integrations、suppressions、auth 与 setup |
+| DOC-52 | adapter-extensibility 剩余范围漏 F3 | docs-drift lane（第 27 轮） | 21 | candidate | — | F3 仍成立：表单只消费 template `modes`，其余 configFields 不参与渲染（`destination-form.ts:294`） |
+| NEW-D | 顶栏全局 ID 快速查找 | requirements lane（第 27 轮） | 27 | candidate | — | 顶栏只有栏目名与静默指示器（`dashboard-header.tsx:30`）；粘贴事件/投递 ID 直达详情，复用 `operations.queries.ts:56`；纯 console shell + feature API |
+| NEW-E | 通知目标只读配置详情 | requirements lane（第 27 轮） | 27 | candidate | — | DTO 已有 `urgentReceivers/headerNames/replyTo/appRef`（`destination.ts:26`），列表只显示数量（`destination-operational-config-cell.tsx:61`）；行内只读弹层，不碰 secret |
+| NEW-F | 飞书应用删除/换密前影响面预检 | requirements lane（第 27 轮） | 27 | candidate | — | 删除确认只显示应用名（`feishu-app-actions.tsx:89`），引用目标已在 DTO；服务端删除时才拒绝（`feishu-app.service.ts:84`）；纯 feature UI |
+| NEW-G | 事件/投递详情复制直达链接 | requirements lane（第 27 轮） | 26 | candidate | — | 详情只显示 ID（`page-toolbar.tsx:36`），动作无复制链接；复用 `copyText`，绝对 URL，纯前端 |
+| NEW-H | 一键检测全部飞书应用凭证 | requirements lane（第 27 轮） | 25 | candidate | — | 工具栏只有新增/刷新（`feishu-apps-page.tsx:45`），测试只能逐行；顺序调用现有 `integrations.testFeishuApp`，汇总成功/失败 |
 | NEW-1 | 静默命中列表显示告警身份 | requirements lane（第 23 轮） | 28 | shipped | #166 | 事件列增加 severity 徽标 + 标题（链接事件）+ 源·状态·ID；复用 `DeliveryListItem` 既有字段；PRD `docs/prd/suppression-hit-event-identity.md` |
 | NEW-2 | Source 接入 URL 使用部署公开地址 | requirements lane（第 23 轮） | 25 | candidate | — | 复制出的 webhook URL 用浏览器 origin，SSH 隧道/反代下不可达（`source-webhook.ts:5-11`、`browser.ts:5-7`）；建议与 REQ-52 共用 `TOCSIN_PUBLIC_URL`，经 `i18n.getRequestLocale` 投影 |
 | SEC-11 | 任意认证头名不被 `redactHeaders` 脱敏 | security lane（第 23 轮） | — | candidate | — | MEDIUM：`X-Custom-Auth`/`X-Auth`/`Authentication`/`X-Signature` 值原样落库并展示（`intake.service.ts:80`、`event-raw-tab.tsx:23-26`）；按值形态二次脱敏或 allowlist，parser 也消费同一份 headers → EXPERT_PANEL |
@@ -315,7 +327,11 @@
 | UI-5 | 折叠侧栏首屏闪动 | ui-review（第 23 轮） | 22 | candidate | — | `sidebar.tsx:80-98` cookie 在 mount 后恢复；宜在 loader/SSR 读 cookie 传 `defaultOpen` |
 | UI-6 | 两个同名 Toggle sidebar 控件 | ui-review（第 23 轮，a11y） | 22 | candidate | — | `dashboard-header.tsx:17` 与 `sidebar.tsx:307-334`；给 Rail 加 `aria-hidden` |
 | UI-7 | 空表仍渲染分页条 | ui-review（第 23 轮，浏览器实测） | 21 | candidate | — | `table-pagination.tsx:48-118`；`total === 0` 时隐藏 |
-| UI-8 | 中文登录页混用英文 dashboard | ui-review（第 23 轮，浏览器实测） | 22 | candidate | — | `zh-Hans.json` 改为「控制台」 |
+| UI-8 | 中文登录页混用英文 dashboard | ui-review（第 23 轮，浏览器实测） | 22 | candidate | — | `zh-Hans.json` 改为「控制台」；第 27 轮复现：`/setup`「创建 owner 账号／dashboard 用户」与 toast「正在打开 dashboard」同样混用（`zh-Hans.json:3,11,18,25,29`） |
+| UI-9 | 静默时间时区错位 | ui-review（第 27 轮，浏览器实测） | 27 | candidate | — | 表单按浏览器本地时间输入、列表按设置默认 UTC 显示，差 8 小时且无时区标注，维护窗口可能错时生效；`suppression-forms.tsx:313-334`、`suppression-form.ts:119-126`、`operation-format.ts:15`；成本 45–60 分钟 |
+| UI-10 | 移动端空态被横向卷出屏幕 | ui-review（第 27 轮，390px 实测） | 26 | candidate | — | 空态位于最小宽 1280px 的表格内，390px 下文字在视口外；`operations-table.tsx:111-145`、`deliveries-table-layout.ts:3`；与 UI-2/UI-7 同一空态切片 |
+| UI-11 | 静默停用按钮显示原始 i18n key | ui-review（第 27 轮，浏览器实测） | 24 | candidate | — | aria-label/tooltip 直接显示 `suppressions.table.actions.disableTitle`；`suppressions-section.tsx:277`；成本 2 分钟 |
+| UI-12 | 空态文案与实际交互不符 | ui-review（第 27 轮，浏览器实测） | 23 | candidate | — | Sources/Routes 称「右侧会保留新建表单」，实际「新增」打开对话框（`zh-Hans.json:915,798`）；轮换 Token 后仍提示「创建成功」；`source-token-notice-panel.tsx:35,53,70` |
 
 ## 发布记录
 

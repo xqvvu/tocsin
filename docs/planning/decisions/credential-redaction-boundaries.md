@@ -2,7 +2,7 @@
 
 - 日期：2026-10-20（第 25 轮）
 - 裁决方式：EXPERT_PANEL 三位专家独立评估（安全与可靠性 / 产品与运维 / 独立评估者）
-- 状态：PR A 已合并（#176，第 26 轮）；PR B 已实现（#180，第 27 轮）
+- 状态：PR A 已合并（#176，第 26 轮）；PR B 已合并（#180，第 27 轮，merge commit `29c0745`）
 
 ## 实现状态
 
@@ -12,7 +12,7 @@
 - 实施差异：认证 scheme 后的值除至少 8 字符外还须含数字或符号，避免
   `Basic authentication` 之类的普通英文被误伤；赋值正则补左词边界，修复
   `max_tokens: 4096` 从 `tokens:` 尾部误判的既有误伤。两条反例已写入测试。
-- PR B（SEC-7 + SEC-17）：#180 已实现（待合并）。新增 `redactNormalizedEvent`、
+- PR B（SEC-7 + SEC-17）：#180 已合并。新增 `redactNormalizedEvent`、
   `redactRouteMatchResults`、`redactEventRecord`：事件/投递列表与详情 DTO、补投预览、
   历史样例预览、发送输入统一走投影；providerMetadata 走 `redactJsonValue`；历史
   `rendered_payload_json` 在读取时复核。匹配、去重、静默、补投仍读原始值，存储不变。
@@ -21,6 +21,10 @@
 - 实施差异：`redactRouteMatchResults` 对敏感 `labelKey` 的 `actual` 整体替换为
   `[REDACTED]`（而非只做值形态），与 normalized labels 的键规则一致；规则 `expected`
   保持可读（属于操作者配置）。
+- 独立评审补强（同一 PR 第二个 commit）：`redactHeaders` 对非敏感头值也跑 `redactText`；
+  新增 `redactJsonText` 覆盖 JSON 字符串叶子里的 `token=...`（用于 raw/rendered payload
+  与模板上下文）；`idempotencyKey` 纳入 DTO 投影；事件页对脱敏标签禁用「按值静默」；
+  投递页在事件内容已脱敏时不再重算当前路由证据，改为提示以接入快照为准。
 
 ## 事项
 
