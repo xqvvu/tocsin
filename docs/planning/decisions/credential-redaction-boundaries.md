@@ -2,7 +2,7 @@
 
 - 日期：2026-10-20（第 25 轮）
 - 裁决方式：EXPERT_PANEL 三位专家独立评估（安全与可靠性 / 产品与运维 / 独立评估者）
-- 状态：PR A 已实现（#176，第 26 轮）；PR B 待实现
+- 状态：PR A 已合并（#176，第 26 轮）；PR B 已实现（#180，第 27 轮）
 
 ## 实现状态
 
@@ -12,7 +12,15 @@
 - 实施差异：认证 scheme 后的值除至少 8 字符外还须含数字或符号，避免
   `Basic authentication` 之类的普通英文被误伤；赋值正则补左词边界，修复
   `max_tokens: 4096` 从 `tokens:` 尾部误判的既有误伤。两条反例已写入测试。
-- PR B（SEC-7 + SEC-17）：待第 27 轮按「读取/发送边界投影、不改存储」实施。
+- PR B（SEC-7 + SEC-17）：#180 已实现（待合并）。新增 `redactNormalizedEvent`、
+  `redactRouteMatchResults`、`redactEventRecord`：事件/投递列表与详情 DTO、补投预览、
+  历史样例预览、发送输入统一走投影；providerMetadata 走 `redactJsonValue`；历史
+  `rendered_payload_json` 在读取时复核。匹配、去重、静默、补投仍读原始值，存储不变。
+  读取边界矩阵测试在 `history/read-projection-redaction.test.ts`，发送输入与补投匹配
+  不变性分别在 `delivery-execution.test.ts`、`event-replay.service.test.ts`。
+- 实施差异：`redactRouteMatchResults` 对敏感 `labelKey` 的 `actual` 整体替换为
+  `[REDACTED]`（而非只做值形态），与 normalized labels 的键规则一致；规则 `expected`
+  保持可读（属于操作者配置）。
 
 ## 事项
 
