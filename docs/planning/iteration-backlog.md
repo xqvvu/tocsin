@@ -234,10 +234,10 @@
 | Q-37 | oncall dedupe cleanup 同样是无界 DELETE | quality lane（第 24 轮） | 20 | candidate | — | `oncall.repository.ts:38-41` 每次 enqueue 在写事务内清理窗口外全部 key；Q-23 的 oncall 同构路径，建议有界删除 |
 | Q-38 | Source token 复制失败仍弹成功 toast | requirements lane（第 26 轮） | 24 | candidate | — | 剪贴板失败分支调用 `toast.success`（`source-token-notice-panel.tsx:48-55,65-72`）；应改错误提示并补测试 |
 | Q-39 | 错误页把占位符当 trace ID 展示 | requirements lane（第 26 轮） | 20 | candidate | — | `dashboard-error.tsx:61-63` 渲染 `shell.error.traceId`，其值为 `[REDACTED_TRACE_ID: generated_server_side]`（`zh-Hans.json:829`）；request-id 只在成功响应回写（`request-logging.middleware.ts:26,37-47`）；需错误边界穿透 request id，成本较高 |
-| REL-21 | E2E 未接入 CI | release-infra lane（第 26 轮） | 26 | candidate | — | `playwright.config.ts` 已配置 webServer/retries/reporter；CI 只有 `ci.yml`；Chromium 版本 1248 需显式安装；建议独立 `e2e.yml`（PR 触发、DB 预清理、失败 artifact），提交前须本地跑通 |
+| REL-21 | E2E 未接入 CI | release-infra lane（第 26 轮） | 26 | candidate | — | 第 29 轮复核：远端仍只有 `ci.yml`（workflow total_count=1）；`playwright.config.ts:22-29` 已为 CI 配好 retries/reporter/trace；Chromium 期望 1248（本机缓存 1234，需显式 `playwright install`）；建议独立 `e2e.yml`（PR + push main、临时 SQLite、失败 artifact 保留 3 天），**提交前必须本地跑通 `playwright install chromium` + `playwright test`**；新增后需同步 8 处发布文档断言。不要在本轮扩展 spec（REL-22） |
 | REL-22 | E2E spec 覆盖小于 RC gate A | release-infra lane（第 26 轮） | 25 | candidate | — | `alert-flow.spec.ts:53-118` 无 Route、Destination preview/test、Delivery、过滤、失败 retry；关闭 `mvp-rc-checklist.md:125` 前需扩展 |
 | REL-23 | main 无 required checks（ruleset） | release-infra lane（第 26 轮） | 24 | candidate | — | `gh api branches/main/protection` 404、rulesets 为空；workflow 只是建议门禁。需 EXPERT_PANEL（仓库设置属高风险外部变更） |
-| REL-24 | Provider fixtures 缺失 | release-infra lane（第 26 轮） | 23 | candidate | — | 6 个 adapter 测试仍内联 payload；建议先搬 8 个最小 fixture，再补 alertmanager/signoz/grafana resolved 变体；`with { type: "json" }` 已有先例 |
+| REL-24 | Provider fixtures 缺失 | release-infra lane（第 26 轮） | 23 | candidate | — | 第 29 轮复核：仍无 `fixtures/` 目录；6 个 adapter 共 19 个代表性 payload、32 个用例（backlog 旧记「31 用例」已过期），另有 6 个非对象拒绝用例；`feishu/index.test.ts:15-16` 有 `with { type: "json" }` 先例；建议先搬 8 个最小 fixture |
 | ARCH-27 | Provider catalog/`iconName` 无消费者，Source UI 硬编码 | architecture lane | 24 | candidate | — | `registry.ts:73-85` 已投影，但 `source-provider-icon.tsx:1-40` 按 provider 穷尽 switch、`source-form.tsx:57-67,149-158` 重复列表；缺 provider catalog procedure |
 | ARCH-28 | Operations DTO 在 core 与 api 双份定义，无 parity 守卫 | architecture lane | 21 | candidate | — | 手写 interface（`packages/core/src/operations.ts:120,132`）与 zod schema（`packages/api/src/schemas/operations.ts:37,59,78,99,111`）各维护一份；无 `satisfies` 断言。第 21 轮实测已漂移：core `EventDetailDelivery`（`operations.ts:89-92`）无 `destinationKind`，API schema（`schemas/operations.ts:51-57`）有 |
 | ARCH-29 | `configuration-support.ts` 成为跨能力 helper 集散地 | architecture lane | 21 | candidate | — | 同时导出 token 生成、测试事件、脱敏、配置解析与引用校验（`configuration-support.ts:11-125`），被 7 个能力服务导入 |
@@ -271,7 +271,7 @@
 | REQ-108 | Events/Deliveries 多值属性筛选 | requirements lane（第 24 轮） | 28 | candidate | — | `severity`/`status`/`deliveryState` 支持多值；URL 逗号分隔并兼容旧单值，chips 逐项移除，列表与 total 同谓词；`operation-search.ts:13-20`、`operation-filters.tsx:258-303,411-441`、`history.repository.ts:88-93,250-255`；无迁移/新依赖 |
 | REQ-109 | 事件标签一键静默 | requirements lane（第 24 轮） | 29 | shipped | #172 | 标签旁图标按钮打开既有静默对话框，预填 source + `equals` 标签；新增 `suppressionDefaultsFromLabel`；PRD `docs/prd/event-label-silence.md`；纯前端 |
 | REQ-110 | 静默即将到期提示 | requirements lane（第 24 轮） | 28 | candidate | — | Header 指示器只统计 active；扩展 `ActiveSuppressionSummary` 增加 30 分钟内到期数量并提示；`suppression-summary.ts:50-80`、`active-suppression-indicator.tsx:20-56`；可并入 REQ-39 评估 |
-| NEW-A | 停用配置前的断流影响确认 | requirements lane（第 25 轮） | 29 | candidate | — | 三个启停按钮单击即执行：停用 Source 接入拒绝（`intake.service.ts:69-72`）、Route 停止匹配（`:98-99`）、Destination/Route 的 pending 投递不再 claim（`delivery.repository.ts:228-229`）；复用 rotate/delete 的确认模式；影响数已在 section props；纯前端 |
+| NEW-A | 停用配置前的断流影响确认 | requirements lane（第 25 轮） | 29 | shipped | #187 | 三个行内启停按钮仅在「启用→停用」方向弹确认；告警源显示匹配的已启用路由数、目标显示引用它的已启用路由数、路由显示关联目标数；说明排队投递是继续还是暂停；PRD `docs/prd/disable-config-confirmation.md`；纯前端 |
 | NEW-B | 静默窗口快捷时长 | requirements lane（第 25 轮） | 27 | candidate | — | 创建静默只有 `datetime-local`，默认固定 2 小时（`suppression-form.ts:118-128`、`suppression-forms.tsx:310-338`）；加 30m/1h/4h/24h 预设按钮，仍存绝对时间；纯前端 |
 | NEW-C | 路由保存前的「目标全停用」警示 | requirements lane（第 25 轮） | 27 | candidate | — | 目标选择器不显示启停状态（`route-forms.tsx:987-1018`）；全停用时路由可保存但永不投递；列表已显示停用数（`routes-section.tsx:328-340`）；仅路由表单 + i18n |
 | REQ-111 | 初始化 Owner 密码确认与不可恢复提示 | requirements lane（第 26 轮） | 27 | candidate | — | Setup 只有单个密码字段、成功后直接进 dashboard，且无重置入口（`-setup-form-impl.tsx:156-185,61-65`、`routes/setup.tsx:14`）；加确认密码 + 不可恢复说明，仅前端校验；纯前端 |
@@ -337,6 +337,11 @@
 | REQ-121 | Source Token 轮换宽限期 | requirements lane（第 28 轮） | 24 | candidate | — | 轮换后旧 token 保留 0/15/60 分钟；`source.service.ts:66-73` 直接覆盖、`schema.ts:44` 单列、`zh-Hans.json:907` 承认切换期断流；需 forward-only 迁移 + EXPERT_PANEL |
 | REQ-122 | 领域错误文案本地化 | requirements lane（第 28 轮） | 23 | candidate | — | 为高频 DomainValidationError 增稳定 code，前端 zh/en 映射；`domain-errors.ts:19-25`、`errors.ts:36-41`；toast 直接显示英文 `error.message`（`delivery-buzz-button.tsx:49`） |
 | REQ-123 | 配置列表最近更新时间 | requirements lane（第 28 轮） | 25 | candidate | — | Source/Destination/Route 列表 DTO 投影 `updatedAt`；表已有列且仓储维护（`schema.ts:48,59,94`），DTO 未投影（`source.ts:13-18`、`destination.ts:64-66`、`route.ts:37-45`）；飞书应用列表已显示 |
+| REQ-124 | 投递详情解释「加急为什么没有发生」 | requirements lane（第 29 轮） | 28 | candidate | — | 自动加急 5 个 gate 均静默 return（`oncall.service.ts:131-160`）；pings 空时只有泛化文案（`delivery-pings-table.tsx:48-54`）；`destinationMetadata` 缺 `urgentAutoEnabled/urgentSeverities`（`destination.helpers.ts:180-193`）。只读投影 + 纯函数 reason code + 说明区，无迁移/无发送语义变化 |
+| REQ-125 | 告警源额外共享密钥显式清除 | requirements lane（第 29 轮） | 27 | candidate | — | 编辑留空=保留，无清除路径（`source-form.ts:27-35`、`source.service.ts:52-64`）；AGENTS 要求 preserve/replace/clear；加 `clearSigningSecret` 命令位与表单二次确认，无迁移 |
+| REQ-126 | 飞书应用凭证变更前验证 | requirements lane（第 29 轮） | 26 | candidate | — | 保存直接覆盖 app_id/secret（`feishu-app.service.ts:72-82`）；现有 test 只接受已存 id 并读旧 secret（`:102-118`）；新增 draft 凭证验证过程（不写库）+ 保存前确认 |
+| REQ-127 | 加急呼叫新鲜度上限 | requirements lane（第 29 轮） | 26 | candidate | — | scheduled ping 无年龄上限（`oncall.repository.ts:57-81,133-153`）；目标停用/worker 停机后恢复会补拨旧告警；有界过期收敛为 `failed`，不新增状态/迁移 |
+| REQ-128 | 手动加急披露去重跳过 | requirements lane（第 29 轮） | 26 | candidate | — | 被 dedupe 的接收人返回 `null` 且不计数（`oncall.service.ts:89-109`、`oncall.repository.ts:43-53`）；toast 只报新建数（`delivery-buzz-button.tsx:42-46`）；DTO 增 `skippedReceivers` |
 | Q-40 | 语言解析顺序与注释/文案不一致 | requirements lane（第 28 轮） | 24 | candidate | — | `i18n/router.ts:9-13` 称 cookie→Accept-Language→settings，`:21` 却把 settings 当 cookieLocale 传入，Accept-Language 不可达；通知渲染用 `settings.locale`（`delivery-worker.service.ts:64`、`destination.service.ts:296`） |
 | Q-41 | 配置名 UNIQUE 冲突返回不透明 500 | requirements lane（第 28 轮） | 22 | candidate | — | `schema.ts:42,55,88,101` 有 UNIQUE，服务无预检、`errors.ts:24-57` 未映射 SQLite 约束错误且剥离 message（`:12`），重名创建只得到 INTERNAL_SERVER_ERROR |
 | ARCH-35 | client-only 标记过度使用 | architecture lane（第 28 轮） | 16 | candidate | — | `components/ui/dropdown-menu.tsx:1`、`routes/-login-form-impl.tsx:1`、`routes/-setup-form-impl.tsx:1`、`i18n/language-switcher-impl.tsx:1`、`shell/dashboard-user-menu-impl.tsx:1` 自身无浏览器 API；建议并入 ARCH-14 |
@@ -355,6 +360,8 @@
 
 ## 下一轮优先项
 
+0. **REQ-124（28）** 投递详情解释「加急为什么没有发生」：第 29 轮 requirements 首推，
+   纯只读投影 + 纯函数 reason code，无迁移；其次 **REQ-125（27）** 告警源共享密钥显式清除。
 1. **UI 小成本批次**：UI-9（27）静默时间时区错位；UI-4（移动端 Sheet 关闭按钮）、
    UI-11（停用按钮原始 i18n key，2 分钟）、UI-12（空态文案与实际交互不符）、
    UI-8（登录/初始化页混用 dashboard）；UI-5/UI-6 视情况。
@@ -374,9 +381,10 @@
    抑制窗口时间比较、复制失败 toast。
 7. **docs-drift 批次**：DOC-34/11/22/23/24/25/26/27/36/37/38/39/40/41/43/44/45，拆两个
    `docs:` PR；第 22 轮已刷新证据。
-8. **车道轮转（第 29 轮）**：`requirements` 必跑 + `ui-triage`；第 28 轮已完成
-   `requirements` + `architecture` + `ui-triage`（defer），第三席跑 `release-infra`
-   （第 26 轮后未跑），`docs-drift` 顺延到第 30 轮。
+8. **车道轮转（第 30 轮）**：`requirements` 必跑 + `ui-triage`；第 29 轮已完成
+   `requirements` + `release-infra` + `ui-triage`（defer），`docs-drift` 顺延到第 30 轮。
+   REL-21 若要实施：先本地 `playwright install chromium` + `playwright test` 跑通，
+   再新增 `e2e.yml` 并同步 8 处发布文档断言；未跑通不得合并。
 9. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 10. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。
