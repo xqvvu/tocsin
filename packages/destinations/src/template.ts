@@ -29,7 +29,7 @@ const RE_TEMPLATE_BINDING_NAME = /^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/;
  *
  * The platform limits are wildly looser than these (Feishu rejects a card only
  * past 30 KB — see feishu-errors' 230025; Slack allows 3000 chars of mrkdwn).
- * These are Vane's own ceilings: high enough that any hand-written notification
+ * These are Tocsin's own ceilings: high enough that any hand-written notification
  * fits, low enough that a runaway generator cannot post a megabyte per alert.
  * They are not derived from a provider spec, and should not be presented as if
  * they were — a template that passes here can still be rejected upstream.

@@ -108,6 +108,29 @@ describe("FeishuAppService", () => {
     expect(result.errorMessage).toContain("app not found");
   });
 
+  it("redacts credentials echoed by the platform in a failed test", async () => {
+    const { service } = await createTestService({
+      fetch: async () => ({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({ code: 99991663, msg: "app_secret=secret-1 is not valid" }),
+      }),
+    });
+    const created = await service.createFeishuApp({
+      name: "SRE pager",
+      appId: "cli_sre",
+      appSecret: "secret-1",
+    });
+
+    const result = await service.testFeishuApp({ id: created.id });
+
+    expect(result.success).toBe(false);
+    expect(result.errorMessage).toContain("99991663");
+    expect(result.errorMessage).toContain("[REDACTED]");
+    expect(result.errorMessage).not.toContain("secret-1");
+  });
+
   it("refuses to delete an app that a destination still references", async () => {
     const { service, store } = await createTestService();
     const created = await service.createFeishuApp({

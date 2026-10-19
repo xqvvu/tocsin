@@ -1,7 +1,12 @@
 import { parse as parseToml } from "smol-toml";
 import { describe, expect, it } from "vite-plus/test";
 
-import type { DestinationKind, JsonObject, TomlDocument } from "@tocsin/core";
+import {
+  DestinationKindSchema,
+  type DestinationKind,
+  type JsonObject,
+  type TomlDocument,
+} from "@tocsin/core";
 import { createDefaultDestinationRegistry } from "@tocsin/destinations";
 import type { DestinationSendContext } from "@tocsin/destinations";
 
@@ -150,6 +155,15 @@ async function createTestContextWithDestinationFetch(fetch: DestinationSendConte
 }
 
 describe("configuration capabilities", () => {
+  it("keeps the destination registry in step with the core kind schema", () => {
+    // The redaction suite below is parameterized by the registry, so a kind
+    // that exists in the schema but was never registered would silently skip
+    // its secret-leak coverage instead of failing here.
+    expect([...registeredDestinationKinds].sort()).toEqual(
+      [...DestinationKindSchema.options].sort(),
+    );
+  });
+
   it("creates sources with one-time plaintext tokens and persisted token hashes", async () => {
     const { store, services } = await createTestContext();
 
