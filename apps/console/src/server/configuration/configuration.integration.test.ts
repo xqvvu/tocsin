@@ -37,6 +37,7 @@ const destinationSecretCases: Record<
       headers: {
         Authorization: "Bearer generic-webhook-header-secret",
         "X-Auth-Token": "generic-webhook-x-auth-token-secret",
+        "X-Custom-Auth": "generic-webhook-custom-auth-secret",
       },
     },
     preserved: { method: "PATCH" },
@@ -44,8 +45,9 @@ const destinationSecretCases: Record<
       "https://relay.example.test/generic-webhook-secret",
       "Bearer generic-webhook-header-secret",
       "generic-webhook-x-auth-token-secret",
+      "generic-webhook-custom-auth-secret",
     ],
-    secretPaths: ["url", "headers.Authorization", "headers.X-Auth-Token"],
+    secretPaths: ["url", "headers.Authorization", "headers.X-Auth-Token", "headers.X-Custom-Auth"],
   },
   feishu: {
     config: {
@@ -79,14 +81,16 @@ const destinationSecretCases: Record<
       from: "tocsin@example.test",
       headers: {
         "X-Api-Key": "email-gateway-header-secret",
+        "X-Custom-Auth": "email-custom-auth-secret",
       },
     },
     preserved: { to: ["sre@example.test"], from: "tocsin@example.test" },
     secretValues: [
       "https://mail-gateway.example.test/email-gateway-secret",
       "email-gateway-header-secret",
+      "email-custom-auth-secret",
     ],
-    secretPaths: ["endpointUrl", "headers.X-Api-Key"],
+    secretPaths: ["endpointUrl", "headers.X-Api-Key", "headers.X-Custom-Auth"],
   },
 };
 
@@ -453,6 +457,110 @@ describe("configuration capabilities", () => {
     expect(JSON.stringify(draft)).toContain("private-token");
     expect(JSON.stringify(draft)).not.toContain("private-signing-secret");
     expect(JSON.stringify(draft)).not.toMatch(/"signSecret"\s*:\s*"/);
+
+    await store.close();
+  });
+
+  it("returns an editor draft with destination header names but no values", async () => {
+    const { store, services } = await createTestContext();
+    const destination = await services.destinations.createDestination({
+      name: "Relay with auth",
+      kind: "generic_webhook",
+      config: {
+        url: "https://relay.example.test/tocsin",
+        headers: {
+          Authorization: "Bearer relay-secret",
+          "X-Custom-Auth": "Bearer custom-auth-secret",
+          "X-Team": "sre",
+        },
+      },
+    });
+
+    const draft = await services.destinations.getDestinationTemplateDraft({
+      id: destination.id,
+    });
+
+    // Names stay visible so the operator can replace a value; the values
+    // themselves never leave the server.
+    expect(draft.form.headers).toBe("Authorization:\nX-Custom-Auth:\nX-Team:");
+    const serialized = JSON.stringify(draft);
+    expect(serialized).not.toContain("Bearer relay-secret");
+    expect(serialized).not.toContain("Bearer custom-auth-secret");
+    expect(serialized).not.toContain("X-Team: sre");
+
+    await store.close();
+  });
+
+  it("refuses to export a header name that cannot be a secret reference", async () => {
+    const { store, services } = await createTestContext();
+
+    await services.destinations.createDestination({
+      name: "Relay with dotted header",
+      kind: "generic_webhook",
+      config: {
+        url: "https://relay.example.test/tocsin",
+        headers: {
+          "X.Custom": "dotted-secret",
+        },
+      },
+    });
+
+    await expect(
+      services.portability.exportToml({
+        now: () => now,
+      }),
+    ).rejects.toThrow('header "X.Custom" cannot be exported');
+
+    await store.close();
+  });
+
+  it("refuses to export header names that collide after env normalization", async () => {
+    const { store, services } = await createTestContext();
+
+    await services.destinations.createDestination({
+      name: "Relay with colliding headers",
+      kind: "generic_webhook",
+      config: {
+        url: "https://relay.example.test/tocsin",
+        headers: {
+          "X-Auth": "first-secret",
+          X_Auth: "second-secret",
+        },
+      },
+    });
+
+    await expect(
+      services.portability.exportToml({
+        now: () => now,
+      }),
+    ).rejects.toThrow("map to the same secret environment name");
+
+    await store.close();
+  });
+
+  it("drops header secret references for headers that no longer exist", async () => {
+    const { store, services } = await createTestContext();
+
+    await services.destinations.createDestination({
+      name: "Relay with stale header ref",
+      kind: "generic_webhook",
+      config: {
+        url: "https://relay.example.test/tocsin",
+        headers: {
+          "X-Team": "sre",
+        },
+      },
+      secretRefs: {
+        "headers.X-Removed": { env: "REMOVED_HEADER" },
+      },
+    });
+
+    const toml = await services.portability.exportToml({
+      now: () => now,
+    });
+
+    expect(toml).not.toContain("headers.X-Removed");
+    expect(toml).not.toContain("REMOVED_HEADER");
 
     await store.close();
   });
@@ -1497,7 +1605,7 @@ describe("configuration capabilities", () => {
     await store.close();
   });
 
-  it("exports nested destination header secrets as environment references", async () => {
+  it("exports every destination header as an environment reference", async () => {
     const { store, services } = await createTestContext();
 
     await services.destinations.createDestination({
@@ -1507,6 +1615,7 @@ describe("configuration capabilities", () => {
         url: "https://relay.example.test/tocsin",
         headers: {
           Authorization: "Bearer relay-secret",
+          "X-Custom-Auth": "Bearer custom-auth-secret",
           "X-Team": "sre",
         },
       },
@@ -1518,8 +1627,11 @@ describe("configuration capabilities", () => {
 
     expect(toml).not.toContain("https://relay.example.test/tocsin");
     expect(toml).not.toContain("Bearer relay-secret");
-    expect(toml).toContain('X-Team = "sre"');
+    expect(toml).not.toContain("Bearer custom-auth-secret");
+    expect(toml).not.toContain('X-Team = "sre"');
     expect(toml).toContain("headers.Authorization");
+    expect(toml).toContain("headers.X-Custom-Auth");
+    expect(toml).toContain("headers.X-Team");
     expect(toml).toContain("TOCSIN_DEST_");
 
     await store.close();

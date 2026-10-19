@@ -87,7 +87,7 @@
 | DOC-8 | README/AGENTS.md 的 pnpm 版本过期 | docs drift | 23 | shipped | #117 | 对齐 `pnpm@12.14.0` |
 | DOC-9 | 发布文档声称没有 E2E/smoke、迁移只有 0001 | release-infra lane | 27 | shipped | #117 | 区分脚本已存在与 CI 未接入；rel 文档更新 |
 | DOC-10 | `route-explain-delivery-gap.md` 仍称「待实现」 | requirements lane | 24 | shipped | #117 | 状态与 R8 说明已对齐代码 |
-| DOC-11 | `adapter-contribution-experience.md` 的「不存在」盘点部分过期 | docs drift | 24 | candidate | — | 第 13 轮复核：`audit()`(`registry.ts:83`)、test-kit(`package.json:18`)、`iconName`、贡献指南均已落地；剩余范围收窄为 **F5（HTTP 发送信封收敛）** |
+| DOC-11 | `adapter-contribution-experience.md` 的「不存在」盘点部分过期 | docs drift | 24 | candidate | — | 第 13 轮复核：`audit()`(`registry.ts:83`)、test-kit(`package.json:18`)、`iconName`、贡献指南均已落地；剩余范围收窄为 **F5（HTTP 发送信封收敛）**。第 15 轮补充：`:17,117-118,131-158,169-171,341-342` 还称 `destinationSecretPaths` 是嵌套三元（实为穷尽 switch），剩余范围应为 F1/F2'/F5 |
 | DOC-12 | `route-authoring-current-state.md` 去重证据断言过期 | docs drift | 23 | shipped | #127 | 拆成「去重已落库」与「skipExisting 仅计数」两行（`delivery_dedupe_keys`，`schema.ts:164-185`） |
 | REQ-25 | 抑制规则试跑预览（dry-run） | requirements lane | 27 | candidate | — | PRD 承诺 `preview` 与范围预览，代码只有 list/get/hits；复用 `evaluateSuppressionMatch` + `listRecent`；`alert-suppression.md:97,209,238` |
 | REQ-26 | Destination 用真实历史 Event 预览 | requirements lane | 29 | shipped | #122 | 预览对话框新增样例来源选择器（内置 + 最近 20 条历史 Event），三个预览入口均可重放；`recentEventsQueryOptions`、`destination-notices.tsx`、`destinations-page.tsx`；PRD `docs/prd/destination-historical-event-preview.md` |
@@ -134,8 +134,8 @@
 | DOC-19 | RC checklist 仍把已交付排障能力列为下一轮候选 | docs drift | 26 | shipped | #127 | `mvp-rc-checklist.md:188` 补状态：筛选/时间范围/ID 搜索/route explain 已落地；fingerprint 视图等仍未做 |
 | DOC-20 | `destination-historical-event-preview.md` 现状陈述与已实现状态矛盾 | docs drift | 22 | shipped | #127 | 现状陈述改为过去时，与顶部「已实现」一致 |
 | DOC-21 | RC checklist 声称 dedupe cleanup 已改为有界批 | docs drift | 27 | shipped | #135 | 已勾选 gate 收窄为 raw payload pruning，新增未勾选的 dedupe cleanup gate；`history-retention-and-snapshots.md` §2 增加范围说明。代码缺口转 Q-23 |
-| DOC-22 | `next-round.md` 仍把 S0 与抑制写成未决安全缺口 | docs drift | 25 | candidate | — | S0 已在 `config-portability.ts:358-370` 用穷尽 switch 修复；抑制主体已落地且 2026-10-12 拍板（`alert-suppression-decisions.md:3`），仅顶部有更正 |
-| DOC-23 | 架构文档文件树/路由/工厂清单过期 | docs drift | 24 | candidate | — | `frontend-architecture.md:37-108` 缺 suppressions/integrations/settings/setup 与 csrf；`application-container.md:57` 写 `auth/router.ts`（实为 `session/router.ts`）且缺 `createSuppressionService` |
+| DOC-22 | `next-round.md` 仍把 S0 与抑制写成未决安全缺口 | docs drift | 25 | candidate | — | S0 已在 `config-portability.ts:358-370` 用穷尽 switch 修复；抑制主体已落地且 2026-10-12 拍板（`alert-suppression-decisions.md:3`）。第 15 轮补充：基线 `:3` 为 `2f48153`（落后 18 提交），正文 `:22-23,31-43,72-73,119-128,142-154,210-226,313-324,361-369` 仍称 registry 无 audit、test-kit/iconName/F3/F4/F7 待做；`registry.ts:83`、`package.json:18`、`destination-kind-icon.tsx:26-34` 均已落地 |
+| DOC-23 | 架构文档文件树/路由/工厂清单过期 | docs drift | 24 | candidate | — | `frontend-architecture.md:37-108` 缺 suppressions/integrations/settings/setup 与 csrf；`application-container.md:57` 写 `auth/router.ts`（实为 `session/router.ts`）且缺 `createSuppressionService`。第 15 轮补充：`container.ts:85,107,110-112` 另有 `createEventReplayService`/`createOperationsService`/两个 worker runner；frontend 树缺 `auth/integrations/suppressions`（`deliveries/model` 已存在、`configuration/model` 不存在）；server 树缺 `oncall/suppressions` 与 `operations.service.ts`；`frontend-architecture.md:83` 实际另有 `csrf.middleware.ts`（`start.ts:3-7`） |
 | DOC-24 | 抑制 PRD 承诺不存在的 preview 且 AC 未勾选 | docs drift | 24 | candidate | — | `alert-suppression.md:238` 列 `preview`，实际 contract 无该过程（`packages/api/src/contract/suppressions.ts:21-63`，preview 是 REQ-25）；`:275-294` AC 全未勾选；`:289` 仍写四状态 |
 | DOC-25 | post-MVP 规划低估已交付的缺口解释与保留策略 | docs drift | 23 | candidate | — | `post-mvp-planning.md:215` 称缺投递缺口解释，实际 `routeMatchGaps` + `event-detail-route-gaps.tsx` 已上线；`:137` 的 retention 已决定不自动清理（`history-retention-and-snapshots.md:14`） |
 | DOC-26 | 三个已交付 mini-PRD 仍用现在时描述问题 | docs drift | 22 | candidate | — | `delivery-retention-notice.md:10-12`（#111）、`event-fingerprint-silence.md:5-7`（#116）、`raw-payload-pruned-state.md:9-12`（#118）均已落地，缺状态注记 |
@@ -175,28 +175,48 @@
 | REQ-62 | Dashboard 账户安全：修改密码与会话撤销 | requirements lane | 25 | candidate | — | Better Auth 已内置能力，session 表含 ip/UA；`dashboard-user-menu-impl.tsx:80-111`、`auth-options.ts:67-69`、`auth-owner-bootstrap.ts:11-26` |
 | REQ-63 | Source 接入鉴权状态可见 | requirements lane | 25 | candidate | — | 仅派生 `sharedSecretConfigured` 布尔值，不返回 secret；`source.ts:9-14`、`sources-section.tsx:38-77`、`edit-source-form.tsx:38-52`、`intake.service.ts:344-374` |
 | REQ-64 | Event/Delivery 详情 Tab 写入 URL | requirements lane | 25 | candidate | — | 详情路由无 `validateSearch`，Tabs 非受控；`event-detail-view.tsx:25-27`、`delivery-detail-view.tsx:23-25`、对应 route 文件 |
-| SEC-5 | 自定义 header 值在配置导出中明文出现 | security lane | 27 | candidate | — | **HIGH**：`destinationSecretPaths` 只把 `isSensitiveKey(headerName)` 命中的 header 加入 secret path；`X-Custom-Auth` 等自定义认证头会明文进入导出（`config-portability.ts:334-347,391-404`），与 manifest `secretFields.path="headers"`/`valueSensitive` 不一致（`generic-webhook/manifest.ts:32-38,63-68`）。编辑 DTO 同样回显（`destination.helpers.ts:395-413`）。需 EXPERT_PANEL 决定导出语义 |
+| SEC-5 | 自定义 header 值在配置导出中明文出现 | security lane | 27 | in-progress | — | **HIGH**：`destinationSecretPaths` 只把 `isSensitiveKey(headerName)` 命中的 header 加入 secret path；`X-Custom-Auth` 等自定义认证头会明文进入导出（`config-portability.ts:334-347,391-404`），与 manifest `secretFields.path="headers"`/`valueSensitive` 不一致（`generic-webhook/manifest.ts:32-38,63-68`）。编辑 DTO 同样回显（`destination.helpers.ts:395-413`）。第 15 轮 EXPERT_PANEL 一致选择全量遮蔽 + fail-closed；决策 `docs/planning/decisions/destination-header-redaction.md` |
 | SEC-6 | `tokenHash` 不在脱敏 helper 覆盖内 | security lane | 23 | candidate | — | 纵深防御：`isSensitiveKey("tokenHash")` 为 false（`redaction.ts:10-43`），当前无输出路径（`source.interface.ts:28-31`） |
 | DOC-28 | RC checklist 对 E2E/compose smoke 是否进 CI 自相矛盾 | release-infra lane | 24 | candidate | — | `mvp-rc-checklist.md:18-19,125,216` 三处表述冲突 |
+| REQ-65 | 全局静默生效提示 | requirements lane | 28 | candidate | — | 生效中的静默只在 `/suppressions` 可见，其它页面会把 catch-all 静默误判为系统健康；`dashboard-header.tsx:29-47`、`suppressions-page.tsx:19-21`、`suppression.ts:82-105`；纯 UI，复用 `suppressionStateAt` |
+| REQ-66 | 按外部消息引用反查投递 | requirements lane | 28 | candidate | — | 详情已展示 `providerReference`，搜索谓词不含 `provider_ref_value`；`history.repository.ts:435-455`、`schema.ts:126-127`、`operations.ts:124-133`；只读 LIKE，列表与 total 同谓词 |
+| REQ-67 | 事件列表解释「命中路由但 0 投递」 | requirements lane | 27 | candidate | — | `routeMatchCount>0 && total=0` 只显示裸 `0`，与详情 route gaps 不一致；`event-delivery-counts-cell.tsx:35-55`、`events-table.tsx:72-80`；纯 UI 三分支 |
+| REQ-68 | 路由一键复制 | requirements lane | 26 | candidate | — | 新建相似路由需重填全部条件；`routes-section.tsx:161-223`、`route-add-dialog.tsx:18-34`、`route-forms.tsx:50-87`；前端 feature 内 |
+| REQ-69 | 新建/编辑静默时提示重叠规则 | requirements lane | 25 | candidate | — | 表单不提示与 active/scheduled 静默的窗口重叠；`suppression-add-dialog.tsx:21-32`、`suppression-forms.tsx:209-228`；只读提示，不阻止保存 |
+| REQ-70 | 出站投递支持标准代理环境变量 | requirements lane | 25 | candidate | — | 所有出站 `fetch` 直连，Docker CMD 未启用 Node 代理解析；`transport.ts:72-77`、`Dockerfile:75`、`docker-production-deployment.md:65-78`；需 EXPERT_PANEL（启动参数/网络语义） |
+| DOC-29 | `next-round.md` 基线与 backlog「已知过期输入」互相矛盾 | docs-drift lane | 24 | candidate | — | `next-round.md:3` 写 `2f48153`（落后 18 提交），backlog `:222` 仍写 `7b5d501` |
+| DOC-30 | `route-authoring-current-state.md` 现状盘点大面积过期 | docs-drift lane | 24 | candidate | — | `:101,103-118,224` 仍称无缺口解释、无 route×destination 视图、多条件只能导入；`route-match-gaps.ts:57`、`event-detail-route-matches-table.tsx:35-40`、`route-forms.tsx` 已落地 |
+| DOC-31 | RC checklist 对 delivery history retention 自相矛盾 | docs-drift lane | 25 | candidate | — | `mvp-rc-checklist.md:18-20,107-109` 称仍需设计，`:163` 已勾选「决定不自动清理」；`history-retention-and-snapshots.md:12-25` |
+| DOC-32 | 抑制决策记录称参数化脱敏测试未补，实际已存在 | docs-drift lane | 24 | candidate | — | `alert-suppression-decisions.md:167-168` 与 `configuration.integration.test.ts:18-19,29-45,1175-1212` 矛盾；残留仅 SEC-2 |
+| REQ-71 | Destination header 显式删除语义 | SEC-5 panel | 24 | candidate | — | 编辑表单留空=保留、删行也=保留（`form-data.ts:26-46`、`configuration-support.ts:125-138`）；全量遮蔽后更难察觉；需 contract + 表单显式删除 |
+| Q-24 | 接入侧 prune sweep 单飞按请求失效 | quality lane | 27 | candidate | — | `pruneSweepRunning` 是 per-instance 字段，container 每请求 new（`intake.service.ts:49-50,176-192`、`container.ts:268-274`、`webhook.ts:55`）；并发 webhook 会叠加无界 UPDATE；无 guard 测试 |
+| Q-25 | 重放/历史预览把 raw payload 清理哨兵当真实载荷 | quality lane | 26 | candidate | — | `{"retentionPruned":true}` 未在重放与样例预览中过滤（`event-replay.service.ts:49-81`、`delivery-execution.ts:95`、`destination.service.ts:371-390`）；事件详情页已隐藏（`event-detail-page.tsx:62` 仍启用重放） |
+| Q-26 | 抑制窗口字符串字典序比较，带偏移 ISO 时间会超期静默 | quality lane | 25 | candidate | — | `suppressionStateAt` 直接比较字符串（`suppression.ts:82-97`）；API 接受任意偏移（`suppression.service.ts:50-57`）；`+08:00` 结尾会多静默数小时；应改用 `Date.parse` 或 schema transform |
+| Q-27 | 告警源覆盖率把条件路由算成全覆盖 | quality lane | 24 | candidate | — | `routeCoversSource` 只要 `sourceIds=[]` 就算覆盖（`source-route-coverage.ts:16-31`）；`{severities:["critical"]}` 会让 warning/info 静默丢失；`catchAllRouteCount` 同样误判 |
+| Q-28 | oncall worker 批次共用开始时间 | quality lane | 22 | candidate | — | `OncallWorker.runOnce` 把批次 `now` 传给每次 execute（`oncall-worker.service.ts:77-79`、`oncall-execution.ts:97-98,138-143`）；`fired_at` 与退避基准偏早；对照 Q-9 的 live clock 修复 |
+| Q-29 | 历史样例选择器错误/空态分支无测试 | quality lane | 20 | candidate | — | `destination-notices.tsx:131,150-158` 的 pending/error/empty 三态无覆盖（`destination-notices.test.tsx:94-164`）；`delivery-event-cell.test.tsx:56,72` 仅否定断言 |
 
 ## 下一轮优先项
 
-1. **SEC-5（HIGH）**：自定义 header 值配置导出明文。先跑 EXPERT_PANEL
-   （导出文件兼容性 + 脱敏语义），再让导出/编辑遮蔽从 manifest
-   `secretFields` 派生或统一隐藏所有 header 值；补非 denylist header 的失败用例。
+1. **SEC-5（HIGH）**：第 15 轮 EXPERT_PANEL 裁决后实施；导出遮蔽所有 header 值，
+   编辑 DTO 只保留名称，补非 denylist header 的失败用例。
 2. **REQ-57**（29）：Route 全空条件保存护栏；纯前端确认框，复用抑制表单先例。
 3. **REQ-53**（29）：加急记录展示触发人、呼叫时间与下次重试；纯 UI，DTO 已具备。
-4. **Q-21**（28）：搜索输入 120 字符上限；输入框 `maxLength` + URL 归一化截断 + 用例。
-5. **REQ-58**（28）：失败投递区分「等待重试」与「重试耗尽」；DTO 增 `maxAttempts`。
-6. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
-7. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
-8. **REL-3**（28，P0）：Docker smoke 卷/镜像/项目/端口隔离；第 11 轮 release lane 补充了
-   `down -v` 丢日志与无超时证据，属任何 smoke CI 接入前的阻断项。
-9. **REQ-32**（28）/ **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：
-   既有高价值切片。
-10. **REQ-54/REQ-55**（27）：告警源覆盖区分停用路由、事件摘要计入已抑制；均为纯 UI。
-11. **Q-23**（25）：dedupe cleanup 有界化；与未来的回填/维护批次协同。
-12. **DOC-22/23/24/25/26/27 + DOC-11 + DOC-28**：一批文档漂移，可合并一个 `docs:` PR。
+4. **REQ-65**（28）：全局静默生效提示；纯 UI，复用 `suppressionStateAt`。
+5. **REQ-66**（28）：按外部消息引用反查投递；只读搜索谓词，列表与 total 同谓词。
+6. **Q-21**（28）：搜索输入 120 字符上限；输入框 `maxLength` + URL 归一化截断 + 用例。
+7. **REQ-58**（28）：失败投递区分「等待重试」与「重试耗尽」；DTO 增 `maxAttempts`。
+8. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
+9. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
+10. **REL-3**（28，P0）：Docker smoke 卷/镜像/项目/端口隔离；第 11 轮 release lane 补充了
+    `down -v` 丢日志与无超时证据，属任何 smoke CI 接入前的阻断项。
+11. **REQ-67**（27）：事件列表三分支投递计数；纯 UI。
+12. **REQ-32**（28）/ **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：
+    既有高价值切片。
+13. **REQ-54/REQ-55**（27）：告警源覆盖区分停用路由、事件摘要计入已抑制；均为纯 UI。
+14. **Q-23**（25）：dedupe cleanup 有界化；与未来的回填/维护批次协同。
+15. **DOC-22/23/24/25/26/27/29/30/31/32 + DOC-11 + DOC-28**：一批文档漂移，
+    可合并一个 `docs:` PR。
 13. **补跑 `docs-drift` + `quality` 车道**（`requirements` 每轮必跑；release-infra 与
     security-exposure 已在第 14 轮复核）。
 14. **REL-6 + REL-7**（26/26）：Docker smoke 断言/日志/超时增强；E2E harness 改为
@@ -219,5 +239,6 @@
 
 ## 已知过期输入
 
-- `docs/planning/next-round.md` 的基线是 `7b5d501`，且其 §1.1 结论（`config-portability.ts` 非穷尽
-  switch）已由 `a460a6f` 修复。续做该备忘前先按当前 `origin/main` 复核。
+- `docs/planning/next-round.md` 的基线是 `2f48153`（第 15 轮核实，落后 `origin/main` 18 个提交），
+  且其 §1.1 结论（`config-portability.ts` 非穷尽 switch）已由 `a460a6f` 修复。续做该备忘前先按
+  当前 `origin/main` 复核。

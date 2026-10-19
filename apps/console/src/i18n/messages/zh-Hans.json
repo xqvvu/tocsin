@@ -303,7 +303,7 @@
   "destinations.form.from": "From",
   "destinations.form.fromDescription": "邮件网关使用的发件人地址",
   "destinations.form.headers": "Headers",
-  "destinations.form.headersDescription": "每行一个 Name: value Header，值只保留在服务端",
+  "destinations.form.headersDescription": "每行一个 Name: value Header，值只保留在服务端，编辑时只显示名称，值留空表示保留原值",
   "destinations.form.htmlTemplate": "HTML 正文模板",
   "destinations.form.htmlTemplateDescription": "取代自动生成的 pre 正文，你写的 HTML 标记按原样输出，变量值一律经过 HTML 转义",
   "destinations.form.jsonPayloadTemplate": "JSON 负载模板",

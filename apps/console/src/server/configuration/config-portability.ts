@@ -151,7 +151,8 @@ export function resolveDestinationSecretRefs(
 ): PortableDestination {
   const resolved = resolvePortableSecretRefs(destination, options, "destination");
 
-  assertNoRedactedSecrets(resolved.config, destinationSecretPaths(destination), "destination");
+  assertNoRedactedSecrets(resolved.config, destinationSecretPaths(resolved), "destination");
+  assertNoRedactedHeaderValues(resolved.config);
 
   return resolved;
 }
@@ -244,6 +245,28 @@ function assertNoRedactedSecrets(
   }
 }
 
+/**
+ * Header values cannot all be reached through dot-paths: HTTP header names may
+ * contain `.` or `$`, which the secret-path grammar rejects. Check the map
+ * directly so a hand-edited import cannot store the redaction placeholder as a
+ * credential.
+ */
+function assertNoRedactedHeaderValues(config: JsonObject): void {
+  const headers = config.headers;
+
+  if (!headers || typeof headers !== "object" || Array.isArray(headers)) {
+    return;
+  }
+
+  for (const [name, value] of Object.entries(headers)) {
+    if (typeof value === "string" && value.trim() === REDACTED_VALUE) {
+      throw new DomainValidationError(
+        `destination header ${name} is the redaction placeholder ${REDACTED_VALUE}; provide the real value or reference an environment variable through secret_refs`,
+      );
+    }
+  }
+}
+
 function resolvePortableSecretRefs<T extends { config: JsonObject; secretRefs: SecretReferences }>(
   entry: T,
   options: ImportConfigurationOptions,
@@ -318,32 +341,93 @@ function sanitizeDestinationConfig(destination: DestinationRuntimeConfig): {
   config: JsonObject;
   secretRefs: SecretReferences;
 } {
-  const secretPaths = destinationSecretPaths(destination);
-  const config = omitJsonPaths(omitSensitiveJson(destination.config), secretPaths);
+  const kindSecretPaths = [...destinationKindSecretPaths(destination.kind)];
+  const config = omitJsonPaths(omitSensitiveJson(destination.config), kindSecretPaths);
   const secretRefs = normalizeSecretRefs(destination.secretRefs);
+  const headerNames = destinationHeaderNames(destination.config);
 
-  for (const path of secretPaths) {
+  for (const path of kindSecretPaths) {
     if (getJsonPath(destination.config, path) !== undefined && secretRefs[path] === undefined) {
       secretRefs[path] = { env: envNameForSecret(destination, path) };
     }
   }
 
+  // Every header value is treated as a credential. The adapter manifests mark
+  // the whole header map as value-sensitive because an operator can put a
+  // bearer token in any header name (`X-Custom-Auth`), and `isSensitiveKey`
+  // cannot enumerate arbitrary names. Remove the map as a unit instead of
+  // deleting dot-paths: a header name may itself contain `.` or characters the
+  // secret-path grammar rejects, so path deletion could leave plaintext behind.
+  delete config.headers;
+  pruneHeaderSecretRefs(secretRefs, headerNames);
+
+  const envNames = new Map<string, string>();
+
+  for (const name of headerNames) {
+    const path = headerSecretPath(destination, name);
+    const env = envNameForSecret(destination, path);
+    const collision = envNames.get(env);
+
+    if (collision !== undefined && collision !== name) {
+      throw new DomainValidationError(
+        `Destination "${destination.name}" headers ${JSON.stringify(collision)} and ${JSON.stringify(name)} map to the same secret environment name ${env}; rename one of them before exporting`,
+      );
+    }
+
+    envNames.set(env, name);
+    secretRefs[path] = secretRefs[path] ?? { env };
+  }
+
   return { config, secretRefs };
 }
 
-function destinationSecretPaths(destination: DestinationRuntimeConfig): string[] {
-  const paths = [...destinationKindSecretPaths(destination.kind)];
-  const headers = destination.config.headers;
+/**
+ * Header names that can be represented as one secret-path segment. The
+ * secret-reference schema only accepts `[A-Za-z0-9_-]` per segment, so a name
+ * containing `.`, `$`, or another HTTP token character cannot round-trip
+ * through `secret_refs["headers.<Name>"]`. Exporting it would either leak the
+ * value (dot-path mismatch) or corrupt the path, so fail closed instead.
+ */
+function headerSecretPath(destination: DestinationRuntimeConfig, name: string): string {
+  const path = `headers.${name}`;
 
-  if (headers && typeof headers === "object" && !Array.isArray(headers)) {
-    for (const key of Object.keys(headers)) {
-      if (isSensitiveKey(key)) {
-        paths.push(`headers.${key}`);
-      }
-    }
+  if (!/^[A-Za-z0-9_-]+$/.test(name) || !isSafeSecretPath(path)) {
+    throw new DomainValidationError(
+      `Destination "${destination.name}" header ${JSON.stringify(name)} cannot be exported as a secret reference; rename it to use only letters, digits, "_" and "-"`,
+    );
   }
 
-  return paths;
+  return path;
+}
+
+/**
+ * Drops references for headers that no longer exist. Without this, a header
+ * removed from the stored config would still be exported and recreated at
+ * import time from its environment variable.
+ */
+function pruneHeaderSecretRefs(secretRefs: SecretReferences, headerNames: readonly string[]): void {
+  const currentPaths = new Set(headerNames.map((name) => `headers.${name}`));
+
+  for (const path of Object.keys(secretRefs)) {
+    if ((path === "headers" || path.startsWith("headers.")) && !currentPaths.has(path)) {
+      delete secretRefs[path];
+    }
+  }
+}
+
+function destinationHeaderNames(config: JsonObject): string[] {
+  const headers = config.headers;
+
+  return headers && typeof headers === "object" && !Array.isArray(headers)
+    ? Object.keys(headers).sort()
+    : [];
+}
+
+function destinationSecretPaths(destination: DestinationRuntimeConfig): string[] {
+  return [
+    ...destinationKindSecretPaths(destination.kind),
+    ...destinationHeaderNames(destination.config).map((name) => `headers.${name}`),
+  ];
 }
 
 /**
