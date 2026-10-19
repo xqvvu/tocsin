@@ -42,7 +42,7 @@
 | FIX-2 | 搜索框承诺指纹但只搜 title/message | 代码核实 | 29 | shipped | #110 | 与 FIX-3 同一 PR；统一 `title/message/fingerprint` 谓词，列表与 total 共用 |
 | FIX-3 | 搜索未转义 LIKE 通配符 | 质量 lane | 27 | shipped | #110 | 转义 `%` `_` `\` 并使用 `ESCAPE '\'`；新增 `search.test.ts` |
 | FIX-4 | 删除不存在的 Source/Destination/Route 返回成功 | 质量 lane | 20 | candidate | — | 第 23 轮复核**已过期**：仓储 delete 均先 `requireSource`/`requireDestination`/`requireRoute`（`source.repository.ts:112-115`、`destination.repository.ts:101-104`、`route.repository.ts:166-169`），事务向上抛 `RecordNotFoundError`。剩余工作仅为补三条回归测试 |
-| FIX-5 | `operations-panel.tsx`/`detail-panel.tsx` 为死代码 | 架构 lane | 24 | candidate | — | 无任何 importer；删除可减少筛选面板歧义。同时删除 `OperationFilters` 只剩测试可达的 `rail`/`grid` 分支（`operation-filters.tsx:58,64-77`） |
+| FIX-5 | `operations-panel.tsx`/`detail-panel.tsx` 为死代码 | 架构 lane | 24 | shipped | #184 | 两个文件已随空态切片删除（无 importer）；剩余 `OperationFilters` 的 `rail`/`grid` 分支仍无生产调用（`operation-filters.tsx:58,64-77`），留待后续 chore |
 | FIX-6 | 导入配置不识别字面量 `[REDACTED]`，可能覆盖真实凭据 | SEC-1 panel | 27 | shipped | #114 | 四个凭据位置拒绝占位符，事务回滚；`config-portability.ts` 新增 `assertNotRedactedSecret` / `assertNoRedactedSecrets` |
 | FIX-7 | Sources 页中文仍把 Source 译作「来源」 | requirements lane | 23 | shipped | #132 | 事件列头、路由来源条件、抑制匹配器、模板变量分组统一为「告警源」；保留「模板来源/样例来源」 |
 | FIX-8 | 抑制的 `createdBy` 永远为空 | requirements lane | 26 | candidate | — | `suppression.service.ts:53-71` 未接收当前用户；详情页显示「未知」`suppression-detail-page.tsx:95-97` |
@@ -321,17 +321,25 @@
 | SEC-17 | providerMetadata 入库/出站前无统一脱敏兜底 | security lane（第 25 轮） | 24 | shipped | #180 | 第 27 轮随 SEC-7 落地：`redactEventRecord` 在读取边界对 providerMetadata 走 `redactJsonValue`（key + 值形态），grafana/alertmanager `externalURL` 的 userinfo 被投影；存储仍为原文（决策已接受） |
 | SEC-18 | raw payload 字符串叶子不做值形态扫描 | security lane（第 25 轮） | 22 | shipped | #176 | `redactJsonValue` 对字符串叶子应用 `redactCredentialText`；parser 仍读取原值，解析/匹配/去重语义不变 |
 | UI-1 | 列表搜索吞字符与空格、逐键请求 | ui-review（第 23 轮，浏览器实测） | 29 | shipped | #171 | 本地草稿 + 300ms 防抖后才写 URL；`pruneSearch` 保留空格，仅服务端过滤 trim；清除 chip/重置会取消未提交草稿；同时闭环 REQ-78 |
-| UI-2 | 筛选无匹配与无数据空态相同 | ui-review（第 23 轮，浏览器实测） | 27 | candidate | — | = REQ-4；`events-empty-state.tsx:12-26`、`deliveries-empty-state.tsx:12-26` 无条件渲染；传 `hasActiveFilters` + 内联重置 |
+| UI-2 | 筛选无匹配与无数据空态相同 | ui-review（第 23 轮，浏览器实测） | 27 | shipped | #184 | = REQ-4；`events-empty-state.tsx:12-26`、`deliveries-empty-state.tsx:12-26` 无条件渲染；传 `hasActiveFilters` + 内联重置 |
 | UI-3 | Delivery Payload 标签名过期 | ui-review（第 23 轮） | 24 | candidate | — | 页面已左右对照，标签仍是「渲染 Payload」；`delivery-detail-view.tsx:34`、`zh-Hans.json:195` |
 | UI-4 | 移动端 Sheet 无可见关闭按钮 | ui-review（第 23 轮） | 24 | candidate | — | `sidebar.tsx:206-231` 用 `[&>button]:hidden` 隐藏内置关闭；加显式 `SheetClose` |
 | UI-5 | 折叠侧栏首屏闪动 | ui-review（第 23 轮） | 22 | candidate | — | `sidebar.tsx:80-98` cookie 在 mount 后恢复；宜在 loader/SSR 读 cookie 传 `defaultOpen` |
 | UI-6 | 两个同名 Toggle sidebar 控件 | ui-review（第 23 轮，a11y） | 22 | candidate | — | `dashboard-header.tsx:17` 与 `sidebar.tsx:307-334`；给 Rail 加 `aria-hidden` |
-| UI-7 | 空表仍渲染分页条 | ui-review（第 23 轮，浏览器实测） | 21 | candidate | — | `table-pagination.tsx:48-118`；`total === 0` 时隐藏 |
+| UI-7 | 空表仍渲染分页条 | ui-review（第 23 轮，浏览器实测） | 21 | shipped | #184 | `table-pagination.tsx:48-118`；`total === 0` 时隐藏 |
 | UI-8 | 中文登录页混用英文 dashboard | ui-review（第 23 轮，浏览器实测） | 22 | candidate | — | `zh-Hans.json` 改为「控制台」；第 27 轮复现：`/setup`「创建 owner 账号／dashboard 用户」与 toast「正在打开 dashboard」同样混用（`zh-Hans.json:3,11,18,25,29`） |
 | UI-9 | 静默时间时区错位 | ui-review（第 27 轮，浏览器实测） | 27 | candidate | — | 表单按浏览器本地时间输入、列表按设置默认 UTC 显示，差 8 小时且无时区标注，维护窗口可能错时生效；`suppression-forms.tsx:313-334`、`suppression-form.ts:119-126`、`operation-format.ts:15`；成本 45–60 分钟 |
-| UI-10 | 移动端空态被横向卷出屏幕 | ui-review（第 27 轮，390px 实测） | 26 | candidate | — | 空态位于最小宽 1280px 的表格内，390px 下文字在视口外；`operations-table.tsx:111-145`、`deliveries-table-layout.ts:3`；与 UI-2/UI-7 同一空态切片 |
+| UI-10 | 移动端空态被横向卷出屏幕 | ui-review（第 27 轮，390px 实测） | 26 | shipped | #184 | 空态位于最小宽 1280px 的表格内，390px 下文字在视口外；`operations-table.tsx:111-145`、`deliveries-table-layout.ts:3`；与 UI-2/UI-7 同一空态切片 |
 | UI-11 | 静默停用按钮显示原始 i18n key | ui-review（第 27 轮，浏览器实测） | 24 | candidate | — | aria-label/tooltip 直接显示 `suppressions.table.actions.disableTitle`；`suppressions-section.tsx:277`；成本 2 分钟 |
 | UI-12 | 空态文案与实际交互不符 | ui-review（第 27 轮，浏览器实测） | 23 | candidate | — | Sources/Routes 称「右侧会保留新建表单」，实际「新增」打开对话框（`zh-Hans.json:915,798`）；轮换 Token 后仍提示「创建成功」；`source-token-notice-panel.tsx:35,53,70` |
+| REQ-119 | 接入去重窗口可配置 | requirements lane（第 28 轮） | 27 | candidate | — | Settings 增去重窗口（1–60 分钟），intake 与补投共用；`intake.service.ts:56`、`event-replay.service.ts:35` 硬编码 5 分钟，`settings.repository.ts:20-26` 无此键 |
+| REQ-120 | 投递最大尝试次数可配置 | requirements lane（第 28 轮） | 27 | candidate | — | Settings 增 1–10 次并入队传值；`delivery.repository.ts:90` 默认 3，`EnqueueDeliveriesInput.maxAttempts` 已存在（`delivery.interface.ts:81`）但无生产调用点传入 |
+| REQ-121 | Source Token 轮换宽限期 | requirements lane（第 28 轮） | 24 | candidate | — | 轮换后旧 token 保留 0/15/60 分钟；`source.service.ts:66-73` 直接覆盖、`schema.ts:44` 单列、`zh-Hans.json:907` 承认切换期断流；需 forward-only 迁移 + EXPERT_PANEL |
+| REQ-122 | 领域错误文案本地化 | requirements lane（第 28 轮） | 23 | candidate | — | 为高频 DomainValidationError 增稳定 code，前端 zh/en 映射；`domain-errors.ts:19-25`、`errors.ts:36-41`；toast 直接显示英文 `error.message`（`delivery-buzz-button.tsx:49`） |
+| REQ-123 | 配置列表最近更新时间 | requirements lane（第 28 轮） | 25 | candidate | — | Source/Destination/Route 列表 DTO 投影 `updatedAt`；表已有列且仓储维护（`schema.ts:48,59,94`），DTO 未投影（`source.ts:13-18`、`destination.ts:64-66`、`route.ts:37-45`）；飞书应用列表已显示 |
+| Q-40 | 语言解析顺序与注释/文案不一致 | requirements lane（第 28 轮） | 24 | candidate | — | `i18n/router.ts:9-13` 称 cookie→Accept-Language→settings，`:21` 却把 settings 当 cookieLocale 传入，Accept-Language 不可达；通知渲染用 `settings.locale`（`delivery-worker.service.ts:64`、`destination.service.ts:296`） |
+| Q-41 | 配置名 UNIQUE 冲突返回不透明 500 | requirements lane（第 28 轮） | 22 | candidate | — | `schema.ts:42,55,88,101` 有 UNIQUE，服务无预检、`errors.ts:24-57` 未映射 SQLite 约束错误且剥离 message（`:12`），重名创建只得到 INTERNAL_SERVER_ERROR |
+| ARCH-35 | client-only 标记过度使用 | architecture lane（第 28 轮） | 16 | candidate | — | `components/ui/dropdown-menu.tsx:1`、`routes/-login-form-impl.tsx:1`、`routes/-setup-form-impl.tsx:1`、`i18n/language-switcher-impl.tsx:1`、`shell/dashboard-user-menu-impl.tsx:1` 自身无浏览器 API；建议并入 ARCH-14 |
 
 ## 发布记录
 
@@ -346,11 +354,12 @@
 
 ## 下一轮优先项
 
-1. **UI 空态/分页切片**：第 27 轮浏览器实测确认 **UI-2 + UI-7 + UI-10** 同源；
-   一次闭环「筛选无匹配 vs 无数据」空态、空表隐藏分页、移动端空态移出横向滚动表格，
-   并做浏览器复验。**UI-9（27）** 静默时间时区错位紧随其后；UI-4/UI-11/UI-12 小成本修复。
+1. **UI 小成本批次**：UI-9（27）静默时间时区错位；UI-4（移动端 Sheet 关闭按钮）、
+   UI-11（停用按钮原始 i18n key，2 分钟）、UI-12（空态文案与实际交互不符）、
+   UI-8（登录/初始化页混用 dashboard）；UI-5/UI-6 视情况。
 2. **NEW-A（29）** 停用 Source/Route/Destination 前的断流影响确认；
-   **REQ-111（27）** 初始化 Owner 密码确认与不可恢复提示。仍待裁决：REQ-93、Q-8、REQ-107。
+   **REQ-111（27）** 初始化 Owner 密码确认与不可恢复提示。
+   **REQ-119/120（27）** 去重窗口与最大尝试次数可配置；仍待裁决：REQ-93、Q-8、REQ-107。
 3. **REQ-108（28）** 多值属性筛选、**REQ-73（28）** 静默时区语义、
    **REQ-48（28）** 配置删除预检（并入 REQ-105）、**REQ-52（28）** `tocsin.eventUrl`
    与公开地址、**REQ-110（28）** 静默即将到期提示。
@@ -364,9 +373,9 @@
    抑制窗口时间比较、复制失败 toast。
 7. **docs-drift 批次**：DOC-34/11/22/23/24/25/26/27/36/37/38/39/40/41/43/44/45，拆两个
    `docs:` PR；第 22 轮已刷新证据。
-8. **车道轮转（第 28 轮）**：`requirements` 必跑 + `ui-triage`；第 27 轮已完成
-   `requirements` + `docs-drift` + `ui-review`，第三席跑 `architecture`
-   （第 26 轮后未跑），`release-infra` 顺延到第 29 轮。
+8. **车道轮转（第 29 轮）**：`requirements` 必跑 + `ui-triage`；第 28 轮已完成
+   `requirements` + `architecture` + `ui-triage`（defer），第三席跑 `release-infra`
+   （第 26 轮后未跑），`docs-drift` 顺延到第 30 轮。
 9. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 10. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。
