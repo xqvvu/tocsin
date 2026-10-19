@@ -337,6 +337,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.15` | `9871a5a` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.15`（linux/amd64 + linux/arm64，digest `sha256:a63d5cb9…`） | 事件/投递读取与发送边界凭据脱敏投影（#180，SEC-7 + SEC-17）；脱敏标签禁用静默、投递路由证据诚实降级；无迁移/配置变化；回滚镜像 `0.1.0-beta.14` |
 | `0.1.0-beta.14` | `ed700d7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.14`（linux/amd64 + linux/arm64，digest `sha256:3fcdfd18…`） | 包含凭据形态脱敏与旧行读取复核（#176）及 `.dockerignore` E2E 产物排除（#177）；无迁移/配置变化；回滚镜像 `0.1.0-beta.13`（digest `sha256:3501c616…`） |
 | `0.1.0-beta.13` | `9232200` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.13`（linux/amd64 + linux/arm64，digest `sha256:3501c616…`） | 包含事件标签一键静默（#172）与运维搜索草稿/防抖修复（#171）；无迁移/配置变化；回滚镜像 `0.1.0-beta.12`（digest `sha256:552e3590…`） |
 | `0.1.0-beta.12` | `1725ac7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.12`（linux/amd64 + linux/arm64，digest `sha256:552e3590…`） | 包含抑制命中列表告警身份（#166）与加急呼叫持久化失败终态修复（#168）；无迁移/配置变化；回滚镜像 `0.1.0-beta.11`（digest `sha256:2c338841…`） |
@@ -345,11 +346,11 @@
 
 ## 下一轮优先项
 
-1. **SEC-7 + SEC-17（PR B）已由 #180 落地**（读取/发送投影，不改存储）。
-   下轮最高优先：**NEW-A（29）** 停用 Source/Route/Destination 前的断流影响确认；
+1. **UI 空态/分页切片**：第 27 轮浏览器实测确认 **UI-2 + UI-7 + UI-10** 同源；
+   一次闭环「筛选无匹配 vs 无数据」空态、空表隐藏分页、移动端空态移出横向滚动表格，
+   并做浏览器复验。**UI-9（27）** 静默时间时区错位紧随其后；UI-4/UI-11/UI-12 小成本修复。
+2. **NEW-A（29）** 停用 Source/Route/Destination 前的断流影响确认；
    **REQ-111（27）** 初始化 Owner 密码确认与不可恢复提示。仍待裁决：REQ-93、Q-8、REQ-107。
-2. **UI-2 / UI-4**：第 27 轮 `ui-triage` 判定 `review_now`（7 条未解决 UI 发现、
-   0 次浏览器验证）；优先修筛选态空状态与移动端 Sheet 关闭按钮，并做真实浏览器验证。
 3. **REQ-108（28）** 多值属性筛选、**REQ-73（28）** 静默时区语义、
    **REQ-48（28）** 配置删除预检（并入 REQ-105）、**REQ-52（28）** `tocsin.eventUrl`
    与公开地址、**REQ-110（28）** 静默即将到期提示。
@@ -363,9 +364,9 @@
    抑制窗口时间比较、复制失败 toast。
 7. **docs-drift 批次**：DOC-34/11/22/23/24/25/26/27/36/37/38/39/40/41/43/44/45，拆两个
    `docs:` PR；第 22 轮已刷新证据。
-8. **车道轮转（第 28 轮）**：`requirements` 必跑 + `ui-triage`；第三席优先
-   `ui-review`（第 27 轮 triage 已判 `review_now`，需真实浏览器验证），否则跑
-   `architecture`（第 26 轮后未跑）。
+8. **车道轮转（第 28 轮）**：`requirements` 必跑 + `ui-triage`；第 27 轮已完成
+   `requirements` + `docs-drift` + `ui-review`，第三席跑 `architecture`
+   （第 26 轮后未跑），`release-infra` 顺延到第 29 轮。
 9. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 10. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。

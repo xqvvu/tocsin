@@ -2,6 +2,105 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 27 轮）
+
+- 时间：2026-10-20 03:25 – 04:35 CST。
+- 基线：`origin/main` @ `0d87db0`；本轮合并 #180（`29c0745`）与发布 PR #181（`9871a5a`）。
+- 类型：EXPERT_PANEL 既定事项落地（PR B）+ requirements/docs-drift/ui-review 三车道（非
+  full-audit）；最近全量审计仍为第 1 轮（2026-10-18 13:30 CST）；backlog 有 ≥27 分候选，
+  按第 1.5 步继续。
+- 车道：`requirements` + `docs-drift` + `ui-triage`（判定 `review_now` → 追加 `ui-review`）；
+  下一轮建议 `requirements` + `architecture` + `ui-triage`，UI 切片优先。
+- `ui-triage`：`review_now` —— 距上次评审约 3.1h（<48h）、评审后 2 个 UI 合并（<3），但
+  7 条未解决 UI 发现（≥2）与 0 次浏览器验证记录构成强信号。
+- `last_ui_review_at`：2026-10-20 04:05（本轮完成浏览器实测）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、构建均在会话工作树
+  `gallant-feynman-ade31f`。
+
+### 本轮交付
+
+- PR #180 `fix(console): redact event copy at read and send boundaries` —— **SEC-7 + SEC-17**
+  （第 25 轮 EXPERT_PANEL 决策 PR B，rebase 合并 `29c0745`）。
+  - `packages/core/src/redaction.ts` 新增 `redactNormalizedEvent`、
+    `redactRouteMatchResults`、`redactEventRecord`、`redactJsonText`；`redactHeaders`
+    对非敏感头值也跑 `redactText`。
+  - 读取边界：`history.listEvents`（title）、`history.getEventDetail`（事件 + 路由证据 +
+    providerMetadata + raw payload/headers + idempotencyKey）、`history.listDeliveries`
+    （eventTitle）、`deliveries.get`（事件 + 历史 rendered payload）。
+  - 发送边界：`delivery-execution` 用投影后的 normalized event 与 deep-redacted payload
+    渲染通知/模板；`event-replay` 预览标题与命中证据投影，匹配/补投仍读原值。
+  - UI：脱敏标签禁用「按值静默」并说明原因；投递详情在事件内容已脱敏时不再重算当前
+    路由证据，改为提示以接入快照为准。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4（console 626
+    tests）；`vp run -r build` 通过；CI success。
+  - 决策记录更新：`docs/planning/decisions/credential-redaction-boundaries.md`。
+
+### requirements 车道
+
+新增 5 个候选（均通过 charter）：NEW-D（27）顶栏全局 ID 快速查找；NEW-E（27）通知目标
+只读配置详情；NEW-F（27）飞书应用删除/换密前影响面预检；NEW-G（26）详情复制直达链接；
+NEW-H（25）一键检测全部飞书应用凭证。
+
+### docs-drift 车道
+
+新增 7 条：DOC-46 方向 5 仍整段列为候选；DOC-47 方向 2 缺口描述过期；DOC-48 四个已交付
+mini-PRD 缺状态头；DOC-49 RC 概览漏列三类剩余 gate；DOC-50 ADR 0008/restructure-plan
+版本与命令过期；DOC-51 frontend-architecture 清单不全；DOC-52 adapter-extensibility
+剩余范围漏 F3。
+
+### ui-review（浏览器实测）
+
+隔离实例（localhost:6190 + 独立临时 SQLite，`/setup` 建房），桌面 1440 与移动 390 实测；
+6180 未触碰。截图：`/tmp/tocsin-ui-review-r27/shots/`。
+- 高：静默时间时区错位（UI-9，表单本地时间 vs 列表 UTC 差 8 小时）。
+- 中高：移动端空态被横向卷出屏幕（UI-10）；UI-2、UI-4、UI-7 复现。
+- 中：静默停用按钮显示原始 i18n key（UI-11）；登录/初始化/toast 混用 dashboard（UI-8
+  扩展）；空态文案与实际交互不符（UI-12）；payload 大小写不一致（UI-3 扩展）。
+- UI-5、UI-6 仍存在；搜索防抖与 URL 同步未回归。
+- 本轮未实现 UI 切片（时间预算用于 PR B 与发布），下一轮优先闭环 UI-2 + UI-7 + UI-10
+  的空态/分页一体化修复。
+
+### 独立 diff 评审
+
+`code-review`（低 effort）返回 5 条，均已在 #180 第二个 commit 修复或记录：
+1. 脱敏标签预填静默规则永不命中 → 禁用该动作。
+2. 投递页用脱敏事件重算当前规则会误报 → 改为快照为准。
+3. 历史 rendered payload 字符串叶子未做赋值脱敏 → 新增 `redactJsonText`。
+4. provider 控制的 idempotencyKey 未纳入投影 → 已纳入；fingerprint 按决策保持原文。
+5. 非敏感头值未做值形态脱敏 → `redactHeaders` 补齐。
+
+### EXPERT_PANEL
+
+本轮无新裁决；执行第 25 轮 `credential-redaction-boundaries` 的 PR B，决策事项已闭环。
+仍待后续裁决：REQ-93、Q-8、REQ-107。
+
+### 发布（第 9.5 步）
+
+- 三位专家一致通过：发布经理 RELEASE（建议 beta.15）；阻断审计 APPROVE（7/7）；
+  运维/回滚 SAFE（仅换镜像，回滚 beta.14）。
+- PR #181 `chore(release): v0.1.0-beta.15` rebase 合并 `9871a5a`；main CI success。
+- Tag：`v0.1.0-beta.15`（annotated，指向 `9871a5a`）；GitHub Release 已创建
+  （prerelease）：https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.15
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.15`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:a63d5cb9db5dfdcef8530b3d7eb8c829a0792611fe30e18969ba3be113e0c1da`）。
+- 回滚镜像：`0.1.0-beta.14`（digest `sha256:3fcdfd18…`）。
+
+### 其他
+
+- Obsidian 同步：`obsidian-vault` skill 未在当前会话暴露，按 AGENTS.md fallback
+  记录并跳过。
+- 工作树：结束前删除会话工作树 `node_modules` 与 `agent-iteration` 锁目录。
+
+### 下一轮优先项
+
+1. **UI 空态/分页切片**：UI-2 + UI-7 + UI-10 一次闭环（区分筛选无匹配、空表隐藏分页、
+   移动端空态移出横向滚动），配浏览器验证。
+2. **NEW-A（29）+ REQ-111（27）**：停用断流影响确认、Owner 密码确认。
+3. **UI-9（27）** 静默时间时区错位；**UI-4/UI-11/UI-12** 小成本修复。
+4. **docs-drift 批次** DOC-46..52（单 docs PR）。
+5. 其余见 backlog「下一轮优先项」。
+
 ## 2026-10-20（第 26 轮）
 
 - 时间：2026-10-20 02:26 – 03:10 CST。
