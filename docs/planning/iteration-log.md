@@ -2,6 +2,110 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 18 轮）
+
+- 时间：2026-10-19 13:27 – 14:30 CST。
+- 基线：`origin/main` @ `ab3a4c4`；main 最近一次 CI 为 success，无遗留 open PR。
+- 本轮类型：**需求切片 + 三车道审计**（非 full-audit）。最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）；backlog 有大量 ≥27 分候选，按第 1.5 步继续消化。
+- 车道轮转位置：本轮跑 `requirements` + `quality` + `architecture`，三条车道均返回。
+  下一轮建议 `requirements` + `docs-drift` + `security-exposure`。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `determined-hopper-bc917b`；收尾时删除其 `node_modules` 与 `agent-iteration`。
+- 依赖：会话工作树 `node_modules` 链接残缺，`vp install` 报 “Already up to date” 后仍缺
+  `@rolldown/plugin-babel`；按既有经验整体删除后重装解决。
+
+### 本轮交付
+
+- PR #146（`feat(console): explain why a route selected a delivery`）—— **REQ-80**。
+  - 投递详情摘要页并列展示「接入时快照」与「当前规则」，逐项检查徽章复用同一组件；
+    区分无快照、快照不含该路由、快照未命中三种事实；当前规则不再命中时显式提示。
+  - 手动投递不渲染该区块；摘要页改为可滚动容器。
+  - 路由检查/命中徽章抽到 `features/routes/ui/`，事件详情页同步复用；文案迁到
+    `routeChecks.*` 命名空间。
+  - PRD `docs/prd/delivery-route-match-evidence.md`；新增 8 条组件用例。
+  - 合并后补 `fix(console): describe a disabled route as disabled`：停用路由不再显示
+    「无此条件」。
+  - 验证：`vp check` 0 errors；`vp run -r test` 4/4 包（console 109 files / 578 tests）；
+    `vp run -r build`；PR CI green；rebase 合并 `f0456f5`。
+
+### requirements lane（新增 7 条，已写入 backlog）
+
+- **REQ-86（28）**：事件详情展示上游告警回链与接入元数据；`providerMetadata` 已含
+  `externalURL`/`generatorURL`（`alertmanager-compatible.ts:59-76`、`grafana/parse.ts:59-71`），
+  但事件页只渲染 normalized 与 raw，需 URL 协议白名单与 `noopener`。
+- **REQ-87（28）**：投递详情原始事件载荷与渲染载荷对照；`DeliveryDetail` 已含两端
+  （`delivery.repository.ts:445-483`），需派生 `rawPayloadPruned` 并过滤清理哨兵。
+- **REQ-88（27）**：事件列表显示 `occurredAt` 与接入延迟；列表 DTO 只有 `receivedAt`
+  （`schemas/operations.ts:37-49`），详情已有发生时间。
+- **REQ-89（27）**：投递重试二次确认；列表/详情一次点击即发送
+  （`delivery-actions.tsx:25-37`、`delivery-retry-button.tsx:27-31`）。
+- **REQ-90（27）**：自托管指标 scrape 端点；只有 health/ready
+  （`health.ts:5-13`、`ready.ts:6-53`），建议只读 `GET /api/metrics`、无新依赖。
+- **REQ-91（26）**：操作列表相对时间与数据新鲜度；全站绝对时间
+  （`operation-format.ts:31-47`），含 `dataUpdatedAt`。
+- **REQ-92（25）**：配置表单未保存离开护栏；四个对话框只检查 pending
+  （`destination-edit-dialog.tsx:49-55` 等）。
+- 配置列表分页入 URL 未单列：与 ARCH-30 重复，已在 ARCH-30 备注中合并证据。
+
+### quality lane（新增 6 条 + 3 处证据更新）
+
+- **Q-30（26，HIGH）**：加急呼叫 `markFired` 持久化失败会落可重试分支
+  （`oncall-execution.ts:98,115-130,161-180`），电话已拨出仍会重复呼叫；无失败注入测试。
+- **Q-31（23）**：`buzzDelivery` 逐条入队无事务（`oncall.service.ts:91-109`），部分失败时
+  已入队 ping 仍会被呼叫。
+- **Q-32（22）**：`toLocaleLowerCase()` 依赖宿主 locale（`normalization.ts:5,23`、
+  `route.ts:325,330`、`intake.service.ts:406,409`），土耳其语环境会漏投。
+- **Q-33（23）**：Webhook 先查 source/启停再验 token（`intake.service.ts:62-77`），
+  可区分未知/已知/停用。
+- **Q-34（20）**：`formatTime` 对损坏时间戳抛 `RangeError`
+  （`operation-format.ts:31-47`），单条脏数据会让整页不可用。
+- **Q-35（17）**：ping 表测试用破折号数量代理列完整性
+  （`delivery-pings-table.test.tsx:45`）。
+- 证据更新：Q-10 同构于 oncall worker（`oncall-worker.service.ts:77-79,87-95`）；
+  Q-5 的损坏 JSON 还覆盖 raw/provider/labels/rendered 列；Q-8 的加急对应物单列为 Q-30。
+
+### architecture lane（新增 8 条）
+
+- **ARCH-27（24）**：Provider catalog/`iconName` 无消费者，Source UI 硬编码
+  （`source-provider-icon.tsx:1-40`、`source-form.tsx:57-67,149-158`）。
+- **ARCH-28（21）**：Operations DTO 在 core 与 api 双份定义，无 parity 守卫
+  （`packages/core/src/operations.ts:120,132`、`packages/api/src/schemas/operations.ts:37-111`）。
+- **ARCH-29（21）**：`configuration-support.ts` 成为跨能力 helper 集散地，被 7 个服务导入。
+- **ARCH-30（21）**：`OperationsTable` 分页固定在本地 state（`operations-table.tsx:58-62`），
+  配置列表刷新/后退回第 1 页。
+- **ARCH-31（20）**：契约与 runtime 的 auth 错误文案双份维护（`dashboard-auth.ts:5-15`）。
+- **ARCH-32（19）**：Events/Deliveries 无自有 api/model 边界，`operations` 成为数据中枢。
+- **ARCH-33（19）**：两个新增死组件（`form-text-field.tsx`、`destination-kind-badge.tsx`）。
+- **ARCH-34（19）**：Scaffold 模板与 generic-webhook 能力分叉
+  （`scaffold/schema.ts:8-13`、`generic-webhook/schema.ts`）。
+- 证据更新：FIX-5/9/10 仍成立；ARCH-1/2/10 规模未变；ARCH-26 引用面扩大。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项。REL-13（LICENSE）继续 `blocked-autonomous`。
+- Q-30 建议下一轮交 EXPERT_PANEL：涉及加急呼叫语义（已拨出后的持久化失败处理），
+  需要安全与可靠性专家裁决。
+
+### 其他
+
+- 浏览器验证：未执行；本机 6180 的 dev server 运行主 checkout 的上一版代码，
+  本切片行为已由 jsdom 组件测试覆盖。
+- Obsidian 同步：从 `~/Library/Application Support/obsidian/obsidian.json` 发现 vault
+  `~/Library/Mobile Documents/iCloud~md~obsidian/Documents`，同步 `Vane Iteration Backlog.md`、
+  `Vane Iteration Log.md`，新增 `Vane Delivery Route Match Evidence.md`，并更新 `Vane Index.md`。
+- 本轮 backlog/log 随 docs PR 提交。
+
+### 下一轮优先项
+
+1. **REQ-86（28）**：事件详情上游告警回链与接入元数据。
+2. **REQ-87（28）**：投递原始/渲染载荷对照。
+3. **Q-30（26，HIGH）**：加急呼叫持久化失败重复呼叫；EXPERT_PANEL。
+4. **REQ-65/66/73/58**（28）：静默提示、外部消息引用反查、时区语义、重试耗尽。
+5. **REL-3 + REL-15/18**：Docker smoke 隔离与发布手册。
+6. **Q-32**（22）：`toLowerCase` 归一化与边界用例。
+7. **SEC-2/3/4/6**：可合并一个安全小修复 PR。
+
 ## 2026-10-19（第 17 轮）
 
 - 时间：2026-10-19 12:40 – 13:30 CST。
