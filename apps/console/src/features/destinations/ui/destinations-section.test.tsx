@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { createDefaultDestinationRegistry } from "@tocsin/destinations";
@@ -181,10 +181,15 @@ describe("destinations section table", () => {
     expect(onTest).toHaveBeenCalledWith(destination);
     expect(onPreview).toHaveBeenCalledWith(destination);
     expect(onEdit).toHaveBeenCalledWith(destination.id);
-    expect(onToggle).toHaveBeenCalledWith(destination);
+    expect(onToggle).not.toHaveBeenCalled();
     expect(powerButton.textContent).toBe("");
     expect(powerButton.getAttribute("class")).toContain("text-destructive");
     expect(powerButton.getAttribute("class")).toContain("drop-shadow");
+
+    const disableDialog = screen.getByRole("alertdialog");
+    expect(within(disableDialog).getByText(/No enabled routes currently reference/)).toBeTruthy();
+    fireEvent.click(within(disableDialog).getByRole("button", { name: "Disable destination" }));
+    expect(onToggle).toHaveBeenCalledWith(destination);
   });
 });
 

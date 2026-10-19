@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { DestinationSummary, RouteDefinition } from "@tocsin/core";
 
@@ -35,7 +35,10 @@ const enabledDestination: DestinationSummary = {
   enabled: true,
 };
 
-function renderSection(destinations: DestinationSummary[] = [enabledDestination]) {
+function renderSection(
+  destinations: DestinationSummary[] = [enabledDestination],
+  onToggle: () => void = noop,
+) {
   return render(
     <AppIntlProvider locale="en-US">
       <div className="flex h-dvh flex-col">
@@ -56,7 +59,7 @@ function renderSection(destinations: DestinationSummary[] = [enabledDestination]
           onEdit={noop}
           onCancelEdit={noop}
           onPreviewReplay={noop}
-          onToggle={noop}
+          onToggle={onToggle}
           onDelete={noop}
           onSubmitEdit={noop}
         />
@@ -107,5 +110,19 @@ describe("routes section table layout", () => {
     renderSection();
 
     expect(screen.queryByText("1 disabled")).toBeNull();
+  });
+
+  it("asks for confirmation before disabling a route", () => {
+    const onToggle = vi.fn<() => void>();
+    renderSection([enabledDestination], onToggle);
+
+    fireEvent.click(screen.getByRole("button", { name: "Disable route matching" }));
+    expect(onToggle).not.toHaveBeenCalled();
+
+    const disableDialog = screen.getByRole("alertdialog");
+    expect(within(disableDialog).getByText(/targets 1 destinations/)).toBeTruthy();
+    fireEvent.click(within(disableDialog).getByRole("button", { name: "Disable route matching" }));
+
+    expect(onToggle).toHaveBeenCalledWith(route);
   });
 });
