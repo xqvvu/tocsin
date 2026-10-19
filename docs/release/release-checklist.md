@@ -4,7 +4,7 @@
 > release workflow、没有 changelog 工具；tag 已由人工创建（`v0.1.0-beta.9`、`v0.1.0-beta.10`），
 > 并且 tag 本身不会触发任何东西。
 
-核实时间 2026-10-13，核实基线 `origin/main` @ `4e17c28`。本文只回答“怎么切一个 tag”；发布前的产品验收
+核实时间 2026-10-19，核实基线 `origin/main` @ `2cdaee1`。本文只回答“怎么切一个 tag”；发布前的产品验收
 清单在 `docs/release/mvp-rc-checklist.md`，部署与数据操作见
 `docs/release/docker-production-deployment.md` 和 `docs/release/backup-restore-upgrade.md`。
 
@@ -18,10 +18,10 @@
 | Changelog 与版本递增工具 | 不存在                                                           | 没有 `.changeset/`、没有 `CHANGELOG.md`、根 `package.json` 没有 `release` script |
 | git tag                  | 首个 tag 为 `v0.1.0-beta.9`（2026-10-19）                        | 此前的 `0.1.0-beta.8` 没有对应 tag，版本追溯以发布记录为准                |
 | 版本号来源               | 只有根 `package.json`（当前 `0.1.0-beta.10`）                     | 启动日志的 `tocsin.runtime` 版本来自根 `package.json`（`apps/console/src/server/runtime/system-information.ts`） |
-| 容器镜像发布             | 没有自动化，只有手工 recipe                                       | 没有 CI 构建/推送步骤；`Justfile` 提供 `just docker-buildx <image> <tag>`（多平台构建并 `--push`）、`just docker-tag`、`just docker-push`，registry 与 tag 由人决定。`docker-compose.yml` 默认用本机构建的 `image: tocsin:local` |
+| 容器镜像发布             | 没有自动化，只有手工 recipe                                       | 没有 CI 构建/推送步骤；`Justfile` 提供 `just docker-buildx <image> <tag>`（多平台构建并 `--push`）、`just docker-tag`、`just docker-push`，registry 与 tag 约定见第 4 节。`docker-compose.yml` 默认用本机构建的 `image: tocsin:local` |
 | E2E / Docker smoke 自动化 | 脚本已有，CI 未接入                                            | `apps/console/e2e/alert-flow.spec.ts` + `apps/console/playwright.config.ts`；`scripts/docker-smoke.sh`；`just e2e` / `just docker-smoke`；`.github/workflows/ci.yml` 仍只有 quality job |
 
-结论：**首个 release 是一次全手工动作。** 不要假设打 tag 会产出镜像、Release note 或 changelog。
+结论：**每次 release 仍是一次全手工动作。** 不要假设打 tag 会产出镜像、Release note 或 changelog。
 
 ## 2. 打 tag 前必须核对
 
@@ -102,8 +102,8 @@ git push origin v0.1.0-beta.10
 
 - 没有 release workflow：tag 与发布产物之间没有自动关联。
 - 没有自动化版本递增与 changelog。
-- 没有镜像仓库的自动化发布：只有 `Justfile` 里三条手工 recipe，没有 CI 任务，也没有既定的 registry
-  或 tag 约定。
+- 没有镜像仓库的自动化发布：只有 `Justfile` 里三条手工 recipe，没有 CI 任务；registry 与 tag 约定
+  见第 4 节，但仍需人工执行。
 - 浏览器 E2E 与 compose smoke 脚本已存在（`just e2e` / `just docker-smoke`），但都没有接入 CI，CI
   覆盖不到浏览器路径和容器运行时。Docker smoke 按 `mvp-rc-checklist.md` 的决定保留为本地人工 gate；
   E2E 是否接入 CI 仍待决策（REL-1）。
