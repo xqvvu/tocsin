@@ -62,7 +62,12 @@ export type OperationFilterData = {
 };
 
 export function operationFiltersFromSearch(search: DashboardOperationSearch): OperationFilterData {
-  return pruneSearch(search) as OperationFilterData;
+  const { q, ...rest } = pruneSearch(search);
+  // The URL keeps the operator's in-progress spacing so typing "Disk usage"
+  // does not lose the space; only the server filter sees a trimmed query.
+  const trimmed = q?.trim();
+
+  return (trimmed ? { ...rest, q: trimmed } : rest) as OperationFilterData;
 }
 
 export function pruneSearch(search: DashboardOperationSearch): DashboardOperationSearch {
@@ -71,7 +76,9 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
       ...search,
       // The contract rejects longer input, and a hand-edited URL bypasses the
       // input's maxLength, so clip here before the value is persisted or sent.
-      q: search.q?.trim().slice(0, OPERATION_SEARCH_MAX_LENGTH),
+      // Spacing is preserved: the search input is backed by this value, and
+      // trimming on every keystroke used to eat the space in "Disk usage".
+      q: search.q?.slice(0, OPERATION_SEARCH_MAX_LENGTH),
       // Both page counters follow the same rule: page 1 is the default, so it
       // stays out of the URL rather than making every link carry `=1`.
       eventPage: search.eventPage && search.eventPage > 1 ? search.eventPage : undefined,

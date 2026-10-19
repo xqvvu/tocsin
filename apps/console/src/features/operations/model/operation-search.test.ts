@@ -5,6 +5,7 @@ import { OPERATION_SEARCH_MAX_LENGTH } from "@tocsin/core";
 import {
   DashboardOperationSearchSchema,
   mergeOperationSearch,
+  operationFiltersFromSearch,
   pruneSearch,
 } from "#/features/operations/model/operation-search";
 
@@ -49,14 +50,21 @@ describe("delivery page in the operation search", () => {
 });
 
 describe("search text in the operation search", () => {
-  it("trims a normal query without changing it", () => {
-    expect(pruneSearch({ q: "  checkout  " }).q).toBe("checkout");
+  it("keeps in-progress spacing in the URL", () => {
+    // The search input is backed by this value. Trimming here would eat the
+    // space in "Disk usage" while the operator is still typing.
+    expect(pruneSearch({ q: "  Disk usage" }).q).toBe("  Disk usage");
+  });
+
+  it("trims the query only for the server filter", () => {
+    expect(operationFiltersFromSearch({ q: "  Disk usage  " }).q).toBe("Disk usage");
+    expect(operationFiltersFromSearch({ q: "   " }).q).toBeUndefined();
   });
 
   it("clips a hand-edited query to the contract limit", () => {
     // The input caps typing, but a pasted URL can be longer. Persisting the
     // overflow would make the next server call fail its schema validation.
-    const long = `  ${"a".repeat(OPERATION_SEARCH_MAX_LENGTH + 20)}  `;
+    const long = "a".repeat(OPERATION_SEARCH_MAX_LENGTH + 20);
 
     const q = pruneSearch({ q: long }).q;
 
