@@ -83,7 +83,7 @@
 - Obsidian 同步：从 `~/Library/Application Support/obsidian/obsidian.json` 发现 vault
   `~/Library/Mobile Documents/iCloud~md~obsidian/Documents`，同步 `Vane Iteration Backlog.md`、
   `Vane Iteration Log.md`，新增 `Vane Event Upstream Source.md`，并更新 `Vane Index.md`。
-- 本轮 backlog/log 单独走 `docs(planning)` PR，与同一验证门禁。
+- 本轮 backlog/log 随 PR #151（`docs(planning)`）提交。
 
 ### 下一轮优先项
 
