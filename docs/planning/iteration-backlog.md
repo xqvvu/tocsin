@@ -54,12 +54,12 @@
 | Q-2 | 出站响应体无上限 | 质量 lane | 26 | candidate | — | 与 inbound 的 body limit 对齐 |
 | Q-3 | Provider `*Result` 函数对非对象 payload 直接 throw | 质量 lane | 25 | candidate | — | 边界契约不一致 |
 | Q-4 | Destination service NOT_FOUND 分支无测试 | 质量 lane | 26 | candidate | — | 实测 6 个分支：update/delete/getTemplateDraft/test/preview/previewUpdate + sampleEventId；`configuration.integration.test.ts` 无 missing-id 用例 |
-| Q-5 | History repository 查询覆盖薄 | 质量 lane | 27 | candidate | — | sourceId、组合筛选、越界页均无测试；损坏 `route_matches_json` 会让整页抛错（`history.repository.ts:385-393`） |
+| Q-5 | History repository 查询覆盖薄 | 质量 lane | 27 | candidate | — | sourceId、组合筛选、越界页均无测试；损坏 `route_matches_json` 会让整页抛错（`history.repository.ts:385-393`）。第 18 轮补充：`raw_payload_json`/`provider_metadata_json`/`labels_json`（`intake.helpers.ts:55-70`）与 `rendered_payload_json`（`delivery.helpers.ts:46-48`）同样无读取容错 |
 | Q-6 | 超时 `errorKind` 未持久化，Deliveries 只显示英文 `lastError` | Q-1 panel | 24 | candidate | — | `delivery-execution.ts:134-141`；需 forward-only 加列 + UI 文案映射 |
 | Q-7 | 同批投递串行发送，慢投递仍造成队头阻塞 | Q-1 panel | 20 | candidate | — | `delivery-worker.service.ts:75-77`；超时已缓解，并发化需单独设计 |
-| Q-8 | `markSucceeded` 抛错会被当作发送失败并重试，导致重复发送/重复 page | quality lane | 26 | candidate | — | `delivery-execution.ts:72` 的 try 覆盖 93-102；`delivery-execution.test.ts:292-317` 无持久化失败注入 |
+| Q-8 | `markSucceeded` 抛错会被当作发送失败并重试，导致重复发送/重复 page | quality lane | 26 | candidate | — | `delivery-execution.ts:72` 的 try 覆盖 93-102；`delivery-execution.test.ts:292-317` 无持久化失败注入。加急呼叫的对应缺陷见 Q-30 |
 | Q-9 | 同批 attempt 共用 run 开始时间，`finishedAt == startedAt`，退避可能已过期 | quality lane | 24 | shipped | #128 | `DeliveryExecution.execute` 增加实时时钟，`markSucceeded/markFailed` 持久化真实 `startedAt`；耗时列不再恒为 0 |
-| Q-10 | claim 后单条 execute 抛错会中断整批，剩余投递滞留 `running` | quality lane | 24 | candidate | — | `delivery-worker.service.ts:55-77,85-93`；无 post-claim 部分失败测试 |
+| Q-10 | claim 后单条 execute 抛错会中断整批，剩余投递滞留 `running` | quality lane | 24 | candidate | — | `delivery-worker.service.ts:55-77,85-93`；无 post-claim 部分失败测试。第 18 轮补充：oncall worker 同构（`oncall-worker.service.ts:77-79,87-95`），可共用注入式失败测试 |
 | Q-11 | `resolveDestinationConfig` 两条错误分支无测试 | quality lane | 24 | shipped | #119 | 两条 fake resolver 用例：配置错误最终失败、未知错误脱敏 |
 | Q-12 | `testDestination` 失败分支的脱敏 DTO 无测试 | quality lane | 24 | candidate | — | `destination.service.ts:187-194`；现有 fetch 永远 `ok: true` |
 | Q-13 | worker 脱敏测试未注入 secret，只依赖驱动错误文本 | quality lane | 20 | candidate | — | `delivery-worker.service.test.ts:840-854`；应注入带 secret 的 fake store 错误 |
@@ -203,7 +203,7 @@
 | REQ-77 | 投递诊断摘要一键复制 | requirements lane | 25 | candidate | — | 脱敏摘要：投递/事件 ID、目标、路由、状态、尝试、错误；`delivery-detail-summary.tsx:43-68` |
 | REQ-78 | 列表搜索逐键请求 | requirements lane | 25 | candidate | — | 无防抖，每次输入即写 URL 并触发查询；Q-21 只覆盖长度；`operation-filters.tsx:87-99`、`operations.queries.ts:29-40` |
 | REQ-79 | 设置保存无条件整页刷新 | requirements lane | 24 | candidate | — | 仅改保留天数也 `hardReloadPage`；`settings-preferences-panel.tsx:59-64` |
-| REQ-80 | 投递详情解释「为什么命中这条路由」 | requirements lane | 29 | candidate | — | DTO 已含 `route.rule` 与 `event.routeMatches[].checks`（`operations.ts:132-144`、`event.ts:7-17`），页面只渲染路由名（`delivery-summary-tab.tsx:24-27`）；复用 `route-rule-summary.ts:28-64`；需并列「接入时快照」与「当前规则」，纯前端 |
+| REQ-80 | 投递详情解释「为什么命中这条路由」 | requirements lane | 29 | shipped | #146 | 摘要页并列「接入时快照」与「当前规则」，区分无快照/快照不含该路由/快照未命中；检查徽章抽到 `features/routes/ui/`；PRD `docs/prd/delivery-route-match-evidence.md` |
 | REQ-81 | 告警源行一键临时静默该源 | requirements lane | 27 | candidate | — | Source 行只有编辑/轮换/启停/删除（`source-actions.tsx:21-34`）；matcher 原生支持 `sourceIds`（`suppression.ts:155-179`）；复用 `CreateSuppressionForm`；停用源会丢排障证据 |
 | REQ-82 | 详情页跨域引用可导航并定位配置行 | requirements lane | 25 | candidate | — | 源/路由/目标名均为纯文本（`delivery-summary-tab.tsx:16-31`、`event-detail-route-matches-table.tsx:62-66`）；配置路由无 `validateSearch`（`_dashboard.sources.tsx:7-17` 等）；需 `focus` 参数 + 自动翻页高亮 |
 | REQ-83 | 补投预览标注将被静默的目标 | requirements lane | 26 | candidate | — | 预览不判断抑制（`event-replay.service.ts:173-186,246-281`），实际入队会落 `suppressed`（`delivery.repository.ts:90-93,131-164`）；DTO 增 `suppressedBy`/`deliverableCount` |
@@ -222,31 +222,55 @@
 | REL-18 | 发布手册 readiness 无重试 | release-infra lane | 23 | candidate | — | `release-checklist.md:45-46` 立即 curl；脚本已有轮询 `docker-smoke.sh:64-79` |
 | REL-19 | 本地 E2E 失败无 trace | release-infra lane | 23 | candidate | — | 本地 `retries=0` + `trace: on-first-retry`；`playwright.config.ts:23,28` |
 | DOC-33 | RC 未勾选 gate 实为 4 条而非 3 条 | release-infra lane | 21 | candidate | — | 漏算 provider 多版本 payload；`mvp-rc-checklist.md:123,165,171,172` |
+| Q-30 | 加急呼叫持久化失败会被当作可重试，导致重复呼叫 | quality lane | 26 | candidate | — | `markFired` 在外层 try 内（`oncall-execution.ts:98`），抛错后落可重试分支（`:115-130,161-180`）；电话已拨出，需单独捕获并视为终态 |
+| Q-31 | `buzzDelivery` 部分入队失败仍会呼叫已入队 ping | quality lane | 23 | candidate | — | 逐条 `enqueueForDelivery` 无事务（`oncall.service.ts:91-109`）；操作员看到错误但已有 ping 落库并会被呼叫 |
+| Q-32 | `toLocaleLowerCase()` 受宿主 locale 影响 | quality lane | 22 | candidate | — | severity/status 归一化（`normalization.ts:5,23`）、contains 匹配（`route.ts:325,330`）、header 查找（`intake.service.ts:406,409`）；土耳其语环境 `INFO`→`ınfo` 会漏投 |
+| Q-33 | Webhook 鉴权顺序允许枚举 Source 存在/停用 | quality lane | 23 | candidate | — | 先查 source/启停再验 token（`intake.service.ts:62-77`），未知→404、已知错 token→401、停用→403；建议统一 401 |
+| Q-34 | `formatTime` 对损坏时间戳抛 `RangeError` | quality lane | 20 | candidate | — | `operation-format.ts:31-47` 无非法值兜底；单条脏数据会让整页进入 error boundary |
+| Q-35 | ping 表测试用破折号数量代理列完整性 | quality lane | 17 | candidate | — | `delivery-pings-table.test.tsx:45` 断言 3 个 `—`；列调整即失败，且无法发现语义错误 |
+| ARCH-27 | Provider catalog/`iconName` 无消费者，Source UI 硬编码 | architecture lane | 24 | candidate | — | `registry.ts:73-85` 已投影，但 `source-provider-icon.tsx:1-40` 按 provider 穷尽 switch、`source-form.tsx:57-67,149-158` 重复列表；缺 provider catalog procedure |
+| ARCH-28 | Operations DTO 在 core 与 api 双份定义，无 parity 守卫 | architecture lane | 21 | candidate | — | 手写 interface（`packages/core/src/operations.ts:120,132`）与 zod schema（`packages/api/src/schemas/operations.ts:37,59,78,99,111`）各维护一份；无 `satisfies` 断言 |
+| ARCH-29 | `configuration-support.ts` 成为跨能力 helper 集散地 | architecture lane | 21 | candidate | — | 同时导出 token 生成、测试事件、脱敏、配置解析与引用校验（`configuration-support.ts:11-125`），被 7 个能力服务导入 |
+| ARCH-30 | `OperationsTable` 分页固定在本地 state | architecture lane | 21 | candidate | — | `operations-table.tsx:58-62` 不受控；配置列表刷新/后退回第 1 页（`sources-section.tsx:81` 等 5 处）；AGENTS 要求分页进 URL。第 18 轮 requirements lane 独立确认（评分 25），与 REQ-30 的前置关系成立 |
+| ARCH-31 | 契约与 runtime 的 auth 错误文案双份维护 | architecture lane | 20 | candidate | — | `dashboard-auth.ts:5-15` 注释要求同步，`dashboard-session.ts` 另写一份；无 parity 测试 |
+| ARCH-32 | Events/Deliveries 无自有 api/model 边界 | architecture lane | 19 | candidate | — | 两个 feature 只有 ui/ 或 model/，数据能力集中在 `features/operations`；20+ 跨 feature 引用（`OperationTimestamp`） |
+| ARCH-33 | 两个新增死组件 | architecture lane | 19 | candidate | — | `form-text-field.tsx`、`destination-kind-badge.tsx` 全仓零 import；与 FIX-5/9/10 合并清理 |
+| ARCH-34 | Scaffold 模板与 generic-webhook 能力分叉 | architecture lane | 19 | candidate | — | `scaffold/schema.ts:8-13` 仅 text 模板，`generic-webhook/schema.ts` 已支持 JSON 模板；README 声称不会漂移 |
+| REQ-86 | 事件详情展示上游告警回链与接入元数据 | requirements lane | 28 | candidate | — | `providerMetadata` 已含 `externalURL`/`generatorURL`（`alertmanager-compatible.ts:59-76`、`grafana/parse.ts:59-71`），事件页未渲染；仅允许 http(s)、去 userinfo、`rel="noopener noreferrer"` |
+| REQ-87 | 投递详情原始事件载荷与渲染载荷对照 | requirements lane | 28 | candidate | — | `DeliveryDetail` 已含 `event.rawPayload` 与 `renderedPayload`（`delivery.repository.ts:445-483`），页面只显示后者；需派生 `rawPayloadPruned` 并复用清理哨兵判断 |
+| REQ-88 | 事件列表显示上游发生时间与接入延迟 | requirements lane | 27 | candidate | — | 列表 DTO 只有 `receivedAt`（`schemas/operations.ts:37-49`），详情已有 `occurredAt`；需加 `occurredAt` 投影与负值/非法值兜底 |
+| REQ-89 | 投递重试二次确认与重试次数上下文 | requirements lane | 27 | candidate | — | 列表/详情重试一次点击即发送（`delivery-actions.tsx:25-37`、`delivery-retry-button.tsx:27-31`）；复用 REQ-72 的确认模式，展示目标/路由/事件/尝试次数 |
+| REQ-90 | 自托管运行指标 scrape 端点 | requirements lane | 27 | candidate | — | 仅有 `/api/health` 与 `/api/ready`（`health.ts:5-13`、`ready.ts:6-53`）；只读 `GET /api/metrics`，手写 OpenMetrics 文本，低基数、无新依赖、无迁移 |
+| REQ-91 | 操作列表相对时间与数据新鲜度 | requirements lane | 26 | candidate | — | 全站绝对时间（`operation-format.ts:31-47`）；24h 内相对时间 + `time` 语义 + 工具栏 `dataUpdatedAt`；不做自动刷新（REQ-35） |
+| REQ-92 | 配置表单未保存修改的离开护栏 | requirements lane | 25 | candidate | — | 四个配置对话框关闭时只检查 pending（`destination-edit-dialog.tsx:49-55` 等）；基于 TanStack Form dirty 统一确认，提交成功后不拦截 |
 
 ## 下一轮优先项
 
-1. **REQ-80**（29）：投递详情解释「为什么命中这条路由」；DTO 已含快照与当前规则，纯前端。
-2. **REQ-65**（28）：全局静默生效提示；纯 UI，复用 `suppressionStateAt`。
-3. **REQ-66**（28）：按外部消息引用反查投递；只读搜索谓词，列表与 total 同谓词。
-4. **REQ-73**（28）：静默时间窗按设置时区解释与回显；含跨时区用例。
-5. **REQ-58**（28）：失败投递区分「等待重试」与「重试耗尽」；DTO 增 `maxAttempts`。
-6. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
-7. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
-8. **REL-3（28，P0）+ REL-15/REL-18**：Docker smoke 与发布手册的卷/镜像/项目/端口隔离、
-   日志保留、readiness 重试；任何 smoke CI 接入前的阻断项。
-9. **Q-26**（25）：抑制窗口改用 `Date.parse` 比较或 schema transform；带偏移 ISO 时间
-   目前会多静默/提前失效，补 ±偏移用例。
-10. **REQ-81**（27）：告警源行一键临时静默；复用 matcher 与创建表单，纯前端。
-11. **REQ-67**（27）：事件列表三分支投递计数；纯 UI。
-12. **REQ-32/REQ-22/REQ-24/REQ-12/REQ-13**（28）：既有高价值切片。
-13. **REQ-54/REQ-55**（27）：告警源覆盖区分停用路由、事件摘要计入已抑制；均为纯 UI。
-14. **REQ-83**（26）：补投预览标注将被静默的目标；需 core DTO + 只读预览计算。
-15. **REQ-84**（26）：Settings 只读展示版本与 schema 版本；受 dashboard auth 的投影。
-16. **Q-25**（26）：重放/历史预览过滤 raw payload 清理哨兵；只读 DTO + 重放提示。
-17. **Q-23**（25）：dedupe cleanup 有界化；与未来的回填/维护批次协同。
-18. **SEC-2/3/4/6**（LOW）：脱敏测试参数化、`env.ts` server-only 标记、Feishu test
-    错误过 `redactText`、`tokenHash` 纳入敏感键；可合并一个 `fix(security)` PR。
-19. **DOC-11/22/23/24/25/26/27/28/29/30/31/32/33**：一批文档漂移，
+1. **REQ-86**（28）：事件详情上游告警回链与接入元数据；只读 UI，需 URL 协议白名单。
+2. **REQ-87**（28）：投递原始/渲染载荷对照；需 API 派生 `rawPayloadPruned`，无迁移。
+3. **Q-30**（26）：加急呼叫持久化失败会导致重复呼叫；EXPERT_PANEL 优先，补失败注入测试。
+4. **REQ-65**（28）：全局静默生效提示；纯 UI，复用 `suppressionStateAt`。
+5. **REQ-66**（28）：按外部消息引用反查投递；只读搜索谓词，列表与 total 同谓词。
+6. **REQ-73**（28）：静默时间窗按设置时区解释与回显；含跨时区用例。
+7. **REQ-58**（28）：失败投递区分「等待重试」与「重试耗尽」；DTO 增 `maxAttempts`。
+8. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
+9. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
+10. **REL-3（28，P0）+ REL-15/REL-18**：Docker smoke 与发布手册的卷/镜像/项目/端口隔离、
+    日志保留、readiness 重试；任何 smoke CI 接入前的阻断项。
+11. **REQ-88/89/90**（27）：事件接入延迟、重试确认、指标端点；均为独立切片。
+12. **Q-32**（22）：`toLocaleLowerCase` 受宿主 locale 影响；改 `toLowerCase` 并补边界用例。
+13. **Q-26**（25）：抑制窗口改用 `Date.parse` 比较或 schema transform；带偏移 ISO 时间
+    目前会多静默/提前失效，补 ±偏移用例。
+14. **REQ-81/REQ-67**（27）：告警源一键静默、事件列表三分支投递计数；纯 UI。
+15. **REQ-32/REQ-22/REQ-24/REQ-12/REQ-13**（28）：既有高价值切片。
+16. **REQ-54/REQ-55**（27）：告警源覆盖区分停用路由、事件摘要计入已抑制；均为纯 UI。
+17. **REQ-83/REQ-84/REQ-91/REQ-92**（25-26）：补投抑制预览、Settings 版本、相对时间、
+    表单离开护栏。
+18. **Q-25**（26）：重放/历史预览过滤 raw payload 清理哨兵；只读 DTO + 重放提示。
+19. **Q-23**（25）：dedupe cleanup 有界化；与未来的回填/维护批次协同。
+20. **Q-31/33/34/35 + SEC-2/3/4/6**：小型质量与安全修复，可合并 1-2 个 PR。
+21. **ARCH-27/28/29/30**（21-24）：provider catalog、DTO parity、helper 拆分、分页 URL 化。
+22. **DOC-11/22/23/24/25/26/27/28/29/30/31/32/33**：一批文档漂移，
     可合并一个 `docs:` PR；第 17 轮已刷新证据。
 20. **车道轮转（第 18 轮）**：`requirements` + `quality` + `architecture`
     （`docs-drift`/`security-exposure` 本轮已跑，`release-infra` 第 16 轮已跑）。
