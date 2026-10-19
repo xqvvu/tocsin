@@ -22,6 +22,7 @@ function detail(overrides: Partial<EventDetailData["event"]> = {}): EventDetailD
       sourceId: "source-1",
       receivedAt: "2026-09-27T00:54:11.000Z",
       idempotencyKey: LONG_IDEMPOTENCY_KEY,
+      providerMetadata: {},
       rawPayload: {},
       normalized: {
         title: "speech-01-turbo model probe recovered",
