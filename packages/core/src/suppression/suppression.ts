@@ -291,6 +291,17 @@ export function formatSuppressionReason(
   return `${SUPPRESSION_KIND_LABEL[suppression.kind]} 「${suppression.name}」 ${scope}`;
 }
 
+/**
+ * Whether a matcher places no restriction on any dimension.
+ *
+ * Exported so the console can label a rule as "silences everything" from the
+ * same condition list `formatSuppressionReason` renders; a new matcher
+ * dimension then updates one place instead of two.
+ */
+export function isUnconditionalSuppressionMatcher(matcher: SuppressionMatcher): boolean {
+  return suppressionConditions(matcher).length === 0;
+}
+
 function suppressionConditions(matcher: SuppressionMatcher): string[] {
   const conditions: string[] = [];
 

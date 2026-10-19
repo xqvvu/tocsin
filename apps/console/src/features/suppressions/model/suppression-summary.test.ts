@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import type { Suppression, SuppressionMatcher } from "@tocsin/core";
 
-import { isCatchAllMatcher, summarizeActiveSuppressions } from "./suppression-summary";
+import { summarizeActiveSuppressions } from "./suppression-summary";
 
 const NOW = "2026-10-19T10:00:00.000Z";
 
@@ -87,19 +87,5 @@ describe("summarizeActiveSuppressions", () => {
     expect(summary.activeCount).toBe(2);
     expect(summary.catchAllCount).toBe(1);
     expect(summary.names).toEqual(["Everything", "Critical only"]);
-  });
-});
-
-describe("isCatchAllMatcher", () => {
-  it("treats an empty matcher as everything", () => {
-    expect(isCatchAllMatcher(matcher())).toBe(true);
-  });
-
-  it("is false as soon as any dimension is constrained", () => {
-    expect(isCatchAllMatcher(matcher({ sourceIds: ["source-1"] }))).toBe(false);
-    expect(isCatchAllMatcher(matcher({ fingerprints: ["abc"] }))).toBe(false);
-    expect(
-      isCatchAllMatcher(matcher({ labels: [{ key: "env", operator: "equals", value: "prod" }] })),
-    ).toBe(false);
   });
 });
