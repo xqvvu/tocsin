@@ -64,9 +64,14 @@ Product charter，且与既有 REQ-17/63/71/76/106、NEW-F/NEW-H 做了边界划
   `0.1.0-beta.17`）；阻断审计 APPROVE（6/6：main CI 绿、无 open PR、无新增回归、无高优
   `blocked-autonomous` 阻断、无 migration/schema、无依赖变更、版本号可用）；运维/回滚 SAFE
   （镜像配置、环境变量、migration plan、依赖均未变；升级只需换镜像重启，回滚换回 beta.16）。
-- 版本：`0.1.0-beta.17`；tag 指向版本递增后的 `origin/main`；镜像
-  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.17`（linux/amd64 + linux/arm64）；
-  回滚镜像 `0.1.0-beta.16`。
+- 版本：`0.1.0-beta.17`；PR #189 `chore(release): v0.1.0-beta.17` rebase 合并 `58dd692`，
+  main CI success。
+- Tag：`v0.1.0-beta.17`（annotated，指向 `58dd692`）；GitHub Release 已创建（prerelease）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.17
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.17`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:ed2076d80f4458a93e893fa073a572c48625e9c60098bca7f4f93f2f9f92def5`）。
+- 回滚镜像：`0.1.0-beta.16`（index digest `sha256:9788b4b8…`）。
 
 ### 下一轮优先项
 
