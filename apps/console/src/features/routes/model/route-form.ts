@@ -56,6 +56,22 @@ export function isIncompleteLabelCondition(condition: RouteLabelCondition): bool
   return (condition.key.trim().length === 0) !== (condition.value.trim().length === 0);
 }
 
+/**
+ * A rule with no condition matches every alert. That is legal (it is how an
+ * operator routes everything to one destination), but it must never happen by
+ * accident: the form asks for confirmation before saving this shape.
+ */
+export function routeRuleIsEmpty(rule: RouteRule): boolean {
+  return (
+    rule.sourceIds.length === 0 &&
+    rule.severities.length === 0 &&
+    rule.statuses.length === 0 &&
+    rule.labels.length === 0 &&
+    rule.titleContains.length === 0 &&
+    rule.messageContains.length === 0
+  );
+}
+
 export function createEmptyLabelCondition(): RouteLabelCondition {
   return { key: "", operator: "equals", value: "" };
 }
