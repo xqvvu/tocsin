@@ -98,7 +98,7 @@ function detailFixture(overrides: {
       id: "delivery-1",
       eventId: "event-1",
       destinationId: "destination-1",
-      routeId: "route-1",
+      routeId: null,
       state: overrides.finishedAt ? "succeeded" : "pending",
       attemptCount: 1,
       maxAttempts: 5,
