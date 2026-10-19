@@ -237,7 +237,7 @@
 | ARCH-33 | 两个新增死组件 | architecture lane | 19 | candidate | — | `form-text-field.tsx`、`destination-kind-badge.tsx` 全仓零 import；与 FIX-5/9/10 合并清理 |
 | ARCH-34 | Scaffold 模板与 generic-webhook 能力分叉 | architecture lane | 19 | candidate | — | `scaffold/schema.ts:8-13` 仅 text 模板，`generic-webhook/schema.ts` 已支持 JSON 模板；README 声称不会漂移 |
 | REQ-86 | 事件详情展示上游告警回链与接入元数据 | requirements lane | 28 | shipped | #149 | 「标准化」页新增「上游告警」区块；http(s) 白名单 + 去凭据 + `noopener noreferrer`；其余标量元数据带产品文案；PRD `docs/prd/event-upstream-source.md` |
-| REQ-87 | 投递详情原始事件载荷与渲染载荷对照 | requirements lane | 28 | candidate | — | `DeliveryDetail` 已含 `event.rawPayload` 与 `renderedPayload`（`delivery.repository.ts:445-483`），页面只显示后者；需派生 `rawPayloadPruned` 并复用清理哨兵判断 |
+| REQ-87 | 投递详情原始事件载荷与渲染载荷对照 | requirements lane | 28 | shipped | #153 | `DeliveryDetail.rawPayloadPruned` + 载荷页左右对照；复用 `isPrunedRawPayload`；PRD `docs/prd/delivery-payload-comparison.md` |
 | REQ-88 | 事件列表显示上游发生时间与接入延迟 | requirements lane | 27 | candidate | — | 列表 DTO 只有 `receivedAt`（`schemas/operations.ts:37-49`），详情已有 `occurredAt`；需加 `occurredAt` 投影与负值/非法值兜底 |
 | REQ-89 | 投递重试二次确认与重试次数上下文 | requirements lane | 27 | candidate | — | 列表/详情重试一次点击即发送（`delivery-actions.tsx:25-37`、`delivery-retry-button.tsx:27-31`）；复用 REQ-72 的确认模式，展示目标/路由/事件/尝试次数 |
 | REQ-90 | 自托管运行指标 scrape 端点 | requirements lane | 27 | candidate | — | 仅有 `/api/health` 与 `/api/ready`（`health.ts:5-13`、`ready.ts:6-53`）；只读 `GET /api/metrics`，手写 OpenMetrics 文本，低基数、无新依赖、无迁移 |
@@ -265,20 +265,22 @@
 
 ## 下一轮优先项
 
-1. **REQ-87**（28）：投递详情原始/渲染载荷对照；需 API 派生 `rawPayloadPruned`，无迁移。
-2. **EXPERT_PANEL 优先**：Q-30（加急持久化失败重复呼叫）、SEC-7（归一化字段绕过脱敏并可
+1. **EXPERT_PANEL 优先**：Q-30（加急持久化失败重复呼叫）、SEC-7（归一化字段绕过脱敏并可
    传播到出站）、REQ-93（在线快照下载的敏感边界）；三项都涉及语义/暴露取舍，三人小组裁决。
-3. **REQ-65/66/73/58**（28）：全局静默提示、外部消息引用反查、静默时间窗时区语义、
+   第 20 轮因车道占满未展开，下一轮优先处理。
+2. **REQ-65/66/73/58**（28）：全局静默提示、外部消息引用反查、静默时间窗时区语义、
    失败投递区分等待重试与重试耗尽。
-4. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
-5. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
-6. **REL-3（28，P0）+ REL-15/REL-18**：Docker smoke 与发布手册的卷/镜像/项目/端口隔离、
+3. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
+4. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
+5. **REL-3（28，P0）+ REL-15/REL-18**：Docker smoke 与发布手册的卷/镜像/项目/端口隔离、
    日志保留、readiness 重试；任何 smoke CI 接入前的阻断项。
-7. **REQ-88/89/90**（27）：事件接入延迟、重试确认、指标端点；均为独立切片。
-8. **SEC-9（24，AUTO_FIX）**：`request-context` 构造时即脱敏 `headersRecord`；补 header 用例。
-9. **Q-32（22）+ Q-26（25）**：`toLowerCase` 归一化、抑制窗口时间比较；补边界用例。
-10. **REQ-81/67/54/55**（27）：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
+6. **REQ-88/89/90**（27）：事件接入延迟、重试确认、指标端点；均为独立切片。
+7. **SEC-9（24，AUTO_FIX）**：`request-context` 构造时即脱敏 `headersRecord`；补 header 用例。
+8. **Q-32（22）+ Q-26（25）**：`toLowerCase` 归一化、抑制窗口时间比较；补边界用例。
+9. **REQ-81/67/54/55**（27）：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制；纯 UI。
+10. **车道轮转（第 21 轮）**：第 20 轮 `requirements` + `quality` + `architecture`
+    三条车道均超时无输出，下一轮重跑同样三条（`requirements` 每轮必跑）。
 11. **REQ-32/22/24/12/13**（28）：既有高价值切片。
 12. **REQ-83/84/91/92**（25-26）：补投抑制预览、Settings 版本、相对时间、表单离开护栏。
 13. **REQ-94/95/96/97/98/99**（23-26）：保留策略后台收敛、模板草稿语义、路由重叠预览、
@@ -304,8 +306,8 @@
 26. **REQ-85（21）**：配置变更审计；需 forward-only migration 与 EXPERT_PANEL，先写决策记录。
 27. **REL-1/4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖；**REL-13**（LICENSE）保持
     blocked-autonomous；ARCH-10/11/15..19 等再次触碰对应文件时做。
-28. **车道轮转（第 20 轮）**：`requirements` + `quality` + `architecture`
-    （`docs-drift`/`security-exposure` 第 19 轮已跑，`release-infra` 第 16 轮已跑）。
+28. **车道轮转**：`requirements` + `quality` + `architecture`（第 20 轮超时未返回，
+    第 21 轮重跑；`docs-drift`/`security-exposure` 第 19 轮已跑，`release-infra` 第 16 轮已跑）。
 
 ## 已知过期输入
 
