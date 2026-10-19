@@ -6,6 +6,7 @@ import {
   isIncompleteLabelCondition,
   routeFormDefaultsFromRule,
   routeRuleFromValues,
+  routeRuleIsEmpty,
   type RouteRuleFormValues,
 } from "#/features/routes/model/route-form";
 
@@ -123,6 +124,32 @@ describe("route form helpers", () => {
     const rule = multiConditionRule();
 
     expect(routeRuleFromValues(routeFormDefaultsFromRule(rule))).toEqual(rule);
+  });
+
+  it("treats a rule with no effective condition as a catch-all", () => {
+    expect(routeRuleIsEmpty(routeRuleFromValues(formValues()))).toBe(true);
+    expect(
+      routeRuleIsEmpty(
+        routeRuleFromValues(
+          formValues({
+            sourceIds: ["  "],
+            titleContains: ["   "],
+            labels: [{ key: "team", operator: "equals", value: "" }],
+          }),
+        ),
+      ),
+    ).toBe(true);
+
+    for (const condition of [
+      { sourceIds: ["source-grafana"] },
+      { severities: ["critical"] },
+      { statuses: ["firing"] },
+      { labels: [{ key: "team", operator: "equals", value: "sre" }] },
+      { titleContains: ["DiskFull"] },
+      { messageContains: ["timeout"] },
+    ] satisfies Array<Partial<RouteRuleFormValues>>) {
+      expect(routeRuleIsEmpty(routeRuleFromValues(formValues(condition)))).toBe(false);
+    }
   });
 
   it("flags label rows that carry only half of the condition", () => {

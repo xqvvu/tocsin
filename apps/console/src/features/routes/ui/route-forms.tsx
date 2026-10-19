@@ -11,6 +11,16 @@ import * as React from "react";
 import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { FormPanel } from "#/components/common/content-panel";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#/components/ui/alert-dialog";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
@@ -35,6 +45,7 @@ import {
   isIncompleteLabelCondition,
   routeFormDefaultsFromRule,
   routeRuleFromValues,
+  routeRuleIsEmpty,
   type RouteLabelCondition,
   type RouteRuleFormValues,
   type RouteSeverityCondition,
@@ -201,6 +212,7 @@ function RouteForm({
 }) {
   const t = useTranslations();
   const isDialogLayout = layout === "dialog";
+  const [pendingCatchAll, setPendingCatchAll] = React.useState<RouteFormValues | null>(null);
 
   const routeSeverityItems = routeSeverityValues.map((severity) => ({
     value: severity,
@@ -214,14 +226,26 @@ function RouteForm({
     { value: "equals", label: t("routing.form.operatorEquals") },
     { value: "contains", label: t("routing.form.operatorContains") },
   ];
+  function submitRoute(values: RouteFormValues): void {
+    onSubmit(values);
+
+    if (resetOnSubmit) {
+      form.reset();
+    }
+  }
+
   const form = useForm({
     defaultValues,
     onSubmit: ({ value }) => {
-      onSubmit(value);
-
-      if (resetOnSubmit) {
-        form.reset();
+      // An empty rule matches every alert. Legal, but never by accident: ask
+      // the operator to confirm the blast radius first, then save the value
+      // they already validated.
+      if (routeRuleIsEmpty(routeRuleFromValues(value.rule))) {
+        setPendingCatchAll(value);
+        return;
       }
+
+      submitRoute(value);
     },
   });
 
@@ -646,46 +670,84 @@ function RouteForm({
   );
 
   return (
-    <form
-      className={cn("flex flex-col", isDialogLayout ? "min-h-0 flex-1 overflow-hidden" : "gap-2")}
-      onSubmit={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void form.handleSubmit();
-      }}
-    >
-      {isDialogLayout ? (
-        <div className="-mx-4 min-h-0 flex-1 overflow-y-auto">
-          <div className="flex min-w-0 flex-col px-4 pb-1">{fields}</div>
-        </div>
-      ) : (
-        fields
-      )}
-      <div
-        className={
-          isDialogLayout
-            ? "border-border bg-popover flex shrink-0 flex-col gap-2 border-t pt-3 sm:flex-row sm:justify-end"
-            : onCancel
-              ? "grid grid-cols-2 gap-2"
-              : undefined
-        }
+    <>
+      <form
+        className={cn("flex flex-col", isDialogLayout ? "min-h-0 flex-1 overflow-hidden" : "gap-2")}
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          void form.handleSubmit();
+        }}
       >
-        {onCancel ? (
-          <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onCancel}>
-            {t("routing.form.cancel")}
-          </Button>
-        ) : null}
-        <Button
-          type="submit"
-          size="sm"
-          disabled={pending || destinations.length === 0}
-          className={isDialogLayout ? "w-full sm:w-fit" : onCancel ? "" : "w-full"}
+        {isDialogLayout ? (
+          <div className="-mx-4 min-h-0 flex-1 overflow-y-auto">
+            <div className="flex min-w-0 flex-col px-4 pb-1">{fields}</div>
+          </div>
+        ) : (
+          fields
+        )}
+        <div
+          className={
+            isDialogLayout
+              ? "border-border bg-popover flex shrink-0 flex-col gap-2 border-t pt-3 sm:flex-row sm:justify-end"
+              : onCancel
+                ? "grid grid-cols-2 gap-2"
+                : undefined
+          }
         >
-          {submitIcon}
-          {submitLabel}
-        </Button>
-      </div>
-    </form>
+          {onCancel ? (
+            <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onCancel}>
+              {t("routing.form.cancel")}
+            </Button>
+          ) : null}
+          <Button
+            type="submit"
+            size="sm"
+            disabled={pending || destinations.length === 0}
+            className={isDialogLayout ? "w-full sm:w-fit" : onCancel ? "" : "w-full"}
+          >
+            {submitIcon}
+            {submitLabel}
+          </Button>
+        </div>
+      </form>
+      <AlertDialog
+        open={pendingCatchAll !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingCatchAll(null);
+          }
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("routing.form.emptyRule.title")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("routing.form.emptyRule.description")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>
+              {t("routing.form.emptyRule.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={pending}
+              onClick={() => {
+                const values = pendingCatchAll;
+                setPendingCatchAll(null);
+
+                if (values) {
+                  submitRoute(values);
+                }
+              }}
+            >
+              {t("routing.form.emptyRule.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

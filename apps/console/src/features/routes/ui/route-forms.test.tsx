@@ -45,6 +45,23 @@ function multiConditionRoute(): RouteDefinition {
   };
 }
 
+function emptyRuleRoute(): RouteDefinition {
+  return {
+    id: "route-catch-all",
+    name: "Everything to ops",
+    enabled: true,
+    rule: {
+      sourceIds: [],
+      severities: [],
+      statuses: [],
+      labels: [],
+      titleContains: [],
+      messageContains: [],
+    },
+    destinationIds: ["destination-ops"],
+  };
+}
+
 function renderEditForm(route: RouteDefinition): { onSubmit: ReturnType<typeof vi.fn> } {
   const onSubmit = vi.fn<(input: EditRouteInput) => void>();
 
@@ -88,6 +105,48 @@ describe("edit route form", () => {
       rule: route.rule,
       destinationIds: route.destinationIds,
     });
+  });
+
+  it("asks for confirmation before saving a route with no conditions", async () => {
+    const route = emptyRuleRoute();
+
+    const { onSubmit } = renderEditForm(route);
+    saveRoute();
+
+    await waitFor(() => {
+      expect(screen.getByText("This route matches everything")).toBeTruthy();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Match every alert" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    expect(onSubmit.mock.calls[0]?.[0]).toEqual({
+      id: route.id,
+      name: route.name,
+      rule: route.rule,
+      destinationIds: route.destinationIds,
+    });
+  });
+
+  it("does not save an empty-rule route when the confirmation is cancelled", async () => {
+    const route = emptyRuleRoute();
+
+    const { onSubmit } = renderEditForm(route);
+    saveRoute();
+
+    await waitFor(() => {
+      expect(screen.getByText("This route matches everything")).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to conditions" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("This route matches everything")).toBeNull();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("shows every stored condition entry instead of only the first of each class", () => {
