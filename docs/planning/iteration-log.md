@@ -2,6 +2,112 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 31 轮）
+
+- 时间：2026-10-20 07:25 – 08:xx CST。
+- 基线：`origin/main` @ `16ec891`；本轮合并 #194（rebase `6e10073`）与 #195（rebase `0b63bc0`）。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `security-exposure` + `ui-triage`（判定 `review_now` → `ui-review`）。
+  下一轮建议 `requirements` + `quality` + `ui-triage`（`quality` 第 24 轮后未跑）。
+- `ui-triage`：`review_now` —— 距第 27 轮真实浏览器评审（04:05）约 3h22m，但自 04:05 起有
+  3 个行为性 UI 合并（`c001414` #184 空态/分页、`d19728b` #187 停用确认、`101a91a` #191
+  加急解释）与 8 条未解决 UI 发现，两项强信号成立；#187/#191 均缺浏览器复验。
+- `last_ui_review_at`：**2026-10-20 07:56 CST**（本轮已做真实浏览器深度评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、构建均在会话工作树
+  `angry-franklin-ccc447`。
+
+### 本轮交付
+
+- PR #194 `feat(console): show deliverable source coverage, not just enabled routes` ——
+  **REQ-129**（28）。
+  - `sourceRouteCoverage(sourceId, routes, destinations)` 增加目标输入，派生
+    `deliverableRouteCount` / `blockedRouteCount` / `blockedRouteNames`；已启用路由只有在
+    至少关联一个已启用目标时才计入可投递，目标全部停用或引用不存在的路由计为阻断
+    （`source-route-coverage.ts:12-55`）。
+  - Sources「命中路由」列改为展示实际可投递数；0 条可投递但有匹配路由时显示 destructive
+    「目标全停用」，部分阻断在悬浮说明里列出阻断路由并说明投递会排队但不会发送
+    （`source-route-coverage-cell.tsx:7-61`）。
+  - Sources 页面与 route loader 复用既有 `destinationsQueryOptions()`，不新增服务端过程或
+    DTO（`sources-page.tsx:24-27`、`_dashboard.sources.tsx:11-18`）。
+  - 中英文 i18n 同步；新增中文 mini-PRD `docs/prd/source-deliverable-coverage.md`。
+  - 测试：模型 4 条（全部可投递、部分目标停用、目标不存在、路由停用）、列表 2 条阻断态渲染、
+    可访问名称；console 123 files / 658 tests。
+- PR #195 `fix(console): name the suppression in its enable and disable controls` —— **UI-11**（24）。
+  - 静默规则启停按钮传入 `suppressionName`，tooltip/aria-label 不再显示未插值占位符；
+    新增可访问名称回归测试（`suppressions-section.tsx:272-275`）。
+  - console 123 files / 659 tests。
+- 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4 包成功；
+  `vp run -r build` 通过；两个 PR CI success，main CI success。
+
+### requirements 车道
+
+新增 6 条候选（已写入 backlog，均无迁移/新依赖）：
+
+- **REQ-135（28）** 事件详情按路由显示投递结果：路由匹配表只显示目标数，投递结果在另一个
+  标签页（`event-detail-route-matches-table.tsx:51,63,71`、`event-detail-deliveries-table.tsx:31-42`）；
+  `EventDetailDelivery` 已带 `routeId/destinationId/state`，纯前端按 routeId 聚合。
+- **REQ-136（27）** 事件详情投递表内联重试失败投递（`event-detail-deliveries-table.tsx:31-42`）。
+- **REQ-137（28）** 告警源解析器变更确认：编辑源时解析器可直接切换并保存
+  （`source-form.tsx:128-163`、`edit-source-form.tsx:42-53`），历史事件不会重解析。
+- **REQ-138（28）** 通知目标覆盖率计入告警源启停（REQ-129 的镜像）：
+  `destination-route-coverage.ts:11-24` 只看路由启用，停用源的路由永不产生事件。
+- **REQ-139（27）** 通知目标草稿配置测试发送：`destinations.test` 只接受已存 id
+  （`destination.service.ts:153-194`），保存坏配置前无法验证。
+- **REQ-140（27）** 事件列表多选批量静默：告警风暴需逐条打开详情
+  （`events-table.tsx:50-96`、`event-actions.tsx:19-33`），可复用 matcher 多指纹预填。
+
+### security-exposure 车道（第 23 轮后首次）
+
+- **SEC-19（24，MEDIUM，新）** 脱敏正则二次复杂度可被 Webhook 触发：后缀分支
+  `[A-Za-z0-9._-]*` 在每个词边界回溯（`packages/core/src/redaction.ts:55-64,260`），
+  40KB 点分词实测 922ms，按平方推算 1MB ≈ 10 分钟 CPU；调用点
+  `intake.service.ts:81,195`、`delivery-execution.ts:152`、`log-safety.ts:94`。单进程同时
+  承载 HTTP 与 worker，会整体失联。需 EXPERT_PANEL 在有界量词与扫描式实现间裁决，
+  必须带性能回归测试且不得缩小脱敏覆盖。
+- **SEC-20（20，新）** `configurationToTomlDocument` 无自防护（`packages/core/src/config.ts:184-202`）；
+  当前调用链已 sanitize，无实际泄漏，建议断言拒绝未 sanitize 输入。
+- **SEC-21（18，新）** `auth.client.ts:4` 以 type import 引用 `.server`；无运行时泄漏，
+  违反 AGENTS 字面规则，建议类型下沉共享模块。
+- 复核确认干净：导出/导入遮蔽、`include_secrets` 恒 false、SEC-2 参数化脱敏测试已闭环、
+  存储/读取/发送边界投影、import protection、`xqvvu/vane` 无失效引用。
+- 既有 SEC-9/11/12/13/14、Q-33、ARCH-14/17/35 仍开放，与 backlog 重复；ARCH-17 补充
+  `operation-filters.tsx:599,644` 使用 `window.setTimeout`。
+
+### ui-review 车道（真实浏览器，隔离实例 6191 + 临时 SQLite）
+
+- **UI-9（27，已复现）** 静默时间时区错位：浏览器 Asia/Shanghai、设置 UTC，输入
+  `10:00–12:00` 后列表显示 `02:00–04:00`，差 8 小时且无时区标注；截图
+  `/tmp/tocsin-r31-suppression-form-tz.png`、`/tmp/tocsin-r31-suppression-list-tz-after.png`；
+  证据 `suppression-form.ts:118-127,192-206`、`suppression-forms.tsx:312-336`、
+  `operation-format.ts:8-15`。这是本轮唯一正确性级 UI 问题，建议下一轮优先修。
+- **UI-4/5/6** 移动端 Sheet 无可见关闭按钮（`sidebar.tsx:209-229`）、折叠侧栏首屏闪动
+  1 秒（`sidebar.tsx:86-98`）、两个同名侧栏开关（`dashboard-header.tsx:17` +
+  `sidebar.tsx:307-319`）均浏览器复现。
+- **UI-11** 已随 #195 修复；**UI-3/8/12** 文案问题分别复现（Payload 标签、中文混用
+  dashboard、空态称「右侧表单」）。
+- **UI-13（26，新）** REQ-129 部分阻断只在原生 `title` 可见，徽标仍显示「1 条可投递」，
+  读屏与触屏无法感知；建议「1/2 可投递」或警示图标 + 可视隐藏文本。
+- **UI-14（25，新）** 静默规则启停仍单击立即执行，与 #187 给告警源/路由/目标加的确认不一致。
+- **REQ-138** 补充浏览器证据：已停用目标行仍显示「N 条生效」。
+- 复验无回归：#191 加急解释面板（非飞书/无 ping 分支）、#187 三个停用确认的影响面数字、
+  #184 空态/分页/390px 空态。**REQ-129 不阻塞发版**；整体视觉一致性可接受本版本发布。
+
+### EXPERT_PANEL
+
+本轮无新裁决；SEC-19 已进入 backlog 并排入下一轮专家小组（有界量词 vs 扫描式实现）。
+
+### 发布（第 9.5 步）
+
+- 待发布评估完成后补充。
+
+### 下一轮优先项
+
+1. UI-9（27）静默时间时区；UI-13（26）部分阻断可见性；UI-14（25）静默启停确认。
+2. REQ-138（28）目标侧覆盖率；REQ-135（28）事件详情逐路由投递；REQ-137（28）解析器变更确认。
+3. SEC-19（24）EXPERT_PANEL；SEC-20/21 AUTO_FIX。
+4. REQ-125/130/131/136/139/140（27）。
+
 ## 2026-10-20（第 30 轮）
 
 - 时间：2026-10-20 06:25 – 07:05 CST。

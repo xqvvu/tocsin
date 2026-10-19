@@ -339,8 +339,10 @@
 | UI-8 | 中文登录页混用英文 dashboard | ui-review（第 23 轮，浏览器实测） | 22 | candidate | — | `zh-Hans.json` 改为「控制台」；第 27 轮复现：`/setup`「创建 owner 账号／dashboard 用户」与 toast「正在打开 dashboard」同样混用（`zh-Hans.json:3,11,18,25,29`） |
 | UI-9 | 静默时间时区错位 | ui-review（第 27 轮，浏览器实测） | 27 | candidate | — | 表单按浏览器本地时间输入、列表按设置默认 UTC 显示，差 8 小时且无时区标注，维护窗口可能错时生效；`suppression-forms.tsx:313-334`、`suppression-form.ts:119-126`、`operation-format.ts:15`；成本 45–60 分钟 |
 | UI-10 | 移动端空态被横向卷出屏幕 | ui-review（第 27 轮，390px 实测） | 26 | shipped | #184 | 空态位于最小宽 1280px 的表格内，390px 下文字在视口外；`operations-table.tsx:111-145`、`deliveries-table-layout.ts:3`；与 UI-2/UI-7 同一空态切片 |
-| UI-11 | 静默停用按钮显示原始 i18n key | ui-review（第 27 轮，浏览器实测） | 24 | candidate | — | aria-label/tooltip 直接显示 `suppressions.table.actions.disableTitle`；`suppressions-section.tsx:277`；成本 2 分钟 |
-| UI-12 | 空态文案与实际交互不符 | ui-review（第 27 轮，浏览器实测） | 23 | candidate | — | Sources/Routes 称「右侧会保留新建表单」，实际「新增」打开对话框（`zh-Hans.json:915,798`）；轮换 Token 后仍提示「创建成功」；`source-token-notice-panel.tsx:35,53,70` |
+| UI-11 | 静默停用按钮显示原始 i18n key | ui-review（第 27 轮，浏览器实测） | 24 | shipped | #195 | 第 31 轮浏览器复核症状为未插值占位符「关闭「{suppressionName}」」；启停按钮传入 `suppressionName`，新增可访问名称测试 |
+| UI-12 | 空态文案与实际交互不符 | ui-review（第 27 轮，浏览器实测） | 23 | candidate | — | Sources/Routes 称「右侧会保留新建表单」，实际「新增」打开对话框（`zh-Hans.json:944,822`）；第 31 轮浏览器复核 Sources 可复现；轮换 Token 后仍提示「创建成功」（`source-token-notice-panel.tsx:35,53,70`） |
+| UI-13 | 部分阻断的告警源覆盖率只在 hover 里可见 | ui-review（第 31 轮，浏览器实测） | 26 | candidate | — | REQ-129 交付后，「1/2 条可投递」仍只显示 secondary「1 条可投递」，阻断信息只在原生 `title`，读屏与触屏都看不到；建议显示「1/2 可投递」或加警示图标 + 可视隐藏文本（`source-route-coverage-cell.tsx:8-24`、`zh-Hans.json:964`）；成本约 20 分钟 |
+| UI-14 | 静默规则启停缺少与其他配置一致的确认 | ui-review（第 31 轮，代码+浏览器） | 25 | candidate | — | #187 已给告警源/路由/目标的「启用→停用」加影响确认，但静默规则仍单击立即启停（`suppressions-section.tsx:278-291`）；停用静默会立即恢复告警/可能触发呼叫；建议复用同一 AlertDialog 模式说明影响窗口 |
 | REQ-119 | 接入去重窗口可配置 | requirements lane（第 28 轮） | 27 | candidate | — | Settings 增去重窗口（1–60 分钟），intake 与补投共用；`intake.service.ts:56`、`event-replay.service.ts:35` 硬编码 5 分钟，`settings.repository.ts:20-26` 无此键 |
 | REQ-120 | 投递最大尝试次数可配置 | requirements lane（第 28 轮） | 27 | candidate | — | Settings 增 1–10 次并入队传值；`delivery.repository.ts:90` 默认 3，`EnqueueDeliveriesInput.maxAttempts` 已存在（`delivery.interface.ts:81`）但无生产调用点传入 |
 | REQ-121 | Source Token 轮换宽限期 | requirements lane（第 28 轮） | 24 | candidate | — | 轮换后旧 token 保留 0/15/60 分钟；`source.service.ts:66-73` 直接覆盖、`schema.ts:44` 单列、`zh-Hans.json:907` 承认切换期断流；需 forward-only 迁移 + EXPERT_PANEL |
@@ -363,7 +365,7 @@
 | REQ-135 | 事件详情按路由显示投递结果 | requirements lane（第 31 轮） | 28 | candidate | — | 路由匹配表只显示目标数，投递结果在另一个标签页（`event-detail-route-matches-table.tsx:51,63,71`、`event-detail-deliveries-table.tsx:31-42,52-76`）；`EventDetailDelivery` 已带 `routeId/destinationId/state`；纯前端按 routeId 聚合，`routeId=null` 手工投递不计入；无 endpoint/DTO/迁移 |
 | REQ-136 | 事件详情投递表内联重试失败投递 | requirements lane（第 31 轮） | 27 | candidate | — | 事件详情投递表无操作列（`event-detail-deliveries-table.tsx:31-42,52-76`），失败需逐条进详情；复用 `operations.retryDelivery`，把 `DeliveryRetryButton` 入参收敛为 `{id,state}`；不改变重试语义；无迁移 |
 | REQ-137 | 告警源解析器变更确认 | requirements lane（第 31 轮） | 28 | candidate | — | 编辑源时解析器下拉始终可改且直接保存（`source-form.tsx:128-163`、`edit-source-form.tsx:42-53`、`source.service.ts:52-64`），切换后只影响后续告警且可能解析失败；保存前 AlertDialog 展示旧→新与「历史不重解析」；纯前端 + i18n |
-| REQ-138 | 通知目标覆盖率计入告警源启停 | requirements lane（第 31 轮） | 28 | candidate | — | `destinationRouteCoverage` 只看路由启用、不看匹配源启用（`destination-route-coverage.ts:11-24`、`destination-route-coverage-cell.tsx:13-23`），停用源的路由永不产生事件；Destinations 页与 loader 增加 sources 查询，派生 reachable/blocked；catch-all 需至少一个启用源；与 REQ-129 镜像 |
+| REQ-138 | 通知目标覆盖率计入告警源启停 | requirements lane（第 31 轮） | 28 | candidate | — | `destinationRouteCoverage` 只看路由启用、不看匹配源启用（`destination-route-coverage.ts:11-24`、`destination-route-coverage-cell.tsx:13-23`），停用源的路由永不产生事件；Destinations 页与 loader 增加 sources 查询，派生 reachable/blocked；catch-all 需至少一个启用源；与 REQ-129 镜像。第 31 轮浏览器复核：已停用目标行仍显示「N 条生效」，语义不一致可复现 |
 | REQ-139 | 通知目标草稿配置测试发送 | requirements lane（第 31 轮） | 27 | candidate | — | MVP 故事 24 要求保存前验证凭证（`self-hosted-alert-hub-mvp.md:86`），但 `destinations.test` 只接受已存 id（`destination-commands.ts:72-74`、`destination.service.ts:153-194`）；新增 `testUpdate` 草稿命令复用合并与发送路径、不写库；跨 core/api/service/UI，需确认与脱敏 |
 | REQ-140 | 事件列表多选批量静默 | requirements lane（第 31 轮） | 27 | candidate | — | 告警风暴需逐条打开详情静默（`events-table.tsx:50-96`、`event-actions.tsx:19-33`）；Events 页已有 sources/destinations，matcher 支持多 sourceIds/fingerprints；受控选择列 + 复用 `CreateSuppressionForm`，单条规则覆盖所选指纹；无服务端改动 |
 
@@ -383,35 +385,39 @@
 
 ## 下一轮优先项
 
-0. **REQ-129（28）** 告警源覆盖率按「可投递性」计算：纯前端派生 + 复用 destinations 查询，
-   无迁移；**REQ-125（27）** 告警源共享密钥显式清除；**REQ-130（27）** 补投包含已静默目标、
-   **REQ-131（27）** 失败投递保留最近渲染载荷。三者均无迁移，可择一作为主交付。
-1. **UI 小成本批次**：UI-9（27）静默时间时区错位；UI-4（移动端 Sheet 关闭按钮）、
-   UI-11（停用按钮原始 i18n key，2 分钟）、UI-12（空态文案与实际交互不符）、
-   UI-8（登录/初始化页混用 dashboard）；UI-5/UI-6 视情况。第 30 轮 `ui-triage` 再次 `defer`，
-   硬性最晚 **2026-10-22 04:05 CST** 前必须做一次真实浏览器深度评审。
-2. **REQ-111（27）** 初始化 Owner 密码确认与不可恢复提示；
+0. **UI-9（27）静默时间时区错位**：第 31 轮真实浏览器复现 8 小时偏差，是唯一正确性级 UI
+   问题；表单应按设置时区解释输入并在表单/列表标注时区。**UI-13（26）** REQ-129 部分阻断
+   只在 hover 可见；**UI-14（25）** 静默规则启停缺确认。
+1. **REQ-138（28）** 通知目标覆盖率计入告警源启停（REQ-129 的镜像）；**REQ-135（28）**
+   事件详情按路由显示投递结果；**REQ-137（28）** 告警源解析器变更确认。
+2. **REQ-125（27）** 告警源共享密钥显式清除；**REQ-130（27）** 补投包含已静默目标；
+   **REQ-131（27）** 失败投递保留最近渲染载荷；**REQ-136/139/140（27）** 事件详情内联重试、
+   目标草稿测试发送、事件列表批量静默。
+3. **SEC-19（24）** 脱敏正则二次复杂度交 EXPERT_PANEL（有界量词 vs 扫描式实现，带性能
+   回归测试）；**SEC-20/21（20/18）** 为 AUTO_FIX 加固项。
+4. **REQ-111（27）** 初始化 Owner 密码确认与不可恢复提示；
    **REQ-119/120（27）** 去重窗口与最大尝试次数可配置；仍待裁决：REQ-93、Q-8、REQ-107。
-3. **REQ-108（28）** 多值属性筛选、**REQ-73（28）** 静默时区语义、
+5. **REQ-108（28）** 多值属性筛选、**REQ-73（28）** 静默时区语义、
    **REQ-48（28）** 配置删除预检（并入 REQ-105）、**REQ-52（28）** `tocsin.eventUrl`
    与公开地址、**REQ-110（28）** 静默即将到期提示。
-4. **REQ-132（26）** 路由补投时间窗口、**REQ-133（25）** 可访问性收尾；
+6. **REQ-132（26）** 路由补投时间窗口、**REQ-133（25）** 可访问性收尾；
    `REQ-134（22）` Owner 离线恢复实现前须 EXPERT_PANEL（安全与架构）。
-5. **REQ-112/113/114/115/116（25-26）**：投递计数下钻、复制视图链接、重试前预览、
+7. **REQ-112/113/114/115/116（25-26）**：投递计数下钻、复制视图链接、重试前预览、
    首次部署空态与过期文案、每页条数；**NEW-B/NEW-C（27）**。
-6. **REL-21（26）**：新增独立 `e2e.yml`（先本地跑通 `playwright install chromium` +
+8. **REL-21（26）**：新增独立 `e2e.yml`（先本地跑通 `playwright install chromium` +
    `playwright test`，DB 预清理，失败 artifact）；**REL-24（23）** 搬 8 个 provider fixture；
    **REL-23（24）** required checks 交 EXPERT_PANEL。
-7. **SEC-9 + SEC-13 + SEC-14 + Q-32 + Q-26 + Q-38**：`headersRecord` 拆窄字段、
+9. **SEC-9 + SEC-13 + SEC-14 + Q-32 + Q-26 + Q-38**：`headersRecord` 拆窄字段、
    `isSensitiveKey` 精确键、`request-context` server-only 标记、`toLowerCase` 归一化、
    抑制窗口时间比较、复制失败 toast。
-8. **docs-drift 批次（第 30 轮已刷新证据）**：第一批 DOC-49/23/24/37/43/46/47/50/51
-   （发布 gate、README、抑制 PRD 五状态、post-MVP 过期范围）；第二批
-   DOC-36/48/53/54/55/56/57/58（状态头、ADR 版本、无 importer 的 accessor）。
-   建议拆两个 `docs:` PR；DOC-52 可关闭，DOC-24 的预览缺口仍成立。
-9. **车道轮转（第 31 轮）**：`requirements` 必跑 + `ui-triage`；第 30 轮已完成
-   `requirements` + `docs-drift` + `ui-triage`（defer），下一轮从 **`security-exposure`**
-   继续（第 23 轮后未跑），之后 `quality`。
+10. **docs-drift 批次（第 30 轮已刷新证据）**：第一批 DOC-49/23/24/37/43/46/47/50/51
+    （发布 gate、README、抑制 PRD 五状态、post-MVP 过期范围）；第二批
+    DOC-36/48/53/54/55/56/57/58（状态头、ADR 版本、无 importer 的 accessor）。
+    建议拆两个 `docs:` PR；DOC-52 可关闭，DOC-24 的预览缺口仍成立。
+11. **车道轮转（第 32 轮）**：`requirements` 必跑 + `ui-triage`；第 31 轮已完成
+    `requirements` + `security-exposure` + `ui-triage`（review_now → `ui-review`），
+    下一轮从 **`quality`** 继续（第 24 轮后未跑），之后 `architecture`。第 31 轮已完成真实
+    浏览器深度评审（`last_ui_review_at` 更新），下一轮 `ui-triage` 预计可 defer。
 10. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 11. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。
