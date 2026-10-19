@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
 import { Skeleton } from "#/components/ui/skeleton";
 import {
   Table,
@@ -11,6 +12,7 @@ import {
 } from "#/components/ui/table";
 import { cn } from "#/lib/utils";
 import { DashboardHeader } from "#/shell/dashboard-header";
+import { DashboardNavigation, DashboardNavigationSkeleton } from "#/shell/dashboard-navigation";
 import { DashboardSidebar } from "#/shell/dashboard-sidebar";
 
 export interface DashboardLayoutProps {
@@ -25,19 +27,27 @@ export interface DashboardLayoutProps {
 
 function DashboardLayoutRoot({ user, children }: DashboardLayoutProps) {
   return (
-    <main className="bg-background text-foreground flex h-dvh flex-col overflow-hidden">
-      <DashboardHeader user={user} />
-      {children}
-    </main>
+    <SidebarProvider className="bg-background text-foreground flex h-dvh min-h-0 w-full overflow-hidden">
+      <DashboardNavigation user={user} />
+      <SidebarInset className="min-h-0 overflow-hidden">
+        <DashboardHeader />
+        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 
 function DashboardLayoutSkeleton() {
   return (
-    <main className="bg-background text-foreground flex h-dvh flex-col overflow-hidden">
-      <DashboardHeaderSkeleton />
-      <DashboardContentLayout.Skeleton />
-    </main>
+    <SidebarProvider className="bg-background text-foreground flex h-dvh min-h-0 w-full overflow-hidden">
+      <DashboardNavigationSkeleton />
+      <SidebarInset className="min-h-0 overflow-hidden">
+        <DashboardHeaderSkeleton />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <DashboardContentLayout.Skeleton />
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 
@@ -131,21 +141,10 @@ function DashboardSettingsLayoutSkeleton() {
 
 function DashboardHeaderSkeleton() {
   return (
-    <header className="border-border bg-card sticky top-0 z-50 h-12 shrink-0 border-b">
-      <div className="flex h-12 w-full items-center justify-between gap-4 px-3">
-        <div className="flex h-full min-w-0 items-center gap-6">
-          <Skeleton className="h-5 w-12 shrink-0" />
-          <div className="hidden h-full min-w-0 items-center gap-5 sm:flex">
-            {dashboardNavSkeletons.map((item) => (
-              <Skeleton key={item} className="h-4 w-18" />
-            ))}
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          <Skeleton className="size-7 rounded-full" />
-        </div>
-      </div>
+    <header className="border-border bg-card flex h-12 shrink-0 items-center gap-2 border-b px-2">
+      <Skeleton className="size-7 shrink-0" />
+      <div className="bg-border h-4 w-px shrink-0" />
+      <Skeleton className="h-4 w-24" />
     </header>
   );
 }
@@ -305,16 +304,6 @@ function DashboardToolbarSkeleton({ detail, tabs }: DashboardToolbarSkeletonProp
   );
 }
 
-const dashboardNavSkeletons = [
-  "events",
-  "sources",
-  "routes",
-  "suppressions",
-  "destinations",
-  "integrations",
-  "deliveries",
-  "settings",
-];
 const dashboardRowSkeletons = ["row-1", "row-2", "row-3", "row-4", "row-5", "row-6"];
 const sidebarFieldSkeletons = ["field-1", "field-2", "field-3", "field-4", "field-5"];
 const dashboardMetricSkeletons = ["metric-1", "metric-2", "metric-3", "metric-4"];

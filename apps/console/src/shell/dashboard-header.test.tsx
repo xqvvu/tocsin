@@ -3,77 +3,54 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
+import { SidebarProvider } from "#/components/ui/sidebar";
 import { AppIntlProvider } from "#/i18n/provider";
 import { DashboardHeader } from "#/shell/dashboard-header";
 
+const testState = vi.hoisted(() => ({ pathname: "/sources" }));
+
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({
-    to,
-    children,
-    className,
+  useRouterState: ({
+    select,
   }: {
-    to: string;
-    children: React.ReactNode;
-    className?: string;
-  }) => (
-    <a href={to} className={className}>
-      {children}
-    </a>
-  ),
-  ClientOnly: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    select: (state: { location: { pathname: string } }) => unknown;
+  }) => select({ location: { pathname: testState.pathname } }),
 }));
 
-vi.mock("#/shell/dashboard-user-menu", () => {
-  function DashboardUserMenuMock({
-    user,
-  }: {
-    user: { name: string | null; email: string; image: string | null; role: string | null };
-  }) {
-    return <button type="button">{user.name ?? user.email}</button>;
-  }
-
-  DashboardUserMenuMock.Skeleton = function DashboardUserMenuSkeleton() {
-    return <span data-testid="user-menu-skeleton">Loading user</span>;
-  };
-
-  return { DashboardUserMenu: DashboardUserMenuMock };
-});
+vi.mock("#/hooks/use-mobile", () => ({
+  useIsMobile: () => false,
+}));
 
 describe("dashboard header", () => {
   afterEach(() => {
     cleanup();
+    testState.pathname = "/sources";
   });
 
-  it("renders operational nav and user menu without inert notification or help controls", () => {
+  it("shows the sidebar trigger and the current section", () => {
     render(
       <AppIntlProvider locale="en-US">
-        <DashboardHeader
-          user={{
-            name: "Ops Owner",
-            email: "admin@example.test",
-            image: null,
-            role: "owner",
-          }}
-        />
+        <SidebarProvider>
+          <DashboardHeader />
+        </SidebarProvider>
       </AppIntlProvider>,
     );
 
-    expect(screen.getByRole("navigation", { name: "Dashboard" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Tocsin" })).toHaveProperty(
-      "href",
-      expect.stringContaining("/events"),
-    );
-    expect(screen.getByRole("link", { name: "Events" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Sources" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Routes" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Destinations" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Deliveries" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Settings" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Ops Owner" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Toggle sidebar" })).toBeTruthy();
+    expect(screen.getByText("Sources")).toBeTruthy();
+  });
 
-    expect(screen.queryByTitle("Notifications")).toBeNull();
-    expect(screen.queryByTitle("Help")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Notifications" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Help" })).toBeNull();
+  it("falls back to the console label outside registered sections", () => {
+    testState.pathname = "/not-registered";
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <SidebarProvider>
+          <DashboardHeader />
+        </SidebarProvider>
+      </AppIntlProvider>,
+    );
+
+    expect(screen.getByText("Console")).toBeTruthy();
   });
 });
