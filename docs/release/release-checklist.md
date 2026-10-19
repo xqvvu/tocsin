@@ -1,7 +1,7 @@
 # 发布 Checklist（人工 tagged release）
 
 > 一句话结论：Tocsin 目前**没有任何发布自动化** —— 仓库只有 `ci.yml`（`check · test · build`），没有
-> release workflow、没有 changelog 工具；tag 已由人工创建（`v0.1.0-beta.9`、`v0.1.0-beta.10`、`v0.1.0-beta.11`、`v0.1.0-beta.12`、`v0.1.0-beta.13`、`v0.1.0-beta.14`），
+> release workflow、没有 changelog 工具；tag 已由人工创建（`v0.1.0-beta.9`、`v0.1.0-beta.10`、`v0.1.0-beta.11`、`v0.1.0-beta.12`、`v0.1.0-beta.13`、`v0.1.0-beta.14`、`v0.1.0-beta.15`），
 > 并且 tag 本身不会触发任何东西。
 
 核实时间 2026-10-19，核实基线 `origin/main` @ `2cdaee1`。本文只回答“怎么切一个 tag”；发布前的产品验收
@@ -17,7 +17,7 @@
 | Release / publish workflow | 不存在                                                         | `.github/` 下只有 `ci.yml`                                               |
 | Changelog 与版本递增工具 | 不存在                                                           | 没有 `.changeset/`、没有 `CHANGELOG.md`、根 `package.json` 没有 `release` script |
 | git tag                  | 首个 tag 为 `v0.1.0-beta.9`（2026-10-19）                        | 此前的 `0.1.0-beta.8` 没有对应 tag，版本追溯以发布记录为准                |
-| 版本号来源               | 只有根 `package.json`（当前 `0.1.0-beta.14`）                     | 启动日志的 `tocsin.runtime` 版本来自根 `package.json`（`apps/console/src/server/runtime/system-information.ts`） |
+| 版本号来源               | 只有根 `package.json`（当前 `0.1.0-beta.15`）                     | 启动日志的 `tocsin.runtime` 版本来自根 `package.json`（`apps/console/src/server/runtime/system-information.ts`） |
 | 容器镜像发布             | 没有自动化，只有手工 recipe                                       | 没有 CI 构建/推送步骤；`Justfile` 提供 `just docker-buildx <image> <tag>`（多平台构建并 `--push`）、`just docker-tag`、`just docker-push`，registry 与 tag 约定见第 4 节。`docker-compose.yml` 默认用本机构建的 `image: tocsin:local` |
 | E2E / Docker smoke 自动化 | 脚本已有，CI 未接入                                            | `apps/console/e2e/alert-flow.spec.ts` + `apps/console/playwright.config.ts`；`scripts/docker-smoke.sh`；`just e2e` / `just docker-smoke`；`.github/workflows/ci.yml` 仍只有 quality job |
 
@@ -64,8 +64,8 @@
 git switch main
 git pull --ff-only
 git status --porcelain      # 必须为空
-git tag -a v0.1.0-beta.14 -m "Tocsin v0.1.0-beta.14"
-git push origin v0.1.0-beta.14
+git tag -a v0.1.0-beta.15 -m "Tocsin v0.1.0-beta.15"
+git push origin v0.1.0-beta.15
 ```
 
 约定与限制，逐条说清：
