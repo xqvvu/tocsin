@@ -7,6 +7,7 @@ import {
   AlertStatusSchema,
   DeliveryStateSchema,
   OperationTimeRangeSchema,
+  OPERATION_SEARCH_MAX_LENGTH,
 } from "@tocsin/core";
 
 export const DashboardOperationSearchSchema = z.object({
@@ -68,7 +69,9 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
   return pickBy(
     {
       ...search,
-      q: search.q?.trim(),
+      // The contract rejects longer input, and a hand-edited URL bypasses the
+      // input's maxLength, so clip here before the value is persisted or sent.
+      q: search.q?.trim().slice(0, OPERATION_SEARCH_MAX_LENGTH),
       // Both page counters follow the same rule: page 1 is the default, so it
       // stays out of the URL rather than making every link carry `=1`.
       eventPage: search.eventPage && search.eventPage > 1 ? search.eventPage : undefined,

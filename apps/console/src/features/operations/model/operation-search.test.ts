@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import { OPERATION_SEARCH_MAX_LENGTH } from "@tocsin/core";
+
 import {
   DashboardOperationSearchSchema,
   mergeOperationSearch,
@@ -43,6 +45,23 @@ describe("delivery page in the operation search", () => {
 
     expect(merged.deliveryPage).toBe(5);
     expect(merged.eventPage).toBe(3);
+  });
+});
+
+describe("search text in the operation search", () => {
+  it("trims a normal query without changing it", () => {
+    expect(pruneSearch({ q: "  checkout  " }).q).toBe("checkout");
+  });
+
+  it("clips a hand-edited query to the contract limit", () => {
+    // The input caps typing, but a pasted URL can be longer. Persisting the
+    // overflow would make the next server call fail its schema validation.
+    const long = `  ${"a".repeat(OPERATION_SEARCH_MAX_LENGTH + 20)}  `;
+
+    const q = pruneSearch({ q: long }).q;
+
+    expect(q).toHaveLength(OPERATION_SEARCH_MAX_LENGTH);
+    expect(q).toBe("a".repeat(OPERATION_SEARCH_MAX_LENGTH));
   });
 });
 

@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import type { RouteDefinition } from "@tocsin/core";
+import { OPERATION_SEARCH_MAX_LENGTH, type RouteDefinition } from "@tocsin/core";
 
 import type { DashboardOperationSearch } from "#/features/operations/model/operation-search";
 import {
@@ -100,6 +100,14 @@ describe("operation filters by page scope", () => {
     renderFilters("events", {}, "toolbar");
 
     expect(screen.getByPlaceholderText("title, message, fingerprint, or ID")).toBeTruthy();
+  });
+
+  it("caps the search input at the contract limit", () => {
+    renderFilters("events", {}, "toolbar");
+
+    const input = screen.getByPlaceholderText("title, message, fingerprint, or ID");
+
+    expect((input as HTMLInputElement).maxLength).toBe(OPERATION_SEARCH_MAX_LENGTH);
   });
 });
 
