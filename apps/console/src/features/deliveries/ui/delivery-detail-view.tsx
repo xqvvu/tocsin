@@ -37,7 +37,7 @@ export function DeliveryDetailView({ detail }: { detail: DeliveryDetailData }) {
           </TabsList>
         </div>
 
-        <TabsContent value="summary" className="min-h-0 overflow-hidden p-3">
+        <TabsContent value="summary" className="min-h-0 overflow-auto p-3">
           <DeliverySummaryTab detail={detail} />
         </TabsContent>
 
