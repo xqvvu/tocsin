@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
@@ -46,9 +47,11 @@ function detail(overrides: Partial<EventDetailData["event"]> = {}): EventDetailD
 
 function renderTab(data: EventDetailData = detail()) {
   return render(
-    <AppIntlProvider locale="zh-Hans">
-      <EventNormalizedTab detail={data} />
-    </AppIntlProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <AppIntlProvider locale="zh-Hans">
+        <EventNormalizedTab detail={data} />
+      </AppIntlProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -97,6 +100,14 @@ describe("event normalized tab", () => {
     expect(screen.queryByRole("button", { name: "复制幂等键" })).toBeNull();
     // The other two still have real values and keep their actions.
     expect(screen.getByRole("button", { name: "复制指纹" })).toBeTruthy();
+  });
+
+  it("offers a per-label silence action that names the label", () => {
+    renderTab();
+
+    // A label outlives one fingerprint ("env=prod"), so the click target must
+    // say exactly which pair it will silence.
+    expect(screen.getByRole("button", { name: "静默标签 provider=fastgpt" })).toBeTruthy();
   });
 
   it("lets the field list scroll instead of clipping under the header", () => {
