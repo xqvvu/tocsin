@@ -298,7 +298,9 @@ path 使用安全 dot path schema 与字段定义测试约束，不做从 config
 的复杂 TypeScript 类型。
 
 Destination send result 使用 `ok` discriminated union。失败分支必须包含 error kind、retry hint
-和安全错误消息；`statusCode` 与已脱敏 `responseBody` 是通用 nullable 字段。
+和安全错误消息；`statusCode` 与已脱敏 `responseBody` 是通用 nullable 字段。脱敏覆盖敏感键
+与高置信值形态（认证 scheme、URL userinfo、Slack/飞书 webhook URL），不承诺覆盖无前缀裸
+token 或 generic webhook path/query 中的 secret。
 
 Send result 始终携带 safe `renderedPayload`，用于 preview 和 Delivery detail，不承诺等于实际
 wire payload。Adapter 捕获预期 transport 失败并返回结构化 failure；worker catch 只兜底非预期

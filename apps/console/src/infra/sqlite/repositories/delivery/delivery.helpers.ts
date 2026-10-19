@@ -19,7 +19,8 @@ export function deliveryFromRow(row: DeliveryRow): DeliveryJob {
     attemptCount: row.attempt_count,
     maxAttempts: row.max_attempts,
     nextAttemptAt: row.next_attempt_at,
-    lastError: row.last_error,
+    // Legacy rows may predate value-shape redaction, so re-check on read.
+    lastError: redactNullableText(row.last_error),
     suppressionId: row.suppression_id,
     suppressedAt: row.suppressed_at,
     suppressReason: row.suppress_reason,
@@ -36,8 +37,8 @@ export function attemptFromRow(row: DeliveryAttemptRow): DeliveryAttempt {
     attemptNumber: row.attempt_number,
     state: row.state,
     responseStatus: row.response_status,
-    responseBody: row.response_body,
-    error: row.error,
+    responseBody: redactNullableText(row.response_body),
+    error: redactNullableText(row.error),
     startedAt: row.started_at,
     finishedAt: row.finished_at,
   };

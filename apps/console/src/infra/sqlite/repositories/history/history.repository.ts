@@ -5,6 +5,7 @@ import { decodeSchemaJson, evaluateRouteMatch, RouteMatchResultsSchema } from "@
 import type { RouteMatchProvenance } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
+import { redactNullableText } from "#/infra/sqlite/repositories/delivery/delivery.helpers";
 import type { SqliteDeliveryRepository } from "#/infra/sqlite/repositories/delivery/delivery.repository";
 import type { DestinationRepository } from "#/infra/sqlite/repositories/destination/destination.interface";
 import {
@@ -295,7 +296,8 @@ export class SqliteHistoryRepository implements HistoryRepository {
         state: row.state,
         attemptCount: row.attempt_count,
         nextAttemptAt: row.next_attempt_at,
-        lastError: row.last_error,
+        // Legacy rows may predate value-shape redaction, so re-check on read.
+        lastError: redactNullableText(row.last_error),
         updatedAt: row.updated_at,
       })),
       total,

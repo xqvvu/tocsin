@@ -54,12 +54,69 @@ const SENSITIVE_TEXT_KEY_SOURCE = [
   "[A-Za-z0-9._-]*(?:secret|token|password|passwd|passphrase|credential|privatekey|apikey|authorization|cookie)",
 ].join("|");
 
+// The `\b` keeps identifiers that merely end in a sensitive suffix, such as
+// `max_tokens`, from matching from their tail (`tokens: 4096`).
 const TEXT_ASSIGNMENT_PATTERN = new RegExp(
-  `(["']?)(${SENSITIVE_TEXT_KEY_SOURCE})\\1(\\s*[:=]\\s*)(?:"((?:\\\\.|[^"\\\\])*)"(?=\\s*[,;}\\]\\n\\r]|$)|'((?:\\\\.|[^'\\\\])*)'(?=\\s*[,;}\\]\\n\\r]|$)|([^,;\\n\\r]*?)(?=\\s+["']?(?:${SENSITIVE_TEXT_KEY_SOURCE})["']?\\s*[:=]|[,;\\n\\r]|$))`,
+  `(["']?)\\b(${SENSITIVE_TEXT_KEY_SOURCE})\\1(\\s*[:=]\\s*)(?:"((?:\\\\.|[^"\\\\])*)"(?=\\s*[,;}\\]\\n\\r]|$)|'((?:\\\\.|[^'\\\\])*)'(?=\\s*[,;}\\]\\n\\r]|$)|([^,;\\n\\r]*?)(?=\\s+["']?(?:${SENSITIVE_TEXT_KEY_SOURCE})["']?\\s*[:=]|[,;\\n\\r]|$))`,
   "gi",
 );
 
 export const REDACTED_VALUE = "[REDACTED]";
+
+/**
+ * Credential shapes that can appear without a `key=value` prefix, such as a
+ * bare `Authorization` header value copied into an error message, URL
+ * userinfo, or a chat-provider webhook URL. The matchers stay deliberately
+ * narrow: prose such as `Bearer token`, operational identifiers such as
+ * `disk-space-low`, and ordinary URLs stay visible.
+ */
+const CREDENTIAL_VALUE_PATTERNS: ReadonlyArray<{
+  pattern: RegExp;
+  replacement: string;
+}> = [
+  // Chat webhook URLs carry their secret in the path. Capture scheme and host
+  // so the same URL inside and outside an assignment converges to one shape.
+  {
+    pattern: /(https?:\/\/hooks\.slack\.com\/services\/)[A-Za-z0-9/_-]+/gi,
+    replacement: "$1[REDACTED]",
+  },
+  {
+    pattern:
+      /(https?:\/\/open\.(?:feishu\.cn|larksuite\.com)\/open-apis\/bot\/v2\/hook\/)[A-Za-z0-9-]+/gi,
+    replacement: "$1[REDACTED]",
+  },
+  // Slack app tokens have a fixed prefix. Requiring a plausible body keeps the
+  // bare prefix intact when it appears as prose.
+  {
+    pattern: /\bxox[baprs]-[A-Za-z0-9-]{8,}\b/g,
+    replacement: REDACTED_VALUE,
+  },
+  // URL userinfo password. Keep user and host so operators can still tell
+  // which endpoint failed; only the password is replaced.
+  {
+    pattern: /\b([a-z][a-z0-9+.-]*:\/\/)([^\s/@:]+):([^\s/@]+)@/gi,
+    replacement: "$1$2:[REDACTED]@",
+  },
+  // Authentication schemes in free text. The token must be at least eight
+  // characters so the words in `Bearer token` are not rewritten, and generic
+  // `Bot` is omitted on purpose so ordinary English is untouched.
+  {
+    pattern: /\b(Bearer|Basic|Token)\s+([A-Za-z0-9._~+/=-]{8,})/gi,
+    replacement: "$1 [REDACTED]",
+  },
+];
+
+/**
+ * Redacts high-confidence credential values regardless of the surrounding
+ * key. Safe to apply more than once: every replacement also fails its own
+ * matcher on the next pass.
+ */
+export function redactCredentialText(value: string): string {
+  return CREDENTIAL_VALUE_PATTERNS.reduce(
+    (text, { pattern, replacement }) => text.replace(pattern, replacement),
+    value,
+  );
+}
 
 export function isSensitiveKey(key: string): boolean {
   const normalized = normalizeKey(key);
@@ -82,10 +139,18 @@ export function redactJsonValue(value: JsonValue): JsonValue {
     ) as JsonObject;
   }
 
+  if (typeof value === "string") {
+    return redactCredentialText(value);
+  }
+
   return value;
 }
 
 export function redactText(value: string): string {
+  return redactCredentialText(redactSensitiveAssignments(value));
+}
+
+function redactSensitiveAssignments(value: string): string {
   return value.replace(
     TEXT_ASSIGNMENT_PATTERN,
     (
