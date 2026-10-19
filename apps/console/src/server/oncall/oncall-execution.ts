@@ -95,16 +95,7 @@ export class OncallExecution {
       );
 
       if (result.ok) {
-        await this.store.oncall.markFired({ pingId: claimed.ping.id, firedAt: now });
-        oncallLogger.info("Urgent call {pingId} fired for {receiver}", {
-          pingId: claimed.ping.id,
-          deliveryId: claimed.ping.deliveryId,
-          destinationId: claimed.ping.destinationId,
-          receiver: claimed.ping.receiver,
-          attemptNumber: claimed.ping.attemptCount,
-        });
-
-        return "fired";
+        return await this.recordFired(claimed, now);
       }
 
       return await this.markFailed(claimed, {
@@ -129,6 +120,90 @@ export class OncallExecution {
         now,
       });
     }
+  }
+
+  /**
+   * Records a call the provider already accepted.
+   *
+   * Once the provider accepts the call, a persistence failure must never fall
+   * back into the retry path: the retry would ring the same receiver again.
+   * The write is idempotent, so it is attempted twice; after that the ping is
+   * closed as terminally failed with an explicit "call was placed" message so
+   * an operator does not page manually, and the failure never escapes the
+   * worker batch.
+   */
+  private async recordFired(
+    claimed: ClaimedOncallPing,
+    now: string,
+  ): Promise<OncallExecutionOutcome> {
+    try {
+      await this.store.oncall.markFired({ pingId: claimed.ping.id, firedAt: now });
+    } catch (firstError) {
+      oncallLogger.error("Urgent call {pingId} fired but its state could not be recorded", {
+        pingId: claimed.ping.id,
+        deliveryId: claimed.ping.deliveryId,
+        destinationId: claimed.ping.destinationId,
+        receiver: claimed.ping.receiver,
+        ...safeErrorProperties(firstError),
+      });
+
+      try {
+        await this.store.oncall.markFired({ pingId: claimed.ping.id, firedAt: now });
+      } catch (error) {
+        return await this.markDispatchedButUnrecorded(claimed, now, error);
+      }
+    }
+
+    oncallLogger.info("Urgent call {pingId} fired for {receiver}", {
+      pingId: claimed.ping.id,
+      deliveryId: claimed.ping.deliveryId,
+      destinationId: claimed.ping.destinationId,
+      receiver: claimed.ping.receiver,
+      attemptNumber: claimed.ping.attemptCount,
+    });
+
+    return "fired";
+  }
+
+  /**
+   * Best-effort terminal state for a call that already went out. It never
+   * schedules a retry and never throws, so one bad row cannot abort the batch
+   * and cannot cause a second call.
+   */
+  private async markDispatchedButUnrecorded(
+    claimed: ClaimedOncallPing,
+    now: string,
+    error: unknown,
+  ): Promise<"failed"> {
+    const safeError = safeErrorProperties(error);
+
+    try {
+      await this.store.oncall.markFailed({
+        pingId: claimed.ping.id,
+        error: `Urgent call was placed but its state could not be recorded: ${safeError.errorMessage}`,
+        retryAt: null,
+        updatedAt: now,
+      });
+    } catch (persistError) {
+      oncallLogger.error("Urgent call {pingId} terminal state could not be recorded", {
+        pingId: claimed.ping.id,
+        deliveryId: claimed.ping.deliveryId,
+        destinationId: claimed.ping.destinationId,
+        receiver: claimed.ping.receiver,
+        ...safeErrorProperties(persistError),
+      });
+    }
+
+    oncallLogger.warn("Urgent call {pingId} was placed but is recorded as failed", {
+      pingId: claimed.ping.id,
+      deliveryId: claimed.ping.deliveryId,
+      destinationId: claimed.ping.destinationId,
+      receiver: claimed.ping.receiver,
+      attemptNumber: claimed.ping.attemptCount,
+      ...safeError,
+    });
+
+    return "failed";
   }
 
   private async markFailed(
