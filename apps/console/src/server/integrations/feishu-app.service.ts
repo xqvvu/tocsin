@@ -3,6 +3,7 @@ import {
   DeleteFeishuAppCommandSchema,
   TestFeishuAppCommandSchema,
   UpdateFeishuAppCommandSchema,
+  redactText,
   type CreateFeishuAppCommand,
   type DeleteFeishuAppCommand,
   type FeishuAppListItem,
@@ -109,7 +110,10 @@ export class FeishuAppService {
     return {
       success: result.ok,
       appName: app.name,
-      errorMessage: result.ok ? null : result.errorMessage,
+      // The platform (or a proxy in front of it) can echo request fields in an
+      // error message. The destination test path already redacts its failure
+      // text; app administration must not be the weaker of the two.
+      errorMessage: result.ok ? null : redactText(result.errorMessage),
     };
   }
 }

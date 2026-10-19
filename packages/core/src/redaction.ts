@@ -14,6 +14,7 @@ const SENSITIVE_EXACT_KEYS = new Set([
   "setcookie",
   "token",
   "tokens",
+  "tokenhash",
   "secret",
   "password",
   "passwd",

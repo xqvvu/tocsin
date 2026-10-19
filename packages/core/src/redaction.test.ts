@@ -76,6 +76,9 @@ describe("redaction", () => {
     "refresh-token",
     "signingSecret",
     "credentials",
+    "tokenHash",
+    "token_hash",
+    "token-hash",
   ])("treats %s as a sensitive key", (key) => {
     expect(isSensitiveKey(key)).toBe(true);
   });
@@ -91,6 +94,8 @@ describe("redaction", () => {
     "message",
     "X-Request-Id",
     "Content-Type",
+    "payloadHash",
+    "hash",
   ])("keeps %s visible", (key) => {
     expect(isSensitiveKey(key)).toBe(false);
   });
