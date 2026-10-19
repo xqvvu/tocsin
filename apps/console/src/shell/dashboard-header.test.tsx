@@ -21,6 +21,10 @@ vi.mock("#/hooks/use-mobile", () => ({
   useIsMobile: () => false,
 }));
 
+vi.mock("#/features/suppressions/ui/active-suppression-indicator", () => ({
+  ActiveSuppressionIndicator: () => <span data-testid="active-suppression-indicator" />,
+}));
+
 describe("dashboard header", () => {
   afterEach(() => {
     cleanup();
@@ -38,6 +42,7 @@ describe("dashboard header", () => {
 
     expect(screen.getByRole("button", { name: "Toggle sidebar" })).toBeTruthy();
     expect(screen.getByText("Sources")).toBeTruthy();
+    expect(screen.getByTestId("active-suppression-indicator")).toBeTruthy();
   });
 
   it("falls back to the console label outside registered sections", () => {

@@ -1024,6 +1024,8 @@
   "suppressions.hits.pagination.page": "第 {page} / {pageCount} 页",
   "suppressions.hits.pagination.previous": "上一页",
   "suppressions.hits.pagination.range": "共 {total} 条记录",
+  "suppressions.indicator.active": "生效中的静默：{count} 条",
+  "suppressions.indicator.catchAll": "全量静默生效中",
   "suppressions.kind.maintenance_window": "维护时段",
   "suppressions.kind.silence": "临时静默",
   "suppressions.matcher.destination": "通知目标",
