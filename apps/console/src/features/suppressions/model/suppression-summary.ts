@@ -1,4 +1,4 @@
-import { suppressionStateAt } from "@tocsin/core";
+import { isUnconditionalSuppressionMatcher, suppressionStateAt } from "@tocsin/core";
 import type { Suppression, SuppressionMatcher } from "@tocsin/core";
 
 /**
@@ -73,21 +73,9 @@ export function summarizeActiveSuppressions(
 
   return {
     activeCount: active.length,
-    catchAllCount: active.filter((suppression) => isCatchAllMatcher(suppression.matcher)).length,
+    catchAllCount: active.filter((suppression) =>
+      isUnconditionalSuppressionMatcher(suppression.matcher),
+    ).length,
     names: active.map((suppression) => suppression.name),
   };
-}
-
-/** Mirrors the empty-matcher semantics of `formatSuppressionReason` in core. */
-export function isCatchAllMatcher(matcher: SuppressionMatcher): boolean {
-  return (
-    matcher.sourceIds.length === 0 &&
-    matcher.destinationIds.length === 0 &&
-    matcher.severities.length === 0 &&
-    matcher.statuses.length === 0 &&
-    matcher.fingerprints.length === 0 &&
-    matcher.labels.length === 0 &&
-    matcher.titleContains.length === 0 &&
-    matcher.messageContains.length === 0
-  );
 }

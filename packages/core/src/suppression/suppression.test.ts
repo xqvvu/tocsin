@@ -6,6 +6,7 @@ import {
   SuppressionSchema,
   evaluateSuppressionMatch,
   formatSuppressionReason,
+  isUnconditionalSuppressionMatcher,
   selectSuppressionForDelivery,
   suppressionIsActive,
   suppressionStateAt,
@@ -272,6 +273,25 @@ describe("suppression audit snapshot", () => {
     expect(reason).toContain("Noisy host");
     expect(reason).not.toContain("s-1");
     expect(reason).toContain("fingerprint disk:full");
+  });
+});
+
+describe("isUnconditionalSuppressionMatcher", () => {
+  it("treats an empty matcher as everything", () => {
+    expect(isUnconditionalSuppressionMatcher(SuppressionMatcherSchema.parse({}))).toBe(true);
+  });
+
+  it("is false as soon as any dimension is constrained", () => {
+    expect(
+      isUnconditionalSuppressionMatcher(
+        SuppressionMatcherSchema.parse({ severities: ["critical"] }),
+      ),
+    ).toBe(false);
+    expect(
+      isUnconditionalSuppressionMatcher(
+        SuppressionMatcherSchema.parse({ labels: [{ key: "env", value: "prod" }] }),
+      ),
+    ).toBe(false);
   });
 });
 
