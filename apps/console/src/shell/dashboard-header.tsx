@@ -1,76 +1,30 @@
-import { ClientOnly, Link } from "@tanstack/react-router";
-import * as React from "react";
+import { useRouterState } from "@tanstack/react-router";
 
+import { Separator } from "#/components/ui/separator";
+import { SidebarTrigger } from "#/components/ui/sidebar";
 import { useTranslations } from "#/i18n/use-i18n";
-import { DashboardUserMenu } from "#/shell/dashboard-user-menu";
+import { dashboardNavItemForPath } from "#/shell/dashboard-navigation";
 
-export interface DashboardHeaderProps {
-  user: {
-    name: string | null;
-    email: string;
-    image: string | null;
-    role: string | null;
-  };
-}
-
-export function DashboardHeader({ user }: DashboardHeaderProps) {
+export function DashboardHeader() {
   const t = useTranslations();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const currentItem = dashboardNavItemForPath(pathname);
+  const CurrentIcon = currentItem?.icon;
 
   return (
-    <header className="border-border bg-card sticky top-0 z-50 h-12 shrink-0 border-b">
-      <div className="flex h-12 w-full items-center justify-between gap-4 px-3">
-        <div className="flex h-full min-w-0 items-center gap-6">
-          <Link
-            to="/events"
-            className="font-heading text-primary shrink-0 text-base font-extrabold tracking-tight"
-          >
-            Tocsin
-          </Link>
-          <nav
-            className="flex h-full min-w-0 items-center overflow-x-auto text-sm"
-            aria-label={t("shell.nav.ariaLabel")}
-          >
-            <DashboardNavLink to="/events">{t("common.routes.events")}</DashboardNavLink>
-            <DashboardNavLink to="/sources">{t("common.routes.sources")}</DashboardNavLink>
-            <DashboardNavLink to="/routes">{t("common.routes.routes")}</DashboardNavLink>
-            <DashboardNavLink to="/destinations">
-              {t("common.routes.destinations")}
-            </DashboardNavLink>
-            <DashboardNavLink to="/integrations">
-              {t("common.routes.integrations")}
-            </DashboardNavLink>
-            <DashboardNavLink to="/suppressions">
-              {t("common.routes.suppressions")}
-            </DashboardNavLink>
-            <DashboardNavLink to="/deliveries">{t("common.routes.deliveries")}</DashboardNavLink>
-            <DashboardNavLink to="/settings">{t("common.routes.settings")}</DashboardNavLink>
-          </nav>
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <ClientOnly fallback={<DashboardUserMenu.Skeleton />}>
-            <React.Suspense fallback={<DashboardUserMenu.Skeleton />}>
-              <DashboardUserMenu user={user} />
-            </React.Suspense>
-          </ClientOnly>
-        </div>
+    <header className="border-border bg-card flex h-12 shrink-0 items-center gap-2 border-b px-2">
+      <SidebarTrigger label={t("shell.nav.toggle")} />
+
+      <Separator orientation="vertical" className="h-4" />
+
+      <div className="flex min-w-0 items-center gap-2 px-1">
+        {CurrentIcon ? (
+          <CurrentIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />
+        ) : null}
+        <span className="truncate text-sm font-medium">
+          {currentItem ? t(currentItem.labelKey) : t("shell.nav.consoleLabel")}
+        </span>
       </div>
     </header>
-  );
-}
-
-function DashboardNavLink({ to, children }: { to: string; children: React.ReactNode }) {
-  return (
-    <Link
-      to={to}
-      activeProps={{
-        className: "border-primary text-primary font-semibold",
-      }}
-      inactiveProps={{
-        className: "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-      }}
-      className="flex h-full items-center border-b-2 px-3 font-medium whitespace-nowrap transition-colors"
-    >
-      {children}
-    </Link>
   );
 }

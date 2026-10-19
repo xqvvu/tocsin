@@ -11,6 +11,7 @@ export interface DashboardUserMenuProps {
     image: string | null;
     role: string | null;
   };
+  variant?: "header" | "sidebar";
 }
 
 const DashboardUserMenuClient = React.lazy(
