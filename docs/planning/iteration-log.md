@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 29 轮）
+
+- 时间：2026-10-20 05:41 – 06:05 CST。
+- 基线：`origin/main` @ `f00cf8e`；本轮交付 #187（rebase 合并 `d19728b`）。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `release-infra` + `ui-triage`（判定 `defer`）。
+  下一轮建议 `requirements` + `docs-drift` + `ui-triage`（`docs-drift` 第 26 轮后未跑）。
+- `ui-triage`：`defer` —— 距第 27 轮真实浏览器评审（04:05）仅 1h37m；04:05 后只有 1 个行为性
+  UI 合并（#184 空态/分页）和 1 个注释提交；8 条未解决 UI 发现全部是第 23/27 轮已定级并排期的
+  旧项，无新增未分诊发现；第 28 轮有隔离实例浏览器验证记录。硬性最晚 2026-10-22 04:05。
+- `last_ui_review_at`：2026-10-20 04:05（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、构建均在会话工作树
+  `awesome-lumiere-3bdb4e`。
+
+### 本轮交付
+
+- PR #187 `feat(console): confirm disable actions with blast-radius copy` —— **NEW-A**（29）。
+  - 告警源/路由/通知目标三个行内启停按钮：仅在「启用 → 停用」方向弹 `AlertDialog`，
+    「停用 → 启用」保持单击立即执行。
+  - 影响面复用既有前端派生函数：告警源显示匹配的已启用路由数（含 catch-all），
+    通知目标显示引用它的已启用路由数，路由显示 `destinationIds.length`。
+  - 文案说明排队投递的去向：停用告警源后已入队投递仍会发送（`delivery.repository.ts:222-234`
+    不按 source 过滤）；停用路由/目标后排队投递暂停到重新启用。
+  - 新增中文 mini-PRD `docs/prd/disable-config-confirmation.md`；中英文 i18n 同步。
+  - 测试：新增告警源「有路由/无路由/启用不弹窗」、路由「目标数」与目标「无路由」确认用例；
+    更新既有目标行操作测试为先确认后回调。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 121 files / 636 tests；
+    `vp run -r build` 通过；PR CI success。
+- 未做 REL-21（新增 `e2e.yml`）：本地 Playwright 1.64.1 期望 Chromium 1248，缓存只有 1234，
+  必须先下载；按 SKILL「新增 workflow 必须本地跑通」的要求，本轮不冒险交付未验证 workflow。
+  下一轮按 backlog 的验证清单执行。
+
+### requirements 车道
+
+新增 5 条候选：REQ-124（28）投递详情解释「加急为什么没有发生」；REQ-125（27）告警源额外
+共享密钥显式清除；REQ-126（26）飞书应用凭证变更前验证；REQ-127（26）加急呼叫新鲜度上限；
+REQ-128（26）手动加急披露去重跳过。方向从「搜索/过滤」转向值班协作与凭据生命周期；均通过
+Product charter，且与既有 REQ-17/63/71/76/106、NEW-F/NEW-H 做了边界划分。
+
+### release-infra 车道
+
+- REL-21/REL-1 仍未关闭：远端 workflow 只有 `ci.yml`（`total_count=1`）；`playwright.config.ts:22-29`
+  已配好 CI retries/reporter/trace；`playwright.config.ts:7-9` 注释却声称已有独立 workflow。
+- REL-22：现有 spec 只覆盖 setup/Source/Destination/webhook/Event；Route、Destination test/preview、
+  Delivery、过滤、失败 retry 均缺；`alert-flow.spec.ts:9-16` 的测试名声称覆盖 route/deliver，属注释漂移。
+- REL-24：仍无 fixture 目录；6 个 adapter 共 19 个代表性 payload、32 个用例（旧记 31 已过期）。
+- REL-5/8：`scripts/` 仍无 `artifact-smoke.sh`；生产 bundle 启动只被手工 Docker smoke 覆盖。
+- REL-9：`migrate.test.ts` 6 处建库全部 `:memory:`；runner 台账无 checksum。
+- REL-16/23：`branches/main/protection` 404、`rulesets` 为空，红 CI 仍可合并。
+- 发布文档当前与「E2E 未接入 CI」的现状一致，无虚假声明；若未来加 `e2e.yml`，需同步 8 处断言。
+
+### EXPERT_PANEL
+
+本轮无新裁决；未触碰 schema、投递/路由/auth 语义或 secret 处理。
+
+### 发布（第 9.5 步）
+
+- 三位专家一致通过：发布经理 RELEASE（beta.16 后 1 个用户可见 feat + 1 个 docs，建议
+  `0.1.0-beta.17`）；阻断审计 APPROVE（6/6：main CI 绿、无 open PR、无新增回归、无高优
+  `blocked-autonomous` 阻断、无 migration/schema、无依赖变更、版本号可用）；运维/回滚 SAFE
+  （镜像配置、环境变量、migration plan、依赖均未变；升级只需换镜像重启，回滚换回 beta.16）。
+- 版本：`0.1.0-beta.17`；tag 指向版本递增后的 `origin/main`；镜像
+  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.17`（linux/amd64 + linux/arm64）；
+  回滚镜像 `0.1.0-beta.16`。
+
+### 下一轮优先项
+
+1. REQ-124（28）加急未发生解释；REQ-125（27）共享密钥显式清除。
+2. `docs-drift` 车道（轮转）+ REL-21（本地跑通后新增 `e2e.yml`）。
+3. UI 小成本批次 UI-9/UI-4/UI-8/UI-11/UI-12。
+4. NEW-B/NEW-C（27）与 REQ-119/120（27）设置项。
+
 ## 2026-10-20（第 28 轮）
 
 - 时间：2026-10-20 04:25 – 05:00 CST。
