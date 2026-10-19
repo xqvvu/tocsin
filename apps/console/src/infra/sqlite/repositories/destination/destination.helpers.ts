@@ -2,7 +2,6 @@ import {
   decodeJsonObject,
   DestinationKindSchema,
   DestinationOperationalConfigSchema,
-  isSensitiveKey,
 } from "@tocsin/core";
 import type {
   DestinationEditorFormDraft,
@@ -253,9 +252,7 @@ function configuredSecretFieldPaths(kind: DestinationKind, config: JsonObject): 
         paths.push("endpointUrl");
       }
       for (const name of configHeaderNames(config)) {
-        if (isSensitiveKey(name)) {
-          paths.push(`headers.${name}`);
-        }
+        paths.push(`headers.${name}`);
       }
       break;
     case "generic_webhook":
@@ -263,9 +260,7 @@ function configuredSecretFieldPaths(kind: DestinationKind, config: JsonObject): 
         paths.push("url");
       }
       for (const name of configHeaderNames(config)) {
-        if (isSensitiveKey(name)) {
-          paths.push(`headers.${name}`);
-        }
+        paths.push(`headers.${name}`);
       }
       break;
     default: {
@@ -399,14 +394,13 @@ function configHeaderLinesForEditor(config: JsonObject): string {
     return "";
   }
 
-  return Object.entries(headers as Record<string, unknown>)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([name, value]) => {
-      if (isSensitiveKey(name)) {
-        return `${name}:`;
-      }
-
-      return `${name}: ${typeof value === "string" ? value : ""}`;
-    })
+  // Every header value is potentially a credential: an operator can put a
+  // bearer token in any header name, and manifests mark the whole header map
+  // as value-sensitive. Show names only. A blank value preserves the stored
+  // one because the update path deep-merges the form patch into the current
+  // config; typing a value replaces it.
+  return Object.keys(headers)
+    .sort((left, right) => left.localeCompare(right))
+    .map((name) => `${name}:`)
     .join("\n");
 }

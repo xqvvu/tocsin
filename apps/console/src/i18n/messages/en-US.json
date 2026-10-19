@@ -303,7 +303,7 @@
   "destinations.form.from": "From",
   "destinations.form.fromDescription": "Sender address used by the email gateway",
   "destinations.form.headers": "Headers",
-  "destinations.form.headersDescription": "One Name: value header per line, values stay server-side",
+  "destinations.form.headersDescription": "One Name: value header per line — values stay server-side and are shown as names only, leave a value blank to keep the stored one",
   "destinations.form.htmlTemplate": "HTML body template",
   "destinations.form.htmlTemplateDescription": "Replaces the generated pre block, your markup is emitted as written while every variable value is HTML-escaped",
   "destinations.form.jsonPayloadTemplate": "JSON payload template",

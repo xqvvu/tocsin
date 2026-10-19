@@ -24,6 +24,10 @@ Tocsin 已通过 Settings 提供 TOML 配置导入导出。运维人员在备份
 
 - JSON 与 TOML 默认导出都不包含明文 secret、Source token 或 token hash。
 - 已配置的 Source/Destination secret 使用相同的环境变量引用表示。
+- Destination 的全部 HTTP header 值都按 secret 处理：导出只保留
+  `secret_refs["headers.<Name>"]` 环境变量引用，编辑 DTO 只返回 header 名。
+  无法表示为 secret path 的 header 名（含 `.`、`$` 等字符）导出时明确报错，
+  不会降级为明文。
 - JSON 导入与 TOML 导入使用同一事务应用配置，并从 env 解析 secret refs。
 - JSON 导出必须通过 dashboard oRPC procedure 鉴权，浏览器不能直接访问 repository、SQLite
   或 runtime config。
