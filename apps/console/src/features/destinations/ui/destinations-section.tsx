@@ -113,7 +113,6 @@ export function DestinationsSection({
       columnClassName={destinationsColumnClassName}
       isPrimaryColumn={(columnId) => columnId === "destination"}
       rangeLabel={({ total }) => t("destinations.table.pagination.range", { total })}
-      emptyRangeLabel={t("destinations.table.pagination.empty")}
       pageLabel={({ page, pageCount }) =>
         t("destinations.table.pagination.page", { page, pageCount })
       }

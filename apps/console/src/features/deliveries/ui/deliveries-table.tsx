@@ -28,9 +28,11 @@ export function DeliveriesTable({
   pageSize,
   total,
   pending,
+  hasActiveFilters,
   onInspect,
   onRetry,
   onPageChange,
+  onResetFilters,
 }: {
   deliveries: Operations["deliveries"]["items"];
   /** Client-safe destination catalog projected to kind → manifest `iconName`. */
@@ -39,9 +41,11 @@ export function DeliveriesTable({
   pageSize: number;
   total: number;
   pending: boolean;
+  hasActiveFilters: boolean;
   onInspect: (deliveryId: string) => void;
   onRetry: (deliveryId: string) => void;
   onPageChange: (page: number) => void;
+  onResetFilters: () => void;
 }) {
   const t = useTranslations();
   const data = React.useMemo(() => deliveries, [deliveries]);
@@ -137,31 +141,35 @@ export function DeliveriesTable({
         pageSize={deliveriesPageSize}
         showPagination={false}
         minWidthClassName={deliveriesTableMinWidthClassName}
-        emptyState={<DeliveriesEmptyState />}
+        emptyState={
+          <DeliveriesEmptyState
+            hasActiveFilters={hasActiveFilters}
+            onResetFilters={onResetFilters}
+          />
+        }
         getRowId={(delivery) => delivery.id}
         columnClassName={deliveriesColumnClassName}
         isPrimaryColumn={(columnId) => columnId === "target"}
         rangeLabel={({ total }) => t("deliveries.table.range", { total })}
-        emptyRangeLabel={t("deliveries.table.emptyRange")}
         pageLabel={({ page, pageCount }) => t("deliveries.table.page", { page, pageCount })}
         previousLabel={t("deliveries.table.previous")}
         nextLabel={t("deliveries.table.next")}
       />
 
-      <TablePagination
-        rangeLabel={
-          total > 0 ? t("deliveries.table.range", { total }) : t("deliveries.table.emptyRange")
-        }
-        pageLabel={t("deliveries.table.page", {
-          page: pageIndex + 1,
-          pageCount,
-        })}
-        previousLabel={t("deliveries.table.previous")}
-        nextLabel={t("deliveries.table.next")}
-        pageIndex={pageIndex}
-        pageCount={pageCount}
-        onPageIndexChange={(nextPageIndex) => onPageChange(nextPageIndex + 1)}
-      />
+      {total > 0 ? (
+        <TablePagination
+          rangeLabel={t("deliveries.table.range", { total })}
+          pageLabel={t("deliveries.table.page", {
+            page: pageIndex + 1,
+            pageCount,
+          })}
+          previousLabel={t("deliveries.table.previous")}
+          nextLabel={t("deliveries.table.next")}
+          pageIndex={pageIndex}
+          pageCount={pageCount}
+          onPageIndexChange={(nextPageIndex) => onPageChange(nextPageIndex + 1)}
+        />
+      ) : null}
     </section>
   );
 }

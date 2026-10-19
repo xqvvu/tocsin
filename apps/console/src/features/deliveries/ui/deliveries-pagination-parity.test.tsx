@@ -99,9 +99,11 @@ describe("DeliveriesTable pagination", () => {
           pageSize={20}
           total={45}
           pending={false}
+          hasActiveFilters={false}
           onInspect={() => {}}
           onRetry={() => {}}
           onPageChange={() => {}}
+          onResetFilters={() => {}}
         />
       </AppIntlProvider>,
     );
@@ -130,9 +132,11 @@ describe("DeliveriesTable pagination", () => {
           pageSize={20}
           total={45}
           pending={false}
+          hasActiveFilters={false}
           onInspect={() => {}}
           onRetry={() => {}}
           onPageChange={() => {}}
+          onResetFilters={() => {}}
         />
       </AppIntlProvider>,
     );

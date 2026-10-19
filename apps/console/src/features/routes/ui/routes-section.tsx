@@ -133,7 +133,6 @@ export function RoutesSection({
         columnClassName={routesColumnClassName}
         isPrimaryColumn={(columnId) => columnId === "name"}
         rangeLabel={({ total }) => t("routing.table.pagination.range", { total })}
-        emptyRangeLabel={t("routing.table.pagination.empty")}
         pageLabel={({ page, pageCount }) => t("routing.table.pagination.page", { page, pageCount })}
         previousLabel={t("routing.table.pagination.previous")}
         nextLabel={t("routing.table.pagination.next")}

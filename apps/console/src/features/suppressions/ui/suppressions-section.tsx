@@ -147,7 +147,6 @@ export function SuppressionsSection({
         columnClassName={suppressionsColumnClassName}
         isPrimaryColumn={(columnId) => columnId === "name"}
         rangeLabel={({ total }) => t("suppressions.table.pagination.range", { total })}
-        emptyRangeLabel={t("suppressions.table.pagination.empty")}
         pageLabel={({ page, pageCount }) =>
           t("suppressions.table.pagination.page", { page, pageCount })
         }

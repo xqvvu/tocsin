@@ -8,9 +8,10 @@ import { EventsPageToolbar } from "#/features/events/ui/events-page-toolbar";
 import { EventsTable } from "#/features/events/ui/events-table";
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import { operationsQueryOptions } from "#/features/operations/api/operations.queries";
-import type {
-  DashboardOperationSearch,
-  OperationFilterData,
+import {
+  hasOperationFilters,
+  type DashboardOperationSearch,
+  type OperationFilterData,
 } from "#/features/operations/model/operation-search";
 import { OperationFilters } from "#/features/operations/ui/operation-filters";
 import { sourcesQueryOptions } from "#/features/sources/api/source.queries";
@@ -31,6 +32,7 @@ export function EventsPage({ search, filters, onSearchChange }: EventsPageProps)
   });
   const { data: operations } = useSuspenseQuery(operationsQueryOptions(filters));
   const operationConfiguration = { sources, destinations };
+  const hasActiveFilters = hasOperationFilters(search);
   const { invalidateOperations } = useOperationMutations();
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
   const pending = pendingAction !== null;
@@ -85,6 +87,8 @@ export function EventsPage({ search, filters, onSearchChange }: EventsPageProps)
             pageSize={operations.events.pageSize}
             total={operations.events.total}
             pending={pending}
+            hasActiveFilters={hasActiveFilters}
+            onResetFilters={resetFilters}
             onInspect={(eventId) =>
               void navigate({
                 to: "/events/$eventId",

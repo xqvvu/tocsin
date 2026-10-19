@@ -87,7 +87,6 @@ export function SourcesSection({
       columnClassName={sourcesColumnClassName}
       isPrimaryColumn={(columnId) => columnId === "source"}
       rangeLabel={({ total }) => t("sources.table.pagination.range", { total })}
-      emptyRangeLabel={t("sources.table.pagination.empty")}
       pageLabel={({ page, pageCount }) => t("sources.table.pagination.page", { page, pageCount })}
       previousLabel={t("sources.table.pagination.previous")}
       nextLabel={t("sources.table.pagination.next")}

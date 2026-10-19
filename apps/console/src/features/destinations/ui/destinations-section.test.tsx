@@ -79,7 +79,9 @@ describe("destinations section table", () => {
     );
 
     expect(screen.getByText("No destinations configured")).toBeTruthy();
-    expect(screen.getByText("No destinations")).toBeTruthy();
+    // Nothing to paginate: the footer must not claim a page or a range.
+    expect(screen.queryByText("No destinations")).toBeNull();
+    expect(screen.queryByText(/Page \d+ of/)).toBeNull();
   });
 
   it("summarizes enabled route usage for each destination", () => {

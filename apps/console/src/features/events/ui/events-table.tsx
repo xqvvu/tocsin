@@ -24,16 +24,20 @@ export function EventsTable({
   pageSize,
   total,
   pending,
+  hasActiveFilters,
   onInspect,
   onPageChange,
+  onResetFilters,
 }: {
   events: Operations["events"]["items"];
   page: number;
   pageSize: number;
   total: number;
   pending: boolean;
+  hasActiveFilters: boolean;
   onInspect: (eventId: string) => void;
   onPageChange: (page: number) => void;
+  onResetFilters: () => void;
 }) {
   const t = useTranslations();
   const data = React.useMemo(() => events, [events]);
@@ -103,29 +107,32 @@ export function EventsTable({
         pageSize={eventsPageSize}
         showPagination={false}
         minWidthClassName={eventsTableMinWidthClassName}
-        emptyState={<EventsEmptyState />}
+        emptyState={
+          <EventsEmptyState hasActiveFilters={hasActiveFilters} onResetFilters={onResetFilters} />
+        }
         getRowId={(event) => event.id}
         columnClassName={eventsColumnClassName}
         isPrimaryColumn={(columnId) => columnId === "event"}
         rangeLabel={({ total }) => t("events.table.range", { total })}
-        emptyRangeLabel={t("events.table.emptyRange")}
         pageLabel={({ page, pageCount }) => t("events.table.page", { page, pageCount })}
         previousLabel={t("events.table.previous")}
         nextLabel={t("events.table.next")}
       />
 
-      <TablePagination
-        rangeLabel={total > 0 ? t("events.table.range", { total }) : t("events.table.emptyRange")}
-        pageLabel={t("events.table.page", {
-          page: pageIndex + 1,
-          pageCount,
-        })}
-        previousLabel={t("events.table.previous")}
-        nextLabel={t("events.table.next")}
-        pageIndex={pageIndex}
-        pageCount={pageCount}
-        onPageIndexChange={(nextPageIndex) => onPageChange(nextPageIndex + 1)}
-      />
+      {total > 0 ? (
+        <TablePagination
+          rangeLabel={t("events.table.range", { total })}
+          pageLabel={t("events.table.page", {
+            page: pageIndex + 1,
+            pageCount,
+          })}
+          previousLabel={t("events.table.previous")}
+          nextLabel={t("events.table.next")}
+          pageIndex={pageIndex}
+          pageCount={pageCount}
+          onPageIndexChange={(nextPageIndex) => onPageChange(nextPageIndex + 1)}
+        />
+      ) : null}
     </section>
   );
 }
