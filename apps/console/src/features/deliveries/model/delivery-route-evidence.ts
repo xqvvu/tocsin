@@ -8,7 +8,6 @@ import { evaluateRouteMatch, type DeliveryDetail, type RouteMatchResult } from "
  * today's rule as the explanation for a past delivery.
  */
 export interface DeliveryRouteEvidence {
-  routeId: string;
   /** The intake snapshot's verdict for this route, when the snapshot covered it. */
   snapshot: RouteMatchResult | null;
   /** Whether the event carries any intake snapshot at all. */
@@ -28,7 +27,6 @@ export function buildDeliveryRouteEvidence(detail: DeliveryDetail): DeliveryRout
   const matches = detail.event.routeMatches;
 
   return {
-    routeId,
     snapshot: matches?.find((match) => match.routeId === routeId) ?? null,
     hasSnapshot: matches != null,
     current: detail.route

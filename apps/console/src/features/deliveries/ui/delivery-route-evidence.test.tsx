@@ -65,6 +65,19 @@ describe("delivery route evidence", () => {
     ).toBeTruthy();
   });
 
+  it("names a disabled route as disabled instead of a missing condition", () => {
+    renderEvidence(
+      detailFixture({
+        route: { ...routeFixture(["critical"]), enabled: false },
+        routeMatches: [matchFixture()],
+      }),
+    );
+
+    // The enabled check is route state, not a rule condition.
+    expect(screen.getByText("Disabled")).toBeTruthy();
+    expect(screen.queryByText("No condition")).toBeNull();
+  });
+
   it("says when the event predates intake snapshots", () => {
     renderEvidence(
       detailFixture({
