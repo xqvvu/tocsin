@@ -167,7 +167,7 @@
 | Q-21 | 搜索框无 120 字符上限导致列表错误页 | quality lane | 28 | candidate | — | schema `max(120)` 但输入框/URL 归一化不截断；`operations.ts:208`、`operation-filters.tsx:87-99`、`operations.queries.ts:87-102` |
 | Q-22 | 复制按钮与响应体回退分支缺测试 | quality lane | 25 | candidate | — | 只断言按钮存在；非 JSON 响应体回退无测试；`delivery-summary-tab.test.tsx:52-67`、`delivery-attempt-detail-dialog.tsx:151-185` |
 | Q-23 | dedupe cleanup 无界 DELETE 仍在 enqueue 热路径 | DOC-21 | 25 | candidate | — | `pruneDedupeKeys` 无 LIMIT，每次 enqueue 执行；`delivery.helpers.ts:98-99`、`delivery.repository.ts:95` |
-| REQ-57 | Route 全空条件（catch-all）保存护栏 | requirements lane | 29 | candidate | — | 空规则会匹配所有告警；抑制表单已有同类确认先例；`route.ts:17-49`、`route-form.ts:8-15`、`route-forms.tsx:231-238,463-470`、`suppression-forms.tsx:224-226,467-488` |
+| REQ-57 | Route 全空条件（catch-all）保存护栏 | requirements lane | 29 | shipped | #138 | `routeRuleIsEmpty` + 提交前确认对话框；新建/编辑共用；PRD `docs/prd/route-catchall-confirmation.md` |
 | REQ-58 | 失败投递区分「等待重试」与「重试耗尽」 | requirements lane | 28 | candidate | — | 列表 DTO 缺 `maxAttempts`；`operations.ts:86-113`、`history.repository.ts:224-244,284-297`、`delivery-state-badge.tsx:12` |
 | REQ-59 | 配置对象 → 过滤后历史的一键钻取 | requirements lane | 27 | candidate | — | 复用现有 `sourceId/destinationId/routeId/q` URL 参数；`operation-search.ts:12-23`、`history.repository.ts:246-263`、`source-actions.tsx:46-160`、`destination-actions.tsx:56-150`、`routes-section.tsx:185-265` |
 | REQ-60 | 停用对象滞留投递的列表可见性与恢复预警 | requirements lane | 26 | candidate | — | 列表投影 `destinationEnabled/routeEnabled` + 只读 `previewPausedBacklog`；`delivery.repository.ts:215-232`、`operations.ts:86-113`、`delivery-retention-notice.tsx:1-20` |
@@ -175,7 +175,7 @@
 | REQ-62 | Dashboard 账户安全：修改密码与会话撤销 | requirements lane | 25 | candidate | — | Better Auth 已内置能力，session 表含 ip/UA；`dashboard-user-menu-impl.tsx:80-111`、`auth-options.ts:67-69`、`auth-owner-bootstrap.ts:11-26` |
 | REQ-63 | Source 接入鉴权状态可见 | requirements lane | 25 | candidate | — | 仅派生 `sharedSecretConfigured` 布尔值，不返回 secret；`source.ts:9-14`、`sources-section.tsx:38-77`、`edit-source-form.tsx:38-52`、`intake.service.ts:344-374` |
 | REQ-64 | Event/Delivery 详情 Tab 写入 URL | requirements lane | 25 | candidate | — | 详情路由无 `validateSearch`，Tabs 非受控；`event-detail-view.tsx:25-27`、`delivery-detail-view.tsx:23-25`、对应 route 文件 |
-| SEC-5 | 自定义 header 值在配置导出中明文出现 | security lane | 27 | in-progress | — | **HIGH**：`destinationSecretPaths` 只把 `isSensitiveKey(headerName)` 命中的 header 加入 secret path；`X-Custom-Auth` 等自定义认证头会明文进入导出（`config-portability.ts:334-347,391-404`），与 manifest `secretFields.path="headers"`/`valueSensitive` 不一致（`generic-webhook/manifest.ts:32-38,63-68`）。编辑 DTO 同样回显（`destination.helpers.ts:395-413`）。第 15 轮 EXPERT_PANEL 一致选择全量遮蔽 + fail-closed；决策 `docs/planning/decisions/destination-header-redaction.md` |
+| SEC-5 | 自定义 header 值在配置导出中明文出现 | security lane | 27 | shipped | #137 | **HIGH**：导出与编辑 DTO 现在全量遮蔽 header 值；不可表达名称 fail-closed、env 名冲突拒绝、陈旧 refs 裁剪；决策 `docs/planning/decisions/destination-header-redaction.md`；删除语义转 REQ-71 |
 | SEC-6 | `tokenHash` 不在脱敏 helper 覆盖内 | security lane | 23 | candidate | — | 纵深防御：`isSensitiveKey("tokenHash")` 为 false（`redaction.ts:10-43`），当前无输出路径（`source.interface.ts:28-31`） |
 | DOC-28 | RC checklist 对 E2E/compose smoke 是否进 CI 自相矛盾 | release-infra lane | 24 | candidate | — | `mvp-rc-checklist.md:18-19,125,216` 三处表述冲突 |
 | REQ-65 | 全局静默生效提示 | requirements lane | 28 | candidate | — | 生效中的静默只在 `/suppressions` 可见，其它页面会把 catch-all 静默误判为系统健康；`dashboard-header.tsx:29-47`、`suppressions-page.tsx:19-21`、`suppression.ts:82-105`；纯 UI，复用 `suppressionStateAt` |
@@ -198,40 +198,43 @@
 
 ## 下一轮优先项
 
-1. **SEC-5（HIGH）**：第 15 轮 EXPERT_PANEL 裁决后实施；导出遮蔽所有 header 值，
-   编辑 DTO 只保留名称，补非 denylist header 的失败用例。
-2. **REQ-57**（29）：Route 全空条件保存护栏；纯前端确认框，复用抑制表单先例。
-3. **REQ-53**（29）：加急记录展示触发人、呼叫时间与下次重试；纯 UI，DTO 已具备。
-4. **REQ-65**（28）：全局静默生效提示；纯 UI，复用 `suppressionStateAt`。
-5. **REQ-66**（28）：按外部消息引用反查投递；只读搜索谓词，列表与 total 同谓词。
-6. **Q-21**（28）：搜索输入 120 字符上限；输入框 `maxLength` + URL 归一化截断 + 用例。
-7. **REQ-58**（28）：失败投递区分「等待重试」与「重试耗尽」；DTO 增 `maxAttempts`。
-8. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
-9. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
-10. **REL-3**（28，P0）：Docker smoke 卷/镜像/项目/端口隔离；第 11 轮 release lane 补充了
-    `down -v` 丢日志与无超时证据，属任何 smoke CI 接入前的阻断项。
+1. **REQ-53**（29）：加急记录展示触发人、呼叫时间与下次重试；纯 UI，DTO 已具备。
+2. **REQ-65**（28）：全局静默生效提示；纯 UI，复用 `suppressionStateAt`。
+3. **REQ-66**（28）：按外部消息引用反查投递；只读搜索谓词，列表与 total 同谓词。
+4. **Q-21**（28）：搜索输入 120 字符上限；输入框 `maxLength` + URL 归一化截断 + 用例。
+5. **REQ-58**（28）：失败投递区分「等待重试」与「重试耗尽」；DTO 增 `maxAttempts`。
+6. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
+7. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
+8. **REL-3**（28，P0）：Docker smoke 卷/镜像/项目/端口隔离；`down -v` 丢日志与无超时
+   证据使其成为任何 smoke CI 接入前的阻断项。
+9. **Q-24**（27）：接入侧 prune sweep 单飞跨请求失效；提升到模块级 promise 或在
+   container 缓存 intake service，补多实例并发只触发一次 sweep 的用例。
+10. **Q-26**（25）：抑制窗口改用 `Date.parse` 比较或 schema transform；带偏移 ISO 时间
+    目前会多静默/提前失效，补 ±偏移用例。
 11. **REQ-67**（27）：事件列表三分支投递计数；纯 UI。
-12. **REQ-32**（28）/ **REQ-22**（28）/ **REQ-24**（28）/ **REQ-12**（28）/ **REQ-13**（28）：
-    既有高价值切片。
+12. **REQ-32/REQ-22/REQ-24/REQ-12/REQ-13**（28）：既有高价值切片。
 13. **REQ-54/REQ-55**（27）：告警源覆盖区分停用路由、事件摘要计入已抑制；均为纯 UI。
-14. **Q-23**（25）：dedupe cleanup 有界化；与未来的回填/维护批次协同。
-15. **DOC-22/23/24/25/26/27/29/30/31/32 + DOC-11 + DOC-28**：一批文档漂移，
+14. **Q-25**（26）：重放/历史预览过滤 raw payload 清理哨兵；只读 DTO + 重放提示。
+15. **Q-23**（25）：dedupe cleanup 有界化；与未来的回填/维护批次协同。
+16. **DOC-22/23/24/25/26/27/29/30/31/32 + DOC-11 + DOC-28**：一批文档漂移，
     可合并一个 `docs:` PR。
-13. **补跑 `docs-drift` + `quality` 车道**（`requirements` 每轮必跑；release-infra 与
-    security-exposure 已在第 14 轮复核）。
-14. **REL-6 + REL-7**（26/26）：Docker smoke 断言/日志/超时增强；E2E harness 改为
+17. **车道轮转（第 16 轮）**：`requirements` + `architecture` + `release-infra`
+    （`docs-drift`/`quality` 本轮已跑，`security-exposure` 第 14 轮已跑）。
+18. **REL-6 + REL-7**（26/26）：Docker smoke 断言/日志/超时增强；E2E harness 改为
     ready 探针、动态临时库、`localhost`、固定 locale、显式安装 Playwright 浏览器，
     并修正 globalSetup 删库顺序。
-15. **REL-5**（24）：先加 `scripts/artifact-smoke.sh`，再决定是否进 CI。
-16. **REQ-49**（27）：可移植配置覆盖抑制规则；schema + portability service + 导入确认。
-17. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
-18. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、事件标签可见性。
-19. **REQ-39/REQ-40/REQ-41**（27/26/26）：静默续期、详情返回保筛选、告警源接入指引。
-20. **Q-14..Q-19 + Q-12/Q-13 + Q-4/Q-5 + Q-22**：纯测试补齐，可合并一个 `test:` PR；
-    Q-16 需重写为真正渲染两个列表的 parity 断言。
-21. **ARCH-13 + ARCH-14 + FIX-8**：显式 env 注入、冗余标记清理、抑制 `createdBy`。
-22. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
-23. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（第 8 轮已确认最小 CI 方案：
+19. **REL-5**（24）：先加 `scripts/artifact-smoke.sh`，再决定是否进 CI。
+20. **REQ-49**（27）：可移植配置覆盖抑制规则；schema + portability service + 导入确认。
+21. **REQ-25**（27）：抑制规则试跑预览；只读 procedure + 复用 core matcher，注意与 FIX-8 一起做。
+22. **REQ-33/REQ-34/REQ-35/REQ-36**（27）：绝对时间窗口、CSV 导出、列表自动刷新、
+    事件标签可见性。
+23. **REQ-39/REQ-40/REQ-41**（27/26/26）：静默续期、详情返回保筛选、告警源接入指引。
+24. **REQ-71**（24）：Destination header 显式删除语义；与 SEC-5 的遮蔽语义配套。
+25. **Q-14..Q-19 + Q-12/Q-13 + Q-4/Q-5/Q-22/Q-27/Q-28/Q-29**：纯测试补齐，可合并
+    一个 `test:` PR；Q-16 需重写为真正渲染两个列表的 parity 断言。
+26. **ARCH-13 + ARCH-14 + FIX-8**：显式 env 注入、冗余标记清理、抑制 `createdBy`。
+27. **FIX-5 + FIX-9 + FIX-10**：低风险 chore（死代码、死分支、未用依赖），可合并一个 PR。
+28. **REL-1/REL-4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖（第 8 轮已确认最小 CI 方案：
     setup vp → playwright install chromium → `CI=true playwright test`，无新服务/secret；
     第 11 轮补充：失败时上传 `test-results`/`playwright-report` artifact）；
     **REL-13**（LICENSE）保持 blocked-autonomous，需专家小组做法律/产品决策。
