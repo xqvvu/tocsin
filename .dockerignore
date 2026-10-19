@@ -22,3 +22,8 @@ coverage
 **/coverage
 playwright-report
 .playwright-mcp
+**/test-results
+**/playwright-report
+**/blob-report
+**/.playwright
+.wt
