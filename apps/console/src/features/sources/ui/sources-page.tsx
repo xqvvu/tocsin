@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { Button } from "#/components/ui/button";
+import { destinationsQueryOptions } from "#/features/destinations/api/destination.queries";
 import { routesQueryOptions } from "#/features/routes/api/route.queries";
 import { useSourceMutations } from "#/features/sources/api/source.mutations";
 import { sourcesQueryOptions } from "#/features/sources/api/source.queries";
@@ -21,8 +22,8 @@ import { DashboardContentLayout } from "#/shell/dashboard-layout";
 
 export function SourcesPage() {
   const t = useTranslations();
-  const [{ data: sources }, { data: routes }] = useSuspenseQueries({
-    queries: [sourcesQueryOptions(), routesQueryOptions()],
+  const [{ data: sources }, { data: routes }, { data: destinations }] = useSuspenseQueries({
+    queries: [sourcesQueryOptions(), routesQueryOptions(), destinationsQueryOptions()],
   });
   const { deleteSource, invalidateSources, rotateSourceToken, updateSource } = useSourceMutations();
   const [tokenNotice, setTokenNotice] = React.useState<SourceTokenNotice | null>(null);
@@ -95,6 +96,7 @@ export function SourcesPage() {
           <SourcesSection
             sources={sources}
             routes={routes}
+            destinations={destinations}
             pending={pending}
             onEdit={(sourceId) => {
               setEditingSourceId(sourceId);

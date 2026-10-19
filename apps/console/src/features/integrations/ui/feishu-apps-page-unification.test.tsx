@@ -50,6 +50,7 @@ function sourcesSection(sources: SourceSummary[] = []) {
     <SourcesSection
       sources={sources}
       routes={[]}
+      destinations={[]}
       pending={false}
       onEdit={noop}
       onToggle={noop}

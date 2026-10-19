@@ -9,6 +9,7 @@ import { SourcesSection } from "#/features/sources/ui/sources-section";
 import { AppIntlProvider } from "#/i18n/provider";
 
 type RouteSummary = ComponentProps<typeof SourcesSection>["routes"][number];
+type DestinationSummary = ComponentProps<typeof SourcesSection>["destinations"][number];
 type SourceActionHandler = (source: SourceSummary) => void;
 type SourceEditHandler = (sourceId: string) => void;
 
@@ -30,6 +31,7 @@ describe("sources section table", () => {
         <SourcesSection
           sources={sources}
           routes={[]}
+          destinations={[]}
           pending={false}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={vi.fn<SourceActionHandler>()}
@@ -64,6 +66,7 @@ describe("sources section table", () => {
             routeFixture("catch-all-route", "Catch all route", [], true),
             routeFixture("disabled-route", "Disabled route", ["source-1"], false),
           ]}
+          destinations={[destinationFixture("destination-1", true)]}
           pending={false}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={vi.fn<SourceActionHandler>()}
@@ -78,8 +81,59 @@ describe("sources section table", () => {
     expect(screen.queryByText("Auth")).toBeNull();
     expect(screen.queryByText("Last received")).toBeNull();
     expect(screen.queryByText("Token configured")).toBeNull();
-    expect(screen.getByText("2 active")).toBeTruthy();
-    expect(screen.getByText("1 active")).toBeTruthy();
+    expect(screen.getByText("2 deliverable")).toBeTruthy();
+    expect(screen.getByText("1 deliverable")).toBeTruthy();
+  });
+
+  it("warns when every matching route has all destinations disabled", () => {
+    render(
+      <AppIntlProvider locale="en-US">
+        <SourcesSection
+          sources={[sourceFixture(2)]}
+          routes={[
+            routeFixture("direct-route", "Direct route", ["source-2"], true),
+            routeFixture("catch-all-route", "Catch all route", [], true),
+          ]}
+          destinations={[destinationFixture("destination-1", false)]}
+          pending={false}
+          onEdit={vi.fn<SourceEditHandler>()}
+          onToggle={vi.fn<SourceActionHandler>()}
+          onRotateToken={vi.fn<SourceActionHandler>()}
+          onDelete={vi.fn<SourceActionHandler>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    const badge = screen.getByText("All targets off");
+    expect(badge.getAttribute("title")).toContain("every linked destination is disabled");
+    expect(badge.getAttribute("title")).toContain("Direct route, Catch all route");
+  });
+
+  it("shows the deliverable count and names blocked routes when only some are blocked", () => {
+    render(
+      <AppIntlProvider locale="en-US">
+        <SourcesSection
+          sources={[sourceFixture(2)]}
+          routes={[
+            routeFixture("healthy-route", "Healthy route", ["source-2"], true, ["destination-on"]),
+            routeFixture("blocked-route", "Blocked route", ["source-2"], true, ["destination-off"]),
+          ]}
+          destinations={[
+            destinationFixture("destination-on", true),
+            destinationFixture("destination-off", false),
+          ]}
+          pending={false}
+          onEdit={vi.fn<SourceEditHandler>()}
+          onToggle={vi.fn<SourceActionHandler>()}
+          onRotateToken={vi.fn<SourceActionHandler>()}
+          onDelete={vi.fn<SourceActionHandler>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    const badge = screen.getByText("1 deliverable");
+    expect(badge.getAttribute("title")).toContain("1 have no enabled destination");
+    expect(badge.getAttribute("title")).toContain("Blocked route");
   });
 
   it("asks for confirmation before disabling a source and reports enabled route impact", () => {
@@ -94,6 +148,7 @@ describe("sources section table", () => {
             routeFixture("catch-all-route", "Catch all route", [], true),
             routeFixture("disabled-route", "Disabled route", ["source-2"], false),
           ]}
+          destinations={[destinationFixture("destination-1", true)]}
           pending={false}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={onToggle}
@@ -123,6 +178,7 @@ describe("sources section table", () => {
         <SourcesSection
           sources={[sourceFixture(1)]}
           routes={[]}
+          destinations={[]}
           pending={false}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={onToggle}
@@ -153,6 +209,7 @@ function routeFixture(
   name: string,
   sourceIds: string[],
   enabled: boolean,
+  destinationIds: string[] = ["destination-1"],
 ): RouteSummary {
   return {
     id,
@@ -166,6 +223,15 @@ function routeFixture(
       titleContains: [],
       messageContains: [],
     },
-    destinationIds: ["destination-1"],
+    destinationIds,
+  };
+}
+
+function destinationFixture(id: string, enabled: boolean): DestinationSummary {
+  return {
+    id,
+    name: id,
+    kind: "generic_webhook",
+    enabled,
   };
 }
