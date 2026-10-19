@@ -224,7 +224,7 @@
 | REL-19 | 本地 E2E 失败无 trace | release-infra lane | 23 | candidate | — | 本地 `retries=0` + `trace: on-first-retry`；`playwright.config.ts:23,28` |
 | REL-20 | `just docker-buildx` 对 ACR 缺 `--provenance=false` | release-infra lane（第 22 轮） | 26 | shipped | #162 | ACR 拒绝 BuildKit OCI attestation manifest；Justfile 已加 `--provenance=false --sbom=false`，发布文档同步 ACR registry/tag 约定 |
 | DOC-33 | RC 未勾选 gate 实为 4 条而非 3 条 | release-infra lane | 21 | candidate | — | 漏算 provider 多版本 payload；`mvp-rc-checklist.md:123,165,171,172` |
-| Q-30 | 加急呼叫持久化失败会被当作可重试，导致重复呼叫 | quality lane | 26 | in-progress | #168 | `markFired` 在外层 try 内（`oncall-execution.ts:97`），抛错后落可重试分支（`:115-131`）；电话已拨出。第 24 轮 EXPERT_PANEL 三方一致：受理后持久化失败不得重排、不得抛错；`markFired` 幂等重试一次后落终态 `retryAt:null`，错误文案写明「已呼叫」；不新增状态/迁移；Q-8 单独处理。决策 `docs/planning/decisions/oncall-fired-persistence-failure.md`；测试 `oncall-execution.test.ts` |
+| Q-30 | 加急呼叫持久化失败会被当作可重试，导致重复呼叫 | quality lane | 26 | shipped | #168 | `markFired` 在外层 try 内（`oncall-execution.ts:97`），抛错后落可重试分支（`:115-131`）；电话已拨出。第 24 轮 EXPERT_PANEL 三方一致：受理后持久化失败不得重排、不得抛错；`markFired` 幂等重试一次后落终态 `retryAt:null`，错误文案写明「已呼叫」；不新增状态/迁移；Q-8 单独处理。决策 `docs/planning/decisions/oncall-fired-persistence-failure.md`；测试 `oncall-execution.test.ts` |
 | Q-31 | `buzzDelivery` 部分入队失败仍会呼叫已入队 ping | quality lane | 23 | candidate | — | 逐条 `enqueueForDelivery` 无事务（`oncall.service.ts:91-109`）；操作员看到错误但已有 ping 落库并会被呼叫 |
 | Q-32 | `toLocaleLowerCase()` 受宿主 locale 影响 | quality lane | 22 | candidate | — | severity/status 归一化（`normalization.ts:5,23`）、contains 匹配（`route.ts:325,330`）、header 查找（`intake.service.ts:406,409`）；土耳其语环境 `INFO`→`ınfo` 会漏投 |
 | Q-33 | Webhook 鉴权顺序允许枚举 Source 存在/停用 | quality lane | 23 | candidate | — | 先查 source/启停再验 token（`intake.service.ts:62-77`），未知→404、已知错 token→401、停用→403；建议统一 401 |
@@ -302,6 +302,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.12` | `1725ac7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.12`（linux/amd64 + linux/arm64，digest `sha256:552e3590…`） | 包含抑制命中列表告警身份（#166）与加急呼叫持久化失败终态修复（#168）；无迁移/配置变化；回滚镜像 `0.1.0-beta.11`（digest `sha256:2c338841…`） |
 | `0.1.0-beta.11` | `3295013` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.11`（linux/amd64 + linux/arm64，digest `sha256:2c338841…`） | 包含 dashboard 静默状态指示器；Docker smoke 与生产卷隔离；ACR buildx provenance 修复；无迁移/配置变化；回滚镜像 `0.1.0-beta.10`（digest `sha256:6acac322…`） |
 | `0.1.0-beta.10` | `6bbef05` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.10`（linux/amd64 + linux/arm64，digest `sha256:6acac322…`） | 包含可折叠侧边栏、外部消息引用搜索、侧边栏状态持久化修复；无迁移/配置变化；回滚镜像 `0.1.0-beta.9`（已在 ACR，digest `sha256:b861d9cf…`） |
 

@@ -4,8 +4,8 @@
 
 ## 2026-10-20（第 24 轮）
 
-- 时间：2026-10-20 00:39 – 01:xx CST。
-- 基线：`origin/main` @ `ee86534`；本轮合并 #168。
+- 时间：2026-10-20 00:39 – 01:20 CST。
+- 基线：`origin/main` @ `ee86534`；本轮合并 #168，并发布 #169（`0.1.0-beta.12`）。
 - 类型：EXPERT_PANEL 语义修复 + 三车道审计（非 full-audit）；最近全量审计仍为
   第 1 轮（2026-10-18 13:30 CST）；backlog 有大量 ≥27 分候选，按第 1.5 步继续。
 - 车道：`requirements` + `quality` + `ui-triage`（决策 `defer`）；下一轮建议
@@ -54,13 +54,27 @@
 
 ### 发布（第 9.5 步）
 
-- 本轮发布评估顺延到下一轮：等待 #168 合并与 main CI 后已超出 75 分钟预算，
-  按单轮预算规则只完成当前 PR 的交付。
+- 三位专家一致通过发布：
+  - **发布经理**：自 beta.11 以来有用户可见变更（#166）与修复（#168），RELEASE，
+    建议 `0.1.0-beta.12`。
+  - **阻断审计**：五道门禁 PASS（main CI 绿、无其他 open PR、migrations 仍为
+    0001–0003、REL-13 属已知非阻断、无 secret/占位符）。
+  - **运维/回滚**：SAFE；无 Dockerfile/compose/env/schema 变化，SQLite 双向兼容，
+    回滚只需换回 `0.1.0-beta.11`。
+- PR #169 `chore(release): v0.1.0-beta.12` rebase 合并 `1725ac7`；main CI success。
+- Tag：`v0.1.0-beta.12`（annotated，指向 `1725ac7`）；GitHub Release 已创建（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.12`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:552e35904c94fcca09fb857264b70d038798f43a4859d9e062fea862f8feddb4`）。
+- 回滚镜像：`0.1.0-beta.11`（digest `sha256:2c338841…`）。
 
 ### 其他
 
 - 本轮未执行浏览器验证：改动为服务端 oncall 语义，由新增执行层测试覆盖。
-- Obsidian 同步：见文末或按 AGENTS.md 处理。
+- Obsidian 同步：已按 Obsidian 配置发现真实 vault
+  （`~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Vane`），同步 backlog / log /
+  release checklist / backup 文档，新增「Vane Oncall Fired Persistence Failure」并更新
+  `Vane Index`；未使用硬编码 WSL 路径。
 - 工作树：结束前删除会话工作树 `node_modules` 与 `agent-iteration`。
 
 ## 2026-10-19（第 23 轮）
