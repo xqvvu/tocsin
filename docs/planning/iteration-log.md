@@ -67,7 +67,7 @@
 
 - 浏览器验证：未执行；本切片行为由 jsdom 组件测试与 SQLite 仓储测试覆盖。
 - Obsidian 同步已跳过：`obsidian-vault` skill 不在本会话可用 skill 列表中。
-- backlog/log 的 PR 编号在 docs PR 创建后由后续提交补充（沿用既有 `docs(planning)` 惯例）。
+- 本轮 backlog/log 随 PR #156（`docs(planning)`）提交。
 - 工作树已清理：删除会话工作树 `node_modules` 与 `agent-iteration`。
 
 ### 下一轮优先项
