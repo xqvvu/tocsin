@@ -1,6 +1,9 @@
 import { mapValues } from "es-toolkit/object";
 
+import type { EventRecord } from "#core/event/event";
+import type { NormalizedEvent } from "#core/event/normalized-event";
 import type { JsonObject, JsonValue } from "#core/json";
+import type { RouteMatchResult } from "#core/route/route";
 
 /**
  * Keys that are sensitive only when they appear verbatim. Keys are normalized
@@ -150,6 +153,76 @@ export function redactJsonValue(value: JsonValue): JsonValue {
 
 export function redactText(value: string): string {
   return redactCredentialText(redactSensitiveAssignments(value));
+}
+
+/**
+ * Projects a normalized event for a read or send boundary.
+ *
+ * Stored `title`, `message`, and `labels` are provider-authored and have never
+ * been redacted at intake, because route matching, suppression, dedupe, and
+ * replay must keep comparing the original values. Callers that turn an event
+ * into a dashboard DTO or an outbound notification use this projection so a
+ * credential pasted into an alert body does not reach the screen or the
+ * destination. `fingerprint` stays untouched: it is the dedupe and suppression
+ * key, not display copy.
+ */
+export function redactNormalizedEvent(event: NormalizedEvent): NormalizedEvent {
+  return {
+    ...event,
+    title: redactText(event.title),
+    message: redactText(event.message),
+    labels: mapValues(event.labels, (value, key) =>
+      isSensitiveKey(String(key)) ? REDACTED_VALUE : redactText(value),
+    ),
+  };
+}
+
+/**
+ * Project route-match evidence for display.
+ *
+ * `expected` is rule configuration and stays readable; `actual` carries the
+ * event value the rule compared, so it can repeat the same credential the
+ * event title or label already contained. Matching itself keeps using the raw
+ * result — this projection is only for DTOs.
+ */
+export function redactRouteMatchResults(results: RouteMatchResult[]): RouteMatchResult[] {
+  return results.map((result) => ({
+    ...result,
+    checks: result.checks.map((check) => {
+      if (check.actual === undefined) {
+        return check;
+      }
+
+      // A label check names the key it compared. When that key is
+      // credential-shaped, hide the value entirely — the same rule the
+      // normalized event applies to its labels.
+      const actual =
+        check.labelKey !== undefined && isSensitiveKey(check.labelKey)
+          ? REDACTED_VALUE
+          : redactText(check.actual);
+
+      return { ...check, actual };
+    }),
+  }));
+}
+
+/**
+ * Projects a stored event for a read boundary.
+ *
+ * Raw payloads and headers are already redacted on intake; re-projecting them
+ * is idempotent and covers rows written before value-shape redaction existed.
+ * Provider metadata is stored verbatim (parsers need it) and only projected
+ * here, the same approach as the normalized fields.
+ */
+export function redactEventRecord(event: EventRecord): EventRecord {
+  return {
+    ...event,
+    normalized: redactNormalizedEvent(event.normalized),
+    providerMetadata: redactJsonValue(event.providerMetadata) as JsonObject,
+    rawPayload: redactJsonValue(event.rawPayload),
+    rawHeaders: redactHeaders(event.rawHeaders),
+    routeMatches: event.routeMatches === null ? null : redactRouteMatchResults(event.routeMatches),
+  };
 }
 
 function redactSensitiveAssignments(value: string): string {

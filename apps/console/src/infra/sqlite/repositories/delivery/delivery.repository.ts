@@ -3,6 +3,7 @@ import { sql } from "kysely";
 import {
   encodeJson,
   formatSuppressionReason,
+  redactEventRecord,
   redactText,
   selectSuppressionForDelivery,
   suppressionIsActive,
@@ -474,7 +475,9 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
 
     return {
       job,
-      event,
+      // The detail DTO redacts provider-authored copy; the worker's claim path
+      // still reads the raw event above for its own decisions.
+      event: redactEventRecord(event),
       rawPayloadPruned: isPrunedRawPayload(event.rawPayload),
       source,
       destination,
