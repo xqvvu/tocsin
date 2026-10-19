@@ -2,6 +2,68 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 28 轮）
+
+- 时间：2026-10-20 04:25 – 05:00 CST。
+- 基线：`origin/main` @ `a985f53`；本轮交付 #184。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `architecture` + `ui-triage`（判定 `defer`）。
+  下一轮建议 `requirements` + `release-infra` + `ui-triage`（`docs-drift` 顺延）。
+- `ui-triage`：`defer` —— 距第 27 轮真实浏览器评审（04:05）仅 21 分钟；04:05 后只有 1 个 docs
+  提交、0 个 UI 变更；11 条未解决 UI 发现全部是刚排期的已知项且有验证记录。建议本轮做既定
+  UI 切片，不重复深度评审。
+- `last_ui_review_at`：2026-10-20 04:05（未变；本轮做了浏览器复验，但不是完整 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、构建均在会话工作树 `zen-darwin-1a09af`。
+
+### 本轮交付
+
+- PR #184 `feat(console): tell empty lists apart from empty filters` —— **UI-2 + UI-7 + UI-10**。
+  - 空态接收 `hasActiveFilters`，区分「还没有数据」与「筛选无匹配」，后者提供内联「重置筛选」；
+    新增 `hasOperationFilters(search)`（`operation-search.ts:69`）。
+  - 分页条只在有行时渲染（`operations-table.tsx:177`、`events-table.tsx:122`、
+    `deliveries-table.tsx:159`、`suppression-hits-table.tsx:130`）；删除随之失效的
+    `emptyRangeLabel` 入参（8 个调用点）。
+  - 空态外层固定为视口宽度并保持粘性（`operations-table.tsx:148`），表头保留最小宽度可横向滚动。
+  - 删除无 importer 的 `operations-panel.tsx` / `detail-panel.tsx`（FIX-5 的一半）。
+  - 新增中文 mini-PRD `docs/prd/operations-empty-state.md`。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4（console 636 tests）；
+    `vp run -r build` 通过；CI 见 PR。
+  - 浏览器实测：隔离实例 `localhost:6190` + 临时 SQLite，桌面 1440 与移动 390；
+    Events/Deliveries/Sources 空态可见、筛选空态与重置生效、空表无分页条；
+    截图 `/tmp/tocsin-r28-*.png`（未提交二进制）。
+  - 环境注记：本工作树 `node_modules` 链接残缺（`@types/node` 缺失）使 `vp check` 报
+    「Invalid tsconfig」与 3376 个伪错误；按既有记忆整体删除 `node_modules` 后
+    `vp install --frozen-lockfile` 解决。
+
+### requirements 车道
+
+新增 5 条需求与 2 条缺陷候选：REQ-119（27）接入去重窗口可配置、REQ-120（27）投递最大尝试次数
+可配置、REQ-121（24）Source Token 轮换宽限期、REQ-122（23）领域错误文案本地化、
+REQ-123（25）配置列表最近更新时间；Q-40（24）语言解析顺序与注释/文案不一致、
+Q-41（22）配置名 UNIQUE 冲突返回不透明 500。方向 4（搜索/过滤/排障）已饱和，本轮候选转向
+运维控制、凭据轮换与配置一致性。
+
+### architecture 车道
+
+无新增违规：services 不抛 `ORPCError`、容器是唯一装配点、entrypoint 厚度、feature 形状、
+`components/common` 纯度、import 保护、路由职责、queryOptions 均与 AGENTS.md 一致；
+已知 ARCH-1/2/3/5/14/15 未恶化。新增一条低优先候选 ARCH-35（16）：5 个模块过度使用
+`client-only` 标记（`components/ui/dropdown-menu.tsx:1`、`routes/-login-form-impl.tsx:1`、
+`routes/-setup-form-impl.tsx:1`、`i18n/language-switcher-impl.tsx:1`、
+`shell/dashboard-user-menu-impl.tsx:1`）。
+
+### EXPERT_PANEL
+
+本轮无新裁决；未触碰 schema、投递/路由/auth 语义或 secret 处理。
+
+### 下一轮优先项
+
+1. UI-9 静默时间时区错位（27）+ UI-4/UI-8/UI-11/UI-12 小成本批次。
+2. NEW-A（29）+ REQ-111（27）；REQ-119/120（27）设置项。
+3. `release-infra` 车道（轮转）+ REL-21 独立 `e2e.yml`。
+4. docs-drift 批次 DOC-46..52 顺延。
+
 ## 2026-10-20（第 27 轮）
 
 - 时间：2026-10-20 03:25 – 04:35 CST。
