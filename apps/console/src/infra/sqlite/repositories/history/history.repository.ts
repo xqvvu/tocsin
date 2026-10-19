@@ -425,9 +425,10 @@ function eventSearchPredicate(term: string) {
 
 /**
  * Delivery search covers the event fields above, both identifiers (the
- * delivery id itself and the id of the event it belongs to), and the three
- * facts the deliveries table displays: the latest error, the destination name,
- * and the route name. Destination and route are matched through correlated
+ * delivery id itself and the id of the event it belongs to), and the facts the
+ * deliveries table and detail page display: the latest error, the destination
+ * name, the route name, and the external message reference returned by the
+ * destination provider. Destination and route are matched through correlated
  * `EXISTS` subqueries so the count query keeps its existing joins and cannot
  * count duplicated rows. Like the event predicate, list and count queries
  * share it.
@@ -442,6 +443,7 @@ function deliverySearchPredicate(term: string) {
     OR events.message LIKE ${pattern} ESCAPE '\\'
     OR events.fingerprint LIKE ${pattern} ESCAPE '\\'
     OR deliveries.last_error LIKE ${pattern} ESCAPE '\\'
+    OR deliveries.provider_ref_value LIKE ${pattern} ESCAPE '\\'
     OR EXISTS (
       SELECT 1 FROM destinations AS searched_destinations
       WHERE searched_destinations.id = deliveries.destination_id

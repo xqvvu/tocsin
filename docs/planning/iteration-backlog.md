@@ -160,7 +160,7 @@
 | REQ-56 | 被抑制投递无逐项匹配说明 | requirements lane | 25 | candidate | — | PRD 故事 26；核心 matcher 已有 checks，但未投影；建议只读读时重算并标注口径；`suppression.ts:134-141,155-186`、`delivery-suppression-notice.tsx:20-60` |
 | ARCH-15 | oRPC `runDeliveryWorker` 在 router 内编排 worker | architecture lane | 23 | candidate | — | `server/orpc/features/operations/router.ts:64-77`；建议下沉 worker/health service |
 | ARCH-16 | auth 复杂表单仍在 route-colocated 文件 | architecture lane | 22 | candidate | — | `routes/-login-form-impl.tsx:27-173`、`routes/-setup-form-impl.tsx:23-207`；应迁 `features/auth/{model,ui}` |
-| ARCH-17 | 浏览器 API 模块缺 client-only 标记 | architecture lane | 23 | candidate | — | `route-forms.tsx:809-811`、`components/ai-elements/code-block.tsx:404-423`；后者另有一套剪贴板路径 |
+| ARCH-17 | 浏览器 API 模块缺 client-only 标记 | architecture lane | 23 | candidate | — | `route-forms.tsx:809-811`、`components/ai-elements/code-block.tsx:404-423`；后者另有一套剪贴板路径。第 21 轮补充：侧边栏提交新增 `hooks/use-mobile.ts:1-16`（`window`）、`components/ui/sidebar.tsx:82,101`（`document.cookie`/`window`）、`components/ui/sheet.tsx` 仅 `"use client"`，均缺 TanStack 标记 |
 | ARCH-18 | 抑制详情命中分页未进 URL | architecture lane | 24 | candidate | — | `suppression-detail-page.tsx:34,39,119`；刷新回第 1 页 |
 | ARCH-19 | Event/Delivery DetailTerm 重复且换行策略分叉 | architecture lane | 25 | candidate | — | `delivery-detail-term.tsx:59` 用 `wrap-break-word`，可能裁切长引用；建议下沉 `components/common` 并统一 `break-all` |
 | Q-20 | 旧库升级 `normalized_json` 未回填 | quality lane | 22 | shipped | #136 | EXPERT_PANEL 采用读取容错（A）：`'{}'` 占位符按列重建，不写库、无迁移；同时解除 claim 事务毒丸。决策 `docs/planning/decisions/legacy-normalized-event-repair.md` |
@@ -168,7 +168,7 @@
 | Q-22 | 复制按钮与响应体回退分支缺测试 | quality lane | 25 | candidate | — | 只断言按钮存在；非 JSON 响应体回退无测试；`delivery-summary-tab.test.tsx:52-67`、`delivery-attempt-detail-dialog.tsx:151-185` |
 | Q-23 | dedupe cleanup 无界 DELETE 仍在 enqueue 热路径 | DOC-21 | 25 | candidate | — | `pruneDedupeKeys` 无 LIMIT，每次 enqueue 执行；`delivery.helpers.ts:98-99`、`delivery.repository.ts:95` |
 | REQ-57 | Route 全空条件（catch-all）保存护栏 | requirements lane | 29 | shipped | #138 | `routeRuleIsEmpty` + 提交前确认对话框；新建/编辑共用；PRD `docs/prd/route-catchall-confirmation.md` |
-| REQ-58 | 失败投递区分「等待重试」与「重试耗尽」 | requirements lane | 28 | candidate | — | 列表 DTO 缺 `maxAttempts`；`operations.ts:86-113`、`history.repository.ts:224-244,284-297`、`delivery-state-badge.tsx:12` |
+| REQ-58 | 失败投递区分「等待重试」与「重试耗尽」 | requirements lane | 27 | candidate | — | 列表 DTO 缺 `maxAttempts`；`operations.ts:86-113`、`history.repository.ts:224-244,284-297`、`delivery-state-badge.tsx:12`。第 21 轮收窄：状态机上 `pending`+`next_attempt_at` 与 `failed`+空已可区分，真正缺口是列表展示 `2/3` 与明确的退避/耗尽文案 |
 | REQ-59 | 配置对象 → 过滤后历史的一键钻取 | requirements lane | 27 | candidate | — | 复用现有 `sourceId/destinationId/routeId/q` URL 参数；`operation-search.ts:12-23`、`history.repository.ts:246-263`、`source-actions.tsx:46-160`、`destination-actions.tsx:56-150`、`routes-section.tsx:185-265` |
 | REQ-60 | 停用对象滞留投递的列表可见性与恢复预警 | requirements lane | 26 | candidate | — | 列表投影 `destinationEnabled/routeEnabled` + 只读 `previewPausedBacklog`；`delivery.repository.ts:215-232`、`operations.ts:86-113`、`delivery-retention-notice.tsx:1-20` |
 | REQ-61 | 从投递详情按目标一键静默 | requirements lane | 26 | candidate | — | 复用 suppression matcher 的 `destinationIds`；`delivery-detail-page.tsx:38-60`、`suppression-from-event-dialog.tsx:38-68`、`suppression.ts:19-40` |
@@ -179,7 +179,7 @@
 | SEC-6 | `tokenHash` 不在脱敏 helper 覆盖内 | security lane | 23 | shipped | #150 | 精确集合加入 `tokenhash`；`payloadHash`/`hash` 仍可见，正反例测试已补 |
 | DOC-28 | RC checklist 对 E2E/compose smoke 是否进 CI 自相矛盾 | release-infra lane | 24 | shipped | #145 | 统一为「E2E 未接入 CI，compose smoke 故意保留为本地人工 gate」 |
 | REQ-65 | 全局静默生效提示 | requirements lane | 28 | candidate | — | 生效中的静默只在 `/suppressions` 可见，其它页面会把 catch-all 静默误判为系统健康；`dashboard-header.tsx:29-47`、`suppressions-page.tsx:19-21`、`suppression.ts:82-105`；纯 UI，复用 `suppressionStateAt` |
-| REQ-66 | 按外部消息引用反查投递 | requirements lane | 28 | candidate | — | 详情已展示 `providerReference`，搜索谓词不含 `provider_ref_value`；`history.repository.ts:435-455`、`schema.ts:126-127`、`operations.ts:124-133`；只读 LIKE，列表与 total 同谓词 |
+| REQ-66 | 按外部消息引用反查投递 | requirements lane | 28 | in-progress | 待填 | 详情已展示 `providerReference`，搜索谓词不含 `provider_ref_value`；`history.repository.ts:435-455`、`schema.ts:126-127`、`operations.ts:124-133`；只读 LIKE，列表与 total 同谓词。第 21 轮实现：谓词增 `provider_ref_value`、Deliveries 占位文案、仓储与组件测试 |
 | REQ-67 | 事件列表解释「命中路由但 0 投递」 | requirements lane | 27 | candidate | — | `routeMatchCount>0 && total=0` 只显示裸 `0`，与详情 route gaps 不一致；`event-delivery-counts-cell.tsx:35-55`、`events-table.tsx:72-80`；纯 UI 三分支 |
 | REQ-68 | 路由一键复制 | requirements lane | 26 | candidate | — | 新建相似路由需重填全部条件；`routes-section.tsx:161-223`、`route-add-dialog.tsx:18-34`、`route-forms.tsx:50-87`；前端 feature 内 |
 | REQ-69 | 新建/编辑静默时提示重叠规则 | requirements lane | 25 | candidate | — | 表单不提示与 active/scheduled 静默的窗口重叠；`suppression-add-dialog.tsx:21-32`、`suppression-forms.tsx:209-228`；只读提示，不阻止保存 |
@@ -229,7 +229,7 @@
 | Q-34 | `formatTime` 对损坏时间戳抛 `RangeError` | quality lane | 20 | candidate | — | `operation-format.ts:31-47` 无非法值兜底；单条脏数据会让整页进入 error boundary |
 | Q-35 | ping 表测试用破折号数量代理列完整性 | quality lane | 17 | candidate | — | `delivery-pings-table.test.tsx:45` 断言 3 个 `—`；列调整即失败，且无法发现语义错误 |
 | ARCH-27 | Provider catalog/`iconName` 无消费者，Source UI 硬编码 | architecture lane | 24 | candidate | — | `registry.ts:73-85` 已投影，但 `source-provider-icon.tsx:1-40` 按 provider 穷尽 switch、`source-form.tsx:57-67,149-158` 重复列表；缺 provider catalog procedure |
-| ARCH-28 | Operations DTO 在 core 与 api 双份定义，无 parity 守卫 | architecture lane | 21 | candidate | — | 手写 interface（`packages/core/src/operations.ts:120,132`）与 zod schema（`packages/api/src/schemas/operations.ts:37,59,78,99,111`）各维护一份；无 `satisfies` 断言 |
+| ARCH-28 | Operations DTO 在 core 与 api 双份定义，无 parity 守卫 | architecture lane | 21 | candidate | — | 手写 interface（`packages/core/src/operations.ts:120,132`）与 zod schema（`packages/api/src/schemas/operations.ts:37,59,78,99,111`）各维护一份；无 `satisfies` 断言。第 21 轮实测已漂移：core `EventDetailDelivery`（`operations.ts:89-92`）无 `destinationKind`，API schema（`schemas/operations.ts:51-57`）有 |
 | ARCH-29 | `configuration-support.ts` 成为跨能力 helper 集散地 | architecture lane | 21 | candidate | — | 同时导出 token 生成、测试事件、脱敏、配置解析与引用校验（`configuration-support.ts:11-125`），被 7 个能力服务导入 |
 | ARCH-30 | `OperationsTable` 分页固定在本地 state | architecture lane | 21 | candidate | — | `operations-table.tsx:58-62` 不受控；配置列表刷新/后退回第 1 页（`sources-section.tsx:81` 等 5 处）；AGENTS 要求分页进 URL。第 18 轮 requirements lane 独立确认（评分 25），与 REQ-30 的前置关系成立 |
 | ARCH-31 | 契约与 runtime 的 auth 错误文案双份维护 | architecture lane | 20 | candidate | — | `dashboard-auth.ts:5-15` 注释要求同步，`dashboard-session.ts` 另写一份；无 parity 测试 |
@@ -250,6 +250,9 @@
 | REQ-97 | 告警源级默认标签 | requirements lane | 24 | candidate | — | 复用既有 `sources.config_json` 无迁移；payload 同名 label 优先；`source-form.ts:27-35`、`intake.service.ts:110-127` |
 | REQ-98 | 投递历史显式 opt-in 清理 | requirements lane | 23 | candidate | — | 决策要求「预览 N 条再确认」形态；终态过滤 + 分批 + cascade；`history-retention-and-snapshots.md:14-23` |
 | REQ-99 | Events/Deliveries 命名筛选视图 | requirements lane | 23 | candidate | — | localStorage 保存/应用/删除；复用 `DashboardOperationSearchSchema`；`events-page-toolbar.tsx:18-48` |
+| REQ-100 | 搜索结果解释命中字段 | requirements lane（第 21 轮） | 25 | candidate | — | 按 message/ID 命中时行内看不出原因；`events-table.tsx:51-74`、`operations.ts:50-61`、`history.repository.ts:410-455`；需 DTO 增命中字段/摘要，列表与 total 同谓词 |
+| REQ-101 | 时间显示标注当前时区 | requirements lane（第 21 轮） | 23 | candidate | — | 时间戳 title 与显示值相同，从不输出时区；`operation-timestamp.tsx:46-53`、`operation-format.ts:11-28`；纯展示，复用设置时区 |
+| REQ-102 | pending 投递等待退避期间立即重试 | requirements lane（第 21 轮） | 26 | candidate | — | `retryNow` 仅接受 failed（`delivery.repository.ts:411-419`），修好目标后仍需等退避；置 `next_attempt_at=now`、不改 attempt_count；需 service 校验与二次确认 |
 | SEC-7 | 归一化事件字段绕过 raw 脱敏并可传播到出站投递 | security lane | — | candidate | — | MEDIUM：`title/message/labels` 原样落库并渲染/出站（`intake.repository.ts:49-51`、`generic-webhook/payload.ts:37`）；修读取/发送边界会触碰匹配与投递语义 → EXPERT_PANEL |
 | SEC-8 | 投递 attempt 响应体裸 token/URL 凭据可穿透 | security lane | — | candidate | — | `redactText` 只匹配键值；Bearer/webhook URL 模式需权衡误伤 → EXPERT_PANEL；`redaction.ts:56-59`、`delivery-execution.ts:111,149` |
 | SEC-9 | 请求上下文 `headersRecord` 保留原始 Authorization/Cookie | security lane | 24 | candidate | — | 当前唯一消费者会再脱敏；建议构造时即 `redactHeaders`；`request-context.ts:87-97` |
