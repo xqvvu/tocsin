@@ -282,7 +282,7 @@
 | REQ-116 | Events/Deliveries 每页条数选择 | requirements lane（第 26 轮） | 25 | candidate | — | 固定 20 条（`events-table-layout.ts:3`、`operations.queries.ts:32-39`），契约允许 1–100（`packages/api/src/schemas/operations.ts:207`）；URL 增 `pageSize=20/50/100` 并重置页码 |
 | REQ-117 | 路由/静默创建失败保留表单 | requirements lane（第 26 轮） | 23 | candidate | — | 两个对话框提交即关闭并重置（`route-add-dialog.tsx:75-78`、`suppression-add-dialog.tsx:74-77`），失败只弹 toast；对齐 Sources/Destinations 的等待成功语义 |
 | REQ-118 | Provider adapter 贡献指南与 scaffold | requirements lane（第 26 轮） | 22 | candidate | — | 只有 destination 侧指南/`just new-destination`（`Justfile:71-72`、`docs/contributing/`）；RC checklist `:117` 与 post-MVP 方向 6 要求 provider 对齐 |
-| SEC-7 | 归一化事件字段绕过 raw 脱敏并可传播到出站投递 | security lane | — | planned | — | **第 25 轮 EXPERT_PANEL 裁决**：读取/发送边界投影，不改存储；新增 `redactNormalizedEvent` + `redactRouteMatchResults`（含 `checks[].actual`），只用于 DTO 与发送输入；拒绝解析期脱敏/回填。决策 `docs/planning/decisions/credential-redaction-boundaries.md`（PR B） |
+| SEC-7 | 归一化事件字段绕过 raw 脱敏并可传播到出站投递 | security lane | — | shipped | #180 | **第 25 轮 EXPERT_PANEL 裁决**：读取/发送边界投影，不改存储；第 27 轮落地 `redactNormalizedEvent` + `redactRouteMatchResults`（含 `checks[].actual`）+ `redactEventRecord`，用于事件/投递 DTO、补投预览、目标预览与发送输入；匹配/去重/回放仍读原值。决策 `docs/planning/decisions/credential-redaction-boundaries.md` |
 | SEC-8 | 投递 attempt 响应体裸 token/URL 凭据可穿透 | security lane | — | shipped | #176 | 第 26 轮 PR A：`redactCredentialText` 覆盖认证 scheme（Bearer/Basic/Token，需值含数字或符号）、`xox[baprs]-`、URL userinfo、Slack/飞书/Lark webhook；组合进 `redactText` 与 `redactJsonValue`；读取层复核 attempt/delivery/oncall/列表旧行。修复 `max_tokens` 尾部误判。决策 `docs/planning/decisions/credential-redaction-boundaries.md`；PR B（SEC-7 + SEC-17）待做 |
 | SEC-9 | 请求上下文 `headersRecord` 保留原始 Authorization/Cookie | security lane | 24 | candidate | — | 当前唯一消费者会再脱敏；建议构造时即 `redactHeaders`；`request-context.ts:87-97` |
 | SEC-10 | 旧库存量行只在写入时脱敏，读取不复核 | security lane | — | shipped | #176 | `deliveryFromRow`/`attemptFromRow`/`oncallPingFromRow`/投递列表映射读取时幂等复核；不做历史回填。决策 `docs/planning/decisions/credential-redaction-boundaries.md` |
@@ -306,7 +306,7 @@
 | SEC-14 | `request-context.ts` 缺 server-only 标记 | security lane（第 23 轮） | — | candidate | — | LOW：直接 import `@tanstack/react-start/server`；导入方均为 server middleware/route；需 build 验证 import protection |
 | SEC-15 | 三份文档称响应体/错误「已脱敏」但仅键值脱敏 | security lane（第 23 轮） | — | shipped | #176 | 三处改为「敏感键 + 高置信值形态」，并写明无前缀裸 token / generic webhook path/query 不承诺覆盖 |
 | SEC-16 | 读取层不复核存量脱敏 | security lane（第 23 轮） | — | shipped | #176 | 与 SEC-10 同一修复；`intake.helpers` 的 raw payload 读取路径按 SEC-18 在入库时已值形态脱敏 |
-| SEC-17 | providerMetadata 入库/出站前无统一脱敏兜底 | security lane（第 25 轮） | 24 | planned | — | `adapter-extensibility.md:260-261` 称已兜底，但 `intake.service.ts:114` 原样落库；grafana/alertmanager 的 `externalURL` 可含 userinfo，DTO 直接返回（`schemas/operations.ts:59-62`）；并入 SEC-7（PR B）读取边界 |
+| SEC-17 | providerMetadata 入库/出站前无统一脱敏兜底 | security lane（第 25 轮） | 24 | shipped | #180 | 第 27 轮随 SEC-7 落地：`redactEventRecord` 在读取边界对 providerMetadata 走 `redactJsonValue`（key + 值形态），grafana/alertmanager `externalURL` 的 userinfo 被投影；存储仍为原文（决策已接受） |
 | SEC-18 | raw payload 字符串叶子不做值形态扫描 | security lane（第 25 轮） | 22 | shipped | #176 | `redactJsonValue` 对字符串叶子应用 `redactCredentialText`；parser 仍读取原值，解析/匹配/去重语义不变 |
 | UI-1 | 列表搜索吞字符与空格、逐键请求 | ui-review（第 23 轮，浏览器实测） | 29 | shipped | #171 | 本地草稿 + 300ms 防抖后才写 URL；`pruneSearch` 保留空格，仅服务端过滤 trim；清除 chip/重置会取消未提交草稿；同时闭环 REQ-78 |
 | UI-2 | 筛选无匹配与无数据空态相同 | ui-review（第 23 轮，浏览器实测） | 27 | candidate | — | = REQ-4；`events-empty-state.tsx:12-26`、`deliveries-empty-state.tsx:12-26` 无条件渲染；传 `hasActiveFilters` + 内联重置 |
@@ -329,12 +329,11 @@
 
 ## 下一轮优先项
 
-1. **SEC-7 + SEC-17（PR B，已裁决）**：按
-   `docs/planning/decisions/credential-redaction-boundaries.md` 新增
-   `redactNormalizedEvent` / `redactRouteMatchResults`，只用于 DTO 组装与发送输入，
-   存储/匹配/去重/回放仍读原值；补读取边界矩阵测试。仍待裁决：REQ-93、Q-8、REQ-107。
-2. **NEW-A（29）**：停用 Source/Route/Destination 前的断流影响确认；纯前端。
-   **REQ-111（27）**：初始化 Owner 密码确认与不可恢复提示；纯前端。
+1. **SEC-7 + SEC-17（PR B）已由 #180 落地**（读取/发送投影，不改存储）。
+   下轮最高优先：**NEW-A（29）** 停用 Source/Route/Destination 前的断流影响确认；
+   **REQ-111（27）** 初始化 Owner 密码确认与不可恢复提示。仍待裁决：REQ-93、Q-8、REQ-107。
+2. **UI-2 / UI-4**：第 27 轮 `ui-triage` 判定 `review_now`（7 条未解决 UI 发现、
+   0 次浏览器验证）；优先修筛选态空状态与移动端 Sheet 关闭按钮，并做真实浏览器验证。
 3. **REQ-108（28）** 多值属性筛选、**REQ-73（28）** 静默时区语义、
    **REQ-48（28）** 配置删除预检（并入 REQ-105）、**REQ-52（28）** `tocsin.eventUrl`
    与公开地址、**REQ-110（28）** 静默即将到期提示。
@@ -348,10 +347,9 @@
    抑制窗口时间比较、复制失败 toast。
 7. **docs-drift 批次**：DOC-34/11/22/23/24/25/26/27/36/37/38/39/40/41/43/44/45，拆两个
    `docs:` PR；第 22 轮已刷新证据。
-8. **车道轮转（第 27 轮）**：`requirements` 必跑 + `docs-drift` + `ui-triage`；
-   第 26 轮已跑 `requirements` + `release-infra`，`ui-triage` 判定 `defer`；
-   `architecture` 留待第 28 轮。下轮若再合入 ≥1 个 UI 变更，即达到「3 个 UI 合并」阈值，
-   应安排浏览器评审并覆盖 #171/#172。
+8. **车道轮转（第 28 轮）**：`requirements` 必跑 + `ui-triage`；第三席优先
+   `ui-review`（第 27 轮 triage 已判 `review_now`，需真实浏览器验证），否则跑
+   `architecture`（第 26 轮后未跑）。
 9. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 10. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。
