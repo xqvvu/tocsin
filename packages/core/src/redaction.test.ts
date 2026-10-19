@@ -174,6 +174,8 @@ describe("redaction", () => {
     ["token counter", "max_tokens: 4096, tokenCount: 5"],
     ["invalid token wording", "response said invalid_token"],
     ["plain prose", "send the Bearer token later"],
+    ["basic authentication", "Basic authentication failed for svc"],
+    ["token expiration", "Token expiration is near"],
     ["ordinary url", "GET https://example.test:8080/path failed"],
     ["ssh user without password", "clone ssh://git@github.com/org/repo.git"],
     ["slack prefix alone", "the xoxb- prefix marks a Slack bot"],

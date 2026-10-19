@@ -97,11 +97,13 @@ const CREDENTIAL_VALUE_PATTERNS: ReadonlyArray<{
     pattern: /\b([a-z][a-z0-9+.-]*:\/\/)([^\s/@:]+):([^\s/@]+)@/gi,
     replacement: "$1$2:[REDACTED]@",
   },
-  // Authentication schemes in free text. The token must be at least eight
-  // characters so the words in `Bearer token` are not rewritten, and generic
-  // `Bot` is omitted on purpose so ordinary English is untouched.
+  // Authentication schemes in free text. The value must be at least eight
+  // characters and contain a digit or symbol, so prose such as
+  // `Basic authentication` and `Bearer token` stays readable. Generic `Bot`
+  // is omitted on purpose so ordinary English is untouched.
   {
-    pattern: /\b(Bearer|Basic|Token)\s+([A-Za-z0-9._~+/=-]{8,})/gi,
+    pattern:
+      /\b(Bearer|Basic|Token)\s+((?=[A-Za-z0-9._~+/=-]{8,}(?![A-Za-z0-9._~+/=-]))(?=[A-Za-z0-9._~+/=-]*[0-9._~+/=-])[A-Za-z0-9._~+/=-]+)/gi,
     replacement: "$1 [REDACTED]",
   },
 ];
