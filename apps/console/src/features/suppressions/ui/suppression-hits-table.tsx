@@ -11,6 +11,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "#/components/u
 import { DeliveryStateBadge } from "#/features/deliveries/ui/delivery-state-badge";
 import type { DeliveryListItem } from "#/features/operations/model/operation-types";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
+import { SuppressionHitEventCell } from "#/features/suppressions/ui/suppression-hit-event-cell";
 import { useTranslations } from "#/i18n/use-i18n";
 
 /**
@@ -42,18 +43,13 @@ export function SuppressionHitsTable({
         id: "event",
         header: t("suppressions.hits.headers.event"),
         cell: ({ row }) => (
-          <div className="min-w-0">
-            <Link
-              to="/events/$eventId"
-              params={{ eventId: row.original.eventId }}
-              className="block truncate font-medium hover:underline"
-            >
-              {row.original.sourceName}
-            </Link>
-            <div className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">
-              {row.original.eventId}
-            </div>
-          </div>
+          <SuppressionHitEventCell
+            eventId={row.original.eventId}
+            eventTitle={row.original.eventTitle}
+            eventSeverity={row.original.eventSeverity}
+            eventStatus={row.original.eventStatus}
+            sourceName={row.original.sourceName}
+          />
         ),
       },
       {
@@ -155,13 +151,13 @@ export function SuppressionHitsTable({
 function hitsColumnClassName(columnId: string): string | null {
   switch (columnId) {
     case "event":
-      return "w-[26%]";
+      return "w-[34%]";
     case "destination":
-      return "w-[24%]";
+      return "w-[20%]";
     case "state":
-      return "w-[14%]";
+      return "w-[12%]";
     case "attempts":
-      return "w-[10%]";
+      return "w-[8%]";
     case "updated":
       return "w-[16%]";
     case "actions":
