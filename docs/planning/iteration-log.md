@@ -2,6 +2,119 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 30 轮）
+
+- 时间：2026-10-20 06:25 – 07:05 CST。
+- 基线：`origin/main` @ `8be0faa`；本轮合并 #191（rebase `101a91a`）与 #192（rebase `d353c60`）。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `docs-drift` + `ui-triage`（判定 `defer`）。
+  下一轮建议 `requirements` + `security-exposure` + `ui-triage`（`security-exposure` 第 23 轮后未跑）。
+- `ui-triage`：`defer` —— 距第 27 轮真实浏览器评审（04:05）约 2h21m；04:05 后只有 2 个行为性
+  UI 合并（#184 空态/分页、#187 停用确认），未达 3 个；8 条未解决 UI 发现全部是第 23/27 轮
+  已定级并排期的旧项；#187 缺浏览器复验但只是既有表格上的确认对话框。硬性最晚
+  **2026-10-22 04:05 CST**。
+- `last_ui_review_at`：2026-10-20 04:05（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、构建均在会话工作树
+  `gallant-heisenberg-6a9864`。
+
+### 本轮交付
+
+- PR #191 `feat(console): explain why automatic urgent paging did not fire` —— **REQ-124**（28）。
+  - 投递详情 `destinationMetadata` 投影自动加急判定所需的只读字段：
+    `urgentAutoEnabled`、`urgentReceiverCount`（缺失时显式 0）、`urgentSeverities`
+    （无 urgent 块为 `[]`，有块但未写级别按 schema 默认 `["critical"]`）
+    （`destination.helpers.ts:190-206`）。
+  - 新增纯函数 `explainMissingUrgentPings`，按触发链路顺序返回首个阻断原因：非飞书、
+    投递未成功（带状态）、Webhook 模式、缺少飞书消息引用、未开启自动加急、无呼叫对象、
+    告警非 firing（带状态）、级别被排除（带级别与允许列表）、其余归为「去重或触发失败」
+    （`features/deliveries/model/urgent-ping-explanation.ts`）。
+  - 「电话加急」标签无记录时渲染说明面板，并提示说明依据目标当前配置、配置变更后历史投递
+    可能不同；有记录时表格不变（`delivery-urgent-ping-explanation.tsx`、
+    `delivery-pings-table.tsx:26-28`）。
+  - 中英文 i18n 同步；新增中文 mini-PRD `docs/prd/delivery-urgent-ping-explanation.md`。
+  - 测试：新增 20 条（原因判定与顺序、元数据投影及凭据不外泄、两种渲染分支）；
+    `vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4、console 123 files /
+    653 tests；`vp run -r build` 通过；PR CI success。
+  - 未做浏览器实测：本机 6180 是主 checkout 的开发服务器，不提供本分支代码；本轮改动是
+    既有 Alert 原语上的条件面板，组件测试覆盖了两种分支。若下一轮做 UI 批次，一并复验
+    #187 的停用确认与该面板。
+  - 环境注记：本工作树 `node_modules` 再次出现链接残缺（缺 `@rolldown/plugin-babel` 等），
+    按既有记忆整体删除后 `vp install --frozen-lockfile` 解决。
+
+### requirements 车道
+
+新增 6 条候选（已写入 backlog，评分 /30）：
+
+- **REQ-129（28）** 告警源覆盖率按「可投递性」计算：覆盖率只看启用路由、不看目标启用
+  （`source-route-coverage.ts:12-26`），目标全停用时仍显示「已覆盖 N」，而 worker 不 claim
+  （`delivery.repository.ts:228-230`）；纯 feature 派生 + 复用 destinations 查询。
+- **REQ-130（27）** 补投可显式包含已静默目标：`skipExistingForEvent` 在抑制判断前执行且不筛
+  状态（`delivery.repository.ts:91-110,553-562`），补投把 suppressed 目标静默算作 existing
+  （`event-replay.service.ts:271-283`）；命令增 `includeSuppressed`，无迁移。
+- **REQ-131（27）** 失败投递保留最近一次渲染载荷：adapter 失败结果已带 `renderedPayload`
+  （`packages/destinations/src/types.ts:63-79`）但 `markFailed` 丢弃
+  （`delivery-execution.ts:149-157`），载荷页失败投递永远显示 `{}`；DTO 已有字段。
+- **REQ-132（26）** 路由补投按时间窗口选择事件：预览只扫最近 20 条
+  （`event-replay.service.ts:196-201`、`intake.repository.ts:76-87`）；增 `range` 与
+  `truncated`，复用 `OperationTimeRangeSchema`。
+- **REQ-133（25）** 控制台可访问性收尾：zh-Hans aria 名称仍是英文
+  （`zh-Hans.json:859`）、Sidebar 快捷键不可发现（`sidebar.tsx:39,280-304`）、投递错误全文
+  只在不可聚焦 `title`（`deliveries-table.tsx:106-113`）。
+- **REQ-134（22）** 自托管 Owner 离线恢复：只有邮件/密码且无 SMTP、无重置入口
+  （`auth-options.ts:67-69`、`dashboard-user-menu-impl.tsx:174-182`）；实现前须 EXPERT_PANEL
+  （安全与架构），优先容器内维护脚本而非匿名 HTTP 入口。
+
+### docs-drift 车道
+
+逐条复核了 DOC-23/24/36/37/39/40/41/42/43/44/45/46/47/48/49/50/51/52 并抽查 15 处其他断言。
+最高价值发现：
+
+- **DOC-49**：RC 清单开头称「仍然缺的只剩 E2E」，但同文件仍有 4 个未勾 gate：E2E
+  （`:125`）、dedupe cleanup（`:167`）、provider fixtures（`:173`）、多版本 payload（`:174`）；
+  `ci.yml` 无 E2E job。
+- **DOC-37**：抑制 PRD 三处仍写「四个状态」（`:43,289,338`），实际 `DeliveryStateSchema`
+  已是五状态含 `suppressed`（`packages/core/src/delivery/delivery.ts:5-11`）。
+- **DOC-43**：README 页面/仓储/入口清单缺 Suppressions、Integrations，仍写 server functions
+  （`README.md:34,36,55`）；实际入口是 oRPC router。
+- **DOC-46/47**：post-MVP 方向 5 整段仍列为候选、方向 2 称缺投递缺口解释，但 CI、Docker smoke、
+  发布文档、`route-match-gaps.ts:57` 均已落地。
+- **DOC-36/50/51**：next-round 的 D2/D5、ADR 0008 工具链版本与命令、frontend-architecture
+  页面/feature 清单均过期。
+- 新增候选 **DOC-53..DOC-58**：模板引擎 PRD 问题陈述、MVP PRD 状态、模板编辑器 UX 评审状态头、
+  ADR 0003 `server/functions/`、application-container 的无 importer `store.ts`、
+  import-boundaries 的 `auth` namespace。
+- DOC-52 经复核不可复现（文档无该「剩余范围」清单），建议关闭；DOC-24 的 `preview` 缺口仍成立。
+
+### EXPERT_PANEL
+
+本轮无新裁决；未触碰 schema、投递/路由/auth 语义或 secret 处理。REQ-134 标记为
+「实现前须 EXPERT_PANEL」。
+
+### 发布（第 9.5 步）
+
+- 三位专家一致通过：发布经理 RELEASE（beta.17 后唯一用户可见变更 #191）；
+  阻断审计 APPROVE（6/6：main CI 绿、无 open PR、无回归、无高优 `blocked-autonomous`、
+  无 migration、无依赖/锁文件变更）；运维/回滚 SAFE（镜像配置、环境变量、端口、卷、
+  entrypoint 未变；schema 相同，回滚只需换镜像）。
+- 版本：`0.1.0-beta.18`；PR #192 `chore(release): v0.1.0-beta.18` rebase 合并 `d353c60`，
+  main CI success。
+- Tag：`v0.1.0-beta.18`（annotated，指向 `d353c60`）；GitHub Release 已创建（prerelease）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.18
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.18`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:b41ad66313045163d81ebb4ec2995e3fed620a37ebed354949a0f069f769d2b8`）。
+- 回滚镜像：`0.1.0-beta.17`（index digest `sha256:ed2076d8…`）。
+
+### 下一轮优先项
+
+1. REQ-129（28）告警源可投递覆盖率；REQ-125（27）共享密钥显式清除；
+   REQ-130/131（27）补投包含已静默目标、失败投递保留渲染载荷。
+2. UI 批次（UI-9/UI-4/UI-8/UI-11/UI-12），并复验 #187 停用确认与 #191 加急说明；
+   深度 UI 评审最晚 2026-10-22 04:05 CST。
+3. docs-drift 两个 `docs:` PR（第 30 轮已刷新证据）。
+4. REL-21（本地跑通 Playwright 后新增 `e2e.yml`）、SEC-9/13/14、REQ-119/120。
+
 ## 2026-10-20（第 29 轮）
 
 - 时间：2026-10-20 05:41 – 06:05 CST。
