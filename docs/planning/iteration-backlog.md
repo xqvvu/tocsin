@@ -68,7 +68,7 @@
 | REL-3 | Docker smoke 使用全局卷名，`down -v` 会删正常数据卷 | 发布 lane | 28 | candidate | — | `docker-compose.yml:7,32-37` 固定镜像 `tocsin:local` + 全局卷名 `tocsin-data`；`docker-smoke.sh:16-17,29,37` 固定项目名/端口并复用同一 compose 文件。正常栈运行时 smoke 会共享真实卷（双 worker）并覆盖镜像 tag；应加 `docker-compose.smoke.yml` override。10-18 release lane 复核仍成立，且 `down -v` 先于抓日志，失败时日志必丢；curl 无超时 |
 | REL-4 | E2E spec 覆盖面不足 | 发布 lane | 25 | candidate | — | 单个串行用例只覆盖 setup/source/destination/webhook/events；未创建 Route、未验证 Delivery/retry/filter/重启/导出（`alert-flow.spec.ts:27`） |
 | REL-5 | build 产物启动与文件型 SQLite migration 无 CI smoke | 发布 lane | 24 | candidate | — | CI 只 `vp run -r build`；`.output/server/index.mjs` 仅 Dockerfile/手动 smoke 执行。10-18 建议先加 `scripts/artifact-smoke.sh`：临时目录 + 临时 SQLite + 固定 secret，启动产物轮询 `/api/ready`，断言 checks 全 ok 并清理 |
-| ARCH-1 | `route-forms.tsx` 965 行含两个导出组件 | 架构 lane | 25 | candidate | — | 拆 `create-route-form.tsx` / `edit-route-form.tsx` |
+| ARCH-1 | `route-forms.tsx` 1027 行含两个导出组件 | 架构 lane | 25 | candidate | — | 拆 `create-route-form.tsx` / `edit-route-form.tsx`；第 16 轮核实已增至 1027 行（`:61` / `:127`，新增确认流程 `:714-745`） |
 | ARCH-2 | `suppression-forms.tsx` 703 行含两个导出组件 | 架构 lane | 25 | candidate | — | 同上；`CreateSuppressionForm` L67、`EditSuppressionForm` L127 |
 | ARCH-3 | `delivery-state-badge.tsx` 三个导出组件 | 架构 lane | 23 | candidate | — | 低优先级 |
 | ARCH-4 | `system-information.ts` 五层相对路径导入根 `package.json` | 架构 lane | 23 | candidate | — | 走配置别名或单点 server adapter |
@@ -154,7 +154,7 @@
 | Q-18 | 抑制提示降级数据分支未测 | quality lane | 22 | candidate | — | `delivery-suppression-notice.tsx:33,36-45`；现有测试只覆盖字段齐全的数据 |
 | Q-19 | 列表页重试/手动 worker 错误路径无测试 | quality lane | 24 | candidate | — | `deliveries-page.tsx:75-90` 的 catch；`DeliveryActions` 无测试文件 |
 | REQ-52 | 模板 `tocsin.eventUrl` 生产恒为空 | requirements lane | 28 | candidate | — | 所有渲染调用点未传 `eventUrl`，且无公开访问地址配置；建议新增 `TOCSIN_PUBLIC_URL`；`template.ts:369-399`、`feishu/payload.ts:18`、`destination.service.ts:299` |
-| REQ-53 | 加急记录缺触发人/呼叫时间/下次重试 | requirements lane | 29 | candidate | — | DTO 已有 `initiatedBy/firedAt/nextAttemptAt`，纯 UI；`delivery-pings-table.tsx:28-41`、`oncall.ts:39-50` |
+| REQ-53 | 加急记录缺触发人/呼叫时间/下次重试 | requirements lane | 29 | shipped | #140 | 触发方式下显示 `initiatedBy`；新增呼叫时间/下次重试两列；PRD `docs/prd/oncall-ping-audit-fields.md` |
 | REQ-54 | 告警源覆盖无法区分无路由与仅停用路由 | requirements lane | 27 | candidate | — | Source 侧无 `disabledRouteCount`，0 条统一显示「未匹配路由」；`source-route-coverage.ts:11-27`、`source-route-coverage-cell.tsx:22-30` |
 | REQ-55 | 全静默事件摘要未计入已抑制 | requirements lane | 27 | candidate | — | 摘要只传 succeeded/failed；统计函数已有 suppressed；`event-detail-summary.tsx:43-49`、`event-detail-stats.ts:3-15` |
 | REQ-56 | 被抑制投递无逐项匹配说明 | requirements lane | 25 | candidate | — | PRD 故事 26；核心 matcher 已有 checks，但未投影；建议只读读时重算并标注口径；`suppression.ts:134-141,155-186`、`delivery-suppression-notice.tsx:20-60` |
@@ -164,7 +164,7 @@
 | ARCH-18 | 抑制详情命中分页未进 URL | architecture lane | 24 | candidate | — | `suppression-detail-page.tsx:34,39,119`；刷新回第 1 页 |
 | ARCH-19 | Event/Delivery DetailTerm 重复且换行策略分叉 | architecture lane | 25 | candidate | — | `delivery-detail-term.tsx:59` 用 `wrap-break-word`，可能裁切长引用；建议下沉 `components/common` 并统一 `break-all` |
 | Q-20 | 旧库升级 `normalized_json` 未回填 | quality lane | 22 | shipped | #136 | EXPERT_PANEL 采用读取容错（A）：`'{}'` 占位符按列重建，不写库、无迁移；同时解除 claim 事务毒丸。决策 `docs/planning/decisions/legacy-normalized-event-repair.md` |
-| Q-21 | 搜索框无 120 字符上限导致列表错误页 | quality lane | 28 | candidate | — | schema `max(120)` 但输入框/URL 归一化不截断；`operations.ts:208`、`operation-filters.tsx:87-99`、`operations.queries.ts:87-102` |
+| Q-21 | 搜索框无 120 字符上限导致列表错误页 | quality lane | 28 | shipped | #141 | `@tocsin/core` 导出 `OPERATION_SEARCH_MAX_LENGTH`；输入框 `maxLength` + `pruneSearch` 截断，contract 共用同一常量 |
 | Q-22 | 复制按钮与响应体回退分支缺测试 | quality lane | 25 | candidate | — | 只断言按钮存在；非 JSON 响应体回退无测试；`delivery-summary-tab.test.tsx:52-67`、`delivery-attempt-detail-dialog.tsx:151-185` |
 | Q-23 | dedupe cleanup 无界 DELETE 仍在 enqueue 热路径 | DOC-21 | 25 | candidate | — | `pruneDedupeKeys` 无 LIMIT，每次 enqueue 执行；`delivery.helpers.ts:98-99`、`delivery.repository.ts:95` |
 | REQ-57 | Route 全空条件（catch-all）保存护栏 | requirements lane | 29 | shipped | #138 | `routeRuleIsEmpty` + 提交前确认对话框；新建/编辑共用；PRD `docs/prd/route-catchall-confirmation.md` |
@@ -195,18 +195,39 @@
 | Q-27 | 告警源覆盖率把条件路由算成全覆盖 | quality lane | 24 | candidate | — | `routeCoversSource` 只要 `sourceIds=[]` 就算覆盖（`source-route-coverage.ts:16-31`）；`{severities:["critical"]}` 会让 warning/info 静默丢失；`catchAllRouteCount` 同样误判 |
 | Q-28 | oncall worker 批次共用开始时间 | quality lane | 22 | candidate | — | `OncallWorker.runOnce` 把批次 `now` 传给每次 execute（`oncall-worker.service.ts:77-79`、`oncall-execution.ts:97-98,138-143`）；`fired_at` 与退避基准偏早；对照 Q-9 的 live clock 修复 |
 | Q-29 | 历史样例选择器错误/空态分支无测试 | quality lane | 20 | candidate | — | `destination-notices.tsx:131,150-158` 的 pending/error/empty 三态无覆盖（`destination-notices.test.tsx:94-164`）；`delivery-event-cell.test.tsx:56,72` 仅否定断言 |
+| REQ-72 | 手动加急一键呼叫无确认 | requirements lane | 29 | candidate | — | 单击即呼叫目标全部接收人；确认框展示接收人数，无接收人时禁用；`delivery-buzz-button.tsx:20-56`、`oncall.service.ts:79-83`、`destination.helpers.ts:190-191` |
+| REQ-73 | 静默时间窗时区语义不一致 | requirements lane | 28 | candidate | — | `datetime-local` 按浏览器时区解释，列表/详情按设置时区显示；`suppression-form.ts:118-128,160-184`、`operation-format.ts:11-28` |
+| REQ-74 | Events/Deliveries 排序方向 | requirements lane | 27 | candidate | — | URL `order=asc\|desc`，列表与 total 共用谓词；`history.repository.ts:79-80,241-242`、`operations.ts:201-217` |
+| REQ-75 | 静默详情页缺生命周期操作 | requirements lane | 26 | candidate | — | 详情页只有返回；复用启停/编辑/删除/续期入口；`suppression-detail-page.tsx:62-75`、`suppressions-section.tsx:260-299` |
+| REQ-76 | 加急可用性预判 | requirements lane | 25 | candidate | — | 0 个 urgent 接收人时禁用并说明；`delivery-buzz-button.tsx:20`、`destination.helpers.ts:190-191` |
+| REQ-77 | 投递诊断摘要一键复制 | requirements lane | 25 | candidate | — | 脱敏摘要：投递/事件 ID、目标、路由、状态、尝试、错误；`delivery-detail-summary.tsx:43-68` |
+| REQ-78 | 列表搜索逐键请求 | requirements lane | 25 | candidate | — | 无防抖，每次输入即写 URL 并触发查询；Q-21 只覆盖长度；`operation-filters.tsx:87-99`、`operations.queries.ts:29-40` |
+| REQ-79 | 设置保存无条件整页刷新 | requirements lane | 24 | candidate | — | 仅改保留天数也 `hardReloadPage`；`settings-preferences-panel.tsx:59-64` |
+| ARCH-20 | Destination 密钥路径策略三处重复 | architecture lane | 25 | candidate | — | manifest `secretFields` 未被消费；`feishu/manifest.ts:126`、`generic-webhook/manifest.ts:57`、`destination.helpers.ts:233`、`config-portability.ts:428` |
+| ARCH-21 | 编辑器草稿映射放在 SQLite repository helper | architecture lane | 21 | candidate | — | `destination.helpers.ts:108,390`、`destination.service.ts:149`；UI DTO 形状落在 infra |
+| ARCH-22 | 纯领域逻辑 `route-match-gaps.ts` 落在 repository 目录 | architecture lane | 21 | candidate | — | 只依赖 core 类型、无持久化；`route-match-gaps.ts:1-60`、`history.repository.ts:22` |
+| ARCH-23 | 注入的 container 在 dashboard 会话解析中被绕过 | architecture lane | 20 | candidate | — | `request-context.ts:46-57,86-88` 固定调用 `getApplicationContainer()` |
+| ARCH-24 | core 模块契约文件位置与 AGENTS 不一致 | architecture lane | 17 | candidate | — | `operations.ts`、`config.ts` 在包根且已有 `configuration/`；AGENTS.md:69 |
+| ARCH-25 | 空条件确认对话框重复实现 | architecture lane | 18 | candidate | — | `route-forms.tsx:714-745` 与 `suppression-forms.tsx:467-497` 同构 |
+| ARCH-26 | feature `model/` 混入 React hook 与 i18n 上下文 | architecture lane | 18 | candidate | — | `operation-format.ts:1,12-22` 被 `delivery-diagnostics.ts:6` 跨 feature 导入 |
+| REL-15 | 发布手册的手工 Docker 冒烟不隔离 | release-infra lane | 24 | candidate | — | `release-checklist.md:40-48` 直接 build/up/down 正常栈；建议 `docker-compose.smoke.yml`（与 REL-3 同根因） |
+| REL-16 | CI 不是强制门禁 | release-infra lane | 21 | candidate | — | main 无 branch protection/ruleset，红 CI 仍可合并；`.github/workflows/ci.yml:16-18` |
+| REL-17 | `.dockerignore` 漏掉 Playwright 产物与 `.wt/` | release-infra lane | 22 | candidate | — | trace 可能含 Source token，`COPY . .` 会带入镜像层；`.dockerignore:23-24`、`.gitignore:40-43`、`Dockerfile:29` |
+| REL-18 | 发布手册 readiness 无重试 | release-infra lane | 23 | candidate | — | `release-checklist.md:45-46` 立即 curl；脚本已有轮询 `docker-smoke.sh:64-79` |
+| REL-19 | 本地 E2E 失败无 trace | release-infra lane | 23 | candidate | — | 本地 `retries=0` + `trace: on-first-retry`；`playwright.config.ts:23,28` |
+| DOC-33 | RC 未勾选 gate 实为 4 条而非 3 条 | release-infra lane | 21 | candidate | — | 漏算 provider 多版本 payload；`mvp-rc-checklist.md:123,165,171,172` |
 
 ## 下一轮优先项
 
-1. **REQ-53**（29）：加急记录展示触发人、呼叫时间与下次重试；纯 UI，DTO 已具备。
+1. **REQ-72**（29）：手动加急一键呼叫确认；最高风险动作反而没有确认，纯 UI。
 2. **REQ-65**（28）：全局静默生效提示；纯 UI，复用 `suppressionStateAt`。
 3. **REQ-66**（28）：按外部消息引用反查投递；只读搜索谓词，列表与 total 同谓词。
-4. **Q-21**（28）：搜索输入 120 字符上限；输入框 `maxLength` + URL 归一化截断 + 用例。
+4. **REQ-73**（28）：静默时间窗按设置时区解释与回显；含跨时区用例。
 5. **REQ-58**（28）：失败投递区分「等待重试」与「重试耗尽」；DTO 增 `maxAttempts`。
 6. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
 7. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
-8. **REL-3**（28，P0）：Docker smoke 卷/镜像/项目/端口隔离；`down -v` 丢日志与无超时
-   证据使其成为任何 smoke CI 接入前的阻断项。
+8. **REL-3（28，P0）+ REL-15/REL-18**：Docker smoke 与发布手册的卷/镜像/项目/端口隔离、
+   日志保留、readiness 重试；任何 smoke CI 接入前的阻断项。
 9. **Q-24**（27）：接入侧 prune sweep 单飞跨请求失效；提升到模块级 promise 或在
    container 缓存 intake service，补多实例并发只触发一次 sweep 的用例。
 10. **Q-26**（25）：抑制窗口改用 `Date.parse` 比较或 schema transform；带偏移 ISO 时间
@@ -239,6 +260,15 @@
     第 11 轮补充：失败时上传 `test-results`/`playwright-report` artifact）；
     **REL-13**（LICENSE）保持 blocked-autonomous，需专家小组做法律/产品决策。
     ARCH-10/ARCH-11/ARCH-15..19 等再次触碰对应文件时做。
+29. **ARCH-20**（25）：由 manifest `secretFields` 驱动 secret path，消除 repository/
+    portability 两处硬编码 switch 的策略漂移。
+30. **REL-17**（22）：补 `.dockerignore` 的 Playwright 产物与 `.wt/`，避免 trace 中的
+    Source token 进入镜像层。
+31. **REL-16**（21）：为 main 增加要求 `quality` job 的 ruleset，让 CI 成为强制门禁。
+32. **DOC-33 + DOC-28..32**：一批文档漂移（RC 未勾选 gate 计数、E2E/CI 表述、
+    `next-round.md` 基线、route authoring 现状、抑制决策脱敏测试）。
+33. **REQ-74..79**（24–27）：排序方向、静默详情生命周期、加急可用性预判、
+    投递诊断摘要复制、搜索防抖、设置保存局部刷新。
 
 ## 已知过期输入
 

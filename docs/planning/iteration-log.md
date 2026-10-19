@@ -2,6 +2,90 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 16 轮）
+
+- 时间：2026-10-19 08:59 – 12:40 CST（会话中途被系统挂起约 2.5 小时，车道在恢复后返回）。
+- 基线：`origin/main` @ `27114f8`；main 最近一次 CI 为 success，无遗留 open PR。
+- 本轮类型：**需求切片 + 小修复 + 三车道审计**（非 full-audit）。最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）；backlog 仍有大量 ≥27 分候选，按第 1.5 步继续消化。
+- 车道轮转位置：本轮跑 `requirements` + `architecture` + `release-infra`，三条车道均返回。
+  下一轮建议 `requirements` + `docs-drift` + `security-exposure`。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `elastic-hopper-f97c51`；收尾时删除其 `node_modules` 与 `agent-iteration`。
+
+### 本轮交付
+
+- PR #140（`feat(console): show oncall ping audit fields`）—— **REQ-53**。
+  - 触发方式单元格显示 `initiatedBy`；新增呼叫时间（`firedAt`）与下次重试
+    （`nextAttemptAt`）两列；空值统一 `—`；时间悬浮显示完整日期时间。
+  - PRD `docs/prd/oncall-ping-audit-fields.md`；新增组件测试覆盖手动/自动/空列表。
+  - 验证：`vp check` 0 errors；`vp run -r test` 4/4（console 565）；`vp run -r build`。
+- PR #141（`fix(console): cap operation search at the contract limit`）—— **Q-21**。
+  - `@tocsin/core` 导出 `OPERATION_SEARCH_MAX_LENGTH`，contract 与前端共用。
+  - 搜索框 `maxLength` + `pruneSearch` 截断，覆盖手工编辑 URL；新增 3 条用例。
+  - 验证：同上门禁。
+
+### requirements lane（新增 8 条，已写入 backlog）
+
+- **REQ-72（29）**：手动加急一键呼叫无确认；单击即呼叫目标全部接收人。
+- **REQ-73（28）**：静默时间窗表单按浏览器时区解释，列表按设置时区显示，跨时区会偏数小时。
+- **REQ-74（27）**：Events/Deliveries 排序方向。
+- **REQ-75（26）**：静默详情页缺启停/编辑/删除/续期入口。
+- **REQ-76（25）**：加急可用性预判（无 urgent 接收人时仍可点）。
+- **REQ-77（25）**：投递诊断摘要一键复制。
+- **REQ-78（25）**：列表搜索逐键请求，无防抖。
+- **REQ-79（24）**：设置保存无条件整页刷新。
+
+### architecture lane（新增 ARCH-20..26）
+
+- **ARCH-20（25）**：Destination secret path 策略在 manifest、repository、portability
+  三处重复，manifest `secretFields` 未被消费（`destination.helpers.ts:233`、
+  `config-portability.ts:428`）。
+- **ARCH-21（21）**：编辑器草稿映射（header 行、收件人拼接）落在 SQLite repository helper。
+- **ARCH-22（21）**：纯领域逻辑 `route-match-gaps.ts` 落在 repository 目录。
+- **ARCH-23（20）**：注入的 container 在 dashboard 会话解析中被绕过。
+- **ARCH-24（17）**：core 模块契约仍在包根，与 AGENTS 的 `<module>/` 约定不一致。
+- **ARCH-25（18）**：空条件确认对话框在 routes/suppressions 重复实现。
+- **ARCH-26（18）**：feature `model/` 混入 React hook 与 i18n 上下文。
+- ARCH-1 证据更新：`route-forms.tsx` 已增至 1027 行。
+
+### release-infra lane（新增 REL-15..19、DOC-33）
+
+- REL-3/6/7 证据未变；实测 `docker compose -p tocsin-smoke config` 仍解析为
+  `tocsin:local` / `tocsin-data`；Playwright 期望 1248、缓存 1234。
+- **REL-15（24）**：发布手册的手工 Docker 冒烟直接作用于正常栈。
+- **REL-16（21）**：main 无 branch protection/ruleset，CI 不是强制门禁。
+- **REL-17（22）**：`.dockerignore` 漏掉 Playwright 产物与 `.wt/`，trace 可能含 Source token。
+- **REL-18（23）**：发布手册 readiness 无重试。
+- **REL-19（23）**：本地 E2E `retries=0` + `trace: on-first-retry`，失败无 trace。
+- **DOC-33（21）**：RC 未勾选 gate 实为 4 条，历史记录漏算 provider 多版本 payload。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项。
+- REL-13（LICENSE）继续 `blocked-autonomous`。
+
+### 其他
+
+- 浏览器验证：未执行。本机 6180 端口的 console dev server 运行在主 checkout
+  `27114f8`（不含本轮改动），且 dev 配置 `strictPort`；组件行为已由 jsdom 测试覆盖。
+- Obsidian 同步：从 `~/Library/Application Support/obsidian/obsidian.json` 发现 vault
+  根目录 `~/Library/Mobile Documents/iCloud~md~obsidian/Documents`，沿用 `Vane/` 下的
+  `Vane <Title>.md` 命名与 `## Related` wikilink 风格。已同步 `Vane Iteration Log`、
+  `Vane Iteration Backlog`，新建 `Vane Oncall Ping Audit Fields` 并更新 `Vane Index`。
+- 本轮 backlog/log 随 `docs(planning):` PR 提交。
+
+### 下一轮优先项
+
+1. **REQ-72（29）**：手动加急确认。
+2. **REQ-65（28）**：全局静默生效提示。
+3. **REQ-66（28）**：按外部消息引用反查投递。
+4. **REQ-73（28）**：静默时间窗时区语义。
+5. **REQ-58（28）**：失败投递等待重试/重试耗尽。
+6. **REL-3 + REL-15/18**：Docker smoke 隔离与手册。
+7. **Q-24（27）**：prune sweep 单飞跨请求失效（真实缺陷）。
+8. **Q-26（25）**：抑制窗口时间比较。
+
 ## 2026-10-19（第 15 轮）
 
 - 时间：2026-10-19 07:42 – 09:00 CST。
