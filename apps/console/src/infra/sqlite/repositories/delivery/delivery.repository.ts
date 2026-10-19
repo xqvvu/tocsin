@@ -49,7 +49,10 @@ import {
 } from "#/infra/sqlite/repositories/destination/destination.helpers";
 import type { DestinationRepository } from "#/infra/sqlite/repositories/destination/destination.interface";
 import { SqliteDestinationRepository } from "#/infra/sqlite/repositories/destination/destination.repository";
-import { requireEvent } from "#/infra/sqlite/repositories/intake/intake.helpers";
+import {
+  isPrunedRawPayload,
+  requireEvent,
+} from "#/infra/sqlite/repositories/intake/intake.helpers";
 import type { SqliteIntakeRepository } from "#/infra/sqlite/repositories/intake/intake.repository";
 import { SqliteIntakeRepository as SqliteIntakeRepositoryImpl } from "#/infra/sqlite/repositories/intake/intake.repository";
 import type { OncallRepository } from "#/infra/sqlite/repositories/oncall/oncall.interface";
@@ -472,6 +475,7 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
     return {
       job,
       event,
+      rawPayloadPruned: isPrunedRawPayload(event.rawPayload),
       source,
       destination,
       destinationMetadata,

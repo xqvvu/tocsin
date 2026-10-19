@@ -111,6 +111,9 @@ export const DeliveryAttemptSchema = z.object({
 export const DeliveryDetailSchema = z.object({
   job: DeliveryJobSchema,
   event: EventRecordSchema,
+  // The retention sweep leaves a sentinel behind; the UI needs the explicit
+  // state to avoid rendering it as provider data.
+  rawPayloadPruned: z.boolean(),
   source: SourceSummarySchema,
   destination: DestinationSummarySchema,
   // Operational destination facts only: template mode, endpoint, method, and
