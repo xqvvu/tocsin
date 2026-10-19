@@ -35,7 +35,7 @@ Deliveries 列表的搜索框现在也能按**目标平台返回的外部消息�
 - `deliverySearchPredicate` 增加
   `deliveries.provider_ref_value LIKE <term> ESCAPE '\'` 分支。
 - 列表查询与 `total` 计数继续共用同一谓词，计数查询不新增 join，避免重复计数。
-- Deliveries 页搜索占位文案补充「外部引用」；Events 页文案与搜索范围不变。
+- Deliveries 页搜索占位文案补充「外部消息引用」；Events 页文案与搜索范围不变。
 - 仓储测试新增：按引用值命中唯一投递、`total` 与 `items` 一致；事件列表不因该引用命中。
 - 组件测试同步更新 Deliveries 页占位文案断言。
 
