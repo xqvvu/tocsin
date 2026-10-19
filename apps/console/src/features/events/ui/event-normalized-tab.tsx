@@ -3,6 +3,7 @@ import { EventDetailTerm } from "#/features/events/ui/event-detail-term";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { EventJsonBlock } from "#/features/events/ui/event-json-block";
 import { EventLabelList } from "#/features/events/ui/event-label-list";
+import { EventUpstreamSource } from "#/features/events/ui/event-upstream-source";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
 
@@ -64,6 +65,7 @@ export function EventNormalizedTab({ detail }: { detail: EventDetailData }) {
           />
         </dl>
         <EventLabelList labels={normalized.labels} />
+        <EventUpstreamSource providerMetadata={detail.event.providerMetadata} />
       </section>
 
       <EventJsonBlock
