@@ -99,7 +99,23 @@
 
 ### 发布（第 9.5 步）
 
-- 待发布评估完成后补充。
+- 三位专家一致通过：
+  - 发布经理 **RECOMMEND**：`v0.1.0-beta.18..origin/main` 有 2 个用户可见变更（#194 feat、#195 fix）
+    与 1 个 docs；建议预发布号递增为 `0.1.0-beta.19`，无同名 tag 冲突。
+  - 阻断审计 **APPROVE（6/6）**：main CI success、无 open PR、唯一 `blocked-autonomous`
+    REL-13（LICENSE）不阻断、无新增迁移、无依赖/锁文件变更、两个 PR 无 secret/auth 回归。
+  - 运维/回滚 **SAFE**：Dockerfile/compose/entrypoint/端口/卷/环境变量零差异，SQLite schema
+    与 beta.18 相同，回滚只需换回 beta.18 镜像、无需恢复数据。
+- 版本：`0.1.0-beta.19`；PR #196 `chore(release): v0.1.0-beta.19` rebase 合并 `9f40eef`，
+  main CI success。
+- Tag：`v0.1.0-beta.19`（annotated，指向 `9f40eef`）；GitHub Release 已创建（prerelease）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.19
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.19`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:01f2bf2649cf13980fd46c8ebad555d62b95f15590f2cc3aea9120396d8fb29b`）。
+- 构建：在 tag `v0.1.0-beta.19` 的干净检出上执行
+  `docker buildx build --builder tocsin-multi --platform linux/amd64,linux/arm64 --provenance=false --sbom=false --push`。
+- 回滚镜像：`0.1.0-beta.18`（index digest `sha256:b41ad663…`）。
 
 ### 下一轮优先项
 
