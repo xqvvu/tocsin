@@ -10,6 +10,7 @@ import { openSqliteStore } from "#/infra/sqlite/store";
 import {
   WebhookIntakeError,
   WebhookIntakeService,
+  createRawPayloadSweepGate,
   hashSourceToken,
   verifySourceToken,
 } from "#/server/intake/intake.service";
@@ -374,6 +375,71 @@ describe("webhook intake service", () => {
     await waitForSweep(store, staleEventIds.length);
 
     expect(await countPrunedEvents(store, staleEventIds)).toBe(staleEventIds.length);
+
+    await store.close();
+  });
+
+  it("runs one background sweep across concurrent service instances", async () => {
+    const store = await createStore();
+    const gate = createRawPayloadSweepGate();
+    const sweepStarted = deferred();
+    const releaseSweep = deferred();
+    const pruneAll = vi.spyOn(store.intake, "pruneAllRawPayloads").mockImplementation(async () => {
+      sweepStarted.resolve();
+      await releaseSweep.promise;
+
+      return 0;
+    });
+    // One gate, two instances: this is the shape the container wires, because
+    // it creates the intake service per request.
+    const services = [0, 1].map(
+      () =>
+        new WebhookIntakeService({
+          store,
+          providers: createDefaultProviderRegistry(),
+          now: () => now,
+          sweepGate: gate,
+        }),
+    );
+
+    await store.sources.create({
+      id: "source-1",
+      name: "Generic source",
+      tokenHash: hashSourceToken("source-token"),
+      provider: "generic",
+    });
+
+    await Promise.all(
+      services.map((service, index) =>
+        service.acceptWebhook({
+          sourceId: "source-1",
+          token: "source-token",
+          headers: {},
+          payload: { id: `fresh-${index}`, title: "Fresh", message: "fresh" },
+          receivedAt: now,
+        }),
+      ),
+    );
+
+    await sweepStarted.promise;
+
+    // Both webhooks kicked the sweep, but the shared latch admitted one drain.
+    expect(pruneAll).toHaveBeenCalledTimes(1);
+
+    releaseSweep.resolve();
+    // Let the sweep's finally block release the latch before the next webhook.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await services[0].acceptWebhook({
+      sourceId: "source-1",
+      token: "source-token",
+      headers: {},
+      payload: { id: "fresh-after-sweep", title: "Fresh", message: "fresh" },
+      receivedAt: now,
+    });
+
+    // The latch is released after a sweep, so retention keeps converging.
+    expect(pruneAll).toHaveBeenCalledTimes(2);
 
     await store.close();
   });
@@ -967,6 +1033,15 @@ async function waitForSweep(
 
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
+}
+
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+
+  return { promise, resolve };
 }
 
 /**
