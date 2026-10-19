@@ -3,6 +3,10 @@
 - 调研基线：`origin/main`，工作树 `/Users/chuanhu9/devs/vane/.wt/a`，commit `73d84d3`
 - 方法：只读代码侦察，范围限定 `packages/core/src/route/`、`apps/console/src/server/`、`apps/console/src/features/routes/` 及直接相邻的 event/delivery/UI 路径
 - 对应上游文档：`docs/prd/post-mvp-planning.md:88`「### 2. Route Authoring 与 Explain」（第 203 行给出第二优先级理由）
+- 状态校正（2026-10-19，第 17 轮）：下文部分「缺口」已交付——投递缺口解释
+  （`route-match-gaps.ts`、`event-detail-route-gaps.tsx`）、route×destination 视图与接入快照
+  来源标注（`event-detail-route-matches-table.tsx`）、每类条件多行增删（`route-forms.tsx`）
+  均已落地。续做前按当前 `origin/main` 与 backlog DOC-30 复核。
 
 > **本文档不含实现方案。** 仅盘点现状、证据与缺口；「候选切片」一节只描述可独立交付的能力边界，不给出技术设计。
 
