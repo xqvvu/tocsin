@@ -11,7 +11,7 @@
 - 车道轮转位置：本轮跑 `requirements` + `quality` + `architecture`，三条车道均返回。
   下一轮建议 `requirements` + `docs-drift` + `security-exposure`。
 - 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
-  `determined-hopper-bc917b`；收尾时删除其 `node_modules` 与 `agent-iteration`。
+  `determined-hopper-bc917b`；工作树已清理：收尾时删除其 `node_modules` 与 `agent-iteration`。
 - 依赖：会话工作树 `node_modules` 链接残缺，`vp install` 报 “Already up to date” 后仍缺
   `@rolldown/plugin-babel`；按既有经验整体删除后重装解决。
 
