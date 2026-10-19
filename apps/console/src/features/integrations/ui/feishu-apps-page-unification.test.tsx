@@ -4,6 +4,8 @@ import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
+import type { FeishuAppListItem, SourceSummary } from "@tocsin/core";
+
 import { FeishuAppsPageToolbar } from "#/features/integrations/ui/feishu-apps-page-toolbar";
 import { FeishuAppsSection } from "#/features/integrations/ui/feishu-apps-section";
 import { SourcesPageToolbar } from "#/features/sources/ui/sources-page-toolbar";
@@ -24,14 +26,29 @@ import { AppIntlProvider } from "#/i18n/provider";
 
 const noop = () => {};
 
+const sourceFixture = {
+  id: "source-1",
+  name: "Grafana",
+  provider: "grafana" as const,
+  enabled: true,
+};
+const feishuAppFixture = {
+  id: "app-1",
+  name: "SRE pager",
+  appId: "cli_abcdef123456",
+  createdAt: "2026-10-13T00:00:00.000Z",
+  updatedAt: "2026-10-13T00:00:00.000Z",
+  referencedDestinations: [],
+};
+
 function renderWithIntl(ui: ReactNode) {
   return render(<AppIntlProvider locale="en-US">{ui}</AppIntlProvider>);
 }
 
-function sourcesSection() {
+function sourcesSection(sources: SourceSummary[] = []) {
   return (
     <SourcesSection
-      sources={[]}
+      sources={sources}
       routes={[]}
       pending={false}
       onEdit={noop}
@@ -42,9 +59,9 @@ function sourcesSection() {
   );
 }
 
-function feishuSection() {
+function feishuSection(apps: FeishuAppListItem[] = []) {
   return (
-    <FeishuAppsSection apps={[]} pending={false} onTest={noop} onEdit={noop} onDelete={noop} />
+    <FeishuAppsSection apps={apps} pending={false} onTest={noop} onEdit={noop} onDelete={noop} />
   );
 }
 
@@ -73,34 +90,37 @@ describe("Feishu apps page matches the other list pages", () => {
   });
 
   it("renders the same pagination footer as another list page", () => {
-    const { container: sources } = renderWithIntl(sourcesSection());
-    const { container: feishu } = renderWithIntl(feishuSection());
+    // A list with no rows has nothing to paginate and hides the footer, so the
+    // parity check needs one row in each table.
+    const { container: sources } = renderWithIntl(sourcesSection([sourceFixture]));
+    const { container: feishu } = renderWithIntl(feishuSection([feishuAppFixture]));
 
-    // Normalise the honest differences: the noun, and the empty-state copy.
-    // Anchor on the pagination label instead of slicing characters — a slice
-    // cuts mid-word and makes the assertion depend on copy length.
-    const footer = (container: HTMLElement) => {
-      const text = container.textContent ?? "";
-      const start = text.indexOf("Page ");
+    // Read the shared footer itself rather than the whole page, so table cell
+    // content cannot leak into the comparison.
+    const footer = (container: HTMLElement) =>
+      container.querySelector('[data-slot="table-pagination"]')?.textContent ?? "";
+    // The range label legitimately differs by noun; the control itself must not.
+    const pageControl = (container: HTMLElement) => {
+      const text = footer(container);
 
-      return text.slice(start);
+      return text.slice(text.indexOf("Page "));
     };
 
     // Page label, Previous and Next all present — i.e. the shared numbered
     // control, which is what makes the footer identical across list pages.
-    expect(footer(feishu)).toContain("Page 1 / 1");
-    expect(footer(feishu)).toContain("Previous");
-    expect(footer(feishu)).toContain("Next");
-    expect(footer(feishu)).toBe(footer(sources));
+    expect(pageControl(feishu)).toContain("Page 1 / 1");
+    expect(pageControl(feishu)).toContain("Previous");
+    expect(pageControl(feishu)).toContain("Next");
+    expect(pageControl(feishu)).toBe(pageControl(sources));
 
     // The range label is part of the same footer and legitimately differs by
     // noun, so assert it separately rather than skipping it: dropping it would
     // leave a footer that renders only arrows, which is the exact regression
     // this page needed fixing for.
-    const rangeLabel = (container: HTMLElement) =>
-      (container.textContent ?? "").split("Page ")[0].split("right rail").at(-1);
+    const rangeLabel = (container: HTMLElement) => footer(container).split("Page ")[0];
 
-    expect(rangeLabel(feishu)).toBe("No Feishu apps");
+    expect(rangeLabel(feishu)).toBe("1 Feishu apps");
+    expect(rangeLabel(sources)).toBe("1 sources");
   });
 
   it("renders its own columns, so the table is not merely structurally identical", () => {

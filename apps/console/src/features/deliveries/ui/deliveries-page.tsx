@@ -12,9 +12,10 @@ import {
 import { destinationIconNamesByKind } from "#/features/destinations/ui/destination-kind-icon";
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import { operationsQueryOptions } from "#/features/operations/api/operations.queries";
-import type {
-  DashboardOperationSearch,
-  OperationFilterData,
+import {
+  hasOperationFilters,
+  type DashboardOperationSearch,
+  type OperationFilterData,
 } from "#/features/operations/model/operation-search";
 import { OperationFilters } from "#/features/operations/ui/operation-filters";
 import { showWorkerRunToast } from "#/features/operations/ui/worker-notice-panel";
@@ -51,6 +52,7 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
   );
   const { data: operations } = useSuspenseQuery(operationsQueryOptions(filters));
   const operationConfiguration = { sources, destinations, routes };
+  const hasActiveFilters = hasOperationFilters(search);
   const { invalidateOperations, retryDelivery, runDeliveryWorker } = useOperationMutations();
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
   const pending = pendingAction !== null;
@@ -118,6 +120,8 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
             deliveries={operations.deliveries.items}
             destinationIconNames={destinationIconNames}
             pending={pending}
+            hasActiveFilters={hasActiveFilters}
+            onResetFilters={resetFilters}
             onInspect={(deliveryId) =>
               void navigate({
                 to: "/deliveries/$deliveryId",

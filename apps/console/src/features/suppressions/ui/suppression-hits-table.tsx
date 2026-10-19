@@ -121,29 +121,26 @@ export function SuppressionHitsTable({
         columnClassName={hitsColumnClassName}
         isPrimaryColumn={(columnId) => columnId === "event"}
         rangeLabel={({ total }) => t("suppressions.hits.pagination.range", { total })}
-        emptyRangeLabel={t("suppressions.hits.pagination.empty")}
         pageLabel={({ page: currentPage, pageCount: count }) =>
           t("suppressions.hits.pagination.page", { page: currentPage, pageCount: count })
         }
         previousLabel={t("suppressions.hits.pagination.previous")}
         nextLabel={t("suppressions.hits.pagination.next")}
       />
-      <TablePagination
-        rangeLabel={
-          hits.total > 0
-            ? t("suppressions.hits.pagination.range", { total: hits.total })
-            : t("suppressions.hits.pagination.empty")
-        }
-        pageLabel={t("suppressions.hits.pagination.page", {
-          page: pageIndex + 1,
-          pageCount,
-        })}
-        previousLabel={t("suppressions.hits.pagination.previous")}
-        nextLabel={t("suppressions.hits.pagination.next")}
-        pageIndex={pageIndex}
-        pageCount={pageCount}
-        onPageIndexChange={(nextIndex) => onPageChange(nextIndex + 1)}
-      />
+      {hits.total > 0 ? (
+        <TablePagination
+          rangeLabel={t("suppressions.hits.pagination.range", { total: hits.total })}
+          pageLabel={t("suppressions.hits.pagination.page", {
+            page: pageIndex + 1,
+            pageCount,
+          })}
+          previousLabel={t("suppressions.hits.pagination.previous")}
+          nextLabel={t("suppressions.hits.pagination.next")}
+          pageIndex={pageIndex}
+          pageCount={pageCount}
+          onPageIndexChange={(nextIndex) => onPageChange(nextIndex + 1)}
+        />
+      ) : null}
     </section>
   );
 }

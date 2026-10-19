@@ -61,6 +61,24 @@ export type OperationFilterData = {
   deliveryPage?: number;
 };
 
+/**
+ * Whether the operator narrowed the list. An empty result means something
+ * different when filters are on ("nothing matched") than when they are off
+ * ("nothing has happened yet"), and the two empty states must say so.
+ */
+export function hasOperationFilters(search: DashboardOperationSearch): boolean {
+  return Boolean(
+    search.sourceId ||
+    search.severity ||
+    search.status ||
+    search.destinationId ||
+    search.routeId ||
+    search.deliveryState ||
+    search.range ||
+    search.q?.trim(),
+  );
+}
+
 export function operationFiltersFromSearch(search: DashboardOperationSearch): OperationFilterData {
   const { q, ...rest } = pruneSearch(search);
   // The URL keeps the operator's in-progress spacing so typing "Disk usage"

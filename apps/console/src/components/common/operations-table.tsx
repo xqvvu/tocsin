@@ -33,7 +33,6 @@ export interface OperationsTableProps<TData extends RowData> {
   columnClassName: (columnId: string) => string | null;
   isPrimaryColumn?: (columnId: string) => boolean;
   rangeLabel: (range: { start: number; end: number; total: number }) => string;
-  emptyRangeLabel: string;
   pageLabel: (page: { page: number; pageCount: number }) => string;
   previousLabel: string;
   nextLabel: string;
@@ -50,7 +49,6 @@ export function OperationsTable<TData extends RowData>({
   columnClassName,
   isPrimaryColumn = (columnId) => columnId === "name",
   rangeLabel,
-  emptyRangeLabel,
   pageLabel,
   previousLabel,
   nextLabel,
@@ -140,7 +138,18 @@ export function OperationsTable<TData extends RowData>({
                   className="h-full p-0 align-middle"
                   colSpan={table.getAllColumns().length}
                 >
-                  {emptyState}
+                  {/*
+                    The table keeps its min-width so headers stay readable, so an
+                    empty state centred in the full cell lands off-screen on a
+                    phone. Pin it to the viewport instead, and keep it pinned
+                    while the operator scrolls the header row sideways.
+                  */}
+                  <div
+                    data-slot="empty-state-viewport"
+                    className="sticky left-0 flex h-full w-[calc(100vw-2rem)] max-w-full items-center justify-center"
+                  >
+                    {emptyState}
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
@@ -165,17 +174,13 @@ export function OperationsTable<TData extends RowData>({
         </Table>
       </div>
 
-      {showPagination ? (
+      {showPagination && data.length > 0 ? (
         <TablePagination
-          rangeLabel={
-            data.length > 0
-              ? rangeLabel({
-                  start: pageStart,
-                  end: pageEnd,
-                  total: data.length,
-                })
-              : emptyRangeLabel
-          }
+          rangeLabel={rangeLabel({
+            start: pageStart,
+            end: pageEnd,
+            total: data.length,
+          })}
           pageLabel={pageLabel({
             page: Math.min(pageIndex + 1, Math.max(pageCount, 1)),
             pageCount: Math.max(pageCount, 1),

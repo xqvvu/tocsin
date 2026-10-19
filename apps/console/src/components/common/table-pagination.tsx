@@ -47,6 +47,7 @@ export function TablePagination({
 
   return (
     <div
+      data-slot="table-pagination"
       className={cn(
         "border-border bg-background flex shrink-0 flex-col gap-3 border-x border-b px-3 py-3 sm:flex-row sm:items-center sm:justify-between",
         className,

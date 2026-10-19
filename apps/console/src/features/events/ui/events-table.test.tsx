@@ -23,8 +23,10 @@ describe("events table", () => {
           pageSize={20}
           total={45}
           pending={false}
+          hasActiveFilters={false}
           onInspect={vi.fn<(eventId: string) => void>()}
           onPageChange={onPageChange}
+          onResetFilters={vi.fn<() => void>()}
         />
       </AppIntlProvider>,
     );
@@ -61,13 +63,83 @@ describe("events table", () => {
           pageSize={20}
           total={1}
           pending={false}
+          hasActiveFilters={false}
           onInspect={vi.fn<(eventId: string) => void>()}
           onPageChange={vi.fn<(page: number) => void>()}
+          onResetFilters={vi.fn<() => void>()}
         />
       </AppIntlProvider>,
     );
 
     expect(screen.getByText("No route matched")).toBeTruthy();
+  });
+
+  it("hides the pagination bar when there are no events at all", () => {
+    render(
+      <AppIntlProvider locale="en-US">
+        <EventsTable
+          events={[]}
+          page={1}
+          pageSize={20}
+          total={0}
+          pending={false}
+          hasActiveFilters={false}
+          onInspect={vi.fn<(eventId: string) => void>()}
+          onPageChange={vi.fn<(page: number) => void>()}
+          onResetFilters={vi.fn<() => void>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    expect(screen.getByText("No events yet")).toBeTruthy();
+    expect(screen.queryByText(/Page 1 of/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Next" })).toBeNull();
+  });
+
+  it("separates an empty stream from filters that match nothing", () => {
+    const onResetFilters = vi.fn<() => void>();
+
+    const { rerender } = render(
+      <AppIntlProvider locale="en-US">
+        <EventsTable
+          events={[]}
+          page={1}
+          pageSize={20}
+          total={0}
+          pending={false}
+          hasActiveFilters={false}
+          onInspect={vi.fn<(eventId: string) => void>()}
+          onPageChange={vi.fn<(page: number) => void>()}
+          onResetFilters={onResetFilters}
+        />
+      </AppIntlProvider>,
+    );
+
+    expect(screen.getByText("No events yet")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reset filters" })).toBeNull();
+
+    rerender(
+      <AppIntlProvider locale="en-US">
+        <EventsTable
+          events={[]}
+          page={1}
+          pageSize={20}
+          total={0}
+          pending={false}
+          hasActiveFilters
+          onInspect={vi.fn<(eventId: string) => void>()}
+          onPageChange={vi.fn<(page: number) => void>()}
+          onResetFilters={onResetFilters}
+        />
+      </AppIntlProvider>,
+    );
+
+    expect(screen.getByText("No events match")).toBeTruthy();
+    expect(screen.queryByText("No events yet")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+
+    expect(onResetFilters).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -95,7 +95,6 @@ export function FeishuAppsSection({
       columnClassName={feishuAppsColumnClassName}
       isPrimaryColumn={(columnId) => columnId === "name"}
       rangeLabel={({ total }) => t("integrations.table.pagination.range", { total })}
-      emptyRangeLabel={t("integrations.table.pagination.empty")}
       pageLabel={({ page, pageCount }) =>
         t("integrations.table.pagination.page", { page, pageCount })
       }
