@@ -202,7 +202,7 @@
 | REQ-75 | 静默详情页缺生命周期操作 | requirements lane | 26 | candidate | — | 详情页只有返回；复用启停/编辑/删除/续期入口；`suppression-detail-page.tsx:62-75`、`suppressions-section.tsx:260-299` |
 | REQ-76 | 加急可用性预判 | requirements lane | 25 | candidate | — | 0 个 urgent 接收人时禁用并说明；`delivery-buzz-button.tsx:20`、`destination.helpers.ts:190-191` |
 | REQ-77 | 投递诊断摘要一键复制 | requirements lane | 25 | candidate | — | 脱敏摘要：投递/事件 ID、目标、路由、状态、尝试、错误；`delivery-detail-summary.tsx:43-68` |
-| REQ-78 | 列表搜索逐键请求 | requirements lane | 25 | candidate | — | 无防抖，每次输入即写 URL 并触发查询；Q-21 只覆盖长度；`operation-filters.tsx:87-99`、`operations.queries.ts:29-40` |
+| REQ-78 | 列表搜索逐键请求 | requirements lane | 25 | shipped | #171 | 与 UI-1 同一修复：本地草稿 + 300ms 防抖，一次输入只提交一次查询；`operation-filters.tsx`、`operation-search.ts` |
 | REQ-79 | 设置保存无条件整页刷新 | requirements lane | 24 | candidate | — | 仅改保留天数也 `hardReloadPage`；`settings-preferences-panel.tsx:59-64` |
 | REQ-80 | 投递详情解释「为什么命中这条路由」 | requirements lane | 29 | shipped | #146 | 摘要页并列「接入时快照」与「当前规则」，区分无快照/快照不含该路由/快照未命中；检查徽章抽到 `features/routes/ui/`；PRD `docs/prd/delivery-route-match-evidence.md` |
 | REQ-81 | 告警源行一键临时静默该源 | requirements lane | 27 | candidate | — | Source 行只有编辑/轮换/启停/删除（`source-actions.tsx:21-34`）；matcher 原生支持 `sourceIds`（`suppression.ts:155-179`）；复用 `CreateSuppressionForm`；停用源会丢排障证据 |
@@ -263,12 +263,15 @@
 | REQ-106 | 加急 ping 排队重试的显式取消 | requirements lane（第 22 轮） | 24 | candidate | — | pings 表无操作列（`delivery-pings-table.tsx:22-44`），contract 只有 `buzzDelivery`；是否复用 `suppressed` 状态需 EXPERT_PANEL；`oncall.repository.ts:216`、`schema.ts:216-217` |
 | REQ-107 | 配置删除模型归档化 | requirements lane（第 22 轮） | 22 | candidate | — | deliveries/events 的 cascade 会抹掉历史证据（`schema.ts:65-66,116-119`）；`post-mvp-planning.md:49-61` 要求公开 release 前重评；需 PRD/ADR + forward-only `deleted_at` → EXPERT_PANEL |
 | REQ-108 | Events/Deliveries 多值属性筛选 | requirements lane（第 24 轮） | 28 | candidate | — | `severity`/`status`/`deliveryState` 支持多值；URL 逗号分隔并兼容旧单值，chips 逐项移除，列表与 total 同谓词；`operation-search.ts:13-20`、`operation-filters.tsx:258-303,411-441`、`history.repository.ts:88-93,250-255`；无迁移/新依赖 |
-| REQ-109 | 事件标签一键静默 | requirements lane（第 24 轮） | 29 | candidate | — | 事件详情标签是纯展示 Badge；每个标签增加「静默此标签」，复用创建静默对话框并预填 source+label；`event-label-list.tsx:14-39`、`suppression-from-event-dialog.tsx:38-68`、`suppression-form.ts:137-158`；纯前端 |
+| REQ-109 | 事件标签一键静默 | requirements lane（第 24 轮） | 29 | shipped | #172 | 标签旁图标按钮打开既有静默对话框，预填 source + `equals` 标签；新增 `suppressionDefaultsFromLabel`；PRD `docs/prd/event-label-silence.md`；纯前端 |
 | REQ-110 | 静默即将到期提示 | requirements lane（第 24 轮） | 28 | candidate | — | Header 指示器只统计 active；扩展 `ActiveSuppressionSummary` 增加 30 分钟内到期数量并提示；`suppression-summary.ts:50-80`、`active-suppression-indicator.tsx:20-56`；可并入 REQ-39 评估 |
-| SEC-7 | 归一化事件字段绕过 raw 脱敏并可传播到出站投递 | security lane | — | candidate | — | MEDIUM：`title/message/labels` 原样落库并渲染/出站（`intake.repository.ts:49-51`、`generic-webhook/payload.ts:37`）；修读取/发送边界会触碰匹配与投递语义 → EXPERT_PANEL |
-| SEC-8 | 投递 attempt 响应体裸 token/URL 凭据可穿透 | security lane | — | candidate | — | `redactText` 只匹配键值；Bearer/webhook URL 模式需权衡误伤 → EXPERT_PANEL；`redaction.ts:56-59`、`delivery-execution.ts:111,149` |
+| NEW-A | 停用配置前的断流影响确认 | requirements lane（第 25 轮） | 29 | candidate | — | 三个启停按钮单击即执行：停用 Source 接入拒绝（`intake.service.ts:69-72`）、Route 停止匹配（`:98-99`）、Destination/Route 的 pending 投递不再 claim（`delivery.repository.ts:228-229`）；复用 rotate/delete 的确认模式；影响数已在 section props；纯前端 |
+| NEW-B | 静默窗口快捷时长 | requirements lane（第 25 轮） | 27 | candidate | — | 创建静默只有 `datetime-local`，默认固定 2 小时（`suppression-form.ts:118-128`、`suppression-forms.tsx:310-338`）；加 30m/1h/4h/24h 预设按钮，仍存绝对时间；纯前端 |
+| NEW-C | 路由保存前的「目标全停用」警示 | requirements lane（第 25 轮） | 27 | candidate | — | 目标选择器不显示启停状态（`route-forms.tsx:987-1018`）；全停用时路由可保存但永不投递；列表已显示停用数（`routes-section.tsx:328-340`）；仅路由表单 + i18n |
+| SEC-7 | 归一化事件字段绕过 raw 脱敏并可传播到出站投递 | security lane | — | planned | — | **第 25 轮 EXPERT_PANEL 裁决**：读取/发送边界投影，不改存储；新增 `redactNormalizedEvent` + `redactRouteMatchResults`（含 `checks[].actual`），只用于 DTO 与发送输入；拒绝解析期脱敏/回填。决策 `docs/planning/decisions/credential-redaction-boundaries.md`（PR B） |
+| SEC-8 | 投递 attempt 响应体裸 token/URL 凭据可穿透 | security lane | — | planned | — | **第 25 轮 EXPERT_PANEL 裁决**：在 core 增加值形态脱敏（认证 scheme、`xox[baprs]-`、URL userinfo、Slack/Feishu/Lark webhook URL），读取层复核旧行；配置导出/编辑器草稿明确排除。决策 `docs/planning/decisions/credential-redaction-boundaries.md`（PR A，先行） |
 | SEC-9 | 请求上下文 `headersRecord` 保留原始 Authorization/Cookie | security lane | 24 | candidate | — | 当前唯一消费者会再脱敏；建议构造时即 `redactHeaders`；`request-context.ts:87-97` |
-| SEC-10 | 旧库存量行只在写入时脱敏，读取不复核 | security lane | — | candidate | — | 是否真实存在旧部署无法判定；读取层幂等脱敏或一次性清理 → EXPERT_PANEL；`delivery.helpers.ts:32-44`、`intake.helpers.ts:55-69` |
+| SEC-10 | 旧库存量行只在写入时脱敏，读取不复核 | security lane | — | planned | — | 已并入 SEC-8 决策：PR A 在 `delivery.helpers.ts:32-44`、`oncall.helpers.ts:25`、`history.repository.ts:298` 读取层复核；不做一次性清理。决策 `docs/planning/decisions/credential-redaction-boundaries.md` |
 | DOC-34 | `route-authoring-current-state.md` 结论段仍称能力不存在 | docs-drift lane | 24 | candidate | — | 文首校正已存在，但 `:17,:105,:115` 仍称无本地化/无解释通道/无 route×destination；代码已反证 |
 | DOC-35 | README/发布文档仍把 Docker smoke 未进 CI 当缺口 | docs-drift lane | 25 | shipped | #162 | README、release checklist、backup/upgrade 文档统一为「E2E 未接入 CI；Docker smoke 保留为本地人工 gate」 |
 | DOC-36 | `next-round.md` 仍把已交付的 D2/D5 列为待做 | docs-drift lane | 23 | candidate | — | 变量面板分组/搜索/折叠与光标插入已落地；UX 评审缺状态头；`next-round.md:258-265` |
@@ -287,9 +290,11 @@
 | SEC-12 | Destination endpoint URL 的 userinfo 密码进入客户端 DTO | security lane（第 23 轮） | — | candidate | — | LOW：`destination.helpers.ts:48-58,275-289`；`webhookurl` 已被定为 secret，但 endpoint 可见决策未覆盖 userinfo；建议投影时剥离 → EXPERT_PANEL |
 | SEC-13 | `isSensitiveKey` 残留缺口 | security lane（第 23 轮） | — | candidate | — | LOW：`secretAccessKey`/`aws_secret_access_key`/`sessionKey`/`pwd`/`pass`/`dsn`；精确键加入，避免 `pass` 词尾规则误伤 `bypass` |
 | SEC-14 | `request-context.ts` 缺 server-only 标记 | security lane（第 23 轮） | — | candidate | — | LOW：直接 import `@tanstack/react-start/server`；导入方均为 server middleware/route；需 build 验证 import protection |
-| SEC-15 | 三份文档称响应体/错误「已脱敏」但仅键值脱敏 | security lane（第 23 轮） | — | candidate | — | LOW：`adapter-extensibility.md:301`、ADR 0002 `:102`、`delivery-detail-diagnostics.md:17`；与 SEC-8 一并修 |
-| SEC-16 | 读取层不复核存量脱敏 | security lane（第 23 轮） | — | candidate | — | LOW：`delivery.helpers.ts:22,39,41`、`oncall.helpers.ts:22`、`intake.helpers.ts:61-63`；tagged release 无旧明文行，未打 tag 部署无法判定；读取层幂等重脱敏可解 → EXPERT_PANEL |
-| UI-1 | 列表搜索吞字符与空格、逐键请求 | ui-review（第 23 轮，浏览器实测） | 29 | candidate | — | HIGH：快速键入 `Disk usage` 只剩 `se`；`operation-filters.tsx:92-105` 直接写 URL、`operation-search.ts:74` trim 吃空格、loaderDeps 逐键查询；改本地草稿 + 300ms 防抖，空格只在查询构造处；同时消灭 REQ-78 |
+| SEC-15 | 三份文档称响应体/错误「已脱敏」但仅键值脱敏 | security lane（第 23 轮） | — | planned | — | LOW：`adapter-extensibility.md:301`、ADR 0002 `:102`、`delivery-detail-diagnostics.md:17`；PR A 落地后改为准确描述并补值形态覆盖 |
+| SEC-16 | 读取层不复核存量脱敏 | security lane（第 23 轮） | — | planned | — | LOW：`delivery.helpers.ts:22,39,41`、`oncall.helpers.ts:22`、`intake.helpers.ts:61-63`；与 SEC-10 实质重复，已并入 SEC-10 / SEC-8 决策，不双开 |
+| SEC-17 | providerMetadata 入库/出站前无统一脱敏兜底 | security lane（第 25 轮） | 24 | planned | — | `adapter-extensibility.md:260-261` 称已兜底，但 `intake.service.ts:114` 原样落库；grafana/alertmanager 的 `externalURL` 可含 userinfo，DTO 直接返回（`schemas/operations.ts:59-62`）；并入 SEC-7（PR B）读取边界 |
+| SEC-18 | raw payload 字符串叶子不做值形态扫描 | security lane（第 25 轮） | 22 | planned | — | `redaction.ts:74-86` 只按 key 判断；`{"url":"https://user:pass@host"}` 明文保留到保留期；PR A 对入库 raw 副本应用值形态 helper，parser 仍用原值 |
+| UI-1 | 列表搜索吞字符与空格、逐键请求 | ui-review（第 23 轮，浏览器实测） | 29 | shipped | #171 | 本地草稿 + 300ms 防抖后才写 URL；`pruneSearch` 保留空格，仅服务端过滤 trim；清除 chip/重置会取消未提交草稿；同时闭环 REQ-78 |
 | UI-2 | 筛选无匹配与无数据空态相同 | ui-review（第 23 轮，浏览器实测） | 27 | candidate | — | = REQ-4；`events-empty-state.tsx:12-26`、`deliveries-empty-state.tsx:12-26` 无条件渲染；传 `hasActiveFilters` + 内联重置 |
 | UI-3 | Delivery Payload 标签名过期 | ui-review（第 23 轮） | 24 | candidate | — | 页面已左右对照，标签仍是「渲染 Payload」；`delivery-detail-view.tsx:34`、`zh-Hans.json:195` |
 | UI-4 | 移动端 Sheet 无可见关闭按钮 | ui-review（第 23 轮） | 24 | candidate | — | `sidebar.tsx:206-231` 用 `[&>button]:hidden` 隐藏内置关闭；加显式 `SheetClose` |
@@ -308,24 +313,26 @@
 
 ## 下一轮优先项
 
-1. **EXPERT_PANEL 优先**：Q-30 已于第 24 轮完成裁决并实施（决策
-   `docs/planning/decisions/oncall-fired-persistence-failure.md`）；仍需裁决 SEC-7
-   （归一化字段绕过脱敏并可传播到出站）、REQ-93（在线快照下载的敏感边界）、Q-8
-   （投递 `markSucceeded` 持久化失败；与 Q-30 同源但需单独权衡漏呼/重复）。REQ-107
-   需先写决策记录。
-2. **REQ-109（29）**：事件标签一键静默（第 24 轮 requirements 首选）；随后
-   **REQ-108（28）** 多值属性筛选、**REQ-73（28）+ REQ-48（28）** 静默时区语义与
-   配置删除预检（并入 REQ-105 的 suppression 引用）。
-3. **REQ-52（28）**：模板 `tocsin.eventUrl` 与公开访问地址配置。
-4. **REQ-103/104（27）**：生产 compose 默认安全启动、备份/恢复演练脚本。
-5. **REL-1/REL-8**：E2E 接入 CI 与生产构建 E2E 的 panel 决策；REL-4/5/7/18/19 先扩 spec、
+1. **SEC-8 / SEC-7 实现（已裁决）**：第 25 轮 EXPERT_PANEL 已落盘
+   `docs/planning/decisions/credential-redaction-boundaries.md`。下一轮先做 PR A
+   （SEC-8 + SEC-10/15/16/18），再做 PR B（SEC-7 + SEC-17）。仍待裁决：REQ-93
+   （在线快照下载的敏感边界）、Q-8（`markSucceeded` 持久化失败）、REQ-107（配置删除归档化）。
+2. **NEW-A（29）**：停用 Source/Route/Destination 前的断流影响确认；复用 rotate/delete
+   的确认模式，纯前端。
+3. **REQ-108（28）** 多值属性筛选、**REQ-73（28）** 静默时区语义、
+   **REQ-48（28）** 配置删除预检（并入 REQ-105）、**REQ-52（28）** `tocsin.eventUrl`
+   与公开地址、**REQ-110（28）** 静默即将到期提示。
+4. **NEW-B/NEW-C（27）**、**REQ-103/104（27）**：静默快捷时长、路由目标全停用警示、
+   生产 compose 安全启动、备份恢复演练。
+5. **SEC-9 + SEC-13 + SEC-14 + Q-32 + Q-26**：`headersRecord` 拆窄字段、`isSensitiveKey`
+   精确键、`request-context` server-only 标记、`toLowerCase` 归一化、抑制窗口时间比较。
+6. **REL-1/REL-8**：E2E 接入 CI 与生产构建 E2E 的 panel 决策；REL-4/5/7/18/19 先扩 spec、
    修 harness 与 readiness 文档。
-6. **docs-drift 批次**：DOC-34/11/22/23/24/25/26/27/36/37/38/39/40/41/43/44/45，拆两个
+7. **docs-drift 批次**：DOC-34/11/22/23/24/25/26/27/36/37/38/39/40/41/43/44/45，拆两个
    `docs:` PR；第 22 轮已刷新证据。
-7. **SEC-9 + Q-32 + Q-26**：`request-context` 构造时脱敏 `headersRecord`、`toLowerCase`
-   归一化、抑制窗口时间比较。
-8. **车道轮转（第 25 轮）**：`requirements` 必跑 + `security-exposure` + `release-infra`；
-   第 24 轮已跑 `requirements` + `quality`，`ui-triage` 判定 `defer`。
+8. **车道轮转（第 26 轮）**：`requirements` 必跑 + `release-infra` + `ui-triage`；
+   第 25 轮已跑 `requirements` + `security-exposure`，`ui-triage` 判定 `defer`；
+   `docs-drift` / `architecture` 留待第 27 轮。
 9. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 10. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。
