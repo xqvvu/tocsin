@@ -28,7 +28,7 @@ import type {
 } from "#/server/deliveries/delivery-worker.service.types";
 import { DestinationService } from "#/server/destinations/destination.service";
 import type { DestinationServiceOptions } from "#/server/destinations/destination.service.types";
-import { WebhookIntakeService } from "#/server/intake/intake.service";
+import { WebhookIntakeService, createRawPayloadSweepGate } from "#/server/intake/intake.service";
 import type { WebhookIntakeServiceOptions } from "#/server/intake/intake.service.types";
 import { createDestinationConfigResolver } from "#/server/integrations/destination-config-resolver";
 import { FeishuAppService } from "#/server/integrations/feishu-app.service";
@@ -165,6 +165,9 @@ export function createApplicationContainer(
   let runnerPromise: Promise<DeliveryWorkerRunner> | undefined;
   let oncallRunner: DeliveryWorkerRunner | undefined;
   let oncallRunnerPromise: Promise<DeliveryWorkerRunner> | undefined;
+  // Shared by every intake service this container builds: it is created per
+  // request, so the sweep latch has to live above the instances.
+  const rawPayloadSweepGate = createRawPayloadSweepGate();
 
   const openStore =
     options.openStore ??
@@ -269,6 +272,7 @@ export function createApplicationContainer(
       return new WebhookIntakeService({
         store: await container.getSqliteStore(),
         providers: container.getProviderRegistry(),
+        sweepGate: rawPayloadSweepGate,
         ...serviceOptions,
       });
     },

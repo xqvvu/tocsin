@@ -20,6 +20,7 @@ import type {
   AcceptedWebhook,
   AcceptWebhookInput,
   ParserFailureRecordInput,
+  RawPayloadSweepGate,
   WebhookIntakeErrorOptions,
   WebhookIntakeFailureReason,
   WebhookIntakeServiceOptions,
@@ -46,14 +47,14 @@ export class WebhookIntakeService {
   private readonly providers: WebhookIntakeServiceOptions["providers"];
   private readonly now: () => string;
   private readonly dedupeWindowMs: number;
-  /** Guards the post-ingest sweep so concurrent webhooks do not stack drains. */
-  private pruneSweepRunning = false;
+  private readonly sweepGate: RawPayloadSweepGate;
 
   constructor(options: WebhookIntakeServiceOptions) {
     this.store = options.store;
     this.providers = options.providers;
     this.now = options.now ?? (() => new Date().toISOString());
     this.dedupeWindowMs = options.dedupeWindowMs ?? 5 * 60 * 1000;
+    this.sweepGate = options.sweepGate ?? createRawPayloadSweepGate();
   }
 
   async acceptWebhook(input: AcceptWebhookInput): Promise<AcceptedWebhook> {
@@ -165,26 +166,26 @@ export class WebhookIntakeService {
    * Drain remaining stale raw payloads in the background.
    *
    * Single-flight: if a sweep is already running, this webhook's batch was
-   * aheady pruned and the running sweep will reach the rest, so there is nothing
-   * to add. Without this guard a burst of concurrent webhooks would each start a
-   * full-table drain and multiply the very cost we bounded.
+   * already pruned and the running sweep will reach the rest, so there is
+   * nothing to add. Without this guard a burst of concurrent webhooks would
+   * each start a full-table drain and multiply the very cost we bounded. The
+   * gate is shared across service instances by the container, because one
+   * instance per request would otherwise never see its neighbours.
    *
    * Failures are swallowed deliberately: this is housekeeping off the request
    * path, and the next webhook retries it. Surfacing an error here would report a
    * failure for a webhook that in fact succeeded.
    */
   private sweepRawPayloadsKicked(cutoff: string | null): void {
-    if (cutoff === null || this.pruneSweepRunning) {
+    if (cutoff === null || !this.sweepGate.tryAcquire()) {
       return;
     }
-
-    this.pruneSweepRunning = true;
 
     void this.store.intake
       .pruneAllRawPayloads({ before: cutoff })
       .catch(() => undefined)
       .finally(() => {
-        this.pruneSweepRunning = false;
+        this.sweepGate.release();
       });
   }
 
@@ -312,6 +313,30 @@ export class WebhookIntakeService {
       },
     );
   }
+}
+
+/**
+ * Builds the process-wide latch the container shares between intake service
+ * instances. Exported for wiring and for tests that need two instances to
+ * coordinate exactly as they do in production.
+ */
+export function createRawPayloadSweepGate(): RawPayloadSweepGate {
+  let running = false;
+
+  return {
+    tryAcquire() {
+      if (running) {
+        return false;
+      }
+
+      running = true;
+
+      return true;
+    },
+    release() {
+      running = false;
+    },
+  };
 }
 
 function logIntakeRejected(
