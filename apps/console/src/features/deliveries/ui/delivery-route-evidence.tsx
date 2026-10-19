@@ -66,16 +66,26 @@ export function DeliveryRouteEvidence({ detail }: { detail: DeliveryDetailData }
             </h4>
             {evidence.current ? <RouteMatchResultBadge matched={evidence.current.matched} /> : null}
           </div>
-          {detail.route && evidence.current ? (
+          {detail.route ? (
             <>
               <p className="truncate font-medium" title={detail.route.name}>
                 {detail.route.name}
               </p>
               <p className="text-muted-foreground">{describeRouteRule(detail.route.rule, copy)}</p>
-              <RouteMatchCheckBadges checks={evidence.current.checks} />
-              {evidence.current.matched ? null : (
+              {evidence.current ? (
+                <>
+                  <RouteMatchCheckBadges checks={evidence.current.checks} />
+                  {evidence.current.matched ? null : (
+                    <p className="text-muted-foreground">
+                      {t("deliveries.detail.routeEvidence.currentMismatch")}
+                    </p>
+                  )}
+                </>
+              ) : (
                 <p className="text-muted-foreground">
-                  {t("deliveries.detail.routeEvidence.currentMismatch")}
+                  {evidence.currentRedacted
+                    ? t("deliveries.detail.routeEvidence.currentRedacted")
+                    : t("deliveries.detail.routeEvidence.currentMissing")}
                 </p>
               )}
             </>

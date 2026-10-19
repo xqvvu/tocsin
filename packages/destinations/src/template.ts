@@ -1,4 +1,4 @@
-import { JsonObjectSchema, redactJsonValue } from "@tocsin/core";
+import { JsonObjectSchema, redactJsonText } from "@tocsin/core";
 import type {
   DestinationSummary,
   DestinationTemplateContext,
@@ -397,7 +397,7 @@ export class DestinationTemplateEngine {
       tocsin: {
         eventUrl: options.eventUrl ?? "",
       },
-      payload: redactJsonValue(input.payload ?? {}),
+      payload: redactJsonText(input.payload ?? {}),
       bindings: {},
     };
 

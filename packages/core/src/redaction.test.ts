@@ -6,6 +6,7 @@ import {
   redactCredentialText,
   redactEventRecord,
   redactHeaders,
+  redactJsonText,
   redactJsonValue,
   redactNormalizedEvent,
   redactRouteMatchResults,
@@ -26,6 +27,32 @@ describe("redaction", () => {
       "X-Request-Id": "req-1",
       "X-Tocsin-Source-Token": REDACTED_VALUE,
       Cookie: REDACTED_VALUE,
+    });
+  });
+
+  it("redacts credential shapes in header values the denylist does not name", () => {
+    expect(
+      redactHeaders({
+        "X-Auth": "Bearer abcdefgh1234",
+        "X-Request-Id": "req-1",
+      }),
+    ).toEqual({
+      "X-Auth": "Bearer [REDACTED]",
+      "X-Request-Id": "req-1",
+    });
+  });
+
+  it("redacts assignments inside JSON string leaves at read boundaries", () => {
+    expect(
+      redactJsonText({
+        text: "token=abcd1234",
+        note: "disk-space-low",
+        nested: ["password: hunter2"],
+      }),
+    ).toEqual({
+      text: "token=[REDACTED]",
+      note: "disk-space-low",
+      nested: ["password: [REDACTED]"],
     });
   });
 
@@ -301,7 +328,7 @@ describe("redaction", () => {
     const event = redactEventRecord({
       id: "event-1",
       sourceId: "source-1",
-      idempotencyKey: null,
+      idempotencyKey: "Bearer abcdefgh1234",
       normalized: {
         title: "Checkout failed",
         message: "token=upstream-secret",
@@ -315,8 +342,13 @@ describe("redaction", () => {
         externalURL: "https://grafana:supersecret@grafana.test/d/abc",
         receiver: "ops",
         token: "plain-token",
+        note: "token=plain-token",
       },
-      rawPayload: { token: "upstream-secret", monitor: "checkout" },
+      rawPayload: {
+        token: "upstream-secret",
+        monitor: "checkout",
+        note: "password=hunter2",
+      },
       rawHeaders: { Authorization: "Bearer abcdefgh1234", "X-Request-Id": "req-1" },
       routeMatches: [
         {
@@ -339,13 +371,19 @@ describe("redaction", () => {
       receivedAt: "2026-10-20T00:00:00.000Z",
     });
 
+    expect(event.idempotencyKey).toBe("Bearer [REDACTED]");
     expect(event.normalized.message).toBe("token=[REDACTED]");
     expect(event.providerMetadata).toEqual({
       externalURL: "https://grafana:[REDACTED]@grafana.test/d/abc",
       receiver: "ops",
       token: REDACTED_VALUE,
+      note: "token=[REDACTED]",
     });
-    expect(event.rawPayload).toEqual({ token: REDACTED_VALUE, monitor: "checkout" });
+    expect(event.rawPayload).toEqual({
+      token: REDACTED_VALUE,
+      monitor: "checkout",
+      note: "password=[REDACTED]",
+    });
     expect(event.rawHeaders).toEqual({
       Authorization: REDACTED_VALUE,
       "X-Request-Id": "req-1",

@@ -1,3 +1,5 @@
+import { REDACTED_VALUE } from "@tocsin/core";
+
 import { Badge } from "#/components/ui/badge";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { SuppressionFromEventDialog } from "#/features/suppressions/ui/suppression-from-event-dialog";
@@ -16,28 +18,39 @@ export function EventLabelList({ detail }: { detail: EventDetailData }) {
         <p className="text-muted-foreground text-xs">{t("events.detail.empty.labels")}</p>
       ) : (
         <div className="flex flex-wrap items-center gap-1">
-          {entries.map(([key, value]) => (
-            <span key={key} className="inline-flex max-w-full items-center gap-0.5">
-              <Badge
-                variant="outline"
-                className="max-w-full justify-start font-mono text-[11px]"
-                title={`${key}=${value}`}
-              >
-                <span className="text-muted-foreground">{key}=</span>
-                <span className="truncate">{value}</span>
-              </Badge>
-              {/*
-                A label is a recurring dimension ("env=prod"), so silencing the
-                value the operator is looking at is the useful action here —
-                silencing the whole fingerprint is the toolbar's job.
-              */}
-              <SuppressionFromEventDialog
-                event={detail.event}
-                source={detail.source}
-                label={{ key, value }}
-              />
-            </span>
-          ))}
+          {entries.map(([key, value]) => {
+            // A redacted value no longer equals the stored label, so a
+            // suppression matcher prefilled from it could never fire. Say so
+            // instead of creating a rule that looks active but matches nothing.
+            const redacted = value.includes(REDACTED_VALUE);
+
+            return (
+              <span key={key} className="inline-flex max-w-full items-center gap-0.5">
+                <Badge
+                  variant="outline"
+                  className="max-w-full justify-start font-mono text-[11px]"
+                  title={`${key}=${value}`}
+                >
+                  <span className="text-muted-foreground">{key}=</span>
+                  <span className="truncate">{value}</span>
+                </Badge>
+                {/*
+                  A label is a recurring dimension ("env=prod"), so silencing the
+                  value the operator is looking at is the useful action here —
+                  silencing the whole fingerprint is the toolbar's job.
+                */}
+                <SuppressionFromEventDialog
+                  event={detail.event}
+                  source={detail.source}
+                  label={{ key, value }}
+                  disabled={redacted}
+                  disabledReason={
+                    redacted ? t("events.detail.labels.redactedSilenceHint") : undefined
+                  }
+                />
+              </span>
+            );
+          })}
         </div>
       )}
     </div>

@@ -110,6 +110,24 @@ describe("event normalized tab", () => {
     expect(screen.getByRole("button", { name: "静默标签 provider=fastgpt" })).toBeTruthy();
   });
 
+  it("disables the silence action for a redacted label value", () => {
+    const data = detail({
+      normalized: {
+        ...detail().event.normalized,
+        labels: { authorization: "[REDACTED]" },
+      },
+    });
+
+    renderTab(data);
+
+    const button = screen.getByRole("button", {
+      name: "该标签值已脱敏，无法据此创建可命中的静默规则",
+    }) as HTMLButtonElement;
+
+    // A matcher prefilled from `[REDACTED]` would never match the stored value.
+    expect(button.disabled).toBe(true);
+  });
+
   it("lets the field list scroll instead of clipping under the header", () => {
     const { container } = renderTab();
     const list = container.querySelector("dl");

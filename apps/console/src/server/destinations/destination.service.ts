@@ -27,7 +27,7 @@ import {
   type TestDestinationCommand,
   type UpdateDestinationCommand,
 } from "@tocsin/core";
-import { redactHeaders, redactJsonValue } from "@tocsin/core";
+import { redactHeaders, redactJsonText } from "@tocsin/core";
 import type { DestinationCatalogItem } from "@tocsin/destinations";
 import { DestinationTemplateEngine } from "@tocsin/destinations";
 import type { TemplateDiagnostic } from "@tocsin/destinations";
@@ -374,7 +374,7 @@ export class DestinationService {
       throw new RecordNotFoundError("Preview sample Event", sampleEventId);
     }
 
-    const payload = redactJsonValue(detail.event.rawPayload);
+    const payload = redactJsonText(detail.event.rawPayload);
 
     return {
       metadata: {

@@ -1,4 +1,10 @@
-import { evaluateRouteMatch, type DeliveryDetail, type RouteMatchResult } from "@tocsin/core";
+import {
+  evaluateRouteMatch,
+  REDACTED_VALUE,
+  type DeliveryDetail,
+  type NormalizedEvent,
+  type RouteMatchResult,
+} from "@tocsin/core";
 
 /**
  * A delivery records the route that selected it, but not *why* that route
@@ -14,6 +20,12 @@ export interface DeliveryRouteEvidence {
   hasSnapshot: boolean;
   /** Evaluation against the route as it stands now; null when the route is gone. */
   current: RouteMatchResult | null;
+  /**
+   * True when the event content was projected for display, so recomputing the
+   * current rule would compare against `[REDACTED]` instead of the input the
+   * rule was written for. The evidence then falls back to the intake snapshot.
+   */
+  currentRedacted: boolean;
 }
 
 export function buildDeliveryRouteEvidence(detail: DeliveryDetail): DeliveryRouteEvidence | null {
@@ -25,15 +37,26 @@ export function buildDeliveryRouteEvidence(detail: DeliveryDetail): DeliveryRout
   }
 
   const matches = detail.event.routeMatches;
+  const redacted = containsRedactedValue(detail.event.normalized);
 
   return {
     snapshot: matches?.find((match) => match.routeId === routeId) ?? null,
     hasSnapshot: matches != null,
-    current: detail.route
-      ? evaluateRouteMatch(detail.route, {
-          sourceId: detail.event.sourceId,
-          event: detail.event.normalized,
-        })
-      : null,
+    current:
+      detail.route && !redacted
+        ? evaluateRouteMatch(detail.route, {
+            sourceId: detail.event.sourceId,
+            event: detail.event.normalized,
+          })
+        : null,
+    currentRedacted: detail.route !== null && redacted,
   };
+}
+
+function containsRedactedValue(event: NormalizedEvent): boolean {
+  return (
+    event.title.includes(REDACTED_VALUE) ||
+    event.message.includes(REDACTED_VALUE) ||
+    Object.values(event.labels).some((value) => value.includes(REDACTED_VALUE))
+  );
 }
