@@ -65,7 +65,7 @@
 | Q-13 | worker 脱敏测试未注入 secret，只依赖驱动错误文本 | quality lane | 20 | candidate | — | `delivery-worker.service.test.ts:840-854`；应注入带 secret 的 fake store 错误 |
 | REL-1 | CI 未接入 E2E | RC checklist A | 24 | candidate | — | `ci.yml:16-51` 仅 quality job；`vite.config.ts:51` 排除 `e2e/**`；全仓无 `playwright install`；`playwright.config.ts:7-9` 注释误称已有 workflow。**token 已有 `workflow` scope（2026-10-18 核实），阻碍是 gate 设计与 spec 覆盖，不是权限** |
 | REL-2 | Provider payload fixture 目录 | RC checklist E | 27 | candidate | — | 6 个 adapter 测试文件、19 个内联 payload、31 个用例；`packages/providers/src/` 无 fixture 目录 |
-| REL-3 | Docker smoke 使用全局卷名，`down -v` 会删正常数据卷 | 发布 lane | 28 | candidate | — | `docker-compose.yml:7,32-37` 固定镜像 `tocsin:local` + 全局卷名 `tocsin-data`；`docker-smoke.sh:16-17,29,37` 固定项目名/端口并复用同一 compose 文件。正常栈运行时 smoke 会共享真实卷（双 worker）并覆盖镜像 tag；应加 `docker-compose.smoke.yml` override。10-18 release lane 复核仍成立，且 `down -v` 先于抓日志，失败时日志必丢；curl 无超时 |
+| REL-3 | Docker smoke 使用全局卷名，`down -v` 会删正常数据卷 | 发布 lane | 28 | shipped | #162 | 新增 `docker-compose.smoke.yml`（`tocsin:smoke` + `tocsin-smoke-data`）；脚本启动前后断言解析配置与 `/data` 实际挂载源，日志在 teardown 前采集，curl 加超时；`just docker-smoke` 本地实跑通过 |
 | REL-4 | E2E spec 覆盖面不足 | 发布 lane | 25 | candidate | — | 单个串行用例只覆盖 setup/source/destination/webhook/events；未创建 Route、未验证 Delivery/retry/filter/重启/导出（`alert-flow.spec.ts:27`） |
 | REL-5 | build 产物启动与文件型 SQLite migration 无 CI smoke | 发布 lane | 24 | candidate | — | CI 只 `vp run -r build`；`.output/server/index.mjs` 仅 Dockerfile/手动 smoke 执行。10-18 建议先加 `scripts/artifact-smoke.sh`：临时目录 + 临时 SQLite + 固定 secret，启动产物轮询 `/api/ready`，断言 checks 全 ok 并清理 |
 | ARCH-1 | `route-forms.tsx` 1027 行含两个导出组件 | 架构 lane | 25 | candidate | — | 拆 `create-route-form.tsx` / `edit-route-form.tsx`；第 16 轮核实已增至 1027 行（`:61` / `:127`，新增确认流程 `:714-745`） |
@@ -99,7 +99,7 @@
 | REL-7 | E2E harness 就绪探针与隔离 | release-infra lane | 26 | candidate | — | 等 `/api/health` 而非 `/api/ready`；固定端口/DB 路径；globalSetup 默认值重复；未固定 locale（`playwright.config.ts:11,34,48`、`global-setup.ts:14-21`）。10-18 复核补：Playwright 先启动 webServer 再跑 globalSetup，删库发生在服务已打开并迁移之后；host 使用 `127.0.0.1` 违反 AGENTS 的 localhost 规则。10-19 复核补：`just e2e` 未安装 Playwright 浏览器，1.64.1 实测报 `chromium_headless_shell` revision 不匹配（`Justfile:78-79`）；应在 recipe/CI 显式 `playwright install chromium` |
 | REL-8 | 生产构建 + 真实操作链路无门禁 | release-infra lane | 23 | candidate | — | E2E 跑 `vp dev`，smoke 只验 health；建议先加 `artifact-smoke.sh`，CI 形态需 EXPERT_PANEL |
 | REL-9 | migration 仅 `:memory:` 覆盖，无文件库/WAL/校验和测试 | release-infra lane | 25 | candidate | — | `migrate.test.ts` 全部内存库；WAL 仅文件库（`connection.ts:29-31`）；runner 无 checksum |
-| REL-10 | 备份恢复 runbook 存在 stale WAL 风险 | release-infra lane | 25 | candidate | — | 快照无伴生文件时未删除旧 `-wal`/`-shm`（`backup-restore-upgrade.md:92-99`）。10-19 复核补：registry 升级路径写 `docker compose up -d --build`（`:123`），会从源码重建并覆盖 `tocsin:local`，与 §7 检查表 `:170` 矛盾 |
+| REL-10 | 备份恢复 runbook 存在 stale WAL 风险 | release-infra lane | 25 | candidate | #162（部分） | 快照无伴生文件时未删除旧 `-wal`/`-shm`（`backup-restore-upgrade.md:92-99`）仍待处理；`up -d --build` 与回滚镜像示例已由 #162 修正 |
 | REL-11 | `.github/**` 被排除在 fmt/lint 外且无 actionlint | release-infra lane | 22 | candidate | — | `vite.config.ts:10,28,63` |
 | REL-12 | 发布文档 Node 版本过期 | release-infra lane | 24 | shipped | #127 | `docker-production-deployment.md:28` 已改为 `26.12.0` |
 | REL-13 | 公开仓库缺少 LICENSE 与 package `license` 字段 | release-infra lane | — | blocked-autonomous | — | PUBLIC 仓库、`licenseInfo: null`；属法律/产品决策，需专家小组，不可自动代选 |
@@ -179,7 +179,7 @@
 | SEC-5 | 自定义 header 值在配置导出中明文出现 | security lane | 27 | shipped | #137 | **HIGH**：导出与编辑 DTO 现在全量遮蔽 header 值；不可表达名称 fail-closed、env 名冲突拒绝、陈旧 refs 裁剪；决策 `docs/planning/decisions/destination-header-redaction.md`；删除语义转 REQ-71 |
 | SEC-6 | `tokenHash` 不在脱敏 helper 覆盖内 | security lane | 23 | shipped | #150 | 精确集合加入 `tokenhash`；`payloadHash`/`hash` 仍可见，正反例测试已补 |
 | DOC-28 | RC checklist 对 E2E/compose smoke 是否进 CI 自相矛盾 | release-infra lane | 24 | shipped | #145 | 统一为「E2E 未接入 CI，compose smoke 故意保留为本地人工 gate」 |
-| REQ-65 | 全局静默生效提示 | requirements lane | 28 | candidate | — | 生效中的静默只在 `/suppressions` 可见，其它页面会把 catch-all 静默误判为系统健康；`dashboard-header.tsx:29-47`、`suppressions-page.tsx:19-21`、`suppression.ts:82-105`；纯 UI，复用 `suppressionStateAt` |
+| REQ-65 | 全局静默生效提示 | requirements lane | 28 | shipped | #161 | Dashboard header 常驻指示器：只统计 `active`，显示数量并链接 `/suppressions`；无条件规则用 destructive「全量静默生效中」；每 30s 重算、加载/失败时隐藏。PRD `docs/prd/active-suppression-indicator.md` |
 | REQ-66 | 按外部消息引用反查投递 | requirements lane | 28 | shipped | #157 | 详情已展示 `providerReference`，搜索谓词不含 `provider_ref_value`；`history.repository.ts:435-455`、`schema.ts:126-127`、`operations.ts:124-133`；只读 LIKE，列表与 total 同谓词。第 21 轮交付：谓词增 `provider_ref_value`、Deliveries 占位文案、仓储与组件测试；PRD `docs/prd/delivery-provider-reference-search.md` |
 | REQ-67 | 事件列表解释「命中路由但 0 投递」 | requirements lane | 27 | candidate | — | `routeMatchCount>0 && total=0` 只显示裸 `0`，与详情 route gaps 不一致；`event-delivery-counts-cell.tsx:35-55`、`events-table.tsx:72-80`；纯 UI 三分支 |
 | REQ-68 | 路由一键复制 | requirements lane | 26 | candidate | — | 新建相似路由需重填全部条件；`routes-section.tsx:161-223`、`route-add-dialog.tsx:18-34`、`route-forms.tsx:50-87`；前端 feature 内 |
@@ -217,11 +217,12 @@
 | ARCH-24 | core 模块契约文件位置与 AGENTS 不一致 | architecture lane | 17 | candidate | — | `operations.ts`、`config.ts` 在包根且已有 `configuration/`；AGENTS.md:69 |
 | ARCH-25 | 空条件确认对话框重复实现 | architecture lane | 18 | candidate | — | `route-forms.tsx:714-745` 与 `suppression-forms.tsx:467-497` 同构 |
 | ARCH-26 | feature `model/` 混入 React hook 与 i18n 上下文 | architecture lane | 18 | candidate | — | `operation-format.ts:1,12-22` 被 `delivery-diagnostics.ts:6` 跨 feature 导入 |
-| REL-15 | 发布手册的手工 Docker 冒烟不隔离 | release-infra lane | 24 | candidate | — | `release-checklist.md:40-48` 直接 build/up/down 正常栈；建议 `docker-compose.smoke.yml`（与 REL-3 同根因） |
+| REL-15 | 发布手册的手工 Docker 冒烟不隔离 | release-infra lane | 24 | shipped | #162 | 手册删除裸 `docker compose up/down -v` 路径，统一指向隔离的 `just docker-smoke` |
 | REL-16 | CI 不是强制门禁 | release-infra lane | 21 | candidate | — | main 无 branch protection/ruleset，红 CI 仍可合并；`.github/workflows/ci.yml:16-18` |
 | REL-17 | `.dockerignore` 漏掉 Playwright 产物与 `.wt/` | release-infra lane | 22 | candidate | — | trace 可能含 Source token，`COPY . .` 会带入镜像层；`.dockerignore:23-24`、`.gitignore:40-43`、`Dockerfile:29` |
 | REL-18 | 发布手册 readiness 无重试 | release-infra lane | 23 | candidate | — | `release-checklist.md:45-46` 立即 curl；脚本已有轮询 `docker-smoke.sh:64-79` |
 | REL-19 | 本地 E2E 失败无 trace | release-infra lane | 23 | candidate | — | 本地 `retries=0` + `trace: on-first-retry`；`playwright.config.ts:23,28` |
+| REL-20 | `just docker-buildx` 对 ACR 缺 `--provenance=false` | release-infra lane（第 22 轮） | 26 | shipped | #162 | ACR 拒绝 BuildKit OCI attestation manifest；Justfile 已加 `--provenance=false --sbom=false`，发布文档同步 ACR registry/tag 约定 |
 | DOC-33 | RC 未勾选 gate 实为 4 条而非 3 条 | release-infra lane | 21 | candidate | — | 漏算 provider 多版本 payload；`mvp-rc-checklist.md:123,165,171,172` |
 | Q-30 | 加急呼叫持久化失败会被当作可重试，导致重复呼叫 | quality lane | 26 | candidate | — | `markFired` 在外层 try 内（`oncall-execution.ts:98`），抛错后落可重试分支（`:115-130,161-180`）；电话已拨出，需单独捕获并视为终态 |
 | Q-31 | `buzzDelivery` 部分入队失败仍会呼叫已入队 ping | quality lane | 23 | candidate | — | 逐条 `enqueueForDelivery` 无事务（`oncall.service.ts:91-109`）；操作员看到错误但已有 ping 落库并会被呼叫 |
@@ -254,72 +255,65 @@
 | REQ-100 | 搜索结果解释命中字段 | requirements lane（第 21 轮） | 25 | candidate | — | 按 message/ID 命中时行内看不出原因；`events-table.tsx:51-74`、`operations.ts:50-61`、`history.repository.ts:410-455`；需 DTO 增命中字段/摘要，列表与 total 同谓词 |
 | REQ-101 | 时间显示标注当前时区 | requirements lane（第 21 轮） | 23 | candidate | — | 时间戳 title 与显示值相同，从不输出时区；`operation-timestamp.tsx:46-53`、`operation-format.ts:11-28`；纯展示，复用设置时区 |
 | REQ-102 | pending 投递等待退避期间立即重试 | requirements lane（第 21 轮） | 26 | candidate | — | `retryNow` 仅接受 failed（`delivery.repository.ts:411-419`），修好目标后仍需等退避；置 `next_attempt_at=now`、不改 attempt_count；需 service 校验与二次确认 |
+| REQ-103 | 生产 compose 默认安全启动 | requirements lane（第 22 轮） | 27 | candidate | — | 拒绝 compose 内置公开 `BETTER_AUTH_SECRET`（`docker-compose.yml:17`）并默认只绑本机（`:11`）；同步 smoke/E2E/部署文档；`auth-config.ts:3-4,78-79` 占位值黑名单不含默认值 |
+| REQ-104 | 备份/恢复演练脚本与完整性校验 | requirements lane（第 22 轮） | 27 | candidate | — | 新增隔离 smoke：写数据 → 冷备份 → 恢复到新卷 → `/api/ready` + `integrity_check`；复用 REL-3 的 smoke override；`mvp-rc-checklist.md:217-219`、`backup-restore-upgrade.md:175-180` |
+| REQ-105 | 静默规则中的失效引用可见且可移除 | requirements lane（第 22 轮） | 25 | candidate | — | 删除 Source/Destination 不清 suppression 引用（`source.service.ts:76-85`、`destination.service.ts:120-129`）；表单只渲染现存选项（`suppression-forms.tsx:498-545`）；建议并入 REQ-48 预检 |
+| REQ-106 | 加急 ping 排队重试的显式取消 | requirements lane（第 22 轮） | 24 | candidate | — | pings 表无操作列（`delivery-pings-table.tsx:22-44`），contract 只有 `buzzDelivery`；是否复用 `suppressed` 状态需 EXPERT_PANEL；`oncall.repository.ts:216`、`schema.ts:216-217` |
+| REQ-107 | 配置删除模型归档化 | requirements lane（第 22 轮） | 22 | candidate | — | deliveries/events 的 cascade 会抹掉历史证据（`schema.ts:65-66,116-119`）；`post-mvp-planning.md:49-61` 要求公开 release 前重评；需 PRD/ADR + forward-only `deleted_at` → EXPERT_PANEL |
 | SEC-7 | 归一化事件字段绕过 raw 脱敏并可传播到出站投递 | security lane | — | candidate | — | MEDIUM：`title/message/labels` 原样落库并渲染/出站（`intake.repository.ts:49-51`、`generic-webhook/payload.ts:37`）；修读取/发送边界会触碰匹配与投递语义 → EXPERT_PANEL |
 | SEC-8 | 投递 attempt 响应体裸 token/URL 凭据可穿透 | security lane | — | candidate | — | `redactText` 只匹配键值；Bearer/webhook URL 模式需权衡误伤 → EXPERT_PANEL；`redaction.ts:56-59`、`delivery-execution.ts:111,149` |
 | SEC-9 | 请求上下文 `headersRecord` 保留原始 Authorization/Cookie | security lane | 24 | candidate | — | 当前唯一消费者会再脱敏；建议构造时即 `redactHeaders`；`request-context.ts:87-97` |
 | SEC-10 | 旧库存量行只在写入时脱敏，读取不复核 | security lane | — | candidate | — | 是否真实存在旧部署无法判定；读取层幂等脱敏或一次性清理 → EXPERT_PANEL；`delivery.helpers.ts:32-44`、`intake.helpers.ts:55-69` |
 | DOC-34 | `route-authoring-current-state.md` 结论段仍称能力不存在 | docs-drift lane | 24 | candidate | — | 文首校正已存在，但 `:17,:105,:115` 仍称无本地化/无解释通道/无 route×destination；代码已反证 |
-| DOC-35 | README/发布文档仍把 Docker smoke 未进 CI 当缺口 | docs-drift lane | 25 | candidate | — | RC 已决定保留为本地人工 gate；`README.md:9`、`release-checklist.md:99,108`、`backup-restore-upgrade.md:177` |
+| DOC-35 | README/发布文档仍把 Docker smoke 未进 CI 当缺口 | docs-drift lane | 25 | shipped | #162 | README、release checklist、backup/upgrade 文档统一为「E2E 未接入 CI；Docker smoke 保留为本地人工 gate」 |
 | DOC-36 | `next-round.md` 仍把已交付的 D2/D5 列为待做 | docs-drift lane | 23 | candidate | — | 变量面板分组/搜索/折叠与光标插入已落地；UX 评审缺状态头；`next-round.md:258-265` |
 | DOC-37 | 抑制 PRD 两处「当前四个状态」过期 | docs-drift lane | 22 | candidate | — | 已五状态（含 `suppressed`）；`alert-suppression.md:43,338`；与 DOC-24 合并 |
 | DOC-38 | `delivery-route-match-evidence.md` 已实现但无状态头 | docs-drift lane | 22 | candidate | — | 与 DOC-26 合并；`delivery-route-evidence.tsx` 已落地 |
 | DOC-39 | RC 清单漏记 suppressed 与抑制/集成页面 | docs-drift lane | 22 | candidate | — | `mvp-rc-checklist.md:40,44-45` |
 | DOC-40 | `destination-template-engine-issues.md` 未勾选项已交付 | docs-drift lane | 20 | candidate | — | Slack/Email/JSON 模式均已实现；`:138` |
 | DOC-41 | post-MVP adapter 问题陈述覆盖已交付的 destination 侧 | docs-drift lane | 20 | candidate | — | 剩余缺口在 provider fixture/指南；`post-mvp-planning.md:178` |
+| DOC-42 | 发布文档仍称没有 tag / 回滚镜像未发布 | release-infra + docs-drift lane（第 22 轮） | 25 | shipped | #162/#163 | tag、registry 约定、回滚镜像与当前版本已在发布文档中对齐 |
+| DOC-43 | README 能力/结构清单过期 | docs-drift lane（第 22 轮） | 23 | candidate | — | 页面清单缺 Suppressions/Integrations（`README.md:34`）；仓储缺 feishu-app/oncall/suppression（`:36`）；仍写 server functions（`:55`） |
+| DOC-44 | 投递搜索占位文案文档落后 | docs-drift lane（第 22 轮） | 20 | candidate | — | `delivery-search-fields.md:48-49` 未提外部消息引用；`zh-Hans.json:674` 已更新（REQ-66） |
+| DOC-45 | README Roadmap 状态过期 | docs-drift lane（第 22 轮） | 24 | candidate | — | `README.md:197-204,228-230` 仍把已交付能力列为待完善；需逐条加状态而非整段删除 |
 
 ## 发布记录
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.11` | `3295013` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.11`（linux/amd64 + linux/arm64，digest `sha256:2c338841…`） | 包含 dashboard 静默状态指示器；Docker smoke 与生产卷隔离；ACR buildx provenance 修复；无迁移/配置变化；回滚镜像 `0.1.0-beta.10`（digest `sha256:6acac322…`） |
 | `0.1.0-beta.10` | `6bbef05` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.10`（linux/amd64 + linux/arm64，digest `sha256:6acac322…`） | 包含可折叠侧边栏、外部消息引用搜索、侧边栏状态持久化修复；无迁移/配置变化；回滚镜像 `0.1.0-beta.9`（已在 ACR，digest `sha256:b861d9cf…`） |
 
 ## 下一轮优先项
 
 1. **EXPERT_PANEL 优先**：Q-30（加急持久化失败重复呼叫）、SEC-7（归一化字段绕过脱敏并可
-   传播到出站）、REQ-93（在线快照下载的敏感边界）；三项都涉及语义/暴露取舍，三人小组裁决。
-   第 21 轮仍未展开，下一轮优先处理。
-2. **REQ-65/73**（28）：全局静默提示、静默时间窗时区语义；REQ-58 已收窄为列表展示
-   `2/3` 与退避/耗尽文案（27）。REQ-66 已于第 21 轮交付（#157）。
-3. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
-4. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
-5. **REL-3（28，P0）+ REL-15/REL-18**：Docker smoke 与发布手册的卷/镜像/项目/端口隔离、
-   日志保留、readiness 重试；任何 smoke CI 接入前的阻断项。
-6. **REQ-88/89/90**（27）：事件接入延迟、重试确认、指标端点；均为独立切片。
-7. **SEC-9（24，AUTO_FIX）**：`request-context` 构造时即脱敏 `headersRecord`；补 header 用例。
-8. **Q-32（22）+ Q-26（25）**：`toLowerCase` 归一化、抑制窗口时间比较；补边界用例。
-   第 21 轮 quality lane 建议 Q-32 为最省 AUTO_FIX。
-9. **REQ-81/67/54/55**（27）：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
-    事件摘要计入已抑制；纯 UI。
-10. **车道轮转（第 22 轮）**：`requirements` 每轮必跑；第 21 轮已跑
-    `requirements` + `quality` + `architecture`（三条均返回），下一轮优先
-    `release-infra` + `docs-drift`，再下一轮补 `security-exposure`。
-11. **REQ-32/22/24/12/13**（28）：既有高价值切片。
-12. **REQ-83/84/91/92**（25-26）：补投抑制预览、Settings 版本、相对时间、表单离开护栏。
-13. **REQ-94/95/96/97/98/99**（23-26）：保留策略后台收敛、模板草稿语义、路由重叠预览、
-    源级默认标签、显式历史清理、命名筛选视图。
-14. **Q-25（26）+ Q-23（25）**：重放过滤清理哨兵、dedupe cleanup 有界化。
-15. **Q-31/33/34/35 + SEC-8/10**：小型质量项；SEC-8/10 需先过 EXPERT_PANEL。
-16. **DOC-34..41 + DOC-11/22/23/24/25/26/27/33**：一批文档漂移，可合并一个 `docs:` PR；
-    第 19 轮已刷新证据。
-17. **ARCH-27/28/29/30**（21-24）：provider catalog、DTO parity、helper 拆分、分页 URL 化。
-18. **Q-14..Q-19 + Q-12/Q-13 + Q-4/Q-5/Q-22/Q-27/Q-28/Q-29**：纯测试补齐，可合并
-    一个 `test:` PR；Q-16 需重写为真正渲染两个列表的 parity 断言。
-19. **ARCH-13/14 + FIX-8**；**FIX-5/9/10**：低风险 chore，可合并一个 PR。
-20. **REL-6/7（26/26）+ REL-5（24）**：Docker smoke 断言与 E2E harness 修正；
-    先加 `scripts/artifact-smoke.sh` 再决定是否进 CI。
-21. **REQ-49（27）+ REQ-25（27）**：可移植配置覆盖抑制规则、抑制试跑预览。
-22. **REQ-33/34/35/36（27）+ REQ-39/40/41/82**：绝对时间窗口、CSV 导出、自动刷新、
-    事件标签、静默续期、详情返回保筛选、接入指引、跨域导航。
-23. **REQ-71（24）+ ARCH-20（25）**：Destination header 显式删除语义与 manifest 驱动
-    secret path。
-24. **REL-17（22）+ REL-16（21）**：`.dockerignore` 产物隔离、main 强制 CI 门禁。
-25. **REQ-74..79（24-27）**：排序方向、静默详情生命周期、加急可用性预判、
-    投递诊断摘要复制、搜索防抖、设置保存局部刷新。
-26. **REQ-85（21）**：配置变更审计；需 forward-only migration 与 EXPERT_PANEL，先写决策记录。
-27. **REL-1/4**（24/25）：E2E 接入 CI 前先扩 spec 覆盖；**REL-13**（LICENSE）保持
-    blocked-autonomous；ARCH-10/11/15..19 等再次触碰对应文件时做。
-28. **车道轮转**：`requirements` + `quality` + `architecture`（第 20 轮超时未返回，
-    第 21 轮重跑；`docs-drift`/`security-exposure` 第 19 轮已跑，`release-infra` 第 16 轮已跑）。
+   传播到出站）、REQ-93（在线快照下载的敏感边界）；新增 REQ-107（配置删除归档化）需先写
+   决策记录。旧三项已连续多轮未展开，下一轮必须先处理。
+2. **REQ-73（28）+ REQ-48（28）**：静默时间窗时区语义、配置删除影响预检（并入 REQ-105 的
+   suppression 引用）。
+3. **REQ-52（28）**：模板 `tocsin.eventUrl` 与公开访问地址配置。
+4. **REQ-103/104（27）**：生产 compose 默认安全启动、备份/恢复演练脚本。
+5. **REL-1/REL-8**：E2E 接入 CI 与生产构建 E2E 的 panel 决策；REL-4/5/7/18/19 先扩 spec、
+   修 harness 与 readiness 文档。
+6. **docs-drift 批次**：DOC-34/11/22/23/24/25/26/27/36/37/38/39/40/41/43/44/45，拆两个
+   `docs:` PR；第 22 轮已刷新证据。
+7. **SEC-9 + Q-32 + Q-26**：`request-context` 构造时脱敏 `headersRecord`、`toLowerCase`
+   归一化、抑制窗口时间比较。
+8. **车道轮转（第 23 轮）**：`requirements` 必跑 + `security-exposure` + `quality`；
+   `release-infra` / `docs-drift` 本轮已跑。
+9. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
+10. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
+    事件摘要计入已抑制。
+11. **REQ-32/22/24/12/13（28）与 REQ-83/84/91/92（25-26）**：既有高价值切片与补投
+    抑制预览、Settings 版本、相对时间、表单离开护栏。
+12. **REQ-94/95/96/97/98/99（23-26）**：保留策略、模板草稿语义、路由重叠预览、源级默认
+    标签、显式历史清理、命名筛选视图。
+13. **Q-25/Q-23/Q-31/33/34/35 + SEC-8/10**：小型质量与安全项；SEC-8/10 需先过 EXPERT_PANEL。
+14. **ARCH-27/28/29/30 + ARCH-13/14 + FIX-8/5/9/10**：provider catalog、DTO parity、
+    helper 拆分、分页 URL 化与低风险 chore。
+15. **REL-6/7/5/17/16 + REL-13**：Docker smoke 断言、E2E harness、`.dockerignore`、CI 门禁；
+    LICENSE 保持 blocked-autonomous。
+16. **REQ-49/25/33/34/35/36/39/40/41/82/71/74..79/85**：其余候选按评分与依赖续做。
 
 ## 已知过期输入
 
