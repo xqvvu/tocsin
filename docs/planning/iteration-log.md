@@ -57,6 +57,19 @@ Q-41（22）配置名 UNIQUE 冲突返回不透明 500。方向 4（搜索/过�
 
 本轮无新裁决；未触碰 schema、投递/路由/auth 语义或 secret 处理。
 
+### 发布（第 9.5 步）
+
+- 三位专家一致通过：发布经理 RELEASE（自 beta.15 起 1 个 feat + 3 个 docs，建议 beta.16）；
+  阻断审计 APPROVE（6/6：main CI 绿、无 open PR、无回归、无阻塞 blocked-autonomous、
+  无 migration、无依赖变更）；运维/回滚 SAFE（镜像配置与 SQLite 兼容）。
+- PR #185 `chore(release): v0.1.0-beta.16` rebase 合并 `2d4247b`；main CI success。
+- Tag：`v0.1.0-beta.16`（annotated，指向 `2d4247b`）；GitHub Release 已创建（prerelease）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.16
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.16`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:9788b4b86bc55a0cbd576142313ff3855131a3386ae4bd9b7db0720ecb1d2e47`）。
+- 回滚镜像：`0.1.0-beta.15`（index digest `sha256:a63d5cb9…`）。
+
 ### 下一轮优先项
 
 1. UI-9 静默时间时区错位（27）+ UI-4/UI-8/UI-11/UI-12 小成本批次。

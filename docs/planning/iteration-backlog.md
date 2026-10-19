@@ -345,6 +345,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.16` | `2d4247b` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.16`（linux/amd64 + linux/arm64，digest `sha256:9788b4b8…`） | 运维列表空态区分「无数据/筛选无匹配」并支持内联重置、空表隐藏分页条、移动端空态移入视口（#184，UI-2 + UI-7 + UI-10）；删除无引用的 operations-panel/detail-panel；无迁移/配置变化；回滚镜像 `0.1.0-beta.15` |
 | `0.1.0-beta.15` | `9871a5a` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.15`（linux/amd64 + linux/arm64，digest `sha256:a63d5cb9…`） | 事件/投递读取与发送边界凭据脱敏投影（#180，SEC-7 + SEC-17）；脱敏标签禁用静默、投递路由证据诚实降级；无迁移/配置变化；回滚镜像 `0.1.0-beta.14` |
 | `0.1.0-beta.14` | `ed700d7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.14`（linux/amd64 + linux/arm64，digest `sha256:3fcdfd18…`） | 包含凭据形态脱敏与旧行读取复核（#176）及 `.dockerignore` E2E 产物排除（#177）；无迁移/配置变化；回滚镜像 `0.1.0-beta.13`（digest `sha256:3501c616…`） |
 | `0.1.0-beta.13` | `9232200` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.13`（linux/amd64 + linux/arm64，digest `sha256:3501c616…`） | 包含事件标签一键静默（#172）与运维搜索草稿/防抖修复（#171）；无迁移/配置变化；回滚镜像 `0.1.0-beta.12`（digest `sha256:552e3590…`） |
