@@ -2,6 +2,96 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 19 轮）
+
+- 时间：2026-10-19 14:44 – 15:50 CST。
+- 基线：`origin/main` @ `17d5066`；main 最近一次 CI 为 success，无遗留 open PR。
+- 本轮类型：**需求切片 + 小修复 + 三车道审计**（非 full-audit）。最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）；backlog 有大量 ≥27 分候选，按第 1.5 步继续。
+- 车道轮转位置：本轮跑 `requirements` + `docs-drift` + `security-exposure`，三条车道均返回。
+  下一轮建议 `requirements` + `quality` + `architecture`。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `distracted-raman-4ccb21`；收尾时删除其 `node_modules` 与 `agent-iteration`。
+- 依赖：会话工作树 `node_modules` 再次缺 `@rolldown/plugin-babel`，整体删除后
+  `vp install --frozen-lockfile` 解决。
+
+### 本轮交付
+
+- PR #149（`feat(console): link events back to their upstream alert`）—— **REQ-86**。
+  - 事件详情「标准化」页新增「上游告警」区块：`externalURL`/`generatorURL` 渲染为外链，
+    仅接受 `http(s)`、剥离 userinfo、`target="_blank"` + `rel="noopener noreferrer"`。
+  - 其余标量元数据按固定顺序展示；已知键使用中英文文案，未知键回退原始键名；空元数据不渲染。
+  - PRD `docs/prd/event-upstream-source.md`；模型/组件用例覆盖协议白名单、凭据剥离、排序、空态。
+  - 验证：`vp check` 0 errors；`vp run -r test` 4/4 包（console 111 files / 590 tests）；
+    `vp run -r build`；rebase 合并 `025ad42`。
+  - 合并后补 `test(console): assert the refined upstream generator label`（`9bf52df`），
+    修正改文案后未同步的测试断言。
+- PR #150（`fix(security): harden redaction coverage and server-only boundaries`）——
+  **SEC-2/3/4/6**。
+  - Feishu app 测试错误消息过 `redactText`；`tokenHash` 加入精确敏感键集合
+    （`payloadHash`/`hash` 保持可见）；`env.ts` 加 server-only 标记；registry kind 与
+    `DestinationKindSchema.options` 的 parity 断言；修正 `template.ts` 旧产品名注释。
+  - 验证：同上门禁（console 111 files / 592 tests）；rebase 合并 `7c2691f`。
+
+### requirements lane（新增 7 条，已写入 backlog）
+
+- **REQ-93（27）**：Settings 在线数据库快照下载；文档要求在线备份用 SQLite 在线接口，
+  但镜像无 `sqlite3` CLI、仓库无实现（`backup-restore-upgrade.md:77-82`、`connection.ts:23-32`）。
+  快照含敏感配置，实施前需 EXPERT_PANEL。
+- **REQ-94（26）**：raw payload 保留策略只在 webhook 路径触发，无流量时不收敛
+  （`intake.service.ts:179-190`、`intake.repository.ts:136-156`）。
+- **REQ-95（26）**：模板编辑器切换模式会静默注入 starter、来源切换强改 mode；
+  空/非空 body 语义不可见（`destination-form.tsx:311-318,454-470`）。
+- **REQ-96（25）**：路由重叠与重复投递风险预览；去重键含 `route_id`，同事件同目标
+  不同路由会重复投递（`delivery.helpers.ts:80-86`、`intake.service.ts:98-125`）。
+- **REQ-97（24）**：告警源级默认标签；可复用既有 `sources.config_json`，无迁移。
+- **REQ-98（23）**：投递历史显式 opt-in 清理；决策要求「预览 N 条再确认」形态
+  （`history-retention-and-snapshots.md:14-23`）。
+- **REQ-99（23）**：Events/Deliveries 命名筛选视图（localStorage，复用 URL schema）。
+
+### docs-drift lane（新增 8 条，关闭 1 条）
+
+- 新增 **DOC-34..41**：`route-authoring-current-state.md` 结论段仍称能力不存在；
+  README/发布文档仍把 Docker smoke 未进 CI 当缺口；`next-round.md` 仍列已交付的 D2/D5；
+  抑制 PRD 另有两处「四个状态」；`delivery-route-match-evidence.md` 缺状态头；
+  RC 清单漏记 `suppressed` 与抑制/集成页面；模板引擎 issues 未勾选项已交付；
+  post-MVP adapter 问题陈述仍覆盖已交付的 destination 侧。
+- **关闭 DOC-29**：backlog「已知过期输入」与 `next-round.md` 基线矛盾已统一。
+- 复核确认 DOC-2/5/14/28/30 已闭环无需再动；DOC-6/11/23/24/25/26/27/33 仍成立。
+- `next-round.md` 基线仍落后 32 提交（以 `git rev-list --count` 为准），由 DOC-22 继续跟踪。
+
+### security-exposure lane（新增 4 条）
+
+- **SEC-7（MEDIUM）**：归一化 `title/message/labels` 未脱敏，绕过 raw payload 脱敏，
+  并可随 generic webhook 默认载荷出站（`intake.repository.ts:49-51`、
+  `generic-webhook/payload.ts:37`）。修复读取/发送边界会触碰匹配与投递语义 → EXPERT_PANEL。
+- **SEC-8**：attempt 响应体/错误只做键值模式脱敏，裸 `Bearer`/webhook URL 可穿透
+  （`redaction.ts:56-59`）；模式清单需权衡误伤 → EXPERT_PANEL。
+- **SEC-9（24，AUTO_FIX）**：`request-context.headersRecord` 保留原始 Authorization/Cookie，
+  当前唯一消费者会再脱敏；建议构造时即 `redactHeaders`（`request-context.ts:87-97`）。
+- **SEC-10**：旧库存量行只在写入时脱敏，读取不复核；是否存在旧部署无法从仓库判定。
+- SEC-1/SEC-5 已核实闭环；SEC-2/3/4/6 已由 PR #150 修复。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 决策事项；Q-30、SEC-7、REQ-93 已排入下一轮 panel。
+- REL-13（LICENSE）继续 `blocked-autonomous`。
+
+### 其他
+
+- 浏览器验证：未执行；本切片行为由 jsdom 组件测试与模型测试覆盖。
+- Obsidian 同步：从 `~/Library/Application Support/obsidian/obsidian.json` 发现 vault
+  `~/Library/Mobile Documents/iCloud~md~obsidian/Documents`，同步 `Vane Iteration Backlog.md`、
+  `Vane Iteration Log.md`，新增 `Vane Event Upstream Source.md`，并更新 `Vane Index.md`。
+- 本轮 backlog/log 单独走 `docs(planning)` PR，与同一验证门禁。
+
+### 下一轮优先项
+
+1. **REQ-87（28）**：投递原始/渲染载荷对照。
+2. **EXPERT_PANEL**：Q-30、SEC-7、REQ-93。
+3. **REQ-65/66/73/58**（28）：静默提示、外部消息引用反查、时区语义、重试耗尽。
+4. **REQ-48**（28）：配置删除影响预检。
+
 ## 2026-10-19（第 18 轮）
 
 - 时间：2026-10-19 13:27 – 14:30 CST。
