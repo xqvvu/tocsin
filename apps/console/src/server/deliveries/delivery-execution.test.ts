@@ -68,6 +68,44 @@ describe("delivery execution", () => {
     expect(failed).toEqual([]);
   });
 
+  it("sends a redacted normalized event while keeping benign copy intact", async () => {
+    const store = createExecutionStore({ succeeded: [], failed: [] });
+    const delivery = createClaimedDelivery();
+    delivery.event = {
+      ...delivery.event,
+      normalized: {
+        ...delivery.event.normalized,
+        title: "Checkout failed Authorization: Bearer abcdefgh1234",
+        message: "POST https://svc:supersecret@example.test/hook failed",
+        labels: {
+          service: "checkout",
+          authorization: "Bearer abcdefgh1234",
+          note: "disk-space-low",
+        },
+      },
+    };
+    const destinations = {
+      async send(_kind, input) {
+        expect(input.normalizedEvent.title).toBe("Checkout failed Authorization: [REDACTED]");
+        expect(input.normalizedEvent.message).toBe(
+          "POST https://svc:[REDACTED]@example.test/hook failed",
+        );
+        expect(input.normalizedEvent.labels).toEqual({
+          service: "checkout",
+          authorization: "[REDACTED]",
+          note: "disk-space-low",
+        });
+        expect(JSON.stringify(input)).not.toContain("abcdefgh1234");
+        expect(JSON.stringify(input)).not.toContain("supersecret");
+
+        return { ok: true, statusCode: 200, responseBody: null, renderedPayload: null };
+      },
+    } satisfies Pick<DestinationRegistry, "send">;
+    const execution = new DeliveryExecution({ store, destinations });
+
+    await expect(execution.execute(delivery, now)).resolves.toBe("succeeded");
+  });
+
   it("records the send's own start and finish instead of the batch timestamp", async () => {
     const succeeded: Parameters<DeliveryRepository["markSucceeded"]>[0][] = [];
     const failed: Parameters<DeliveryRepository["markFailed"]>[0][] = [];

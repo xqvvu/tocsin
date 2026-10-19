@@ -2,6 +2,8 @@ import {
   evaluateRouteMatch,
   findMatchingRoutes,
   PreviewRouteReplayCommandSchema,
+  redactRouteMatchResults,
+  redactText,
   ReplayRouteEventsCommandSchema,
   ReplayEventCommandSchema,
   type EventRecord,
@@ -181,7 +183,9 @@ export class EventReplayService {
 
     return {
       eventId: event.id,
-      routeMatches,
+      // The preview is a DTO; matching above and replay below keep the raw
+      // result so a redacted label cannot change which routes match.
+      routeMatches: redactRouteMatchResults(routeMatches),
       targets,
       matchedRouteCount: routeMatches.length,
       newDeliveryCount: targets.length - existingDeliveryCount,
@@ -314,7 +318,7 @@ async function routeReplayEventSummary(
     sourceName: source?.name ?? event.sourceId,
     severity: event.normalized.severity,
     status: event.normalized.status,
-    title: event.normalized.title,
+    title: redactText(event.normalized.title),
     fingerprint: event.normalized.fingerprint,
     receivedAt: event.receivedAt,
   };

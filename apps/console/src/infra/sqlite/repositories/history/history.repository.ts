@@ -1,7 +1,14 @@
 import { sql } from "kysely";
 
 import type { DeliveryListItem, EventDetail, EventListItem, NumberedPage } from "@tocsin/core";
-import { decodeSchemaJson, evaluateRouteMatch, RouteMatchResultsSchema } from "@tocsin/core";
+import {
+  decodeSchemaJson,
+  evaluateRouteMatch,
+  redactEventRecord,
+  redactRouteMatchResults,
+  redactText,
+  RouteMatchResultsSchema,
+} from "@tocsin/core";
 import type { RouteMatchProvenance } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
@@ -111,7 +118,9 @@ export class SqliteHistoryRepository implements HistoryRepository {
         sourceName: row.source_name,
         severity: row.severity,
         status: row.status,
-        title: row.title,
+        // Provider-authored copy can carry a credential pasted into the alert;
+        // matching already happened against the raw value at intake.
+        title: redactText(row.title),
         fingerprint: row.fingerprint,
         receivedAt: row.received_at,
         routeMatchCount: countMatchedRoutes(row.route_matches_json),
@@ -200,10 +209,12 @@ export class SqliteHistoryRepository implements HistoryRepository {
     });
 
     return {
-      event,
+      // The detail is a DTO, not the matching input: replay and gap analysis
+      // above already read the raw event and raw route results.
+      event: redactEventRecord(event),
       rawPayloadPruned: isPrunedRawPayload(event.rawPayload),
       source,
-      routeMatches,
+      routeMatches: redactRouteMatchResults(routeMatches),
       routeMatchesProvenance,
       routeMatchGaps: gaps,
       deliveries,
@@ -286,7 +297,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
       items: rows.map((row) => ({
         id: row.id,
         eventId: row.event_id,
-        eventTitle: row.event_title,
+        eventTitle: redactText(row.event_title),
         eventSeverity: row.event_severity,
         eventStatus: row.event_status,
         sourceName: row.source_name,

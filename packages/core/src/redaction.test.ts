@@ -4,8 +4,11 @@ import {
   REDACTED_VALUE,
   isSensitiveKey,
   redactCredentialText,
+  redactEventRecord,
   redactHeaders,
   redactJsonValue,
+  redactNormalizedEvent,
+  redactRouteMatchResults,
   redactText,
 } from "#core/redaction";
 
@@ -208,5 +211,173 @@ describe("redaction", () => {
       severity: "disk-space-low",
       tokenCount: 5,
     });
+  });
+
+  it("projects normalized events without touching matching keys", () => {
+    expect(
+      redactNormalizedEvent({
+        title: "Checkout failed after Bearer abcdefgh1234",
+        message: "POST https://svc:supersecret@example.test/hook failed",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout:unavailable",
+        labels: {
+          service: "checkout",
+          authorization: "Bearer abcdefgh1234",
+          note: "disk-space-low",
+        },
+        occurredAt: "2026-10-20T00:00:00.000Z",
+      }),
+    ).toEqual({
+      title: "Checkout failed after Bearer [REDACTED]",
+      message: "POST https://svc:[REDACTED]@example.test/hook failed",
+      severity: "critical",
+      status: "firing",
+      fingerprint: "checkout:unavailable",
+      labels: {
+        service: "checkout",
+        // A credential-shaped key is redacted by name even when its value has
+        // no recognizable credential shape.
+        authorization: REDACTED_VALUE,
+        note: "disk-space-low",
+      },
+      occurredAt: "2026-10-20T00:00:00.000Z",
+    });
+  });
+
+  it("projects route evidence while keeping rule expectations readable", () => {
+    expect(
+      redactRouteMatchResults([
+        {
+          routeId: "route-1",
+          routeName: "Checkout critical",
+          matched: true,
+          destinationIds: ["destination-1"],
+          checks: [
+            {
+              field: "title",
+              matched: true,
+              detail: "Expected title to contain checkout",
+              condition: "compare",
+              expected: ["checkout"],
+              actual: "Checkout failed Bearer abcdefgh1234",
+            },
+            {
+              field: "severity",
+              matched: true,
+              detail: "No severity condition",
+              condition: "none",
+            },
+          ],
+        },
+      ]),
+    ).toEqual([
+      {
+        routeId: "route-1",
+        routeName: "Checkout critical",
+        matched: true,
+        destinationIds: ["destination-1"],
+        checks: [
+          {
+            field: "title",
+            matched: true,
+            detail: "Expected title to contain checkout",
+            condition: "compare",
+            expected: ["checkout"],
+            actual: "Checkout failed Bearer [REDACTED]",
+          },
+          {
+            field: "severity",
+            matched: true,
+            detail: "No severity condition",
+            condition: "none",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("projects a stored event's metadata, payload, headers, and route evidence", () => {
+    const event = redactEventRecord({
+      id: "event-1",
+      sourceId: "source-1",
+      idempotencyKey: null,
+      normalized: {
+        title: "Checkout failed",
+        message: "token=upstream-secret",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout:unavailable",
+        labels: {},
+        occurredAt: "2026-10-20T00:00:00.000Z",
+      },
+      providerMetadata: {
+        externalURL: "https://grafana:supersecret@grafana.test/d/abc",
+        receiver: "ops",
+        token: "plain-token",
+      },
+      rawPayload: { token: "upstream-secret", monitor: "checkout" },
+      rawHeaders: { Authorization: "Bearer abcdefgh1234", "X-Request-Id": "req-1" },
+      routeMatches: [
+        {
+          routeId: "route-1",
+          routeName: "Checkout critical",
+          matched: true,
+          destinationIds: ["destination-1"],
+          checks: [
+            {
+              field: "message",
+              matched: true,
+              detail: "Expected message to contain token",
+              condition: "compare",
+              expected: ["token"],
+              actual: "token=upstream-secret",
+            },
+          ],
+        },
+      ],
+      receivedAt: "2026-10-20T00:00:00.000Z",
+    });
+
+    expect(event.normalized.message).toBe("token=[REDACTED]");
+    expect(event.providerMetadata).toEqual({
+      externalURL: "https://grafana:[REDACTED]@grafana.test/d/abc",
+      receiver: "ops",
+      token: REDACTED_VALUE,
+    });
+    expect(event.rawPayload).toEqual({ token: REDACTED_VALUE, monitor: "checkout" });
+    expect(event.rawHeaders).toEqual({
+      Authorization: REDACTED_VALUE,
+      "X-Request-Id": "req-1",
+    });
+    expect(event.routeMatches?.[0].checks[0].actual).toBe("token=[REDACTED]");
+    expect(JSON.stringify(event)).not.toContain("upstream-secret");
+    expect(JSON.stringify(event)).not.toContain("supersecret");
+  });
+
+  it("projects stored events idempotently", () => {
+    const once = redactEventRecord({
+      id: "event-1",
+      sourceId: "source-1",
+      idempotencyKey: null,
+      normalized: {
+        title: "Checkout failed",
+        message: "Authorization: Bearer abcdefgh1234",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout:unavailable",
+        labels: { authorization: "Bearer abcdefgh1234" },
+        occurredAt: "2026-10-20T00:00:00.000Z",
+      },
+      providerMetadata: {
+        externalURL: "https://grafana:supersecret@grafana.test/d/abc",
+      },
+      rawPayload: { token: "upstream-secret" },
+      rawHeaders: { Authorization: "Bearer abcdefgh1234" },
+      routeMatches: null,
+      receivedAt: "2026-10-20T00:00:00.000Z",
+    });
+
+    expect(redactEventRecord(once)).toEqual(once);
   });
 });

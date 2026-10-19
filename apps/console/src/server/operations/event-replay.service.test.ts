@@ -201,4 +201,62 @@ describe("event replay service", () => {
 
     await store.close();
   });
+
+  it("redacts preview DTOs without changing replay matching", async () => {
+    const store = await createStore();
+    const service = new EventReplayService({ store, now: () => now });
+
+    await store.sources.create({
+      id: "source-1",
+      name: "Generic source",
+      provider: "generic",
+      tokenHash: "token-hash",
+    });
+    await store.destinations.create({
+      id: "destination-1",
+      name: "Ops webhook",
+      kind: "generic_webhook",
+    });
+
+    const event = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: null,
+      normalized: {
+        title: "Checkout failed Authorization: Bearer abcdefgh1234",
+        message: "checkout returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout:unavailable",
+        labels: { authorization: "Bearer abcdefgh1234" },
+        occurredAt: now,
+      },
+      rawPayload: {},
+      routeMatches: [],
+    });
+
+    await store.routes.create({
+      id: "route-1",
+      name: "Credential match",
+      rule: {
+        labels: [{ key: "authorization", operator: "equals", value: "Bearer abcdefgh1234" }],
+      },
+      destinationIds: ["destination-1"],
+    });
+
+    const preview = await service.previewEventReplay({ eventId: event.id });
+    const labelCheck = preview?.routeMatches[0].checks.find((check) => check.field === "label");
+
+    // Matching still uses the raw label value, so the route is selected...
+    expect(preview?.matchedRouteCount).toBe(1);
+    // ...but the evidence returned to the console does not repeat it.
+    expect(labelCheck?.actual).toBe("[REDACTED]");
+    // The rule's own `expected` value is operator-authored configuration and
+    // stays readable, so only the event-side evidence is asserted above.
+
+    const replay = await service.replayEvent({ eventId: event.id });
+
+    expect(replay?.createdDeliveryIds).toHaveLength(1);
+
+    await store.close();
+  });
 });

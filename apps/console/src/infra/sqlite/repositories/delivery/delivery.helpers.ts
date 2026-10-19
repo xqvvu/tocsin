@@ -1,4 +1,4 @@
-import { decodeJson, DeliveryJobSchema, redactText } from "@tocsin/core";
+import { decodeJson, DeliveryJobSchema, redactJsonValue, redactText } from "@tocsin/core";
 import type { DeliveryAttempt, DeliveryJob, JsonValue, ProviderReference } from "@tocsin/core";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
@@ -44,8 +44,16 @@ export function attemptFromRow(row: DeliveryAttemptRow): DeliveryAttempt {
   };
 }
 
+/**
+ * Decodes the rendered payload for the delivery detail DTO.
+ *
+ * New rows were rendered from an already-redacted send input, but rows written
+ * before that projection existed still carry the raw event copy; re-projecting
+ * here keeps the detail page from showing credentials that an operator has
+ * since rotated.
+ */
 export function decodeRenderedPayload(value: string | null): JsonValue | null {
-  return value === null ? null : decodeJson(value);
+  return value === null ? null : redactJsonValue(decodeJson(value));
 }
 
 export function providerReferenceFromRow(
