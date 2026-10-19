@@ -94,7 +94,7 @@
 - Obsidian 同步：从 `~/Library/Application Support/obsidian/obsidian.json` 发现 vault
   `~/Library/Mobile Documents/iCloud~md~obsidian/Documents`，同步 `Vane Iteration Backlog.md`、
   `Vane Iteration Log.md`，新增 `Vane Delivery Route Match Evidence.md`，并更新 `Vane Index.md`。
-- 本轮 backlog/log 随 docs PR 提交。
+- 本轮 backlog/log 随 PR #147（`docs(planning)`）提交。
 
 ### 下一轮优先项
 
