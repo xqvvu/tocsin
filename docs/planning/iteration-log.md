@@ -2,6 +2,83 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 21 轮）
+
+- 时间：2026-10-19 16:58 – 17:25 CST。
+- 基线：`origin/main` @ `59e195b`；本轮合并后为 `ce7ccaf`（#157）、`dca8056`（#158）、
+  `6bbef05`（#159 release）。
+- 本轮类型：**需求切片 + 小修复 + 三车道审计 + 发布**（非 full-audit）。最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）；backlog 有大量 ≥27 分候选，按第 1.5 步继续。
+- 车道轮转位置：本轮跑 `requirements` + `quality` + `architecture`，三条车道均返回
+  （第 20 轮三条均超时未返回）。下一轮优先 `release-infra` + `docs-drift`。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `nice-kapitsa-fdae7a`；收尾时删除其 `node_modules` 与 `agent-iteration`。
+- 依赖：会话工作树 `node_modules` 链接再次残缺，整体删除后 `vp install --frozen-lockfile`
+  解决（与第 18/19/20 轮相同）。
+
+### 本轮交付
+
+- PR #157（`feat(console): search deliveries by provider message reference`）—— **REQ-66**。
+  - `deliverySearchPredicate` 增加 `deliveries.provider_ref_value LIKE`；列表与 `total`
+    继续共用同一谓词，计数查询不新增 join。
+  - Deliveries 页搜索占位文案补充「外部消息引用」；Events 范围与文案不变。
+  - 仓储测试覆盖按引用命中、`total` 一致、事件列表不命中；组件测试同步文案。
+  - PRD `docs/prd/delivery-provider-reference-search.md`；rebase 合并 `ce7ccaf`。
+- PR #158（`fix(console): restore the collapsed sidebar state after reload`）—— **FIX-11**。
+  - `SidebarProvider` 挂载后读取 `sidebar_state` cookie 恢复状态；受控模式不干预；
+    读取放在 effect 以避免 hydration 不一致。
+  - 新增 `sidebar.test.tsx` 覆盖折叠恢复与默认展开；rebase 合并 `dca8056`。
+- 验证（两个 PR 各自）：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4
+  （console 114 files / 602 tests）；`vp run -r build`；PR CI green。
+
+### requirements / quality / architecture 车道
+
+- **requirements**：逐条核实 REQ-66/65/58/73 仍有效；新增候选 REQ-100（搜索结果解释命中字段）、
+  REQ-101（时间显示标注当前时区）、REQ-102（pending 投递等待退避期间立即重试）；
+  REQ-58 收窄为「列表展示 `2/3` 与退避/耗尽文案」，评分 28 → 27。
+- **quality**：Q-30/Q-31/Q-25/Q-23/Q-26/Q-32 全部 [代码已核实] 仍有效；新发现并当轮修复
+  N1（侧边栏折叠状态永不恢复，`sidebar.tsx:70,82`）。未发现其他可确证的新回归；
+  Q-32 为最省 AUTO_FIX。
+- **architecture**：ARCH-20/27/28/29/30、SEC-9 均仍有效；ARCH-28 已实际漂移
+  （core `EventDetailDelivery` 缺 `destinationKind`，API schema 有）；ARCH-17 补充
+  侧边栏提交新增浏览器 API 模块缺 TanStack 标记（`use-mobile.ts`、`sidebar.tsx`、`sheet.tsx`）。
+
+### EXPERT_PANEL
+
+- 本轮无新的 EXPERT_PANEL 决策；Q-30、SEC-7、REQ-93 继续留待下一轮优先处理。
+- REL-13（LICENSE）继续 `blocked-autonomous`。
+
+### 发布（第 9.5 步）
+
+- 三位专家结论：
+  - **发布经理**：自 `v0.1.0-beta.9` 以来有 3 项用户可见变更，RELEASE，建议 `0.1.0-beta.10`。
+  - **阻断审计**：迁移仍为 0001–0003、无破坏性变更、无遗留 open PR；
+    仅要求等待 #158 与 release commit 的 main CI 变绿后打 tag。
+  - **运维/回滚**：无新增环境变量/配置/镜像变化；回滚只需换回 `0.1.0-beta.9`；
+    ACR 凭据可从 macOS keychain 取得。
+- PR #159（`chore(release): v0.1.0-beta.10`）rebase 合并 `6bbef05`；main CI success。
+- Tag：`v0.1.0-beta.10`（annotated，指向 `6bbef05`）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.10`
+  （linux/amd64 + linux/arm64，index digest `sha256:6acac3229178ae4006f0199f7c4266d0f550919f0f76cced044ba448a6a763ce`）。
+  - 首次 `--push` 被 ACR 拒绝：`denied: unknown manifest class for
+    application/vnd.oci.empty.v1+json`（BuildKit provenance 附带的空 descriptor）。
+  - 加 `--provenance=false` 重试成功；`docker buildx imagetools inspect` 确认双平台。
+  - `0.1.0-beta.9` 镜像已确认存在于 ACR（digest `sha256:b861d9cf…`），无需重推。
+  - 回滚镜像 tag：`0.1.0-beta.9`。
+
+### 其他
+
+- 浏览器验证：未执行；两个切片由 jsdom 组件测试与 SQLite 仓储测试覆盖。
+- Obsidian 同步已跳过：`obsidian-vault` skill 不在本会话可用 skill 列表中。
+- 本轮 backlog/log 随 `docs(planning)` PR 提交。
+- 工作树已清理：删除会话工作树 `node_modules` 与 `agent-iteration`。
+
+### 下一轮优先项
+
+1. **EXPERT_PANEL**：Q-30、SEC-7、REQ-93。
+2. **REQ-65/73**（28）、REQ-58（27）、REQ-48（28）、REQ-52（28）。
+3. **车道**：`requirements` + `release-infra` + `docs-drift`。
+
 ## 2026-10-19（第 20 轮）
 
 - 时间：2026-10-19 16:00 – 17:00 CST。

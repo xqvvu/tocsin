@@ -109,7 +109,7 @@
 | ARCH-12 | `hashSourceToken` 放在 intake service 并被跨服务导入 | architecture lane | 22 | candidate | — | `intake.service.ts:329-331`、`source.service.ts:18`、`config-portability.service.ts:33`；建议移到窄模块 |
 | FIX-9 | `server/runtime/store.ts` 为死代码 | architecture lane | 24 | candidate | — | 无生产 importer，唯一引用是自身测试；`application-container.md:50` 仍声称存在 |
 | FIX-10 | 未使用的生产依赖 | architecture lane | 20 | candidate | — | `@faker-js/faker`、`@tanstack/match-sorter-utils` 全仓无 import；确认后移除或降为 devDependency |
-| FIX-11 | 侧边栏折叠状态刷新后丢失 | quality lane（第 21 轮） | 27 | in-progress | 待填 | `sidebar.tsx:70,82` 只写 `sidebar_state` cookie 从不读回，`dashboard-layout.tsx:30` 未传 `defaultOpen`；本轮挂载后恢复持久化状态并补组件测试 |
+| FIX-11 | 侧边栏折叠状态刷新后丢失 | quality lane（第 21 轮） | 27 | shipped | #158 | `sidebar.tsx:70,82` 只写 `sidebar_state` cookie 从不读回；已改为挂载后恢复持久化状态，受控模式不干预，补组件测试 |
 | DOC-13 | import boundaries 文档 4 处与代码不一致 | architecture lane | 24 | shipped | #127 | `withDashboardService` 示例、core operations 路径、`findDashboardContext()`、middleware 数量均已更正 |
 | DOC-14 | sqlite-store 文档缺 suppressions 信息 | architecture lane | 23 | shipped | #127 | schema 列表补 `suppressions`，id 工厂补 `suppression` |
 | REQ-31 | 排障搜索覆盖事件/投递 ID | requirements lane | 29 | shipped | #125 | 事件谓词加 `events.id` + 所属投递 `EXISTS`；投递谓词加 `deliveries.id`/`events.id`；列表与 total 同谓词；PRD `docs/prd/operation-search-identifiers.md` |
@@ -180,7 +180,7 @@
 | SEC-6 | `tokenHash` 不在脱敏 helper 覆盖内 | security lane | 23 | shipped | #150 | 精确集合加入 `tokenhash`；`payloadHash`/`hash` 仍可见，正反例测试已补 |
 | DOC-28 | RC checklist 对 E2E/compose smoke 是否进 CI 自相矛盾 | release-infra lane | 24 | shipped | #145 | 统一为「E2E 未接入 CI，compose smoke 故意保留为本地人工 gate」 |
 | REQ-65 | 全局静默生效提示 | requirements lane | 28 | candidate | — | 生效中的静默只在 `/suppressions` 可见，其它页面会把 catch-all 静默误判为系统健康；`dashboard-header.tsx:29-47`、`suppressions-page.tsx:19-21`、`suppression.ts:82-105`；纯 UI，复用 `suppressionStateAt` |
-| REQ-66 | 按外部消息引用反查投递 | requirements lane | 28 | in-progress | 待填 | 详情已展示 `providerReference`，搜索谓词不含 `provider_ref_value`；`history.repository.ts:435-455`、`schema.ts:126-127`、`operations.ts:124-133`；只读 LIKE，列表与 total 同谓词。第 21 轮实现：谓词增 `provider_ref_value`、Deliveries 占位文案、仓储与组件测试 |
+| REQ-66 | 按外部消息引用反查投递 | requirements lane | 28 | shipped | #157 | 详情已展示 `providerReference`，搜索谓词不含 `provider_ref_value`；`history.repository.ts:435-455`、`schema.ts:126-127`、`operations.ts:124-133`；只读 LIKE，列表与 total 同谓词。第 21 轮交付：谓词增 `provider_ref_value`、Deliveries 占位文案、仓储与组件测试；PRD `docs/prd/delivery-provider-reference-search.md` |
 | REQ-67 | 事件列表解释「命中路由但 0 投递」 | requirements lane | 27 | candidate | — | `routeMatchCount>0 && total=0` 只显示裸 `0`，与详情 route gaps 不一致；`event-delivery-counts-cell.tsx:35-55`、`events-table.tsx:72-80`；纯 UI 三分支 |
 | REQ-68 | 路由一键复制 | requirements lane | 26 | candidate | — | 新建相似路由需重填全部条件；`routes-section.tsx:161-223`、`route-add-dialog.tsx:18-34`、`route-forms.tsx:50-87`；前端 feature 内 |
 | REQ-69 | 新建/编辑静默时提示重叠规则 | requirements lane | 25 | candidate | — | 表单不提示与 active/scheduled 静默的窗口重叠；`suppression-add-dialog.tsx:21-32`、`suppression-forms.tsx:209-228`；只读提示，不阻止保存 |
@@ -267,13 +267,19 @@
 | DOC-40 | `destination-template-engine-issues.md` 未勾选项已交付 | docs-drift lane | 20 | candidate | — | Slack/Email/JSON 模式均已实现；`:138` |
 | DOC-41 | post-MVP adapter 问题陈述覆盖已交付的 destination 侧 | docs-drift lane | 20 | candidate | — | 剩余缺口在 provider fixture/指南；`post-mvp-planning.md:178` |
 
+## 发布记录
+
+| 版本 | tag 指向 | 镜像 | 说明 |
+|---|---|---|---|
+| `0.1.0-beta.10` | `6bbef05` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.10`（linux/amd64 + linux/arm64，digest `sha256:6acac322…`） | 包含可折叠侧边栏、外部消息引用搜索、侧边栏状态持久化修复；无迁移/配置变化；回滚镜像 `0.1.0-beta.9`（已在 ACR，digest `sha256:b861d9cf…`） |
+
 ## 下一轮优先项
 
 1. **EXPERT_PANEL 优先**：Q-30（加急持久化失败重复呼叫）、SEC-7（归一化字段绕过脱敏并可
    传播到出站）、REQ-93（在线快照下载的敏感边界）；三项都涉及语义/暴露取舍，三人小组裁决。
-   第 20 轮因车道占满未展开，下一轮优先处理。
-2. **REQ-65/66/73/58**（28）：全局静默提示、外部消息引用反查、静默时间窗时区语义、
-   失败投递区分等待重试与重试耗尽。
+   第 21 轮仍未展开，下一轮优先处理。
+2. **REQ-65/73**（28）：全局静默提示、静默时间窗时区语义；REQ-58 已收窄为列表展示
+   `2/3` 与退避/耗尽文案（27）。REQ-66 已于第 21 轮交付（#157）。
 3. **REQ-48**（28）：配置删除影响预检；只读 preview procedure，需模拟引用清理语义。
 4. **REQ-52**（28）：模板 `tocsin.eventUrl` 与公开访问地址配置。
 5. **REL-3（28，P0）+ REL-15/REL-18**：Docker smoke 与发布手册的卷/镜像/项目/端口隔离、
@@ -281,10 +287,12 @@
 6. **REQ-88/89/90**（27）：事件接入延迟、重试确认、指标端点；均为独立切片。
 7. **SEC-9（24，AUTO_FIX）**：`request-context` 构造时即脱敏 `headersRecord`；补 header 用例。
 8. **Q-32（22）+ Q-26（25）**：`toLowerCase` 归一化、抑制窗口时间比较；补边界用例。
+   第 21 轮 quality lane 建议 Q-32 为最省 AUTO_FIX。
 9. **REQ-81/67/54/55**（27）：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制；纯 UI。
-10. **车道轮转（第 21 轮）**：第 20 轮 `requirements` + `quality` + `architecture`
-    三条车道均超时无输出，下一轮重跑同样三条（`requirements` 每轮必跑）。
+10. **车道轮转（第 22 轮）**：`requirements` 每轮必跑；第 21 轮已跑
+    `requirements` + `quality` + `architecture`（三条均返回），下一轮优先
+    `release-infra` + `docs-drift`，再下一轮补 `security-exposure`。
 11. **REQ-32/22/24/12/13**（28）：既有高价值切片。
 12. **REQ-83/84/91/92**（25-26）：补投抑制预览、Settings 版本、相对时间、表单离开护栏。
 13. **REQ-94/95/96/97/98/99**（23-26）：保留策略后台收敛、模板草稿语义、路由重叠预览、
