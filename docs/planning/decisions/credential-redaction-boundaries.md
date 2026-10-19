@@ -2,7 +2,17 @@
 
 - 日期：2026-10-20（第 25 轮）
 - 裁决方式：EXPERT_PANEL 三位专家独立评估（安全与可靠性 / 产品与运维 / 独立评估者）
-- 状态：已裁决，待实现（第 26 轮起按 PR A → PR B 顺序落地）
+- 状态：PR A 已实现（#176，第 26 轮）；PR B 待实现
+
+## 实现状态
+
+- PR A（SEC-8 + SEC-10/15/16/18）：#176 已合并。`redactCredentialText` 组合进
+  `redactText` 与 `redactJsonValue`；读取层在 `delivery.helpers`、`oncall.helpers`、
+  `history.repository` 复核旧行。
+- 实施差异：认证 scheme 后的值除至少 8 字符外还须含数字或符号，避免
+  `Basic authentication` 之类的普通英文被误伤；赋值正则补左词边界，修复
+  `max_tokens: 4096` 从 `tokens:` 尾部误判的既有误伤。两条反例已写入测试。
+- PR B（SEC-7 + SEC-17）：待第 27 轮按「读取/发送边界投影、不改存储」实施。
 
 ## 事项
 

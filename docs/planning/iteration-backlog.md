@@ -219,7 +219,7 @@
 | ARCH-26 | feature `model/` 混入 React hook 与 i18n 上下文 | architecture lane | 18 | candidate | — | `operation-format.ts:1,12-22` 被 `delivery-diagnostics.ts:6` 跨 feature 导入 |
 | REL-15 | 发布手册的手工 Docker 冒烟不隔离 | release-infra lane | 24 | shipped | #162 | 手册删除裸 `docker compose up/down -v` 路径，统一指向隔离的 `just docker-smoke` |
 | REL-16 | CI 不是强制门禁 | release-infra lane | 21 | candidate | — | main 无 branch protection/ruleset，红 CI 仍可合并；`.github/workflows/ci.yml:16-18` |
-| REL-17 | `.dockerignore` 漏掉 Playwright 产物与 `.wt/` | release-infra lane | 22 | candidate | — | trace 可能含 Source token，`COPY . .` 会带入镜像层；`.dockerignore:23-24`、`.gitignore:40-43`、`Dockerfile:29` |
+| REL-17 | `.dockerignore` 漏掉 Playwright 产物与 `.wt/` | release-infra lane | 22 | shipped | #177 | 增加 `**/test-results`、`**/playwright-report`、`**/blob-report`、`**/.playwright`、`.wt`，与 `.gitignore:29,40-43` 对齐 |
 | REL-18 | 发布手册 readiness 无重试 | release-infra lane | 23 | candidate | — | `release-checklist.md:45-46` 立即 curl；脚本已有轮询 `docker-smoke.sh:64-79` |
 | REL-19 | 本地 E2E 失败无 trace | release-infra lane | 23 | candidate | — | 本地 `retries=0` + `trace: on-first-retry`；`playwright.config.ts:23,28` |
 | REL-20 | `just docker-buildx` 对 ACR 缺 `--provenance=false` | release-infra lane（第 22 轮） | 26 | shipped | #162 | ACR 拒绝 BuildKit OCI attestation manifest；Justfile 已加 `--provenance=false --sbom=false`，发布文档同步 ACR registry/tag 约定 |
@@ -232,6 +232,12 @@
 | Q-35 | ping 表测试用破折号数量代理列完整性 | quality lane | 17 | candidate | — | `delivery-pings-table.test.tsx:45` 断言 3 个 `—`；列调整即失败，且无法发现语义错误 |
 | Q-36 | 自动加急部分入队被静默吞掉 | quality lane（第 24 轮） | 22 | candidate | — | `delivery-execution.ts:116-130` 仅 warn；`oncall.service.ts:168-187` 逐 receiver 独立事务，中途失败只呼叫了子集且无补偿/重试；与 Q-31 同族，建议一并事务化 |
 | Q-37 | oncall dedupe cleanup 同样是无界 DELETE | quality lane（第 24 轮） | 20 | candidate | — | `oncall.repository.ts:38-41` 每次 enqueue 在写事务内清理窗口外全部 key；Q-23 的 oncall 同构路径，建议有界删除 |
+| Q-38 | Source token 复制失败仍弹成功 toast | requirements lane（第 26 轮） | 24 | candidate | — | 剪贴板失败分支调用 `toast.success`（`source-token-notice-panel.tsx:48-55,65-72`）；应改错误提示并补测试 |
+| Q-39 | 错误页把占位符当 trace ID 展示 | requirements lane（第 26 轮） | 20 | candidate | — | `dashboard-error.tsx:61-63` 渲染 `shell.error.traceId`，其值为 `[REDACTED_TRACE_ID: generated_server_side]`（`zh-Hans.json:829`）；request-id 只在成功响应回写（`request-logging.middleware.ts:26,37-47`）；需错误边界穿透 request id，成本较高 |
+| REL-21 | E2E 未接入 CI | release-infra lane（第 26 轮） | 26 | candidate | — | `playwright.config.ts` 已配置 webServer/retries/reporter；CI 只有 `ci.yml`；Chromium 版本 1248 需显式安装；建议独立 `e2e.yml`（PR 触发、DB 预清理、失败 artifact），提交前须本地跑通 |
+| REL-22 | E2E spec 覆盖小于 RC gate A | release-infra lane（第 26 轮） | 25 | candidate | — | `alert-flow.spec.ts:53-118` 无 Route、Destination preview/test、Delivery、过滤、失败 retry；关闭 `mvp-rc-checklist.md:125` 前需扩展 |
+| REL-23 | main 无 required checks（ruleset） | release-infra lane（第 26 轮） | 24 | candidate | — | `gh api branches/main/protection` 404、rulesets 为空；workflow 只是建议门禁。需 EXPERT_PANEL（仓库设置属高风险外部变更） |
+| REL-24 | Provider fixtures 缺失 | release-infra lane（第 26 轮） | 23 | candidate | — | 6 个 adapter 测试仍内联 payload；建议先搬 8 个最小 fixture，再补 alertmanager/signoz/grafana resolved 变体；`with { type: "json" }` 已有先例 |
 | ARCH-27 | Provider catalog/`iconName` 无消费者，Source UI 硬编码 | architecture lane | 24 | candidate | — | `registry.ts:73-85` 已投影，但 `source-provider-icon.tsx:1-40` 按 provider 穷尽 switch、`source-form.tsx:57-67,149-158` 重复列表；缺 provider catalog procedure |
 | ARCH-28 | Operations DTO 在 core 与 api 双份定义，无 parity 守卫 | architecture lane | 21 | candidate | — | 手写 interface（`packages/core/src/operations.ts:120,132`）与 zod schema（`packages/api/src/schemas/operations.ts:37,59,78,99,111`）各维护一份；无 `satisfies` 断言。第 21 轮实测已漂移：core `EventDetailDelivery`（`operations.ts:89-92`）无 `destinationKind`，API schema（`schemas/operations.ts:51-57`）有 |
 | ARCH-29 | `configuration-support.ts` 成为跨能力 helper 集散地 | architecture lane | 21 | candidate | — | 同时导出 token 生成、测试事件、脱敏、配置解析与引用校验（`configuration-support.ts:11-125`），被 7 个能力服务导入 |
@@ -268,10 +274,18 @@
 | NEW-A | 停用配置前的断流影响确认 | requirements lane（第 25 轮） | 29 | candidate | — | 三个启停按钮单击即执行：停用 Source 接入拒绝（`intake.service.ts:69-72`）、Route 停止匹配（`:98-99`）、Destination/Route 的 pending 投递不再 claim（`delivery.repository.ts:228-229`）；复用 rotate/delete 的确认模式；影响数已在 section props；纯前端 |
 | NEW-B | 静默窗口快捷时长 | requirements lane（第 25 轮） | 27 | candidate | — | 创建静默只有 `datetime-local`，默认固定 2 小时（`suppression-form.ts:118-128`、`suppression-forms.tsx:310-338`）；加 30m/1h/4h/24h 预设按钮，仍存绝对时间；纯前端 |
 | NEW-C | 路由保存前的「目标全停用」警示 | requirements lane（第 25 轮） | 27 | candidate | — | 目标选择器不显示启停状态（`route-forms.tsx:987-1018`）；全停用时路由可保存但永不投递；列表已显示停用数（`routes-section.tsx:328-340`）；仅路由表单 + i18n |
+| REQ-111 | 初始化 Owner 密码确认与不可恢复提示 | requirements lane（第 26 轮） | 27 | candidate | — | Setup 只有单个密码字段、成功后直接进 dashboard，且无重置入口（`-setup-form-impl.tsx:156-185,61-65`、`routes/setup.tsx:14`）；加确认密码 + 不可恢复说明，仅前端校验；纯前端 |
+| REQ-112 | 事件列表投递计数一键下钻 | requirements lane（第 26 轮） | 26 | candidate | — | 计数徽标不可点击（`event-delivery-counts-cell.tsx:57-82`）；跳 `/deliveries?q=<eventId>&deliveryState=<state>`，复用现有谓词与筛选；零值/未匹配路由保持不可点 |
+| REQ-113 | 复制当前筛选视图链接 | requirements lane（第 26 轮） | 26 | candidate | — | Events/Deliveries 工具栏只有刷新/重置（`events-page-toolbar.tsx:19-47`、`deliveries-page-toolbar.tsx:18-48`）；筛选与页码已在 URL；复制绝对 URL + toast；纯前端 |
+| REQ-114 | 投递重试前预览当前渲染结果 | requirements lane（第 26 轮） | 25 | candidate | — | 重试按钮直接执行（`delivery-retry-button.tsx:23-56`）；复用 `destinations.preview({id, sampleEventId})` 与既有预览对话框；仅 failed 状态显示，明确「只预览不发送」 |
+| REQ-115 | 首次部署空状态引导与过期文案修正 | requirements lane（第 26 轮） | 25 | candidate | — | Events 空态无下一步（`events-empty-state.tsx:12-26`）；Sources/Routes/Integrations 文案仍称「右侧栏」（`zh-Hans.json:913,796,636`）但页面无侧栏；补 CTA 并修正文案 |
+| REQ-116 | Events/Deliveries 每页条数选择 | requirements lane（第 26 轮） | 25 | candidate | — | 固定 20 条（`events-table-layout.ts:3`、`operations.queries.ts:32-39`），契约允许 1–100（`packages/api/src/schemas/operations.ts:207`）；URL 增 `pageSize=20/50/100` 并重置页码 |
+| REQ-117 | 路由/静默创建失败保留表单 | requirements lane（第 26 轮） | 23 | candidate | — | 两个对话框提交即关闭并重置（`route-add-dialog.tsx:75-78`、`suppression-add-dialog.tsx:74-77`），失败只弹 toast；对齐 Sources/Destinations 的等待成功语义 |
+| REQ-118 | Provider adapter 贡献指南与 scaffold | requirements lane（第 26 轮） | 22 | candidate | — | 只有 destination 侧指南/`just new-destination`（`Justfile:71-72`、`docs/contributing/`）；RC checklist `:117` 与 post-MVP 方向 6 要求 provider 对齐 |
 | SEC-7 | 归一化事件字段绕过 raw 脱敏并可传播到出站投递 | security lane | — | planned | — | **第 25 轮 EXPERT_PANEL 裁决**：读取/发送边界投影，不改存储；新增 `redactNormalizedEvent` + `redactRouteMatchResults`（含 `checks[].actual`），只用于 DTO 与发送输入；拒绝解析期脱敏/回填。决策 `docs/planning/decisions/credential-redaction-boundaries.md`（PR B） |
-| SEC-8 | 投递 attempt 响应体裸 token/URL 凭据可穿透 | security lane | — | planned | — | **第 25 轮 EXPERT_PANEL 裁决**：在 core 增加值形态脱敏（认证 scheme、`xox[baprs]-`、URL userinfo、Slack/Feishu/Lark webhook URL），读取层复核旧行；配置导出/编辑器草稿明确排除。决策 `docs/planning/decisions/credential-redaction-boundaries.md`（PR A，先行） |
+| SEC-8 | 投递 attempt 响应体裸 token/URL 凭据可穿透 | security lane | — | shipped | #176 | 第 26 轮 PR A：`redactCredentialText` 覆盖认证 scheme（Bearer/Basic/Token，需值含数字或符号）、`xox[baprs]-`、URL userinfo、Slack/飞书/Lark webhook；组合进 `redactText` 与 `redactJsonValue`；读取层复核 attempt/delivery/oncall/列表旧行。修复 `max_tokens` 尾部误判。决策 `docs/planning/decisions/credential-redaction-boundaries.md`；PR B（SEC-7 + SEC-17）待做 |
 | SEC-9 | 请求上下文 `headersRecord` 保留原始 Authorization/Cookie | security lane | 24 | candidate | — | 当前唯一消费者会再脱敏；建议构造时即 `redactHeaders`；`request-context.ts:87-97` |
-| SEC-10 | 旧库存量行只在写入时脱敏，读取不复核 | security lane | — | planned | — | 已并入 SEC-8 决策：PR A 在 `delivery.helpers.ts:32-44`、`oncall.helpers.ts:25`、`history.repository.ts:298` 读取层复核；不做一次性清理。决策 `docs/planning/decisions/credential-redaction-boundaries.md` |
+| SEC-10 | 旧库存量行只在写入时脱敏，读取不复核 | security lane | — | shipped | #176 | `deliveryFromRow`/`attemptFromRow`/`oncallPingFromRow`/投递列表映射读取时幂等复核；不做历史回填。决策 `docs/planning/decisions/credential-redaction-boundaries.md` |
 | DOC-34 | `route-authoring-current-state.md` 结论段仍称能力不存在 | docs-drift lane | 24 | candidate | — | 文首校正已存在，但 `:17,:105,:115` 仍称无本地化/无解释通道/无 route×destination；代码已反证 |
 | DOC-35 | README/发布文档仍把 Docker smoke 未进 CI 当缺口 | docs-drift lane | 25 | shipped | #162 | README、release checklist、backup/upgrade 文档统一为「E2E 未接入 CI；Docker smoke 保留为本地人工 gate」 |
 | DOC-36 | `next-round.md` 仍把已交付的 D2/D5 列为待做 | docs-drift lane | 23 | candidate | — | 变量面板分组/搜索/折叠与光标插入已落地；UX 评审缺状态头；`next-round.md:258-265` |
@@ -290,10 +304,10 @@
 | SEC-12 | Destination endpoint URL 的 userinfo 密码进入客户端 DTO | security lane（第 23 轮） | — | candidate | — | LOW：`destination.helpers.ts:48-58,275-289`；`webhookurl` 已被定为 secret，但 endpoint 可见决策未覆盖 userinfo；建议投影时剥离 → EXPERT_PANEL |
 | SEC-13 | `isSensitiveKey` 残留缺口 | security lane（第 23 轮） | — | candidate | — | LOW：`secretAccessKey`/`aws_secret_access_key`/`sessionKey`/`pwd`/`pass`/`dsn`；精确键加入，避免 `pass` 词尾规则误伤 `bypass` |
 | SEC-14 | `request-context.ts` 缺 server-only 标记 | security lane（第 23 轮） | — | candidate | — | LOW：直接 import `@tanstack/react-start/server`；导入方均为 server middleware/route；需 build 验证 import protection |
-| SEC-15 | 三份文档称响应体/错误「已脱敏」但仅键值脱敏 | security lane（第 23 轮） | — | planned | — | LOW：`adapter-extensibility.md:301`、ADR 0002 `:102`、`delivery-detail-diagnostics.md:17`；PR A 落地后改为准确描述并补值形态覆盖 |
-| SEC-16 | 读取层不复核存量脱敏 | security lane（第 23 轮） | — | planned | — | LOW：`delivery.helpers.ts:22,39,41`、`oncall.helpers.ts:22`、`intake.helpers.ts:61-63`；与 SEC-10 实质重复，已并入 SEC-10 / SEC-8 决策，不双开 |
+| SEC-15 | 三份文档称响应体/错误「已脱敏」但仅键值脱敏 | security lane（第 23 轮） | — | shipped | #176 | 三处改为「敏感键 + 高置信值形态」，并写明无前缀裸 token / generic webhook path/query 不承诺覆盖 |
+| SEC-16 | 读取层不复核存量脱敏 | security lane（第 23 轮） | — | shipped | #176 | 与 SEC-10 同一修复；`intake.helpers` 的 raw payload 读取路径按 SEC-18 在入库时已值形态脱敏 |
 | SEC-17 | providerMetadata 入库/出站前无统一脱敏兜底 | security lane（第 25 轮） | 24 | planned | — | `adapter-extensibility.md:260-261` 称已兜底，但 `intake.service.ts:114` 原样落库；grafana/alertmanager 的 `externalURL` 可含 userinfo，DTO 直接返回（`schemas/operations.ts:59-62`）；并入 SEC-7（PR B）读取边界 |
-| SEC-18 | raw payload 字符串叶子不做值形态扫描 | security lane（第 25 轮） | 22 | planned | — | `redaction.ts:74-86` 只按 key 判断；`{"url":"https://user:pass@host"}` 明文保留到保留期；PR A 对入库 raw 副本应用值形态 helper，parser 仍用原值 |
+| SEC-18 | raw payload 字符串叶子不做值形态扫描 | security lane（第 25 轮） | 22 | shipped | #176 | `redactJsonValue` 对字符串叶子应用 `redactCredentialText`；parser 仍读取原值，解析/匹配/去重语义不变 |
 | UI-1 | 列表搜索吞字符与空格、逐键请求 | ui-review（第 23 轮，浏览器实测） | 29 | shipped | #171 | 本地草稿 + 300ms 防抖后才写 URL；`pruneSearch` 保留空格，仅服务端过滤 trim；清除 chip/重置会取消未提交草稿；同时闭环 REQ-78 |
 | UI-2 | 筛选无匹配与无数据空态相同 | ui-review（第 23 轮，浏览器实测） | 27 | candidate | — | = REQ-4；`events-empty-state.tsx:12-26`、`deliveries-empty-state.tsx:12-26` 无条件渲染；传 `hasActiveFilters` + 内联重置 |
 | UI-3 | Delivery Payload 标签名过期 | ui-review（第 23 轮） | 24 | candidate | — | 页面已左右对照，标签仍是「渲染 Payload」；`delivery-detail-view.tsx:34`、`zh-Hans.json:195` |
@@ -314,26 +328,29 @@
 
 ## 下一轮优先项
 
-1. **SEC-8 / SEC-7 实现（已裁决）**：第 25 轮 EXPERT_PANEL 已落盘
-   `docs/planning/decisions/credential-redaction-boundaries.md`。下一轮先做 PR A
-   （SEC-8 + SEC-10/15/16/18），再做 PR B（SEC-7 + SEC-17）。仍待裁决：REQ-93
-   （在线快照下载的敏感边界）、Q-8（`markSucceeded` 持久化失败）、REQ-107（配置删除归档化）。
-2. **NEW-A（29）**：停用 Source/Route/Destination 前的断流影响确认；复用 rotate/delete
-   的确认模式，纯前端。
+1. **SEC-7 + SEC-17（PR B，已裁决）**：按
+   `docs/planning/decisions/credential-redaction-boundaries.md` 新增
+   `redactNormalizedEvent` / `redactRouteMatchResults`，只用于 DTO 组装与发送输入，
+   存储/匹配/去重/回放仍读原值；补读取边界矩阵测试。仍待裁决：REQ-93、Q-8、REQ-107。
+2. **NEW-A（29）**：停用 Source/Route/Destination 前的断流影响确认；纯前端。
+   **REQ-111（27）**：初始化 Owner 密码确认与不可恢复提示；纯前端。
 3. **REQ-108（28）** 多值属性筛选、**REQ-73（28）** 静默时区语义、
    **REQ-48（28）** 配置删除预检（并入 REQ-105）、**REQ-52（28）** `tocsin.eventUrl`
    与公开地址、**REQ-110（28）** 静默即将到期提示。
-4. **NEW-B/NEW-C（27）**、**REQ-103/104（27）**：静默快捷时长、路由目标全停用警示、
-   生产 compose 安全启动、备份恢复演练。
-5. **SEC-9 + SEC-13 + SEC-14 + Q-32 + Q-26**：`headersRecord` 拆窄字段、`isSensitiveKey`
-   精确键、`request-context` server-only 标记、`toLowerCase` 归一化、抑制窗口时间比较。
-6. **REL-1/REL-8**：E2E 接入 CI 与生产构建 E2E 的 panel 决策；REL-4/5/7/18/19 先扩 spec、
-   修 harness 与 readiness 文档。
+4. **REQ-112/113/114/115/116（25-26）**：投递计数下钻、复制视图链接、重试前预览、
+   首次部署空态与过期文案、每页条数；**NEW-B/NEW-C（27）**。
+5. **REL-21（26）**：新增独立 `e2e.yml`（先本地跑通 `playwright install chromium` +
+   `playwright test`，DB 预清理，失败 artifact）；**REL-24（23）** 搬 8 个 provider fixture；
+   **REL-23（24）** required checks 交 EXPERT_PANEL。
+6. **SEC-9 + SEC-13 + SEC-14 + Q-32 + Q-26 + Q-38**：`headersRecord` 拆窄字段、
+   `isSensitiveKey` 精确键、`request-context` server-only 标记、`toLowerCase` 归一化、
+   抑制窗口时间比较、复制失败 toast。
 7. **docs-drift 批次**：DOC-34/11/22/23/24/25/26/27/36/37/38/39/40/41/43/44/45，拆两个
    `docs:` PR；第 22 轮已刷新证据。
-8. **车道轮转（第 26 轮）**：`requirements` 必跑 + `release-infra` + `ui-triage`；
-   第 25 轮已跑 `requirements` + `security-exposure`，`ui-triage` 判定 `defer`；
-   `docs-drift` / `architecture` 留待第 27 轮。
+8. **车道轮转（第 27 轮）**：`requirements` 必跑 + `docs-drift` + `ui-triage`；
+   第 26 轮已跑 `requirements` + `release-infra`，`ui-triage` 判定 `defer`；
+   `architecture` 留待第 28 轮。下轮若再合入 ≥1 个 UI 变更，即达到「3 个 UI 合并」阈值，
+   应安排浏览器评审并覆盖 #171/#172。
 9. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 10. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。
@@ -341,11 +358,12 @@
     抑制预览、Settings 版本、相对时间、表单离开护栏。
 12. **REQ-94/95/96/97/98/99（23-26）**：保留策略、模板草稿语义、路由重叠预览、源级默认
     标签、显式历史清理、命名筛选视图。
-13. **Q-25/Q-23/Q-31/33/34/35 + SEC-8/10**：小型质量与安全项；SEC-8/10 需先过 EXPERT_PANEL。
+13. **Q-25/Q-23/Q-31/33/34/35/Q-36/Q-37/Q-39**：小型质量项；Q-23/Q-37 的有界
+    cleanup 一起设计。
 14. **ARCH-27/28/29/30 + ARCH-13/14 + FIX-8/5/9/10**：provider catalog、DTO parity、
     helper 拆分、分页 URL 化与低风险 chore。
-15. **REL-6/7/5/17/16 + REL-13**：Docker smoke 断言、E2E harness、`.dockerignore`、CI 门禁；
-    LICENSE 保持 blocked-autonomous。
+15. **REL-6/7/5/16/18/19/22 + REL-13**：Docker smoke 断言、E2E harness、readiness、
+    CI 门禁；LICENSE 保持 blocked-autonomous。
 16. **REQ-49/25/33/34/35/36/39/40/41/82/71/74..79/85**：其余候选按评分与依赖续做。
 
 ## 已知过期输入
