@@ -16,8 +16,9 @@ Docker runtime 形态。
 
 它不等于稳定公开发布已经完成。截至 2026-10-13，发布文档（release checklist、Docker 生产部署、
 备份/恢复/升级/回滚）与 README 的状态措辞已经补齐，见 `docs/release/`；仍然缺的是把关键浏览器
-E2E 与 compose smoke automation 接入 CI（脚本已存在并在本机实测通过，见下方 gate），以及
-delivery history retention 之类的长期可靠性策略。
+E2E 接入 CI（脚本已存在并在本机实测通过，见下方 gate）。compose smoke 已交付并明确保留为本地
+人工 gate，不计划接入 CI；delivery history retention 已决定不自动清理，理由见
+`docs/release/history-retention-and-snapshots.md` §1。
 
 ## 已完成的 MVP 能力
 
@@ -100,13 +101,14 @@ https://github.com/xqvvu/tocsin/issues/47 已在 `xqvvu/tocsin` 关闭，清单�
 
 仍然缺的是自动化接入：仓库只有 `.github/workflows/ci.yml`（`check · test · build`，`push` 到 main 与
 `pull_request` 触发，tag 不触发任何东西）；E2E（`just e2e`）与 Docker smoke（`just docker-smoke`）脚本
-已存在，但都没有接入 CI，这两条继续留在下面的发布 gate 里。
+已存在。E2E 尚未接入 CI，继续留在下面的发布 gate 里；Docker smoke 不再计划接入 CI（见 gate 说明）。
 
 ### 运行时策略
 
 raw payload retention 已可配置并在 intake 路径执行清理；服务端已有 LogTape 结构化日志、request ID
-关联、JSON Lines 生产输出与 secret-safe 测试。delivery history retention、dedupe cleanup 成本上限和
-外部 observability sink 仍应在发布或 post-MVP 中继续设计。
+关联、JSON Lines 生产输出与 secret-safe 测试。delivery history retention 已决定不自动清理（见
+`docs/release/history-retention-and-snapshots.md` §1）；dedupe cleanup 成本上限和外部 observability
+sink 仍应在发布或 post-MVP 中继续设计。
 
 ### Fixtures 与贡献体验
 

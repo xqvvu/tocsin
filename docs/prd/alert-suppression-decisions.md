@@ -164,8 +164,10 @@ PRD OQ3 说摘要是「跨投递聚合 + 一类新的通知」。核实后第一
   全仓现在是 **4** 处（`destination.helpers.ts:268,286`、`config-portability.ts:322`、`source-provider-icon.tsx:36`），
   不是备忘写的「仅两处命中」。
 
-**唯一残留的真实缺口是测试**：`grep` 全仓 `DestinationKindSchema.options` 在 configuration 测试里 0 命中，
-即「按 kind 参数化的脱敏回归测试」仍未补。建议保留这条待办，但**不要**再按「潜伏的凭据泄露」优先级排序。
+**测试缺口已闭环**：`configuration.integration.test.ts:1283` 已以
+`it.each(registeredDestinationKinds)` 覆盖每个 destination kind 的导出脱敏。残留仅是 SEC-2：
+用例从 registry 派生 kind，而不是 `DestinationKindSchema.options`；这不构成实际泄漏路径，按测试
+完备性处理即可，**不要**再按「潜伏的凭据泄露」优先级排序。
 
 ### 5.2 「表结构落地再改要付迁移成本」——实际比这更严重
 

@@ -2,6 +2,96 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 17 轮）
+
+- 时间：2026-10-19 12:40 – 13:30 CST。
+- 基线：`origin/main` @ `9a4013c`；main 最近一次 CI 为 success，无遗留 open PR。
+- 本轮类型：**需求切片 + 小修复 + 三车道审计**（非 full-audit）。最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）；backlog 有大量 ≥27 分候选，按第 1.5 步继续消化。
+- 车道轮转位置：本轮跑 `requirements` + `docs-drift` + `security-exposure`，三条车道均返回。
+  下一轮建议 `requirements` + `quality` + `architecture`。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `peaceful-perlman-1093ae`；收尾时删除其 `node_modules` 与 `agent-iteration`。
+
+### 本轮交付
+
+- PR #143（`feat(console): confirm manual urgent calls with receiver count`）—— **REQ-72**。
+  - 确认对话框展示接收人数与「立即拨号、不可撤销」；取消不产生请求；接收人数为 0 时
+    按钮禁用并说明；保留「非飞书应用投递不可加急」文案。
+  - PRD `docs/prd/oncall-buzz-confirmation.md`；5 条组件测试覆盖确认/取消/无接收人/非应用/失败。
+  - 验证：`vp check` 0 errors；`vp run -r test` 108 files / 570 tests；`vp run -r build`。
+- PR #144（`fix(console): share the intake prune sweep across requests`）—— **Q-24**。
+  - 单飞状态移至 container 持有的 `RawPayloadSweepGate`，注入每个按请求创建的实例；
+    双实例并发只触发一次后台清理，释放后下一个 webhook 可再次触发。
+  - 验证：同上门禁。
+
+### requirements lane（新增 6 条，已写入 backlog）
+
+- **REQ-80（29）**：投递详情解释「为什么命中这条路由」；DTO 已含 `route.rule` 与
+  `event.routeMatches[].checks`（`packages/core/src/operations.ts:132-144`、
+  `packages/core/src/event/event.ts:7-17`），页面只渲染路由名
+  （`delivery-summary-tab.tsx:24-27`）；需并列「接入时快照」与「当前规则」。
+- **REQ-81（27）**：告警源行一键临时静默；`source-actions.tsx:21-34` 只有编辑/轮换/启停/删除，
+  matcher 原生支持 `sourceIds`（`suppression.ts:155-179`）。
+- **REQ-82（25）**：详情页跨域引用可导航并定位配置行；
+  `delivery-summary-tab.tsx:16-31`、`event-detail-route-matches-table.tsx:62-66` 均为纯文本。
+- **REQ-83（26）**：补投预览标注将被静默的目标；预览不判断抑制
+  （`event-replay.service.ts:173-186,246-281`），实际入队会落 `suppressed`。
+- **REQ-84（26）**：Settings 展示版本与 schema 版本；`system-information.ts:10-45` 已收集，
+  但 `/api/health` 仅 `{status:"ok"}`（`health.ts:5-11`）。
+- **REQ-85（21）**：配置变更审计；无审计表（`schema.ts:7-111`）、service 无 actor；
+  需 forward-only migration，建议先写决策记录并交 EXPERT_PANEL。
+
+### docs-drift lane
+
+- **DOC-28**：`mvp-rc-checklist.md:18-20,103` 称 E2E/compose smoke 未接入 CI，`:125` 又勾选
+  「故意不进 ci.yml」；实际 `.github/workflows/ci.yml` 只有 quality job，属表述冲突。
+- **DOC-31**：retention 仍缺（`:18-20,107-109`）与 `:163` 已决定不自动清理矛盾。
+- **DOC-30**：`route-authoring-current-state.md:101-118,224` 称无缺口解释/无 route×destination
+  视图/多条件只能导入；`route-match-gaps.ts:57`、`event-detail-route-matches-table.tsx`、
+  `route-forms.tsx:284+` 均已落地。
+- **DOC-22**：`next-round.md` 正文仍把已完成的 S0、registry audit、test-kit 写成未决。
+- 证据刷新：DOC-11/23/24/25/26/27/29/32；新发现
+  `adapter-extensibility.md:118-119` 称脱敏由 `secretFields` 决定，实际仍由 console 手写
+  （`destination.helpers.ts:233-260`、`config-portability.ts:442-455`），manifest 派生未落地。
+
+### security-exposure lane
+
+- **SEC-5 已完整落地**：导出整表删除 `config.headers` 并生成 refs
+  （`config-portability.ts:344-381`）、不可表达名称 fail-closed、env 名冲突拒绝、
+  陈旧 refs 裁剪、编辑 DTO 只返回名称、导入拒绝 `[REDACTED]`、preview/test 不含明文。
+- 无 HIGH/MEDIUM。LOW 项：
+  - SEC-6：`tokenHash` 未命中 `isSensitiveKey`（`redaction.ts:10-43`），当前无输出路径。
+  - SEC-4：Feishu app test 错误未过 `redactText`（`feishu-app.service.ts:100-113`）。
+  - SEC-3：`env.ts:9-12` 读 `process.env` 但无 server-only 标记。
+  - SEC-2：脱敏测试按 registry 派生 kind（`configuration.integration.test.ts:18-20`）。
+- 旧仓库名 `xqvvu/vane` 已无有效链接；仅 `route-authoring-current-state.md:3` 本地路径残留。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项。REL-13（LICENSE）继续 `blocked-autonomous`。
+
+### 其他
+
+- 浏览器验证：未执行；本机 6180 的 dev server 运行在主 checkout 的上一版代码，
+  组件行为已由 jsdom 测试覆盖（含 Radix AlertDialog 交互）。
+- Obsidian 同步：从 `~/Library/Application Support/obsidian/obsidian.json` 发现 vault
+  根目录 `~/Library/Mobile Documents/iCloud~md~obsidian/Documents`，现有 Tocsin 笔记在
+  `Vane/` 下；本轮同步 iteration backlog/log 与新增 PRD 笔记。
+- 本轮 backlog/log 随 PR #145（`docs(planning): record the seventeenth iteration round`）
+  提交，并顺手更正 DOC-28/30/31/32 四处已漂移的文档断言。
+
+### 下一轮优先项
+
+1. **REQ-80（29）**：投递详情解释路由命中。
+2. **REQ-65（28）**：全局静默生效提示。
+3. **REQ-66（28）**：按外部消息引用反查投递。
+4. **REQ-73（28）**：静默时间窗时区语义。
+5. **REQ-58（28）**：失败投递等待重试/重试耗尽。
+6. **REL-3 + REL-15/18**：Docker smoke 隔离与发布手册。
+7. **Q-26（25）**：抑制窗口时间比较。
+8. **SEC-2/3/4/6**：可合并一个安全小修复 PR。
+
 ## 2026-10-19（第 16 轮）
 
 - 时间：2026-10-19 08:59 – 12:40 CST（会话中途被系统挂起约 2.5 小时，车道在恢复后返回）。
