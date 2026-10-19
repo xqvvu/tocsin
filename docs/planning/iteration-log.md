@@ -71,12 +71,29 @@
 - 决策记录：`docs/planning/decisions/credential-redaction-boundaries.md`。
 - 实现排期：第 26 轮先 PR A（SEC-8 + SEC-10/15/16/18），再 PR B（SEC-7 + SEC-17）。
 
+### 发布（第 9.5 步）
+
+- 三位专家一致通过发布：
+  - **发布经理**：自 beta.12 以来有 2 个用户可见变更（#171、#172），RELEASE，
+    建议 `0.1.0-beta.13`。
+  - **阻断审计**：main CI success、无其他 open PR、migrations 零 diff、无 secret 误提交；
+    唯一 FAIL 是版本未 bump，PR #174 修复后转 APPROVE。
+  - **运维/回滚**：SAFE；Dockerfile/compose/env/schema 零 diff，回滚只需换回 beta.12 镜像。
+- PR #174 `chore(release): v0.1.0-beta.13` rebase 合并 `9232200`；main CI success。
+- Tag：`v0.1.0-beta.13`（annotated，指向 `9232200`）；GitHub Release 已创建（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.13`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:3501c616418ec1772b3bef00dd4222803550bb26a16b3612e56299af500ade4b`）。
+- 回滚镜像：`0.1.0-beta.12`（digest `sha256:552e3590…`）。
+
 ### 其他
 
 - Q-30 已于第 24 轮闭环；本轮未新增 migration、未改投递/路由/auth 语义。
 - 本轮未做浏览器验证：改动为搜索交互与标签静默，由组件测试覆盖；UI-1 的浏览器证据来自
   第 23 轮实测。
-- Obsidian 同步：见本节末尾。
+- Obsidian 同步：**本轮跳过** —— `obsidian-vault` skill 未在当前会话暴露；按 AGENTS.md
+  的 fallback 规则记录后继续，不在没有 skill 的情况下手工猜测 vault 结构。
+- 工作树：结束前删除本会话工作树 `node_modules` 与 `agent-iteration` 锁目录。
 
 ### 下一轮优先项
 

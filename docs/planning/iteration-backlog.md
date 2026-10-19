@@ -307,6 +307,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.13` | `9232200` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.13`（linux/amd64 + linux/arm64，digest `sha256:3501c616…`） | 包含事件标签一键静默（#172）与运维搜索草稿/防抖修复（#171）；无迁移/配置变化；回滚镜像 `0.1.0-beta.12`（digest `sha256:552e3590…`） |
 | `0.1.0-beta.12` | `1725ac7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.12`（linux/amd64 + linux/arm64，digest `sha256:552e3590…`） | 包含抑制命中列表告警身份（#166）与加急呼叫持久化失败终态修复（#168）；无迁移/配置变化；回滚镜像 `0.1.0-beta.11`（digest `sha256:2c338841…`） |
 | `0.1.0-beta.11` | `3295013` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.11`（linux/amd64 + linux/arm64，digest `sha256:2c338841…`） | 包含 dashboard 静默状态指示器；Docker smoke 与生产卷隔离；ACR buildx provenance 修复；无迁移/配置变化；回滚镜像 `0.1.0-beta.10`（digest `sha256:6acac322…`） |
 | `0.1.0-beta.10` | `6bbef05` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.10`（linux/amd64 + linux/arm64，digest `sha256:6acac322…`） | 包含可折叠侧边栏、外部消息引用搜索、侧边栏状态持久化修复；无迁移/配置变化；回滚镜像 `0.1.0-beta.9`（已在 ACR，digest `sha256:b861d9cf…`） |
