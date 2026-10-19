@@ -2,6 +2,110 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-19（第 15 轮）
+
+- 时间：2026-10-19 07:42 – 09:00 CST。
+- 基线：`origin/main` @ `5d49502`；main 最近一次 CI 为 success，无遗留 open PR。
+- 本轮类型：**安全修复 + 需求切片 + 三车道审计**（非 full-audit）。最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）；backlog 仍有大量 ≥27 分候选，按第 1.5 步继续消化。
+- 车道轮转位置：本轮跑 `requirements` + `docs-drift` + `quality`，三条车道全部返回。
+  下一轮建议 `requirements` + `architecture` + `release-infra`。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现与验证在会话工作树
+  `nervous-varahamihira-86cc30`；收尾时删除其 `node_modules` 与 `agent-iteration`。
+
+### 本轮交付
+
+- PR #137（`fix(console): redact every destination header value from exports`）—— **SEC-5**。
+  - 导出整表删除 `config.headers`，为每个 header 生成
+    `secret_refs["headers.<Name>"]` 环境变量引用；编辑 DTO 只返回 `Name:`。
+  - 不可表达为 secret path 的 header 名（`.`、`$`、空格）fail-closed；
+    `slugEnvPart` 归一化后的 env 名冲突拒绝导出；陈旧 `headers.*` refs 导出前裁剪；
+    导入侧拒绝 header 值等于 `[REDACTED]`。
+  - 决策记录：`docs/planning/decisions/destination-header-redaction.md`。
+  - 验证：`vp check` 0 errors；`vp run -r test` 107 files / 559 tests；`vp run -r build`。
+- PR #138（`feat(console): confirm routes that match every alert`）—— **REQ-57**。
+  - `routeRuleIsEmpty` 按归一化后的保存规则判定；新建/编辑路由提交前弹出
+    catch-all 确认对话框，取消不提交。
+  - PRD：`docs/prd/route-catchall-confirmation.md`。
+  - 验证：`vp check` 0 errors；`vp run -r test` 107 files / 561 tests；`vp run -r build`。
+
+### requirements lane
+
+新增 6 条候选（已写入 backlog）：
+
+- **REQ-65（28）**：全局静默生效提示；其他页面会把 catch-all 静默误判为系统健康
+  （`dashboard-header.tsx:29-47`、`suppression.ts:82-105`）。
+- **REQ-66（28）**：按外部消息引用反查投递；搜索谓词不含 `provider_ref_value`
+  （`history.repository.ts:435-455`、`schema.ts:126-127`）。
+- **REQ-67（27）**：事件列表解释「命中路由但 0 投递」
+  （`event-delivery-counts-cell.tsx:35-55`、`events-table.tsx:72-80`）。
+- **REQ-68（26）**：路由一键复制（`routes-section.tsx:161-223`、`route-forms.tsx:50-87`）。
+- **REQ-69（25）**：新建/编辑静默时提示重叠规则（`suppression-forms.tsx:209-228`）。
+- **REQ-70（25）**：出站投递支持 `HTTP_PROXY/HTTPS_PROXY/NO_PROXY`
+  （`transport.ts:72-77`、`Dockerfile:75`）；涉及启动参数，需 EXPERT_PANEL。
+
+### docs-drift lane
+
+新增 DOC-29..DOC-32，并补充 DOC-11/22/23：
+
+- `next-round.md:3` 基线 `2f48153`（落后 18 提交），backlog「已知过期输入」仍写
+  `7b5d501`（DOC-29）。
+- `route-authoring-current-state.md:101,103-118,224` 仍称无缺口解释/无 route×destination
+  视图/多条件只能导入，实际已落地（`route-match-gaps.ts:57`、
+  `event-detail-route-matches-table.tsx:35-40`）（DOC-30）。
+- RC checklist `:18-20,107-109` 与 `:163` 对 delivery history retention 自相矛盾（DOC-31）。
+- `alert-suppression-decisions.md:167-168` 称参数化脱敏测试未补，实际已存在
+  （`configuration.integration.test.ts:18-19,29-45,1175-1212`）（DOC-32）。
+- 另确认 SEC-5（`mvp-rc-checklist.md:41-42` 的「无明文 secret」断言在修复前不成立）。
+
+### quality lane
+
+新增 Q-24..Q-29：
+
+- **Q-24（27）**：`pruneSweepRunning` 是 per-request service 实例字段，单飞从未跨请求
+  生效；并发 webhook 会叠加无界 `pruneAllRawPayloads`
+  （`intake.service.ts:49-50,176-192`、`container.ts:268-274`、`webhook.ts:55`）。
+- **Q-25（26）**：重放与历史样例预览把 `{"retentionPruned":true}` 当真实载荷
+  （`event-replay.service.ts:49-81`、`delivery-execution.ts:95`、
+  `destination.service.ts:371-390`）。
+- **Q-26（25）**：抑制窗口用字符串字典序比较，带偏移 ISO 时间会超期静默或提前失效
+  （`suppression.ts:82-97`、`suppression.service.ts:50-57`）。
+- **Q-27（24）**：告警源覆盖率把条件路由算成全覆盖（`source-route-coverage.ts:16-31`）。
+- **Q-28（22）**：oncall worker 批次共用开始时间，`fired_at` 与退避基准偏早
+  （`oncall-worker.service.ts:77-79`、`oncall-execution.ts:97-98,138-143`）。
+- **Q-29（20）**：历史样例选择器 pending/error/empty 三态无测试
+  （`destination-notices.tsx:131,150-158`）。
+
+### EXPERT_PANEL（SEC-5）
+
+- 安全与可靠性专家、产品与运维专家、独立评估者三人一致推荐 **方案 A：全量遮蔽 +
+  fail-closed**。
+- 关键约束（均已实施）：不能按点路径逐条删除 header 值（header 名可含 `.`/`$`）；
+  env 名冲突必须拒绝；陈旧 refs 必须裁剪；编辑留空=保留的 merge 语义不能破坏。
+- 决策记录：`docs/planning/decisions/destination-header-redaction.md`。
+- 回滚：`git revert`，无迁移、无数据改写。
+- 残余项：编辑表单仍无法删除已有 header，已记入 `REQ-71`。
+- REL-13（LICENSE）继续 `blocked-autonomous`。
+
+### 其他
+
+- Obsidian 同步：从 `~/Library/Application Support/obsidian/obsidian.json` 发现 vault
+  根目录 `~/Library/Mobile Documents/iCloud~md~obsidian/Documents`，现有 Tocsin 笔记在
+  `Vane/` 下，沿用 `Vane <Title>.md` 命名与底部 `## Related` wikilink 风格。本轮同步
+  `Vane Iteration Backlog`、`Vane Iteration Log`，新建
+  `Vane Destination Header Redaction` 与 `Vane Route Catchall Confirmation`，并更新
+  `Vane Index`。
+- 本轮 backlog/log 与决策记录随本 `docs(planning):` PR 提交。
+
+### 下一轮优先项
+
+1. **REQ-53（29）**：加急记录审计字段；纯 UI。
+2. **REQ-65（28）**：全局静默生效提示。
+3. **REQ-66（28）**：按外部消息引用反查投递。
+4. **Q-21（28）**：搜索输入 120 字符上限。
+5. **Q-24（27）**：prune sweep 单飞跨请求失效；这是真实缺陷，建议优先于普通功能项。
+6. 其余见 `iteration-backlog.md` 的「下一轮优先项」。
+
 ## 2026-10-19（第 14 轮）
 
 - 时间：2026-10-19 01:25 – 04:15 CST。
