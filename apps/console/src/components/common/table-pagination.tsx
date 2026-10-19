@@ -10,7 +10,7 @@ import {
 import { cn } from "#/lib/utils";
 
 export interface TablePaginationProps {
-  /** Omitted only while the list is empty, where a count of 0 says nothing. */
+  /** Range summary such as "1-20 of 45". Callers hide the bar when nothing is paginated. */
   rangeLabel: string;
   pageLabel: string;
   previousLabel: string;
