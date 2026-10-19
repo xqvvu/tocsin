@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { OPERATION_SEARCH_MAX_LENGTH, type RouteDefinition } from "@tocsin/core";
 
@@ -113,23 +113,98 @@ describe("operation filters by page scope", () => {
   });
 });
 
+describe("operation search input", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("keeps a burst of typing local and commits it once", async () => {
+    const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
+    renderFilters("events", {}, "toolbar", onChange);
+    const input = screen.getByPlaceholderText(
+      "title, message, fingerprint, or ID",
+    ) as HTMLInputElement;
+
+    // Each change is one keystroke as React sees it. The old input wrote every
+    // key to the URL, which both re-trimmed the value and queried per key.
+    for (const value of ["D", "Di", "Dis", "Disk", "Disk ", "Disk u", "Disk usage"]) {
+      fireEvent.change(input, { target: { value } });
+    }
+
+    expect(input.value).toBe("Disk usage");
+    expect(onChange).not.toHaveBeenCalled();
+
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
+    expect(onChange).toHaveBeenCalledWith({ q: "Disk usage" });
+  });
+
+  it("clears an uncommitted draft when the active query chip is removed", async () => {
+    const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
+    renderFilters("events", { q: "checkout" }, "toolbar", onChange);
+    const input = screen.getByPlaceholderText(
+      "title, message, fingerprint, or ID",
+    ) as HTMLInputElement;
+
+    // Still inside the debounce window: the URL does not know about "now" yet.
+    fireEvent.change(input, { target: { value: "checkout now" } });
+    fireEvent.click(screen.getByTitle("Clear Search"));
+
+    expect(input.value).toBe("");
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith({ q: "" });
+  });
+
+  it("adopts an external reset instead of the uncommitted draft", async () => {
+    const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
+    const { rerender } = renderFilters("events", { q: "checkout" }, "toolbar", onChange);
+    const input = screen.getByPlaceholderText(
+      "title, message, fingerprint, or ID",
+    ) as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "checkout now" } });
+    expect(input.value).toBe("checkout now");
+
+    // Reset filters clears the URL value before the debounce fires.
+    rerender(filtersTree("events", {}, "toolbar", onChange));
+
+    const reset = screen.getByPlaceholderText(
+      "title, message, fingerprint, or ID",
+    ) as HTMLInputElement;
+    expect(reset.value).toBe("");
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
 function renderFilters(
   scope: OperationFilterScope,
   search: DashboardOperationSearch = {},
   // The rail renders the panel inline; the toolbar keeps the panel inside a
   // closed popover but always renders the active-filter chips.
   layout: "rail" | "toolbar" = "rail",
+  onChange: (next: Partial<DashboardOperationSearch>) => void = () => {},
 ) {
-  render(
+  return render(filtersTree(scope, search, layout, onChange));
+}
+
+function filtersTree(
+  scope: OperationFilterScope,
+  search: DashboardOperationSearch,
+  layout: "rail" | "toolbar",
+  onChange: (next: Partial<DashboardOperationSearch>) => void,
+) {
+  return (
     <AppIntlProvider locale="en-US">
       <OperationFilters
         configuration={configuration}
         scope={scope}
         search={search}
         pending={false}
-        onChange={() => {}}
+        onChange={onChange}
         layout={layout}
       />
-    </AppIntlProvider>,
+    </AppIntlProvider>
   );
 }

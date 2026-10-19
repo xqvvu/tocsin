@@ -1,4 +1,5 @@
 import { RiCloseLine, RiFilter3Line, RiSearchLine } from "@remixicon/react";
+import * as React from "react";
 
 import {
   type DestinationSummary,
@@ -67,6 +68,17 @@ export function OperationFilters({
   const chips = activeFilterChips(search, configuration, scope, t);
   const activeCount = chips.length;
   const resolvedLayout = layout === "grid" ? "toolbar" : layout;
+  const searchDraft = useOperationSearchDraft(search.q ?? "", (q) => onChange({ q }));
+
+  // Clearing the query must also cancel an uncommitted draft; otherwise the
+  // debounce would put the text back into the URL right after the reset.
+  function handleFilterChange(next: Partial<DashboardOperationSearch>): void {
+    if (next.q === "") {
+      searchDraft.clear();
+    }
+
+    onChange(next);
+  }
 
   if (resolvedLayout === "rail") {
     return (
@@ -75,7 +87,7 @@ export function OperationFilters({
         scope={scope}
         search={search}
         pending={pending}
-        onChange={onChange}
+        onChange={handleFilterChange}
         className="border-border bg-background border p-2"
       />
     );
@@ -89,19 +101,16 @@ export function OperationFilters({
             aria-hidden
             className="text-muted-foreground pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2"
           />
-          <Input
-            id="operation-search"
-            value={search.q ?? ""}
-            disabled={pending}
+          <OperationSearchInput
+            value={searchDraft.draft}
+            pending={pending}
             placeholder={
               scope === "deliveries"
                 ? t("operations.filters.searchPlaceholderDeliveries")
                 : t("operations.filters.searchPlaceholder")
             }
-            className="h-8 pl-7"
-            maxLength={OPERATION_SEARCH_MAX_LENGTH}
-            onChange={(event) => onChange({ q: event.currentTarget.value })}
-            aria-label={t("operations.filters.search")}
+            ariaLabel={t("operations.filters.search")}
+            onChange={searchDraft.update}
           />
         </div>
 
@@ -135,7 +144,7 @@ export function OperationFilters({
               scope={scope}
               search={search}
               pending={pending}
-              onChange={onChange}
+              onChange={handleFilterChange}
               compact
             />
           </PopoverContent>
@@ -149,7 +158,7 @@ export function OperationFilters({
               key={chip.key}
               type="button"
               disabled={pending}
-              onClick={() => onChange(chip.clear)}
+              onClick={() => handleFilterChange(chip.clear)}
               className={cn(
                 "border-border bg-muted/50 text-foreground hover:bg-muted inline-flex h-6 max-w-full items-center gap-1 border px-1.5 text-[11px]",
                 pending ? "pointer-events-none opacity-60" : null,
@@ -168,7 +177,7 @@ export function OperationFilters({
             disabled={pending}
             className="h-6 px-1.5 text-[11px]"
             onClick={() =>
-              onChange({
+              handleFilterChange({
                 sourceId: "",
                 severity: "",
                 status: "",
@@ -539,4 +548,100 @@ function activeFilterChips(
   }
 
   return chips;
+}
+
+/**
+ * Search text is typed locally and committed after a pause.
+ *
+ * Writing every keystroke to the URL used to do two things at once: each
+ * navigation re-rendered the input from the trimmed URL value (so "Disk usage"
+ * collapsed to "diskusage"), and each key fired a server query. The draft keeps
+ * the operator's exact text — including a trailing space — while the debounce
+ * collapses a burst of typing into one navigation.
+ */
+const SEARCH_DEBOUNCE_MS = 300;
+
+/**
+ * The draft lives with the filter bar, not inside the input, because "Reset
+ * filters" and the query chip both clear the committed value. Clearing has to
+ * cancel an uncommitted draft at the same time, and only this scope sees both.
+ */
+function useOperationSearchDraft(value: string, commit: (next: string) => void) {
+  const [draft, setDraft] = React.useState(value);
+  // The last value this draft sent to the URL. An incoming `value` that matches
+  // it is our own commit echoing back, so it must not overwrite characters the
+  // operator typed while the navigation was in flight.
+  const committed = React.useRef(value);
+  const timer = React.useRef<number | null>(null);
+  const commitRef = React.useRef(commit);
+
+  React.useEffect(() => {
+    commitRef.current = commit;
+  }, [commit]);
+
+  React.useEffect(() => {
+    if (value === committed.current) {
+      return;
+    }
+
+    // An external change — browser history, or a filter the operator applied
+    // elsewhere — wins over an uncommitted draft.
+    committed.current = value;
+    setDraft(value);
+    cancelPending(timer);
+  }, [value]);
+
+  React.useEffect(() => () => cancelPending(timer), []);
+
+  function update(next: string): void {
+    setDraft(next);
+    cancelPending(timer);
+    timer.current = window.setTimeout(() => {
+      timer.current = null;
+      committed.current = next;
+      commitRef.current(next);
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  function clear(): void {
+    cancelPending(timer);
+    committed.current = "";
+    setDraft("");
+  }
+
+  return { draft, update, clear };
+}
+
+function OperationSearchInput({
+  value,
+  pending,
+  placeholder,
+  ariaLabel,
+  onChange,
+}: {
+  value: string;
+  pending: boolean;
+  placeholder: string;
+  ariaLabel: string;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <Input
+      id="operation-search"
+      value={value}
+      aria-busy={pending}
+      placeholder={placeholder}
+      className="h-8 pl-7"
+      maxLength={OPERATION_SEARCH_MAX_LENGTH}
+      onChange={(event) => onChange(event.currentTarget.value)}
+      aria-label={ariaLabel}
+    />
+  );
+}
+
+function cancelPending(timer: React.MutableRefObject<number | null>): void {
+  if (timer.current !== null) {
+    window.clearTimeout(timer.current);
+    timer.current = null;
+  }
 }
