@@ -5,6 +5,7 @@ import {
   emptySuppressionMatcher,
   isoFromDatetimeLocal,
   suppressionDefaultsFromEvent,
+  suppressionDefaultsFromLabel,
   suppressionFormDefaultsFromRule,
   suppressionMatcherFromValues,
   suppressionMatcherIsEmpty,
@@ -58,6 +59,21 @@ describe("suppression form model", () => {
     expect(suppressionMatcherIsEmpty(defaults.matcher)).toBe(false);
     expect(defaults.startsAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
     expect(Date.parse(defaults.endsAt)).toBeGreaterThan(Date.parse(defaults.startsAt));
+  });
+
+  it("prefills the event's source and label when silencing one label value", () => {
+    const defaults = suppressionDefaultsFromLabel({
+      name: "Silence: Disk full",
+      sourceId: "source-1",
+      label: { key: "env", value: "prod" },
+      now: new Date("2026-10-18T09:00:00.000Z"),
+    });
+
+    expect(defaults.kind).toBe("silence");
+    expect(defaults.matcher.sourceIds).toEqual(["source-1"]);
+    expect(defaults.matcher.labels).toEqual([{ key: "env", operator: "equals", value: "prod" }]);
+    // Clicking one label must not silently widen the rule to the whole alert.
+    expect(defaults.matcher.fingerprints).toEqual([]);
   });
 
   it("keeps every matcher dimension when editing an existing rule", () => {

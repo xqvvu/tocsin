@@ -64,7 +64,7 @@ export function EventNormalizedTab({ detail }: { detail: EventDetailData }) {
             value={<OperationTimestamp format="dateTime" value={detail.event.receivedAt} />}
           />
         </dl>
-        <EventLabelList labels={normalized.labels} />
+        <EventLabelList detail={detail} />
         <EventUpstreamSource providerMetadata={detail.event.providerMetadata} />
       </section>
 

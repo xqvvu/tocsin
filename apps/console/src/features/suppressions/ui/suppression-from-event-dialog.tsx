@@ -18,7 +18,10 @@ import { Skeleton } from "#/components/ui/skeleton";
 import { destinationsQueryOptions } from "#/features/destinations/api/destination.queries";
 import { sourcesQueryOptions } from "#/features/sources/api/source.queries";
 import { useSuppressionMutations } from "#/features/suppressions/api/suppression.mutations";
-import { suppressionDefaultsFromEvent } from "#/features/suppressions/model/suppression-form";
+import {
+  suppressionDefaultsFromEvent,
+  suppressionDefaultsFromLabel,
+} from "#/features/suppressions/model/suppression-form";
 import {
   CreateSuppressionForm,
   type SuppressionFormSubmission,
@@ -29,19 +32,24 @@ import { useTranslations } from "#/i18n/use-i18n";
 const MAX_NAME_TITLE_LENGTH = 80;
 
 /**
- * Silences one event's fingerprint without leaving the event detail page.
+ * Silences one event's fingerprint, or one of its label values, without
+ * leaving the event detail page.
  *
- * The form is prefilled with the event's source and fingerprint; the operator
- * still confirms the window and can widen or narrow the conditions, because a
- * suppression outlives the event that prompted it.
+ * The form is prefilled with the event's source plus either the fingerprint or
+ * the clicked label; the operator still confirms the window and can widen or
+ * narrow the conditions, because a suppression outlives the event that
+ * prompted it.
  */
 export function SuppressionFromEventDialog({
   event,
   source,
+  label,
   disabled = false,
 }: {
   event: EventRecord;
   source: SourceSummary;
+  /** When set, the form silences this label value instead of the fingerprint. */
+  label?: { key: string; value: string };
   disabled?: boolean;
 }) {
   const t = useTranslations();
@@ -56,13 +64,22 @@ export function SuppressionFromEventDialog({
   // Built on every render, but the form only mounts once its option lists are
   // ready, so the default window reflects the moment the dialog opened rather
   // than the moment this long-lived detail page mounted.
-  const defaults = suppressionDefaultsFromEvent({
-    name: t("suppressions.fromEvent.nameTemplate", {
-      title: clipTitle(event.normalized.title),
-    }),
-    sourceId: source.id,
-    fingerprint: event.normalized.fingerprint,
+  const name = t("suppressions.fromEvent.nameTemplate", {
+    title: clipTitle(event.normalized.title),
   });
+  const defaults = label
+    ? suppressionDefaultsFromLabel({ name, sourceId: source.id, label })
+    : suppressionDefaultsFromEvent({
+        name,
+        sourceId: source.id,
+        fingerprint: event.normalized.fingerprint,
+      });
+  const actionLabel = label
+    ? t("suppressions.fromLabel.actionFor", {
+        labelKey: label.key,
+        labelValue: label.value,
+      })
+    : t("suppressions.fromEvent.action");
 
   // The event's source may be missing from the fetched list if it was deleted
   // after intake; keep it selectable so the prefilled matcher stays visible.
@@ -103,27 +120,40 @@ export function SuppressionFromEventDialog({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size={label ? "icon-xs" : "sm"}
             disabled={disabled || pending}
-            title={t("suppressions.fromEvent.action")}
-            className="w-fit"
+            title={actionLabel}
+            aria-label={label ? actionLabel : undefined}
+            className={label ? "shrink-0" : "w-fit"}
           />
         }
       >
         <RiShieldCheckLine data-icon="inline-start" aria-hidden />
-        {t("suppressions.fromEvent.action")}
+        {label ? null : actionLabel}
       </DialogTrigger>
 
       <ConfigurationDialogContent>
         <DialogHeader className="shrink-0 pr-8">
-          <DialogTitle>{t("suppressions.fromEvent.title")}</DialogTitle>
-          <DialogDescription>{t("suppressions.fromEvent.description")}</DialogDescription>
+          <DialogTitle>
+            {label ? t("suppressions.fromLabel.title") : t("suppressions.fromEvent.title")}
+          </DialogTitle>
+          <DialogDescription>
+            {label
+              ? t("suppressions.fromLabel.description")
+              : t("suppressions.fromEvent.description")}
+          </DialogDescription>
         </DialogHeader>
         <p className="text-muted-foreground shrink-0 font-mono text-[11px] wrap-break-word">
-          {t("suppressions.fromEvent.context", {
-            sourceName: source.name,
-            fingerprint: event.normalized.fingerprint,
-          })}
+          {label
+            ? t("suppressions.fromLabel.context", {
+                sourceName: source.name,
+                labelKey: label.key,
+                labelValue: label.value,
+              })
+            : t("suppressions.fromEvent.context", {
+                sourceName: source.name,
+                fingerprint: event.normalized.fingerprint,
+              })}
         </p>
 
         {loadError ? (

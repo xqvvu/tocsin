@@ -157,6 +157,37 @@ export function suppressionDefaultsFromEvent(input: {
   };
 }
 
+/**
+ * Prefills the create form when the operator silences one label value.
+ *
+ * The source is pinned for the same reason as the fingerprint variant: a label
+ * such as `env=prod` exists across upstream systems, and the operator is
+ * looking at one event from one source. The operator defaults to `equals`, the
+ * narrowest match, so the prompt cannot widen what was clicked.
+ */
+export function suppressionDefaultsFromLabel(input: {
+  name: string;
+  sourceId: string;
+  label: { key: string; value: string };
+  now?: Date;
+}): SuppressionFormValues {
+  const window = defaultSuppressionWindow(input.now);
+
+  return {
+    name: input.name,
+    kind: "silence",
+    reason: "",
+    enabled: true,
+    startsAt: window.startsAt,
+    endsAt: window.endsAt,
+    matcher: {
+      ...emptySuppressionMatcher(),
+      sourceIds: [input.sourceId],
+      labels: [{ key: input.label.key, operator: "equals", value: input.label.value }],
+    },
+  };
+}
+
 /** ISO instant → the local `datetime-local` value the input expects. */
 export function datetimeLocalFromIso(iso: string): string {
   const date = new Date(iso);
