@@ -11,6 +11,7 @@ import {
   JsonValueSchema,
   OncallPingSchema,
   OperationTimeRangeSchema,
+  OPERATION_SEARCH_MAX_LENGTH,
   PreviewRouteReplayCommandSchema,
   ProviderReferenceSchema,
   ReplayEventCommandSchema,
@@ -210,7 +211,7 @@ export const ListOperationsInputSchema = z
     deliveryState: DeliveryStateSchema.optional(),
     /** Relative window resolved against the server's request time. */
     range: OperationTimeRangeSchema.optional(),
-    q: z.string().trim().min(1).max(120).optional(),
+    q: z.string().trim().min(1).max(OPERATION_SEARCH_MAX_LENGTH).optional(),
     eventPage: z.number().int().min(1).default(1),
     deliveryPage: z.number().int().min(1).default(1),
   })

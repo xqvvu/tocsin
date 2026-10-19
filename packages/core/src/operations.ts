@@ -27,6 +27,14 @@ export const OperationTimeRangeSchema = z.enum(["15m", "1h", "6h", "24h", "7d"])
 
 export type OperationTimeRange = z.infer<typeof OperationTimeRangeSchema>;
 
+/**
+ * Upper bound for the free-text operations search.
+ *
+ * The oRPC contract and the console URL normalizer share this value so a
+ * pasted or hand-edited query is clipped before the server rejects it.
+ */
+export const OPERATION_SEARCH_MAX_LENGTH = 120;
+
 export interface NumberedPage<T> {
   items: T[];
   total: number;

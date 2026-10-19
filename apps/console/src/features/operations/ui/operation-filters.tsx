@@ -1,6 +1,11 @@
 import { RiCloseLine, RiFilter3Line, RiSearchLine } from "@remixicon/react";
 
-import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
+import {
+  type DestinationSummary,
+  OPERATION_SEARCH_MAX_LENGTH,
+  type RouteDefinition,
+  type SourceSummary,
+} from "@tocsin/core";
 
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
@@ -94,6 +99,7 @@ export function OperationFilters({
                 : t("operations.filters.searchPlaceholder")
             }
             className="h-8 pl-7"
+            maxLength={OPERATION_SEARCH_MAX_LENGTH}
             onChange={(event) => onChange({ q: event.currentTarget.value })}
             aria-label={t("operations.filters.search")}
           />
