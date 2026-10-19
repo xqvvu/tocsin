@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
@@ -80,6 +80,62 @@ describe("sources section table", () => {
     expect(screen.queryByText("Token configured")).toBeNull();
     expect(screen.getByText("2 active")).toBeTruthy();
     expect(screen.getByText("1 active")).toBeTruthy();
+  });
+
+  it("asks for confirmation before disabling a source and reports enabled route impact", () => {
+    const onToggle = vi.fn<SourceActionHandler>();
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <SourcesSection
+          sources={[sourceFixture(2)]}
+          routes={[
+            routeFixture("direct-route", "Direct route", ["source-2"], true),
+            routeFixture("catch-all-route", "Catch all route", [], true),
+            routeFixture("disabled-route", "Disabled route", ["source-2"], false),
+          ]}
+          pending={false}
+          onEdit={vi.fn<SourceEditHandler>()}
+          onToggle={onToggle}
+          onRotateToken={vi.fn<SourceActionHandler>()}
+          onDelete={vi.fn<SourceActionHandler>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Disable source intake" }));
+    expect(onToggle).not.toHaveBeenCalled();
+
+    const disableDialog = screen.getByRole("alertdialog");
+    expect(
+      within(disableDialog).getByText(/2 enabled routes will stop receiving new events/),
+    ).toBeTruthy();
+    fireEvent.click(within(disableDialog).getByRole("button", { name: "Disable intake" }));
+
+    expect(onToggle).toHaveBeenCalledWith(expect.objectContaining({ id: "source-2" }));
+  });
+
+  it("enables a disabled source without a confirmation step", () => {
+    const onToggle = vi.fn<SourceActionHandler>();
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <SourcesSection
+          sources={[sourceFixture(1)]}
+          routes={[]}
+          pending={false}
+          onEdit={vi.fn<SourceEditHandler>()}
+          onToggle={onToggle}
+          onRotateToken={vi.fn<SourceActionHandler>()}
+          onDelete={vi.fn<SourceActionHandler>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Enable source intake" }));
+
+    expect(onToggle).toHaveBeenCalledWith(expect.objectContaining({ id: "source-1" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 });
 

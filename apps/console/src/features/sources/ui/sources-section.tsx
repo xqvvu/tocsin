@@ -65,6 +65,7 @@ export function SourcesSection({
         cell: ({ row }) => (
           <SourceActions
             source={row.original}
+            enabledRouteCount={sourceRouteCoverage(row.original.id, routes).enabledRouteCount}
             pending={pending}
             onEdit={onEdit}
             onToggle={onToggle}

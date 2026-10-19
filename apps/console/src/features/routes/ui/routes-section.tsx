@@ -170,6 +170,7 @@ function RouteActions({
   onDelete: (route: RouteSummary) => void;
 }) {
   const t = useTranslations();
+  const [disableDialogOpen, setDisableDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const editLabel = t("routing.table.actions.edit");
   const replayLabel = t("routing.table.actions.replayPreview");
@@ -204,19 +205,73 @@ function RouteActions({
           <RiRefreshLine data-icon="inline-start" aria-hidden />
         </Button>
       </IconTooltip>
-      <IconTooltip label={toggleLabel}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          disabled={pending}
-          aria-label={toggleLabel}
-          className={powerActionButtonClassName(route.enabled)}
-          onClick={() => onToggle(route)}
+      {route.enabled ? (
+        <AlertDialog
+          open={disableDialogOpen}
+          onOpenChange={(open) => {
+            if (!pending) {
+              setDisableDialogOpen(open);
+            }
+          }}
         >
-          <RiShutDownLine data-icon="inline-start" aria-hidden />
-        </Button>
-      </IconTooltip>
+          <IconTooltip label={toggleLabel}>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={pending}
+                  aria-label={toggleLabel}
+                  className={powerActionButtonClassName(route.enabled)}
+                />
+              }
+            >
+              <RiShutDownLine data-icon="inline-start" aria-hidden />
+            </AlertDialogTrigger>
+          </IconTooltip>
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("routing.disable.confirmTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("routing.disable.confirmDescription", {
+                  routeName: route.name,
+                  destinationCount: route.destinationIds.length,
+                })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>
+                {t("routing.disable.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={pending}
+                onClick={() => {
+                  setDisableDialogOpen(false);
+                  onToggle(route);
+                }}
+              >
+                {t("routing.disable.confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : (
+        <IconTooltip label={toggleLabel}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={pending}
+            aria-label={toggleLabel}
+            className={powerActionButtonClassName(route.enabled)}
+            onClick={() => onToggle(route)}
+          >
+            <RiShutDownLine data-icon="inline-start" aria-hidden />
+          </Button>
+        </IconTooltip>
+      )}
       <AlertDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {

@@ -26,6 +26,7 @@ import { useTranslations } from "#/i18n/use-i18n";
 
 export function DestinationActions({
   destination,
+  enabledRouteCount,
   pending,
   onTest,
   onPreview,
@@ -34,6 +35,7 @@ export function DestinationActions({
   onDelete,
 }: {
   destination: DestinationListItem;
+  enabledRouteCount: number;
   pending: boolean;
   onTest: (destination: DestinationListItem) => void;
   onPreview: (destination: DestinationListItem) => void;
@@ -42,6 +44,7 @@ export function DestinationActions({
   onDelete: (destination: DestinationListItem) => void;
 }) {
   const t = useTranslations();
+  const [disableDialogOpen, setDisableDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const testLabel = t("destinations.table.actions.testTitle", { name: destination.name });
   const previewLabel = t("destinations.table.actions.previewTitle", {
@@ -91,19 +94,77 @@ export function DestinationActions({
           <RiEditLine data-icon="inline-start" aria-hidden />
         </Button>
       </IconTooltip>
-      <IconTooltip label={toggleLabel}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          disabled={pending}
-          aria-label={toggleLabel}
-          className={powerActionButtonClassName(destination.enabled)}
-          onClick={() => onToggle(destination)}
+      {destination.enabled ? (
+        <AlertDialog
+          open={disableDialogOpen}
+          onOpenChange={(open) => {
+            if (!pending) {
+              setDisableDialogOpen(open);
+            }
+          }}
         >
-          <RiShutDownLine data-icon="inline-start" aria-hidden />
-        </Button>
-      </IconTooltip>
+          <IconTooltip label={toggleLabel}>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={pending}
+                  aria-label={toggleLabel}
+                  className={powerActionButtonClassName(destination.enabled)}
+                />
+              }
+            >
+              <RiShutDownLine data-icon="inline-start" aria-hidden />
+            </AlertDialogTrigger>
+          </IconTooltip>
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("destinations.disable.confirmTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {enabledRouteCount > 0
+                  ? t("destinations.disable.confirmDescription", {
+                      destinationName: destination.name,
+                      routeCount: enabledRouteCount,
+                    })
+                  : t("destinations.disable.confirmDescriptionNoRoutes", {
+                      destinationName: destination.name,
+                    })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>
+                {t("destinations.disable.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={pending}
+                onClick={() => {
+                  setDisableDialogOpen(false);
+                  onToggle(destination);
+                }}
+              >
+                {t("destinations.disable.confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : (
+        <IconTooltip label={toggleLabel}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={pending}
+            aria-label={toggleLabel}
+            className={powerActionButtonClassName(destination.enabled)}
+            onClick={() => onToggle(destination)}
+          >
+            <RiShutDownLine data-icon="inline-start" aria-hidden />
+          </Button>
+        </IconTooltip>
+      )}
       <AlertDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {

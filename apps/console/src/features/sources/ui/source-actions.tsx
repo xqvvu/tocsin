@@ -20,6 +20,7 @@ import { useTranslations } from "#/i18n/use-i18n";
 
 export function SourceActions({
   source,
+  enabledRouteCount,
   pending,
   onEdit,
   onToggle,
@@ -27,6 +28,7 @@ export function SourceActions({
   onDelete,
 }: {
   source: SourceSummary;
+  enabledRouteCount: number;
   pending: boolean;
   onEdit: (sourceId: string) => void;
   onToggle: (source: SourceSummary) => void;
@@ -34,6 +36,7 @@ export function SourceActions({
   onDelete: (source: SourceSummary) => void;
 }) {
   const t = useTranslations();
+  const [disableDialogOpen, setDisableDialogOpen] = React.useState(false);
   const [rotateDialogOpen, setRotateDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const editLabel = t("sources.table.actions.edit");
@@ -102,19 +105,77 @@ export function SourceActions({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <IconTooltip label={toggleLabel}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          disabled={pending}
-          aria-label={toggleLabel}
-          className={powerActionButtonClassName(source.enabled)}
-          onClick={() => onToggle(source)}
+      {source.enabled ? (
+        <AlertDialog
+          open={disableDialogOpen}
+          onOpenChange={(open) => {
+            if (!pending) {
+              setDisableDialogOpen(open);
+            }
+          }}
         >
-          <RiShutDownLine data-icon="inline-start" aria-hidden />
-        </Button>
-      </IconTooltip>
+          <IconTooltip label={toggleLabel}>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={pending}
+                  aria-label={toggleLabel}
+                  className={powerActionButtonClassName(source.enabled)}
+                />
+              }
+            >
+              <RiShutDownLine data-icon="inline-start" aria-hidden />
+            </AlertDialogTrigger>
+          </IconTooltip>
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("sources.disable.confirmTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {enabledRouteCount > 0
+                  ? t("sources.disable.confirmDescription", {
+                      sourceName: source.name,
+                      routeCount: enabledRouteCount,
+                    })
+                  : t("sources.disable.confirmDescriptionNoRoutes", {
+                      sourceName: source.name,
+                    })}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>
+                {t("sources.disable.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={pending}
+                onClick={() => {
+                  setDisableDialogOpen(false);
+                  onToggle(source);
+                }}
+              >
+                {t("sources.disable.confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : (
+        <IconTooltip label={toggleLabel}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={pending}
+            aria-label={toggleLabel}
+            className={powerActionButtonClassName(source.enabled)}
+            onClick={() => onToggle(source)}
+          >
+            <RiShutDownLine data-icon="inline-start" aria-hidden />
+          </Button>
+        </IconTooltip>
+      )}
       <AlertDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {

@@ -90,6 +90,7 @@ export function DestinationsSection({
         cell: ({ row }) => (
           <DestinationActions
             destination={row.original}
+            enabledRouteCount={destinationRouteCoverage(row.original.id, routes).enabledRouteCount}
             pending={pending}
             onTest={onTest}
             onPreview={onPreview}
