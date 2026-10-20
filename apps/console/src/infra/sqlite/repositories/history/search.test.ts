@@ -57,7 +57,17 @@ async function repositoryWithSearchFixtures(): Promise<
     })
     .execute();
 
-  const event = (id: string, fingerprint: string, title: string, message: string) => ({
+  const event = (
+    id: string,
+    fingerprint: string,
+    title: string,
+    message: string,
+    overrides: Partial<{
+      labels_json: string;
+      provider_metadata_json: string;
+      raw_payload_json: string;
+    }> = {},
+  ) => ({
     id,
     source_id: "src-1",
     fingerprint,
@@ -73,6 +83,7 @@ async function repositoryWithSearchFixtures(): Promise<
     received_at: NOW,
     occurred_at: NOW,
     created_at: NOW,
+    ...overrides,
   });
 
   await db
@@ -87,6 +98,17 @@ async function repositoryWithSearchFixtures(): Promise<
       // lookup can only hit through the intended branch.
       event("evt-opaque-7f3a", "fp-opaque", "Node down", "node"),
       event("event-feishu", "fp-feishu", "Edge latency", "latency"),
+      event("event-labels", "fp-labels", "Latency", "p99", {
+        labels_json: '{"service":"checkout","env":"prod"}',
+      }),
+      event("event-upstream", "fp-upstream", "Fire", "burn", {
+        provider_metadata_json: '{"provider":"grafana","receiver":"platform-burn"}',
+      }),
+      // A credential pasted into the raw payload is not searchable; only the
+      // redacted projection is ever shown, so matching it would be an oracle.
+      event("event-raw-secret", "fp-raw-secret", "Quiet", "nothing", {
+        raw_payload_json: '{"password":"raw-secret-should-not-match"}',
+      }),
     ])
     .execute();
 
@@ -138,6 +160,18 @@ async function repositoryWithSearchFixtures(): Promise<
         created_at: NOW,
         updated_at: NOW,
       },
+      ...[
+        ["event-labels", "dlv-event-labels"],
+        ["event-upstream", "dlv-event-upstream"],
+        ["event-raw-secret", "dlv-event-raw-secret"],
+      ].map(([eventId, deliveryId]) => ({
+        id: deliveryId,
+        event_id: eventId,
+        destination_id: "dest-1",
+        state: "pending" as const,
+        created_at: NOW,
+        updated_at: NOW,
+      })),
     ])
     .execute();
 
@@ -263,5 +297,48 @@ describe("history search", () => {
 
     expect(ids(events.items)).toEqual(["event-underscore"]);
     expect(events.total).toBe(1);
+  });
+
+  it("matches a label value on both lists", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "checkout" });
+    const deliveries = await repository.listDeliveries({ q: "checkout" });
+
+    expect(ids(events.items)).toEqual(["event-labels"]);
+    expect(events.total).toBe(1);
+    expect(ids(deliveries.items)).toEqual(["dlv-event-labels"]);
+    expect(deliveries.total).toBe(1);
+  });
+
+  it("matches a label key", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "env" });
+
+    expect(ids(events.items)).toEqual(["event-labels"]);
+    expect(events.total).toBe(1);
+  });
+
+  it("matches upstream provider metadata on both lists", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "platform-burn" });
+    const deliveries = await repository.listDeliveries({ q: "platform-burn" });
+
+    expect(ids(events.items)).toEqual(["event-upstream"]);
+    expect(events.total).toBe(1);
+    expect(ids(deliveries.items)).toEqual(["dlv-event-upstream"]);
+    expect(deliveries.total).toBe(1);
+  });
+
+  it("does not search raw payloads for credential-shaped values", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "raw-secret-should-not-match" });
+    const deliveries = await repository.listDeliveries({ q: "raw-secret-should-not-match" });
+
+    expect(events.total).toBe(0);
+    expect(deliveries.total).toBe(0);
   });
 });
