@@ -384,6 +384,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.20` | `9c93e03` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.20`（linux/amd64 + linux/arm64，index digest `sha256:23f1efdc…`） | 静默窗口按控制台时区解释与显示（#198，UI-9 + REQ-73）+ 静默窗口按真实瞬时判定（#199，Q-26）；无迁移/配置变化；回滚镜像 `0.1.0-beta.19` |
 | `0.1.0-beta.19` | `9f40eef` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.19`（linux/amd64 + linux/arm64，index digest `sha256:01f2bf26…`） | 告警源覆盖率按可投递性计算（#194，REQ-129）+ 静默启停可访问名称（#195，UI-11）；无迁移/配置变化；回滚镜像 `0.1.0-beta.18` |
 | `0.1.0-beta.18` | `d353c60` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.18`（linux/amd64 + linux/arm64，index digest `sha256:b41ad663…`） | 投递详情解释「加急为什么没有发生」（#191，REQ-124）：按触发链路展示首个阻断原因并标注依据当前配置；无迁移/配置变化；回滚镜像 `0.1.0-beta.17` |
 | `0.1.0-beta.17` | `58dd692` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.17`（linux/amd64 + linux/arm64，index digest `sha256:ed2076d8…`） | 告警源/路由/通知目标停用前确认与断流影响提示（#187，NEW-A）；启用仍一键执行；无迁移/配置变化；回滚镜像 `0.1.0-beta.16` |
