@@ -37,6 +37,7 @@ import {
   EmptyTitle,
 } from "#/components/ui/empty";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
+import { sortSuppressionsForOperations } from "#/features/suppressions/model/suppression-order";
 import {
   buildSuppressionMatcherChips,
   describeSuppressionMatcher,
@@ -82,7 +83,12 @@ export function SuppressionsSection({
 }: SuppressionsSectionProps) {
   const t = useTranslations();
   const now = useNow();
-  const data = React.useMemo(() => suppressions, [suppressions]);
+  // Fixed operational priority, not a user preference: rules that are silencing
+  // alerts right now must not be pushed below expired ones by creation time.
+  const data = React.useMemo(
+    () => sortSuppressionsForOperations(suppressions, now.toISOString()),
+    [suppressions, now],
+  );
   const columns = React.useMemo<Array<ColumnDef<ConsoleTableFeatures, Suppression>>>(
     () => [
       {
