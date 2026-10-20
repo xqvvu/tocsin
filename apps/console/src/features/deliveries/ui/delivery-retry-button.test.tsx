@@ -3,7 +3,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
 import { DeliveryRetryButton } from "#/features/deliveries/ui/delivery-retry-button";
 
 const testState = vi.hoisted(() => ({
@@ -43,7 +42,7 @@ describe("delivery retry button", () => {
   });
 
   it("re-queues a failed delivery and refreshes operations", async () => {
-    render(<DeliveryRetryButton detail={detailFixture("failed")} />);
+    render(<DeliveryRetryButton id="delivery-1" state="failed" />);
     fireEvent.click(retryButtonFixture());
 
     await waitFor(() => {
@@ -54,7 +53,7 @@ describe("delivery retry button", () => {
   });
 
   it("stays hidden for a delivery that cannot be retried", () => {
-    render(<DeliveryRetryButton detail={detailFixture("succeeded")} />);
+    render(<DeliveryRetryButton id="delivery-1" state="succeeded" />);
 
     expect(screen.queryByRole("button")).toBeNull();
     expect(testState.retryDelivery).not.toHaveBeenCalled();
@@ -67,7 +66,7 @@ describe("delivery retry button", () => {
     });
     testState.retryDelivery.mockReturnValueOnce(retryPromise);
 
-    render(<DeliveryRetryButton detail={detailFixture("failed")} />);
+    render(<DeliveryRetryButton id="delivery-1" state="failed" />);
     const button = retryButtonFixture();
     fireEvent.click(button);
 
@@ -85,7 +84,7 @@ describe("delivery retry button", () => {
   it("surfaces a refused retry as an error toast", async () => {
     testState.retryDelivery.mockRejectedValueOnce(new Error("delivery is not failed"));
 
-    render(<DeliveryRetryButton detail={detailFixture("failed")} />);
+    render(<DeliveryRetryButton id="delivery-1" state="failed" />);
     fireEvent.click(retryButtonFixture());
 
     await waitFor(() => {
@@ -100,10 +99,4 @@ describe("delivery retry button", () => {
 
 function retryButtonFixture(): HTMLButtonElement {
   return screen.getByRole("button") as HTMLButtonElement;
-}
-
-function detailFixture(state: string): DeliveryDetailData {
-  return {
-    job: { id: "delivery-1", state },
-  } as unknown as DeliveryDetailData;
 }

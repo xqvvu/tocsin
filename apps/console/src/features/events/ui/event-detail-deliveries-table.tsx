@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "#/components/ui/table";
+import { DeliveryRetryButton } from "#/features/deliveries/ui/delivery-retry-button";
 import { DeliveryStateBadge } from "#/features/deliveries/ui/delivery-state-badge";
 import { EventDetailSectionHeader } from "#/features/events/ui/event-detail-section-header";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
@@ -39,12 +40,15 @@ export function EventDetailDeliveriesTable({
               </TableHead>
               <TableHead className="w-[14%]">{t("events.detail.deliveryHeaders.next")}</TableHead>
               <TableHead>{t("events.detail.deliveryHeaders.lastError")}</TableHead>
+              <TableHead className="w-[10%]">
+                {t("events.detail.deliveryHeaders.actions")}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {deliveries.length === 0 ? (
               <TableRow>
-                <TableCell className="text-muted-foreground" colSpan={6}>
+                <TableCell className="text-muted-foreground" colSpan={7}>
                   {t("events.detail.empty.deliveries")}
                 </TableCell>
               </TableRow>
@@ -72,6 +76,9 @@ export function EventDetailDeliveriesTable({
                   </TableCell>
                   <TableCell className="truncate" title={delivery.lastError ?? undefined}>
                     {delivery.lastError ?? "-"}
+                  </TableCell>
+                  <TableCell>
+                    <DeliveryRetryButton id={delivery.id} state={delivery.state} />
                   </TableCell>
                 </TableRow>
               ))

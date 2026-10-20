@@ -503,6 +503,7 @@
   "events.detail.actions.copyIdempotencyKey": "Copy idempotency key",
   "events.detail.back": "Events",
   "events.detail.deliveries": "{count} deliveries",
+  "events.detail.deliveryHeaders.actions": "Actions",
   "events.detail.deliveryHeaders.attempts": "Attempts",
   "events.detail.deliveryHeaders.destination": "Destination",
   "events.detail.deliveryHeaders.lastError": "Last error",
