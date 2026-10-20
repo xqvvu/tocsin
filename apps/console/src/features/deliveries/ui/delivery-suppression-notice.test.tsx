@@ -16,9 +16,9 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 // The per-check evidence owns its own query-state test; this suite covers the
-// reason snapshot and the rule link.
+// reason snapshot, the rule link, and when the evidence is mounted at all.
 vi.mock("#/features/deliveries/ui/delivery-suppression-checks", () => ({
-  DeliverySuppressionChecks: () => null,
+  DeliverySuppressionChecks: () => <span>per-condition evidence</span>,
 }));
 
 const SUPPRESS_REASON =
@@ -48,6 +48,7 @@ describe("delivery suppression notice", () => {
 
     // The rule was deleted, so the FK is null; the snapshot is the audit trail.
     expect(screen.getByText("The rule no longer exists, the snapshot above is kept")).toBeTruthy();
+    expect(screen.queryByText("per-condition evidence")).toBeNull();
   });
 
   it("points at the rule while the rule still exists", () => {
@@ -64,6 +65,7 @@ describe("delivery suppression notice", () => {
     );
 
     expect(screen.getByText("suppression-1")).toBeTruthy();
+    expect(screen.getByText("per-condition evidence")).toBeTruthy();
     expect(screen.queryByText("The rule no longer exists, the snapshot above is kept")).toBeNull();
   });
 });
