@@ -6,8 +6,10 @@ import {
   TableHeader,
   TableRow,
 } from "#/components/ui/table";
+import { routeDeliveryOutcomes } from "#/features/events/ui/event-detail-route-delivery-outcomes";
 import { EventDetailSectionHeader } from "#/features/events/ui/event-detail-section-header";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
+import { RouteDeliveryOutcomeCell } from "#/features/events/ui/event-route-delivery-outcome-cell";
 import { RouteMatchCheckBadges } from "#/features/routes/ui/route-match-check-badges";
 import { RouteMatchResultBadge } from "#/features/routes/ui/route-match-result-badge";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -16,12 +18,15 @@ export function EventDetailRouteMatchesTable({
   matches,
   matchedRouteCount,
   provenance,
+  deliveries,
 }: {
   matches: EventDetailData["routeMatches"];
   matchedRouteCount: number;
   provenance: EventDetailData["routeMatchesProvenance"];
+  deliveries: EventDetailData["deliveries"];
 }) {
   const t = useTranslations();
+  const outcomes = routeDeliveryOutcomes(deliveries);
 
   return (
     <section className="flex h-full min-h-0 flex-col gap-2">
@@ -46,16 +51,19 @@ export function EventDetailRouteMatchesTable({
         <Table className="min-w-180 table-fixed">
           <TableHeader className="bg-muted/50 text-muted-foreground sticky top-0 z-10">
             <TableRow>
-              <TableHead className="w-[28%]">{t("events.detail.routeHeaders.route")}</TableHead>
-              <TableHead className="w-[16%]">{t("events.detail.routeHeaders.result")}</TableHead>
-              <TableHead className="w-[14%]">{t("events.detail.routeHeaders.targets")}</TableHead>
+              <TableHead className="w-[24%]">{t("events.detail.routeHeaders.route")}</TableHead>
+              <TableHead className="w-[14%]">{t("events.detail.routeHeaders.result")}</TableHead>
+              <TableHead className="w-[12%]">{t("events.detail.routeHeaders.targets")}</TableHead>
+              <TableHead className="w-[22%]">
+                {t("events.detail.routeHeaders.deliveries")}
+              </TableHead>
               <TableHead>{t("events.detail.routeHeaders.checks")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {matches.length === 0 ? (
               <TableRow>
-                <TableCell className="text-muted-foreground" colSpan={4}>
+                <TableCell className="text-muted-foreground" colSpan={5}>
                   {t("events.detail.empty.routes")}
                 </TableCell>
               </TableRow>
@@ -69,6 +77,12 @@ export function EventDetailRouteMatchesTable({
                     <RouteMatchResultBadge matched={match.matched} />
                   </TableCell>
                   <TableCell>{match.destinationIds.length}</TableCell>
+                  <TableCell className="whitespace-normal">
+                    <RouteDeliveryOutcomeCell
+                      matched={match.matched}
+                      outcomes={outcomes.get(match.routeId)}
+                    />
+                  </TableCell>
                   <TableCell className="whitespace-normal">
                     <RouteMatchCheckBadges checks={match.checks} />
                   </TableCell>
