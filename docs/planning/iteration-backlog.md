@@ -387,15 +387,21 @@
 | Q-44 | 路由证据敏感 labelKey 脱敏分支无测试 | quality lane（第 32 轮） | 22 | shipped | #202 | `redactRouteMatchResults` 的 `labelKey` 分支（`redaction.ts:226-229`）此前无用例；新增凭据 labelKey 隐藏 actual、普通 labelKey 保留并继续值形态脱敏两条用例，变异验证通过 |
 | Q-45 | OncallExecution 两个 catch 分支无测试 | quality lane（第 32 轮） | 21 | candidate | — | `oncall-execution.ts:106-122` 的 DomainValidationError/未知错误分支无覆盖；现有 worker 测试未 claim 到会抛错的 ping；AUTO_FIX：两条执行/worker 用例 |
 | Q-46 | #171 防抖尾随空格与卸载取消无测试 | quality lane（第 32 轮） | 21 | candidate | — | `operation-filters.tsx:553-561,594-604` 的用途是保留尾随空格并取消未提交草稿，但测试无尾随空格、无 `unmount()`、无 fake timers（`operation-filters.test.tsx:130-178`）；AUTO_FIX |
-| REQ-150 | 投递详情内修复目标配置并立即重试 | requirements lane（第 36 轮） | 27 | candidate | — | 失败详情工具栏只有重试/返回（`delivery-detail-page.tsx:56-66`），编辑入口只在 Destinations 页（`destinations-page.tsx:221-252`、`destination-actions.tsx:85-95`）；复用 `DestinationEditDialog` 与 `destinationsQueryOptions`，保存后失效目标与当前详情查询；纯前端、无 endpoint/迁移；本轮推荐第一名 |
+| REQ-150 | 投递详情内修复目标配置并立即重试 | requirements lane（第 36 轮） | 27 | shipped | #211 | 失败详情工具栏只有重试/返回（`delivery-detail-page.tsx:56-66`），编辑入口只在 Destinations 页（`destinations-page.tsx:221-252`、`destination-actions.tsx:85-95`）；复用 `DestinationEditDialog` 与 `destinationsQueryOptions`，保存后失效目标与当前详情查询；纯前端、无 endpoint/迁移 |
 | REQ-151 | 值班交接摘要 | requirements lane（第 36 轮） | 26 | candidate | — | 交班需在 Events/Deliveries/Suppressions 三页手工拼装（`active-suppression-indicator.tsx:38-56`、`deliveries-page-toolbar.tsx:15-43`、`events-page-toolbar.tsx:15-43`）；复用 suppressions + operations 查询做只读 Sheet，计数链接到筛选视图并可复制；纯前端 |
 | REQ-152 | 首次部署引导检查清单 | requirements lane（第 36 轮） | 26 | candidate | — | Setup 后落到 Events 空态（`-setup-form-impl.tsx:61-64`、`index.tsx:3-8`、`events-empty-state.tsx:23-40`）；四步清单由现有 sources/destinations/routes/events 查询派生，localStorage 关闭；吸收 REQ-115 |
 | REQ-153 | 告警恢复后取消未执行的自动加急呼叫 | requirements lane（第 36 轮） | 24 | candidate | — | resolved 只停止新入队（`oncall.service.ts:151-160`），已 scheduled 的 auto ping 仍会拨出（`oncall.repository.ts:137-153`、`oncall-execution.ts:63-95`）；在 resolved 事务内置 suppressed 并释放 dedupe key；需 EXPERT_PANEL（投递/加急语义） |
+| REQ-154 | 搜索覆盖标签与上游告警标识 | requirements lane（第 37 轮） | 28 | candidate | — | 事件/投递搜索只覆盖 title/message/fingerprint/id（`history.repository.ts:423-441,449-470`），`labels_json`/`provider_metadata_json` 已落库却不可搜（`schema.ts:74,76`）；列表与 total 同谓词、转义 LIKE、不搜敏感原文；无迁移 |
+| REQ-155 | 静默规则按生效状态置顶 | requirements lane（第 37 轮） | 28 | candidate | — | 决策承诺「置顶 + 徽章」防遗忘（`alert-suppression-decisions.md:74`），仓储固定 `created_at desc`（`suppression.repository.ts:19-25`），过期规则压住生效规则；纯前端按 `suppressionStateAt` 排序 |
+| REQ-156 | 手动加急可指定接收人 | requirements lane（第 37 轮） | 27 | candidate | — | 手动加急固定呼叫全部 `urgent.receivers`（`oncall.service.ts:91-104`、`delivery-buzz-button.tsx:20-26`）；契约增可选 `receiverIds`（省略=全部），service 校验子集，确认框复选框；无迁移 |
+| REQ-157 | 自动加急去重跳过可解释 | requirements lane（第 37 轮） | 26 | candidate | — | dedupe 命中只返回 null + debug 日志（`oncall.service.ts:168-190`、`oncall.repository.ts:42-53`），UI 只能猜（`zh-Hans.json:179`）；只读投影 skippedReceivers 与首次 ping；无迁移 |
+| REQ-158 | 路由规则排除条件 | requirements lane（第 37 轮） | 25 | candidate | — | `RouteRuleSchema` 只有正向数组（`route/route.ts:18-25`），matcher 只做 includes/contains（`:182-205,240-330`）；增可选 exclude* 字段并保持旧快照/TOML 兼容；结构化声明式，无用户代码 |
 
 ## 发布记录
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.23` | `8a36238` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.23`（linux/amd64 + linux/arm64，index digest `sha256:7240a4af…`） | 失败投递详情内直接编辑通知目标并继续重试（#211，REQ-150）；无迁移/配置变化；回滚镜像 `0.1.0-beta.22` |
 | `0.1.0-beta.22` | `6c237fc` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.22`（linux/amd64 + linux/arm64，index digest `sha256:a01471cb…`） | 事件详情内联重试失败投递（#206，REQ-136）+ 路由匹配表按路由显示投递结果（#207，REQ-135）+ 飞书加急空 severity 列表归一为 critical（#208，Q-42）；无迁移/配置变化；回滚镜像 `0.1.0-beta.21` |
 | `0.1.0-beta.21` | `5932245` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.21`（linux/amd64 + linux/arm64，index digest `sha256:4295956e…`） | 脱敏改为线性扫描（#204，SEC-19）：1 MiB 载荷不再阻塞同步接入/详情/投递证据；覆盖不变，新增性能闸门；无迁移/配置变化；回滚镜像 `0.1.0-beta.20` |
 | `0.1.0-beta.20` | `9c93e03` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.20`（linux/amd64 + linux/arm64，index digest `sha256:23f1efdc…`） | 静默窗口按控制台时区解释与显示（#198，UI-9 + REQ-73）+ 静默窗口按真实瞬时判定（#199，Q-26）；无迁移/配置变化；回滚镜像 `0.1.0-beta.19` |
@@ -412,10 +418,10 @@
 
 ## 下一轮优先项
 
-0. **发布 `v0.1.0-beta.22`**：release-prep PR 合入、CI 绿后打 annotated tag、创建 GitHub
-   Release、构建并推送多平台镜像；若本轮发布小组未通过，下一轮第一优先重评估。
-1. **REQ-150（27）** 投递详情内修复目标配置并立即重试（第 36 轮 requirements 第一名；
-   复用 `DestinationEditDialog`，纯前端）。
+0. **发布 `v0.1.0-beta.23` 已完成**（tag `8a36238`、GitHub Release、多平台镜像）；下一轮
+   在合入新的用户可见变更后重新评估，不重复发同一批变更。
+1. **REQ-154（28）** 搜索覆盖标签与上游告警标识（第 37 轮 requirements 第一名）；
+   **REQ-155（28）** 静默规则按生效状态置顶。
 2. **UI-17（26）** 路由匹配 checks 实际值本地化与换行；**UI-19（25）** 事件详情投递列
    可读性与重试后刷新；**UI-18（24）** 390px 路由匹配布局。
 3. **REQ-138（28）** 通知目标覆盖率计入告警源启停（REQ-129 的镜像）；**REQ-137（28）**
@@ -442,9 +448,10 @@
 11. **docs-drift 批次**：第一批 DOC-49/23/24/37/43/46/47/50/51（发布 gate、README、
     抑制 PRD 五状态、post-MVP 过期范围）；第二批 DOC-36/48/53/54/55/56/57/58（状态头、
     ADR 版本、无 importer 的 accessor）。建议拆两个 `docs:` PR；DOC-52 可关闭。
-12. **车道轮转（第 37 轮）**：`requirements` 必跑 + `ui-triage`；非必跑车道轮转到
-    **`quality`**（上次第 32 轮）或 `docs-drift`（上次第 30 轮）。`ui-review` 已于第 36 轮
-    完成真实浏览器评审（`last_ui_review_at` = 2026-10-20 14:27），下一轮无需重复深度评审。
+12. **车道轮转（第 38 轮）**：`requirements` 必跑 + `ui-triage`；非必跑车道补跑
+    **`quality`**（第 37 轮超时未产出，缩小范围到 Q-43/Q-45/Q-46/Q-12/Q-13/Q-5），之后
+    轮转 `architecture`。`ui-review` 建议下一轮安排完整真实浏览器评审（硬性最晚
+    2026-10-22 14:27）。
 11. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 12. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。

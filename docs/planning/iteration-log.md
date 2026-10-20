@@ -2,6 +2,82 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 37 轮）
+
+- 时间：2026-10-20 14:45 – 16:05 CST。
+- 基线：本轮开始时 `origin/main` @ `b122539`；合入后 `origin/main` @ `8a36238`
+  （#211 `38d43ed`、发布 #212 `8a36238`）。
+- 类型：非 full-audit（backlog 有大量 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` + `quality`（第 36 轮预承诺轮转）。`quality` 车道
+  运行超时被停止，本轮未产出；下一轮以更窄范围补跑。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审（14:27）仅 20 分钟，自那以后
+  `features/*/ui`、`routes`、`shell`、`components` 下 0 个提交；13 条未解决 UI 发现均为
+  既有清单。建议下一轮（2026-10-21 08:00 前后）安排完整评审；硬性最晚 2026-10-22 14:27。
+- `last_ui_review_at`：2026-10-20 14:27（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `laughing-bohr-0f4937`；发布镜像在 tag 的独立干净检出 `release-build-0f4937` 构建。
+  结束后删除并发锁并清理两个临时工作树。
+
+### 本轮交付
+
+- PR #211 `feat(console): edit a failed delivery's destination in place` —— **REQ-150（27）**。
+  - 失败投递详情工具栏新增「编辑目标」，复用 `DestinationEditDialog`（字段预填、密钥留空即
+    保留、模板预览与历史事件样例）；保存后关闭对话框、失效目标/路由查询与当前投递详情。
+  - 新增 `DestinationEditDialogLoader` 按需加载目标列表/目录/飞书应用；`DestinationEditDialog`
+    增加加载中、加载失败可重试、目标已删除三种状态与可选 `onSaved` 回调。
+  - 重试仍为显式第二击（符合 AGENTS 对投递动作必须显式的要求）；无 endpoint/迁移。
+  - PRD `docs/prd/delivery-detail-edit-destination.md`；新增 6 个组件测试。
+  - 验证：`vp check` 0 errors（12 条既有 warning）；`vp run -r test` 4/4
+    （console 126 files / 686 tests）；`vp run -r build` 通过；CI success。
+  - 备注：本轮未做浏览器实测（UI 评审 defer、时间预算）；组件测试覆盖可见性/打开/保存
+    失效/加载状态，编辑对话框本体沿用第 36 轮已浏览器验证的组件。
+
+### requirements lane（5 个新候选）
+
+- **REQ-154（28）** 搜索覆盖标签与上游告警标识：`labels_json`/`provider_metadata_json`
+  已落库却不可搜（`history.repository.ts:423-441,449-470`、`schema.ts:74,76`）；
+  列表与 total 同谓词、转义 LIKE、不搜敏感原文；无迁移。本轮推荐第一名。
+- **REQ-155（28）** 静默规则按生效状态置顶：决策承诺置顶防遗忘
+  （`alert-suppression-decisions.md:74`），仓储固定 `created_at desc`
+  （`suppression.repository.ts:19-25`）；纯前端排序。
+- **REQ-156（27）** 手动加急可指定接收人（`oncall.service.ts:91-104`、
+  `delivery-buzz-button.tsx:20-26`）；契约增可选 `receiverIds`，无迁移。
+- **REQ-157（26）** 自动加急去重跳过可解释（`oncall.service.ts:168-190`、
+  `oncall.repository.ts:42-53`）；只读投影 skippedReceivers。
+- **REQ-158（25）** 路由规则排除条件（`route/route.ts:18-25`）；结构化声明式，无用户代码。
+
+### quality lane
+
+- 车道运行超过 70 分钟被停止，未返回发现；Q-43/Q-45/Q-46/Q-12/Q-13/Q-5 的复核顺延到
+  下一轮（缩小范围：只核实这 6 项 + 最多 2 条新发现）。
+
+### 发布（第 9.5 步）
+
+三位发布专家独立返回：发布经理 **RELEASE**（beta.22..main 唯一用户可见变更是 #211）、
+阻断审计 **APPROVE**（38d43ed CI success、0 open PR、敏感路径零变更、tag 未占用）、
+运维/回滚 **SAFE**（无 migration/Dockerfile/compose/env 变化，回滚只需换回 beta.22 镜像）。
+
+- 版本：`0.1.0-beta.23`；PR #212 rebase 合并 `8a36238`，main CI success。
+- Tag：`v0.1.0-beta.23`（annotated，指向 `8a36238`）；GitHub Release 已创建（prerelease）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.23
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.23`，index digest
+  `sha256:7240a4afcf747a18bbba19192a347ee3701eb4bd5c5c08f7902e187c88295029`，
+  含 `linux/amd64` 与 `linux/arm64`；构建于 tag 的干净检出，
+  `--provenance=false --sbom=false`。
+- 回滚镜像：`0.1.0-beta.22`。
+- 用户可见依据：失败投递详情内直接编辑目标配置并继续重试。
+
+### 下一轮优先项
+
+1. **REQ-154（28）** 搜索覆盖标签与上游告警标识（requirements 推荐第一名）。
+2. **REQ-155（28）** 静默规则按生效状态置顶。
+3. **UI-17（26）/ UI-19（25）/ UI-18（24）**；下一轮安排完整 UI 评审（真实浏览器）。
+4. **REQ-138（28）/ REQ-137（28）/ REQ-147（27）**。
+5. **quality 补跑（窄范围）**：Q-43/Q-45/Q-46/Q-12/Q-13/Q-5。
+6. 车道轮转（第 38 轮）：`requirements` + `ui-triage` + `quality`（补跑）；之后
+   `architecture`。
+
 ## 2026-10-20（第 36 轮）
 
 - 时间：2026-10-20 13:26 – 14:47 CST。
