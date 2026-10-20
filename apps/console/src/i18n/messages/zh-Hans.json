@@ -994,6 +994,7 @@
   "suppressions.delete.cancel": "取消",
   "suppressions.delete.confirm": "删除静默规则",
   "suppressions.delete.confirmDescription": "删除「{suppressionName}」后，后续通知不再按这条规则暂停，已经暂停的通知记录仍会保留原因，但不再关联这条规则",
+  "suppressions.delete.confirmDescriptionActive": "删除「{suppressionName}」后这条规则立即停止生效，后续符合条件的告警会恢复发送通知，包括自动电话提醒，已暂停的通知记录仍会保留原因快照",
   "suppressions.delete.confirmTitle": "要删除这条静默规则吗？",
   "suppressions.detail.back": "返回告警静默列表",
   "suppressions.detail.description": "查看这条规则的适用范围和已静默通知",
@@ -1137,5 +1138,16 @@
   "suppressions.table.pagination.next": "下一页",
   "suppressions.table.pagination.page": "第 {page} / {pageCount} 页",
   "suppressions.table.pagination.previous": "上一页",
-  "suppressions.table.pagination.range": "共 {total} 条规则"
+  "suppressions.table.pagination.range": "共 {total} 条规则",
+  "suppressions.toggle.cancel": "保留当前状态",
+  "suppressions.toggle.disable.active": "关闭后「{suppressionName}」立即停止生效，后续符合条件的告警会恢复发送通知，包括自动电话提醒",
+  "suppressions.toggle.disable.expired": "「{suppressionName}」已过结束时间，关闭不会改变当前的告警通知",
+  "suppressions.toggle.disable.scheduled": "关闭后「{suppressionName}」在开始时间到达时也不会生效",
+  "suppressions.toggle.disableConfirm": "关闭静默规则",
+  "suppressions.toggle.disableTitle": "关闭这条静默规则？",
+  "suppressions.toggle.enable.active": "启用后「{suppressionName}」立即生效，后续符合条件的告警通知会暂停发送，包括自动电话提醒",
+  "suppressions.toggle.enable.expired": "「{suppressionName}」已过结束时间，启用后不会生效，请先编辑结束时间",
+  "suppressions.toggle.enable.scheduled": "启用后「{suppressionName}」将在开始时间到达时开始暂停符合条件的告警通知",
+  "suppressions.toggle.enableConfirm": "启用静默规则",
+  "suppressions.toggle.enableTitle": "启用这条静默规则？"
 }

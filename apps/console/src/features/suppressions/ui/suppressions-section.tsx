@@ -276,7 +276,9 @@ function SuppressionActions({
   onDelete: (suppression: Suppression) => void;
 }) {
   const t = useTranslations();
+  const now = useNow();
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [toggleDialogOpen, setToggleDialogOpen] = React.useState(false);
   const editLabel = t("suppressions.table.actions.edit");
   const toggleLabel = suppression.enabled
     ? t("suppressions.table.actions.disableTitle", { suppressionName: suppression.name })
@@ -284,6 +286,23 @@ function SuppressionActions({
   const deleteLabel = t("suppressions.table.actions.deleteTitle", {
     suppressionName: suppression.name,
   });
+  // The rule window decides what a toggle actually changes: only an enabled rule
+  // whose window covers now silences anything, so a disabled rule is projected
+  // with `enabled: true` to keep the copy honest about the moment it takes effect.
+  const windowState = suppressionStateAt({ ...suppression, enabled: true }, now.toISOString());
+  const toggleDirection = suppression.enabled ? "disable" : "enable";
+  const toggleTitle = t(`suppressions.toggle.${toggleDirection}Title`);
+  const toggleDescription = t(`suppressions.toggle.${toggleDirection}.${windowState}`, {
+    suppressionName: suppression.name,
+  });
+  const deleteDescription =
+    suppression.enabled && windowState === "active"
+      ? t("suppressions.delete.confirmDescriptionActive", {
+          suppressionName: suppression.name,
+        })
+      : t("suppressions.delete.confirmDescription", {
+          suppressionName: suppression.name,
+        });
 
   return (
     <div className="flex justify-center gap-1">
@@ -299,19 +318,52 @@ function SuppressionActions({
           <RiEditLine data-icon="inline-start" aria-hidden />
         </Button>
       </IconTooltip>
-      <IconTooltip label={toggleLabel}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          disabled={pending}
-          aria-label={toggleLabel}
-          className={powerActionButtonClassName(suppression.enabled)}
-          onClick={() => onToggle(suppression)}
-        >
-          <RiShutDownLine data-icon="inline-start" aria-hidden />
-        </Button>
-      </IconTooltip>
+      <AlertDialog
+        open={toggleDialogOpen}
+        onOpenChange={(open) => {
+          if (!pending) {
+            setToggleDialogOpen(open);
+          }
+        }}
+      >
+        <IconTooltip label={toggleLabel}>
+          <AlertDialogTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                disabled={pending}
+                aria-label={toggleLabel}
+                className={powerActionButtonClassName(suppression.enabled)}
+              />
+            }
+          >
+            <RiShutDownLine data-icon="inline-start" aria-hidden />
+          </AlertDialogTrigger>
+        </IconTooltip>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{toggleTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{toggleDescription}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>
+              {t("suppressions.toggle.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant={suppression.enabled ? "destructive" : "default"}
+              disabled={pending}
+              onClick={() => {
+                setToggleDialogOpen(false);
+                onToggle(suppression);
+              }}
+            >
+              {t(`suppressions.toggle.${toggleDirection}Confirm`)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {
@@ -338,11 +390,7 @@ function SuppressionActions({
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
             <AlertDialogTitle>{t("suppressions.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("suppressions.delete.confirmDescription", {
-                suppressionName: suppression.name,
-              })}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{deleteDescription}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>

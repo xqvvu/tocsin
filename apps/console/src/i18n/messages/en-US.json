@@ -994,6 +994,7 @@
   "suppressions.delete.cancel": "Cancel",
   "suppressions.delete.confirm": "Delete suppression",
   "suppressions.delete.confirmDescription": "「{suppressionName}」 stops matching immediately — deliveries it already silenced keep their reason snapshot but stop pointing at the rule",
+  "suppressions.delete.confirmDescriptionActive": "「{suppressionName}」 stops silencing immediately — matching alerts resume delivery, including urgent auto-calls, and silenced deliveries keep their reason snapshot",
   "suppressions.delete.confirmTitle": "Delete this suppression?",
   "suppressions.detail.back": "Back to suppressions",
   "suppressions.detail.description": "Blast radius and audit evidence for one suppression rule",
@@ -1137,5 +1138,16 @@
   "suppressions.table.pagination.next": "Next",
   "suppressions.table.pagination.page": "Page {page} of {pageCount}",
   "suppressions.table.pagination.previous": "Previous",
-  "suppressions.table.pagination.range": "{total} rules"
+  "suppressions.table.pagination.range": "{total} rules",
+  "suppressions.toggle.cancel": "Keep current state",
+  "suppressions.toggle.disable.active": "「{suppressionName}」 stops silencing immediately — matching alerts resume delivery, including urgent auto-calls",
+  "suppressions.toggle.disable.expired": "「{suppressionName}」 already ended — disabling it does not change delivery",
+  "suppressions.toggle.disable.scheduled": "「{suppressionName}」 will no longer take effect when its window opens",
+  "suppressions.toggle.disableConfirm": "Disable suppression",
+  "suppressions.toggle.disableTitle": "Disable this suppression?",
+  "suppressions.toggle.enable.active": "「{suppressionName}」 starts silencing immediately — matching alerts pause delivery, including urgent auto-calls",
+  "suppressions.toggle.enable.expired": "「{suppressionName}」 already ended — enabling it has no effect, edit the end time first",
+  "suppressions.toggle.enable.scheduled": "「{suppressionName}」 starts silencing matching alerts when its window opens",
+  "suppressions.toggle.enableConfirm": "Enable suppression",
+  "suppressions.toggle.enableTitle": "Enable this suppression?"
 }
