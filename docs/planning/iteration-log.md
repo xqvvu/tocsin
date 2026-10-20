@@ -2,6 +2,101 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 47 轮）
+
+- 时间：2026-10-21 03:26 – 04:00 CST。
+- 基线：本轮开始时 `origin/main` @ `7f5139c`；需求合入后 @ `9f1784d`；发布后 @ `1a38599`。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，且无 open PR）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 `review_now`，第三名额给
+  `ui-review`；`ui-triage` 返回后补跑第 46 轮预承诺的 `release-infra`（并发峰值仍为 3）。
+- 车道轮转位置：`requirements` / `ui-triage` / `release-infra` / `ui-review` 已完成；
+  下一轮非必跑车道为 **`security-exposure`**（自第 45 轮起两轮未跑）。
+- `ui-triage`：**`review_now`** —— 自 01:00 CST 真实浏览器评审以来 UI 路径合并 3 个
+  （`b6b9dc6`、`f028db4`、`7e39424`），达到 ≥3 强信号；13 条未解决 UI 发现；第 46 轮两个
+  UI 合并无浏览器验证记录；48h 信号未中但其余强信号成立。
+- `last_ui_review_at`：2026-10-21 03:47 CST（第 47 轮完整浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR、镜像构建均在会话工作树
+  `sleepy-ptolemy-23b503`。
+
+### 本轮交付
+
+- PR #248 `feat(console): show queued deliveries before disabling config` —— **REQ-185（29）**。
+  - 新增 `pendingDeliveriesQueryOptions(scope)`：复用 `operations.list`
+    的 `deliveryState=pending` + `sourceId|routeId|destinationId`，读 `deliveries.total`，
+    `limit: 1`、`staleTime: 15s`（`features/operations/api/operations.queries.ts`）。
+  - 新增 `QueuedDeliveriesNotice`：确认框打开时才挂载查询；加载/失败不渲染、不阻塞；
+    `aria-live="polite"`（`features/operations/ui/queued-deliveries-notice.tsx`）。
+  - 告警源/路由/通知目标三个停用确认框显示「排队中的投递：N 条」；中英文 ICU 0/1/N 复数。
+  - 新增 PRD `docs/prd/queued-deliveries-before-disable.md`；4 条组件测试覆盖 0/1/N/失败；
+    三个列表页测试以 mock 隔离计数组件。
+  - 验证：`vp fmt --write`、`vp check` 0 errors（12 条既有 warning）、
+    `vp run -r test` 137 files / 740 tests、`vp run -r build` 通过；CI success；rebase 合并。
+  - 浏览器实测（隔离实例 `http://localhost:6196` + 全新 SQLite，中文界面）：创建告警源/
+    通知目标/路由并发送真实 Webhook 产生 1 条 pending 投递；三个确认框均显示「1 条」；
+    新建无事件告警源显示「0 条」，证明按 id 作用域过滤。截图
+    `/tmp/tocsin-r47-{source,route,destination}-disable.png`、`/tmp/tocsin-r47-source-disable-zero.png`。
+    dev server 已停止、临时库已删除。
+- PR #249 `chore(release): v0.1.0-beta.33`（rebase 合并 `1a38599`），发布见下。
+
+### 专家发现
+
+- `requirements`：复核 REQ-185/186/181/182 均仍准确；新增 3 条候选：
+  - REQ-190（27）删除静默规则前的恢复影响确认（`suppressions-section.tsx:340-359`、
+    `zh-Hans.json:995`、`packages/core/src/suppression.ts:79-96`）。
+  - REQ-191（22）补发指定目标与显式重发（语义变更需 EXPERT_PANEL）。
+  - REQ-192（22）列表查询失败的就地重试（`events-page.tsx:33`、`_dashboard.tsx:49,82`）。
+  - 来源扫描结论：post-MVP 方向 4 与 RC 未勾 gate 均已由既有候选覆盖，无漏报。
+- `ui-triage`：`review_now`（理由见上）。
+- `ui-review`（真实浏览器，6195 + 全新库，中文，1280×900 与 390×844）：
+  - **UI-14 确认**：静默规则启停单击即发出 `setEnabled`，全量静默规则无二次确认
+    （`suppressions-section.tsx:296-311`）；本轮 UI 首推。
+  - **UI-22（新，24）**：编辑静默规则时表格行隐藏但分页条仍绘制在编辑面板顶部
+    （分页 y=148、标题 y=154），页面看起来错位（`suppressions-section.tsx:145-173`）。
+  - **UI-23（新，24）**：390px 下静默规则状态与行操作位于 x≈902-982，屏幕外且无提示
+    （`suppressions-section.tsx:401-417` + `operations-table` 最小宽 980px）。
+  - **UI-21 确认**：中文界面 Dialog sr-only 文案仍为英文 `Close`（`components/ui/dialog.tsx:63`）；
+    `Failed to fetch` 分支未复现，仅代码核实。
+  - 正向验证：证据包下载（事件/投递）工作正常；静默影响预览的 `{count}` 插值与「范围无启用目标」
+    文案正确；390px 筛选浮层完全在视口内；UI-18 的 tab 重叠未再出现（表格仍为横向滚动）；
+    UI-19 因无可用投递数据未复现。
+- `release-infra`：REL-21（E2E 未接 CI）、REL-22（spec 覆盖）、REL-2/24（fixtures）、
+  REL-6（重启持久化断言）、REL-9（仅 `:memory:` 迁移测试）、REL-7（ready/端口/locale）
+  均仍准确。新增候选 REL-25（`/api/ready` 无行为测试）、REL-26（smoke 不检查 HEALTHCHECK）、
+  REL-27（smoke 固定宿主机端口 3100）、REL-28（E2E 双入口）。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项；REQ-185 为纯前端只读投影，不触碰 schema/投递/auth 语义。
+
+### 发布评估与镜像
+
+- 三位专家（发布经理 / 阻断审计 / 运维回滚）一致 APPROVE：
+  - 发布经理：自 `v0.1.0-beta.32` 以来 1 个用户可见 feat（其余为 docs），建议预发布号递增。
+  - 阻断审计：6/6 PASS —— `9f1784d` 与 `1a38599` main CI success、0 open PR、无阻塞回归、
+    migration 零变化、beta.33 tag 未占用。
+  - 运维回滚：Dockerfile/compose/env/runtime/SQLite 均零 diff；回滚只需换回镜像，无需数据恢复。
+- 版本：`0.1.0-beta.33`；PR #249 `chore(release): v0.1.0-beta.33`（rebase 合并 `1a38599`），
+  main CI success。
+- Tag：`v0.1.0-beta.33`（annotated，指向 `1a38599`）；GitHub Release：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.33
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.33` **已推送**，
+  linux/amd64 + linux/arm64，index digest `sha256:12d21abe…`（`imagetools inspect` 已核实双平台）。
+- 回滚镜像：`0.1.0-beta.32`（`sha256:3f1409d2…`）；本版本无迁移/配置变化。
+- Obsidian 同步：本会话未提供 `obsidian-vault` skill，且第 43 轮已确认 vault 中无 Tocsin
+  既有笔记，本轮**同步已跳过**。
+
+### 下一轮优先项
+
+1. **REQ-190（27）** 删除静默规则恢复影响确认；**REQ-181（27）** 删除级联数量；
+   **REQ-182（27）** 目标测试确认；**REQ-186（28）** 文件导入。
+2. **UI-14（25）** 静默启停确认（浏览器已复现，ui-review 首推）；**UI-22（24）** 编辑面板
+   与分页重叠（约 30 分钟）；**UI-23（24）** 390px 行操作不可见；**UI-21（22）** `Close` 本地化。
+3. **SEC-22（27）** endpoint userinfo 投影；**SEC-24（25）** 补脱敏 key 测试；
+   **SEC-25（25）** test/preview 载荷投影。
+4. 车道轮转：`requirements` + `ui-triage` 必跑；非必跑车道下一轮 **`security-exposure`**。
+   `last_ui_review_at` = 2026-10-21 03:47。
+
 ## 2026-10-21（第 46 轮）
 
 - 时间：2026-10-21 02:26 – 03:10 CST。
