@@ -221,7 +221,7 @@ describe("suppression create form", () => {
     renderCreateForm();
 
     expect(
-      screen.getByText("1 destinations with automatic paging fall inside this rule"),
+      screen.getByText("1 destination with automatic paging falls inside this rule"),
     ).toBeTruthy();
     expect(
       screen.getByText(
