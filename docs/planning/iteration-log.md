@@ -96,6 +96,18 @@
     `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.26`（amd64+arm64）；
     回滚镜像 `0.1.0-beta.25`。
 
+### 发布
+
+- 版本：`0.1.0-beta.26`；PR #222 `chore(release): v0.1.0-beta.26`（rebase 合并
+  `2af4669`），main CI success。
+- Tag：`v0.1.0-beta.26`（annotated，指向 `2af4669`）；GitHub Release：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.26
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.26`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:ab90df83b5be041d486ecefbc61c8ca71922dc9d87783914c67341b2a69287f9`）；
+  回滚镜像 `0.1.0-beta.25`。
+- 用户可见依据：路由匹配证据本地化与换行（#220，UI-17）。
+
 ### 下一轮优先项
 
 1. **REQ-170（29）** 目标停用确认披露自动加急；**REQ-164（29）** 删除级联影响

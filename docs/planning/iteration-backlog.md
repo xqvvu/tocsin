@@ -423,6 +423,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.26` | `2af4669` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.26`（linux/amd64 + linux/arm64，index digest `sha256:ab90df83…`） | 路由匹配证据本地化与换行（#220，UI-17）；无迁移/配置变化；回滚镜像 `0.1.0-beta.25` |
 | `0.1.0-beta.25` | `4f548d0` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.25`（linux/amd64 + linux/arm64，index digest `sha256:29108b4c…`） | 静默规则列表按生效状态置顶（#217，REQ-155）；无迁移/配置变化；回滚镜像 `0.1.0-beta.24` |
 | `0.1.0-beta.24` | `866eeb9` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.24`（linux/amd64 + linux/arm64，index digest `sha256:c3b7326c…`） | Events/Deliveries 搜索覆盖事件标签与上游 provider metadata（#214，REQ-154）；无迁移/配置变化；回滚镜像 `0.1.0-beta.23` |
 | `0.1.0-beta.23` | `8a36238` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.23`（linux/amd64 + linux/arm64，index digest `sha256:7240a4af…`） | 失败投递详情内直接编辑通知目标并继续重试（#211，REQ-150）；无迁移/配置变化；回滚镜像 `0.1.0-beta.22` |
