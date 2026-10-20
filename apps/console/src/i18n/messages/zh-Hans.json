@@ -1034,6 +1034,8 @@
   "suppressions.form.urgentImpact.title": "有 {count} 个开启自动电话提醒的目标符合条件",
   "suppressions.form.validation.nameRequired": "请填写规则名称",
   "suppressions.form.validation.windowInvalid": "结束时间必须晚于开始时间",
+  "suppressions.form.validation.windowInvalidDate": "请选择有效的开始和结束时间",
+  "suppressions.form.windowTimeZone": "时间按控制台时区 {timeZone} 解释和显示",
   "suppressions.fromEvent.action": "静默此指纹",
   "suppressions.fromEvent.context": "告警源 {sourceName} · 指纹 {fingerprint}",
   "suppressions.fromEvent.description": "已预填当前告警源和指纹，保存前可调整生效时间与匹配条件",
