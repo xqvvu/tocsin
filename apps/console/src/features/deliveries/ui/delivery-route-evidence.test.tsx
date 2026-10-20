@@ -40,7 +40,7 @@ describe("delivery route evidence", () => {
     expect(screen.getByText("Current rule")).toBeTruthy();
     // The snapshot and the live route carry the same name today.
     expect(screen.getAllByText("Checkout critical")).toHaveLength(2);
-    expect(screen.getAllByText("expected Critical, event carried critical")).toHaveLength(2);
+    expect(screen.getAllByText("expected Critical, event carried Critical")).toHaveLength(2);
     expect(
       screen.queryByText(
         "The current rule no longer matches this event — this delivery ran under the rule in force at the time",

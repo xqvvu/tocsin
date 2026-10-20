@@ -19,11 +19,13 @@ export function RouteMatchCheckBadges({ checks }: { checks: RouteMatchCheck[] })
         <Badge
           key={`${index}-${check.field}-${check.detail}`}
           variant={check.matched ? "outline" : "destructive"}
-          className="max-w-full justify-start"
+          className="h-auto max-w-full justify-start py-1 whitespace-normal"
           title={check.detail}
         >
-          <span className="font-medium">{t(`routeChecks.fields.${check.field}`)}</span>
-          <span className="text-muted-foreground truncate">{describeRouteCheck(check, t)}</span>
+          <span className="shrink-0 font-medium">{t(`routeChecks.fields.${check.field}`)}</span>
+          <span className="text-muted-foreground text-left break-words whitespace-normal">
+            {describeRouteCheck(check, t)}
+          </span>
         </Badge>
       ))}
     </div>
@@ -87,8 +89,37 @@ function describeRouteCheck(check: RouteMatchCheck, t: ReturnType<typeof useTran
         : t("routeChecks.contains", { value: wanted, actual });
     }
 
-    return t("routeChecks.received", { value: wanted, actual });
+    return t("routeChecks.received", {
+      value: wanted,
+      actual: localizeActualValue(check, actual, t),
+    });
   }
 
   return check.detail;
+}
+
+/**
+ * Translate the event's raw severity/status enum for the "actual" half of a
+ * comparison. Other check fields carry operator data (labels, titles, message
+ * fragments) that must stay verbatim. `actual` is always present when the
+ * `enumerable` branch runs; the empty fallback only satisfies the type.
+ */
+function localizeActualValue(
+  check: RouteMatchCheck,
+  actual: string | undefined,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  if (actual === undefined) {
+    return "";
+  }
+
+  if (check.field === "severity") {
+    return t(`common.severity.${actual}`);
+  }
+
+  if (check.field === "status") {
+    return t(`common.alertStatus.${actual}`);
+  }
+
+  return actual;
 }

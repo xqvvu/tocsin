@@ -33,7 +33,7 @@ describe("event detail route matches table", () => {
       }),
     ]);
 
-    expect(screen.getByText("expected Critical, event carried critical")).toBeTruthy();
+    expect(screen.getByText("expected Critical, event carried Critical")).toBeTruthy();
   });
 
   it("names the missing label instead of only stating the expectation", () => {
@@ -53,9 +53,7 @@ describe("event detail route matches table", () => {
       }),
     ]);
 
-    expect(
-      screen.getByText("label service expected checkout, event has no such label"),
-    ).toBeTruthy();
+    expect(screen.getByText("service expected checkout, event has no such label")).toBeTruthy();
   });
 
   it("quotes the haystack for a title/message condition that missed", () => {
