@@ -363,7 +363,12 @@
 | REQ-133 | 控制台可访问性收尾：中文无障碍名称、快捷键、截断文本 | requirements lane（第 30 轮） | 25 | candidate | — | zh-Hans 仍为 `shell.nav.ariaLabel: "Dashboard"`（`zh-Hans.json:859`）；Sidebar 快捷键不可发现（`sidebar.tsx:39,280-304`）；投递错误全文只在不可聚焦 `title`（`deliveries-table.tsx:106-113`） |
 | REQ-134 | 自托管 Owner 账户离线恢复 | requirements lane（第 30 轮） | 22 | candidate | — | 只有邮件/密码登录且无 SMTP、无重置入口（`auth-options.ts:67-69`、`dashboard-user-menu-impl.tsx:174-182`）；唯一 owner 忘密只能改库；实现前须 EXPERT_PANEL（安全与架构） |
 | REQ-135 | 事件详情按路由显示投递结果 | requirements lane（第 31 轮） | 28 | candidate | — | 路由匹配表只显示目标数，投递结果在另一个标签页（`event-detail-route-matches-table.tsx:51,63,71`、`event-detail-deliveries-table.tsx:31-42,52-76`）；`EventDetailDelivery` 已带 `routeId/destinationId/state`；纯前端按 routeId 聚合，`routeId=null` 手工投递不计入；无 endpoint/DTO/迁移 |
-| REQ-136 | 事件详情投递表内联重试失败投递 | requirements lane（第 31 轮） | 27 | candidate | — | 事件详情投递表无操作列（`event-detail-deliveries-table.tsx:31-42,52-76`），失败需逐条进详情；复用 `operations.retryDelivery`，把 `DeliveryRetryButton` 入参收敛为 `{id,state}`；不改变重试语义；无迁移 |
+| REQ-136 | 事件详情投递表内联重试失败投递 | requirements lane（第 31 轮） | 27 | shipped | #206 | 表格新增「操作」列，仅 failed 行显示重试；`DeliveryRetryButton` 入参收敛为 `{id,state}`；PRD `docs/prd/event-detail-inline-retry.md`；纯前端无迁移 |
+| REQ-147 | 通知目标批量连通性自检 | requirements lane（第 35 轮） | 27 | candidate | — | 工具栏只有新增/刷新，测试只能逐行（`destination-actions.tsx:61-72`、`destinations-page.tsx:159-183,209-215`）；复用 `destinations.test` 顺序执行并汇总失败；无新 endpoint |
+| REQ-148 | 投递详情展示同事件其他目标投递 | requirements lane（第 35 轮） | 26 | candidate | — | 详情只加载当前 job（`delivery-detail-page.tsx:25-35`）；复用 `eventDetailQueryOptions`；单投递事件隐藏面板；无新 DTO |
+| REQ-149 | 目标预览事件选择器支持搜索与时间范围 | requirements lane（第 35 轮） | 26 | candidate | — | 固定最近 20 条（`destination-notices.tsx:101-141`、`operations.queries.ts:48-55`）；PRD 明确后续（`destination-historical-event-preview.md:46-47`） |
+| UI-15 | 路由级浏览器标题 | requirements lane（第 35 轮） | 26 | candidate | — | 所有页面共用静态 `<title>Tocsin</title>`（`__root.tsx:22-27`）；详情标题含 ID；纯前端 |
+| UI-16 | 列表内联徽标一键筛选 | requirements lane（第 35 轮） | 26 | candidate | — | severity/status/delivery state 徽标静态（`severity-badge.tsx:6-22`、`event-state-cell.tsx:12-16`、`deliveries-table.tsx:87-90`）；复用已有 URL 筛选 |
 | REQ-137 | 告警源解析器变更确认 | requirements lane（第 31 轮） | 28 | candidate | — | 编辑源时解析器下拉始终可改且直接保存（`source-form.tsx:128-163`、`edit-source-form.tsx:42-53`、`source.service.ts:52-64`），切换后只影响后续告警且可能解析失败；保存前 AlertDialog 展示旧→新与「历史不重解析」；纯前端 + i18n |
 | REQ-138 | 通知目标覆盖率计入告警源启停 | requirements lane（第 31 轮） | 28 | candidate | — | `destinationRouteCoverage` 只看路由启用、不看匹配源启用（`destination-route-coverage.ts:11-24`、`destination-route-coverage-cell.tsx:13-23`），停用源的路由永不产生事件；Destinations 页与 loader 增加 sources 查询，派生 reachable/blocked；catch-all 需至少一个启用源；与 REQ-129 镜像。第 31 轮浏览器复核：已停用目标行仍显示「N 条生效」，语义不一致可复现 |
 | REQ-139 | 通知目标草稿配置测试发送 | requirements lane（第 31 轮） | 27 | candidate | — | MVP 故事 24 要求保存前验证凭证（`self-hosted-alert-hub-mvp.md:86`），但 `destinations.test` 只接受已存 id（`destination-commands.ts:72-74`、`destination.service.ts:153-194`）；新增 `testUpdate` 草稿命令复用合并与发送路径、不写库；跨 core/api/service/UI，需确认与脱敏 |
@@ -384,6 +389,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.21` | `5932245` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.21`（linux/amd64 + linux/arm64，index digest `sha256:4295956e…`） | 脱敏改为线性扫描（#204，SEC-19）：1 MiB 载荷不再阻塞同步接入/详情/投递证据；覆盖不变，新增性能闸门；无迁移/配置变化；回滚镜像 `0.1.0-beta.20` |
 | `0.1.0-beta.20` | `9c93e03` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.20`（linux/amd64 + linux/arm64，index digest `sha256:23f1efdc…`） | 静默窗口按控制台时区解释与显示（#198，UI-9 + REQ-73）+ 静默窗口按真实瞬时判定（#199，Q-26）；无迁移/配置变化；回滚镜像 `0.1.0-beta.19` |
 | `0.1.0-beta.19` | `9f40eef` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.19`（linux/amd64 + linux/arm64，index digest `sha256:01f2bf26…`） | 告警源覆盖率按可投递性计算（#194，REQ-129）+ 静默启停可访问名称（#195，UI-11）；无迁移/配置变化；回滚镜像 `0.1.0-beta.18` |
 | `0.1.0-beta.18` | `d353c60` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.18`（linux/amd64 + linux/arm64，index digest `sha256:b41ad663…`） | 投递详情解释「加急为什么没有发生」（#191，REQ-124）：按触发链路展示首个阻断原因并标注依据当前配置；无迁移/配置变化；回滚镜像 `0.1.0-beta.17` |
@@ -399,18 +405,18 @@
 ## 下一轮优先项
 
 0. **Q-42（26）** 空 severity 的加急语义交 EXPERT_PANEL：规范化 / 拒绝 / 视为不限，
-   需同时对齐 schema、触发、DTO 投影与说明面板。SEC-19 已关闭（#204），下一轮开局即启动
-   三位专家，避免再次被配额饥饿拖垮整轮。
+   需同时对齐 schema、触发、DTO 投影与说明面板。
 1. **REQ-138（28）** 通知目标覆盖率计入告警源启停（REQ-129 的镜像）；**REQ-135（28）**
-   事件详情按路由显示投递结果；**REQ-137（28）** 告警源解析器变更确认。
-2. **REQ-125/130/131/136/139/140（27）** 共享密钥显式清除、补投包含已静默目标、失败
-   投递保留渲染载荷、事件详情内联重试、目标草稿测试发送、事件列表批量静默；
+   事件详情按路由显示投递结果；**REQ-137（28）** 告警源解析器变更确认；
+   **REQ-147（27）** 通知目标批量连通性自检。
+2. **REQ-125/130/131/139/140（27）** 共享密钥显式清除、补投包含已静默目标、失败
+   投递保留渲染载荷、目标草稿测试发送、事件列表批量静默；
    **REQ-141（27）** 通知目标测试结果可复核。
 3. **Q-43（25）** 损坏 JSON 热路径失败策略（Q-5 的超集）；**Q-44/Q-45/Q-46** 测试补齐；
    **SEC-13** 精确键 + `sessionId/jwt/signature`；**SEC-20/21** AUTO_FIX 加固。
 4. **REQ-142（26）** 事件按路由筛选（建议并入 REQ-21）；**REQ-143（26）** 一次性 Token
    离开保护；**REQ-144（26）** 投递详情告警身份；**REQ-145/146（25）** 主标识可点与
-   补投结果下钻。
+   补投结果下钻；第 35 轮新增 **UI-15 / REQ-148 / UI-16 / REQ-149（26）**。
 5. **REQ-111（27）** 初始化 Owner 密码确认；**REQ-119/120（27）** 去重窗口与最大尝试
    次数可配置；仍待裁决：REQ-93、Q-8、REQ-107、REQ-134。
 6. **REQ-108（28）** 多值属性筛选、**REQ-48（28）** 配置删除预检（并入 REQ-105）、
@@ -423,10 +429,9 @@
 9. **docs-drift 批次**：第一批 DOC-49/23/24/37/43/46/47/50/51（发布 gate、README、
    抑制 PRD 五状态、post-MVP 过期范围）；第二批 DOC-36/48/53/54/55/56/57/58（状态头、
    ADR 版本、无 importer 的 accessor）。建议拆两个 `docs:` PR；DOC-52 可关闭。
-10. **车道轮转（第 34 轮）**：`requirements` 必跑 + `ui-triage`；第 33 轮
-    `requirements`/`architecture` 均因配额饥饿被终止、无产出，下一轮重跑
-    **`architecture`**（仍未跑完），之后 `release-infra`。`ui-triage` 第 33 轮判定
-    `defer`，硬性最晚 **2026-10-22 07:56 CST**；期间若再合入 ≥2 个行为性 UI 改动则提前触发。
+10. **车道轮转（第 35 轮）**：`requirements` 必跑 + `ui-triage`；`architecture` 已于第 35 轮
+    补跑（无新增违规），下一轮轮转到 **`release-infra`**。`ui-triage` 第 35 轮判定 `defer`，
+    硬性最晚 **2026-10-22 07:56 CST**；建议 2026-10-21 08:00 前后主动安排完整 UI 评审。
 11. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 12. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。

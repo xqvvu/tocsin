@@ -2,6 +2,105 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 35 轮）
+
+- 时间：2026-10-20 12:45 – 13:25 CST。
+- 基线：本轮开始时 `origin/main` @ `191e47c`；发布合入后 `origin/main` @ `5932245`。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`release panel`（发布经理 + 阻断审计 + 运维/回滚，3 位专家）+ `requirements` +
+  `architecture` + `ui-triage`。`architecture` 补跑第 33 轮未完成的轮转。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审（2026-10-20 07:56）约 5 小时；自那以后
+  只有 1 个行为性 UI 提交（#198，已有隔离实例浏览器验证）；8 条未解决 UI 发现均为已排期旧项。
+  硬性最晚 **2026-10-22 07:56 CST**；建议下一轮（2026-10-21 08:00 前后）主动安排一次完整
+  UI 评审。
+- `last_ui_review_at`：2026-10-20 07:56（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `busy-wilson-fdb79a`。结束后已删除并发锁、`agent-iteration` 临时工作树与本会话
+  `node_modules`。
+- 环境备注：本轮开始时会话工作树 `node_modules` 链接残缺（缺 `@types/react` 与 workspace
+  link），`vp check` 误报 3396 个类型错误；按记忆中的清理方式重装后恢复 0 errors / 11 warnings。
+
+### EXPERT_PANEL（发布 v0.1.0-beta.21）
+
+三位专家独立返回，结论一致 **RELEASE**：
+
+- **发布经理**：beta.20..main 共 7 个提交，唯一用户可见变更是 `e5de4f6`（SEC-19 线性脱敏，
+  HIGH 性能/安全修复）；`e5265e4` 为同语义流式重构，其余为 test/docs。建议预发布号递增。
+- **阻断审计**：5 项 gate 全 PASS —— main HEAD `e5265e4` CI success；0 个 open PR；
+  beta.20..main 无 migration/schema/Dockerfile/compose/env 变化；最近 20 次 main CI 无失败；
+  `v0.1.0-beta.21` 未被占用。唯一非阻断遗留是 REL-13（LICENSE，法律/产品决策）。
+- **运维/回滚**：Dockerfile、compose、环境变量、SQLite schema 均未变化；回滚只需换回
+  `0.1.0-beta.20` 镜像，无需恢复数据；镜像仓库约定为
+  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:<version>`，只推版本 tag、不推 `latest`。
+  回滚会重新引入 beta.20 的超线性脱敏行为，属运维性能回退而非数据兼容问题。
+
+### 发布（第 9.5 步）
+
+- 版本：`0.1.0-beta.21`；PR #205 `chore(release): v0.1.0-beta.21` rebase 合并 `5932245`，
+  main CI success。
+- Tag：`v0.1.0-beta.21`（annotated，指向 `5932245`）；GitHub Release 已创建（prerelease）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.21
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.21`，
+  index digest `sha256:4295956ed849d322578abc7803c926a9be03119f0647c75ab2f112bfce902b0a`，
+  含 `linux/amd64` 与 `linux/arm64`；构建于 tag 的干净检出，`--provenance=false --sbom=false`。
+- 回滚镜像：`0.1.0-beta.20`。
+- 用户可见依据：SEC-19 修复后，大载荷（含 1 MiB 默认上限）的脱敏从分钟级降到毫秒级，
+  同步接入与详情/投递证据展示不再被阻塞；脱敏覆盖不变。
+
+### 专家发现
+
+**requirements（需求发现）** —— 5 个新候选，均带代码核实证据：
+
+- REQ-147（27）通知目标批量连通性自检：工具栏只有新增/刷新，测试只能逐行
+  （`destination-actions.tsx:61-72`、`destinations-page.tsx:159-183,209-215`）；复用
+  `destinations.test`，顺序执行并汇总失败，无新 endpoint。
+- UI-15（26）路由级浏览器标题：所有页面共用静态 `<title>Tocsin</title>`
+  （`__root.tsx:22-27`），事件/投递详情未把 ID 写进标题；多标签排障无法区分。
+- REQ-148（26）投递详情展示同事件其他目标投递：详情只加载当前 job
+  （`delivery-detail-page.tsx:25-35`），事件详情表格行不可点；可复用
+  `eventDetailQueryOptions`，无新 DTO。
+- UI-16（26）列表内联徽标一键筛选：severity/status/delivery state 徽标是静态的
+  （`severity-badge.tsx:6-22`、`event-state-cell.tsx:12-16`、`deliveries-table.tsx:87-90`），
+  但对应 URL 筛选已存在（`operation-filters.tsx:267-325`）。
+- REQ-149（26）目标预览历史事件选择器支持搜索与时间范围：固定最近 20 条
+  （`destination-notices.tsx:101-141`、`operations.queries.ts:48-55`），PRD 明确把搜索/时间
+  范围列为后续（`destination-historical-event-preview.md:46-47`）。
+
+**architecture（架构一致性）** —— 架构基本干净，无 High/Medium；3 条 Low 均为已跟踪项：
+
+- ARCH-5 复核：service 仍直接抛 `RecordNotFoundError`（`destination.service.ts:138,158,202,250,374`、
+  `oncall.service.ts:59,73`），仓储已有 `requireDestination`。
+- SEC-21 复核：`auth.client.ts:4` 以 type import 引用 `.server`。
+- ARCH-6 复核：`routes/api/ready.ts:9-49` 入口内联 readiness 状态机。
+- 其余检查（domain error、容器装配、entrypoint 薄度、feature 形状、`components/common` 纯度、
+  alias、marker、禁用模式、contract/implementer parity、DTO 保密）全部通过；最近 10 个提交
+  未引入新违规。
+
+**ui-triage**：`defer`（理由见上）。
+
+### 本轮交付
+
+- PR #205 `chore(release): v0.1.0-beta.21` —— 发布准备与文档版本同步。
+- PR #206 `feat(console): retry failed deliveries from the event detail table` —— **REQ-136**。
+  - 事件详情投递表格新增「操作」列，仅 `failed` 行显示重试按钮；`DeliveryRetryButton`
+    入参收敛为 `{ id, state }`，详情页与事件表格共用。
+  - 新增 `event-detail-deliveries-table.test.tsx`（失败/成功行、点击重试、空态跨列）与
+    `docs/prd/event-detail-inline-retry.md`。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4 成功
+    （console 124 files / 669 tests）；`vp run -r build` 通过。
+
+### 下一轮优先项
+
+1. **Q-42（26）EXPERT_PANEL**：空 severity 的加急语义（规范化/拒绝/视为不限）。
+2. 发布收尾已闭环；下一轮不再评估同一个 tag，除非有新的用户可见变更。
+3. REQ-138（28）、REQ-135（28）、REQ-137（28）；REQ-147（27）、REQ-125/130/131/139/140/141（27）。
+4. 新候选 UI-15/REQ-148/UI-16/REQ-149（26）按评分与依赖续做。
+5. Q-43（25）、Q-45/Q-46、SEC-13、SEC-20/21 的 AUTO_FIX 批次；UI-13/UI-14。
+6. **UI 评审**：硬性最晚 2026-10-22 07:56 CST，建议 2026-10-21 08:00 前后主动安排。
+7. 车道轮转：`requirements` 必跑 + `ui-triage`；轮转车道下一轮为 **`release-infra`**
+   （本轮补跑 `architecture`）。
+
 ## 2026-10-20（第 34 轮）
 
 - 时间：2026-10-20 11:22 – 12:35 CST。
