@@ -2,6 +2,72 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 43 轮）
+
+- 时间：2026-10-20 22:25 – 2026-10-21 00:30 CST。
+- 基线：本轮开始时 `origin/main` @ `aa9c17a`；需求合入后 @ `8659e02`，发布合入后
+  `origin/main` @ `eea856f`。
+- 类型：非 full-audit（backlog 有大量 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）。
+- 车道轮转位置：本轮跑 `requirements` + `ui-triage` + `docs-drift`（第 42 轮预承诺）。
+  `requirements` 与 `docs-drift` 运行约 33 分钟未产出报告，按车道限时规则终止，
+  发现留待下一轮重跑；下一轮非必跑车道仍为 **`docs-drift`**。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审（21:10）仅约 40 分钟；自 21:10 起
+  UI 路径合并 0 个；backlog 13 条未解决 UI 发现属稳定基线，非新增信号。last_ui_review_at
+  保持 2026-10-20 21:10 CST。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `nervous-keller-bb6752`。
+
+### 本轮交付
+
+- PR #233 `feat(console): link the dedupe winner from event route gaps` —— **REQ-173（29）**。
+  - 事件详情「未投递的原因」表中，`duplicate_within_window` 且 `firstEventId` 非空时，
+    把 ID 渲染为指向 `/events/$eventId` 的类型化 `Link`；中英文文案改用 `<event>`
+    富文本标签包裹 `{eventId}`，句子结构不变。
+  - 去重证据被清理（`firstEventId = null`）时保持既有「原因无法复原」，不造链接。
+  - 新增 4 条组件测试：链接目标与句子、证据已清理、其他原因、英文界面。
+  - 新增中文 PRD `docs/prd/delivery-gap-first-event-link.md`。
+  - 验证：`vp check` 0 errors（12 条既有 warning）；`vp run -r test` 4/4（console
+    131 files / 716 tests）；`vp run -r build` 通过；CI success；rebase 合并。
+- docs(planning) 收尾 PR：更新 backlog（REQ-173 shipped、beta.29 发布记录）与本日志。
+
+### 专家发现
+
+- `ui-triage`：`defer`（理由见上）。
+- `requirements` / `docs-drift`：约 33 分钟未返回报告，终止后无发现可写；下一轮重跑，
+  不要重复本轮未落盘的工作。
+- 环境记录：`docker buildx imagetools inspect docker/dockerfile:1` 与构建均报
+  `registry-1.docker.io ... EOF`，而 `ghcr.io` 可达；判定为 Docker Hub 网络不可达，
+  非仓库问题。
+- Obsidian 同步：已从 `~/Library/Application Support/obsidian/obsidian.json` 发现 vault
+  `/Users/chuanhu9/Library/Mobile Documents/iCloud~md~obsidian/Documents`，但其中没有
+  Tocsin 既有笔记；本轮**Obsidian 同步已跳过**，未在 vault 中新建目录。
+
+### EXPERT_PANEL 与发布
+
+- 发布评估：3 位专家一致 APPROVE。
+  - 发布经理：beta.28..main 仅 1 个用户可见提交（#233）；建议递增预发布计数器。
+  - 阻断审计：7/7 PASS（main CI success `8659e02`、0 open PR、最近 8 次 main 全绿、
+    无 migration、锁文件未变、`v0.1.0-beta.29` 未被占用；REL-13 为长期挂起项不阻断）。
+  - 运维/回滚：Dockerfile/compose/lock/migration/env 零改动；升级换镜像，回滚换回
+    beta.28 镜像，无需恢复数据库。
+- 版本：`0.1.0-beta.29`；PR #234 `chore(release): v0.1.0-beta.29`（rebase 合并
+  `eea856f`），main CI success。
+- Tag：`v0.1.0-beta.29`（annotated，指向 `eea856f`）；GitHub Release：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.29
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.29` **未推送** ——
+  多平台构建在解析 `docker/dockerfile:1` 时因 Docker Hub EOF 失败；tag 与 Release 保留，
+  下一轮重试推送（不 force、不删 tag）。
+- 回滚镜像：`0.1.0-beta.28`。
+
+### 下一轮优先项
+
+1. 重试 `0.1.0-beta.29` 多平台镜像构建与推送；验证两个平台 digest。
+2. **REQ-164（29）** 删除告警源/通知目标前显示路由级联影响；**REQ-171（28）** 补投加急披露；
+   **REQ-172（27）** 列表静默引用。
+3. 重跑 `docs-drift` 车道；`requirements` + `ui-triage` 必跑。
+4. **UI-21（22）** 对话框关闭按钮本地化；**UI-14（25）** 静默启停确认。
+
 ## 2026-10-20（第 42 轮）
 
 - 时间：2026-10-20 20:14 – 21:20 CST。
