@@ -2,7 +2,11 @@
 
 Labels: `draft-for-review`
 
-- 方向来源：`docs/prd/post-mvp-planning.md:163`（候选方向 6「Adapter 贡献体验」）。
+状态：部分已交付（2026-10-21 复核）。contributor guide、scaffold、test-kit、destination registry
+audit 与 iconName 消费均已落地；F1（kind 多份真相）、F2'（secret 路径两处手写）、F3（表单手写
+per-kind 分支）、F5（send 信封重复）仍成立。下文「不存在」盘点保留为当时的现状记录。
+
+- 方向来源：`docs/prd/post-mvp-planning.md:176`（候选方向 6「Adapter 贡献体验」）。
 - 约束来源：`docs/adr/0002-curated-adapter-extension-model.md`、`docs/architecture/adapter-extensibility.md`。
 - 范围：只覆盖 **destination adapter**（provider 侧共用同一模式，作为后续增量）。
 
@@ -98,24 +102,20 @@ Tocsin 的 destination 扩展模型已经成型：封闭 `DestinationKind` 枚�
 
 没有任何单一真相。贡献者改 4 处、且这 4 处没有互相校验。
 
-### F2. portable export 的 secret 脱敏列表 **静默兜底为空**（安全边界）
+### F2'. secret 路径仍有两份手写真相（安全边界）
 
-`apps/console/src/server/configuration/config-portability.ts:286` `destinationSecretPaths` 用嵌套三元
-表达式，末尾是 `: []`：
+**2026-10-21 复核：静默兜底已消除。** `config-portability.ts:426-457` 的
+`destinationKindSecretPaths` 已改为带 `_exhaustive: never` 的穷尽 switch，新增 kind 会 typecheck
+失败，而不是静默落进 `: []`。
 
-```ts
-const paths: string[] =
-  destination.kind === "generic_webhook" ? ["url"] :
-  destination.kind === "feishu" ? ["webhookUrl", "signSecret"] :
-  destination.kind === "slack" ? ["webhookUrl"] :
-  destination.kind === "email" ? ["endpointUrl"] :
-  [];   // ← 新增 kind 落这里，无 TS 报错
-```
+剩余缺口是两处仍各自手写 secret 路径、未从 `manifest.secretFields` 派生：
 
-它喂给 `omitJsonPaths(omitSensitiveJson(destination.config), secretPaths)`（:273-275）来生成可移植
-配置（TOML/JSON 导出）。注意 `destination.helpers.ts:268,286` 的同类 switch **有** `_exhaustive: never`
-兜底，这里**没有**——新增 kind 若不改这一行，portable export 的 secret 路径列表为空，脱敏只靠
-`isSensitiveKey`（key 名启发式）兜底。这是"照着别处抄完以为齐了"最危险的静默缺口。
+- `apps/console/src/infra/sqlite/repositories/destination/destination.helpers.ts:247-287`
+  的 `configuredSecretFieldPaths`；
+- `apps/console/src/server/configuration/config-portability.ts:442-457` 的
+  `destinationKindSecretPaths`。
+
+两处可能随 adapter 演进不一致（C4 / F2'）。
 
 ### F3. manifest 不是表单真相：UI 表单是手写 per-kind 分支
 
@@ -334,12 +334,12 @@ manifest message key 存在（现由 console 测试承担）、catalog 不含 `s
 | --- | --- |
 | 新增 adapter 必须改动的文件数 | **≈20**（6 adapter-local + ≈14 跨包/console） |
 | `apps/console` 侧必须改的文件数 | **≈9** |
-| 其中 fail-silent 的站点 | **≥3**（`config-portability.ts:286`、`destination-form.tsx` 下拉、`BindingSelectorCases`） |
+| 其中 fail-silent 的站点 | **2**（`destination-form.tsx` 下拉、`BindingSelectorCases`）；portable export 已改为穷尽 switch |
 | adapter-local LOC 参考（slack） | schema 20 + manifest 50 + payload 90 + adapter 100 + index 4 = **264**（另测试 523） |
 | `send()` 中与业务无关的 boilerplate | 约 **80 行 / kind** |
 | 复制的 `DestinationSendInput` fixture | **4 份** |
-| destination registry audit | **不存在** |
-| contributor guide / checklist / scaffold | **不存在** |
+| destination registry audit | **已存在**（`packages/destinations/src/registry.ts:83`，测试强制零 warning） |
+| contributor guide / checklist / scaffold | **已存在**（`docs/contributing/destination-adapter.md`、`scripts/new-destination-adapter.mjs`） |
 
 ### 验收标准（可测量）
 

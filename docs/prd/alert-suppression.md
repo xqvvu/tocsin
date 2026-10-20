@@ -1,7 +1,8 @@
 # PRD：Alert Suppression 与 Maintenance Window
 
-状态：已实现（E1–E3 主体，2026-10-18 复核；OQ1–OQ3 已于 2026-10-12 拍板）
-方向来源：`docs/prd/post-mvp-planning.md:106`（第三优先级，「Alert Suppression 与 Maintenance Window」）
+状态：主体已实现（E1–E3，2026-10-18 复核；2026-10-21 复核未交付增量为试跑预览与保留期清理；
+OQ1–OQ3 已于 2026-10-12 拍板）。下方 AC 为完整验收清单，尚未逐项勾选。
+方向来源：`docs/prd/post-mvp-planning.md:115`（第三优先级，「Alert Suppression 与 Maintenance Window」）
 相关 ADR：`docs/adr/0009-oncall-feishu-urgent.md`（加急去重窗口与指数退避，本 PRD 的关键一致性约束）
 相关 PRD：`docs/prd/self-hosted-alert-hub-mvp.md`（术语与口径基线）
 
@@ -40,7 +41,8 @@ Tocsin 的 MVP 会忠实投递每一条命中路由的告警，包括重复的 `
 | 事件层（标记 suppressed 后仍入队） | Event 记录，但整体不发 | **否**。抑制常常是**目标级**的（"只别再往这个群发"），事件级标记无法表达部分投递被抑制、部分正常。 |
 | **投递层** | Event 照常记录；每条 `(event, route, destination)` 投递生成时评估抑制；命中则落一条**状态为 `suppressed` 的 Delivery**，跳过发送 | **是**。同时满足可审计、可表达目标级范围、且复用既有 delivery 状态机与详情页。 |
 
-投递层方案与 MVP PRD 的预留一致：`deliveries` 表已有 `state` 列与 CHECK 约束（`apps/console/src/infra/sqlite/migrate/schema.ts:120,132-133`），扩展一个 `suppressed` 状态是加法而非重写。Domain 类型 `DeliveryStateSchema`（`packages/core/src/delivery/delivery.ts:5`）当前是 `pending | running | succeeded | failed`，本 PRD 增加 `suppressed`。
+投递层方案与 MVP PRD 的预留一致：`deliveries` 表已有 `state` 列与 CHECK 约束（`apps/console/src/infra/sqlite/migrate/schema.ts:120,132-133`），扩展一个 `suppressed` 状态是加法而非重写。Domain 类型 `DeliveryStateSchema`（`packages/core/src/delivery/delivery.ts:5`）在本 PRD 之前是
+`pending | running | succeeded | failed`，现已扩展为含 `suppressed` 的五状态。
 
 **关键补充：不改写既有记录。** 抑制只影响"尚未尝试发送"的投递。已经发送成功、已经失败的投递不被追溯改写；已经开始或已入队待发的投递在**被认领执行前**再次校验（见 2.4），避免"窗口在重试等待期间打开、重试却照发"的漏洞。
 
@@ -235,7 +237,9 @@ deliveries + (
 - **原因快照与规则解耦。** `suppress_reason` 是文本快照，`suppression_id` 用 `on delete set null`，使删规则不毁审计。
 - **多条规则命中取确定性唯一来源。** 一条投递只挂一条抑制规则：按 `startsAt` 最早、再按 `name` 排序取第一条命中，避免"到底是谁静默的"不确定。是否需要多命中记录列为 Open Question 1 之外的实现细节（默认不做）。
 - **保留策略沿用既有形状。** 新增一个 retention setting（对齐 `rawPayloadRetentionDays` 的既有 setting + 定时 prune 形状）清理已到期 N 天后的抑制规则本体；**投递上的抑制快照不参与清理**。
-- **oRPC 面。** 新增 `suppressions` namespace（`list` / `get` / `create` / `update` / `delete` / `setEnabled`，以及 `preview`（对样例或历史 Event 试跑 matcher））；`DeliveryDetail` 增加抑制字段；`EventDetail` 的投递列表透出 `suppressed` 状态与原因。私有过程一律 dashboard 鉴权，领域错误由既有边界统一翻译（见 `docs/adr/0007-console-orpc-api-boundary.md`）。
+- **oRPC 面。** 新增 `suppressions` namespace，已交付 `list` / `get` / `hits` / `create` / `update` /
+  `setEnabled` / `delete`；`preview`（对样例或历史 Event 试跑 matcher）仍为计划项，见 backlog REQ-25。
+  `DeliveryDetail` 增加抑制字段；`EventDetail` 的投递列表透出 `suppressed` 状态与原因。私有过程一律 dashboard 鉴权，领域错误由既有边界统一翻译（见 `docs/adr/0007-console-orpc-api-boundary.md`）。
 - **文案**遵循 AGENTS.md 运维词汇（「静默」「维护窗口」「抑制」），机器值（`suppressed`、`equivalent` 枚举值等）不翻译。
 - **不做 route 级的静默开关。** route strict schema + TOML snake_case 镜像 + 路由表单全链的连带成本高（ADR 0009 已为"加急不配在 route 上"做过同样取舍），且抑制需要的是"跨 route 的一段时间"，挂在 route 上会迫使运维重复配置。
 
@@ -335,7 +339,7 @@ deliveries + (
 - `docs/prd/oncall-feishu-urgent.md`（PRD 写法与术语对齐；加急的 user story / out-of-scope 边界）
 - `docs/prd/destination-template-engine.md`（PRD 章节风格：Problem / Solution / User Stories / Implementation Decisions / Testing Decisions / Out of Scope / Further Notes）
 - `packages/core/src/route/route.ts`（`LabelMatchOperatorSchema` 只有 `equals` / `contains`；空条件 = 无条件通过；`RouteMatchCheck` 逐项 checks 形状）
-- `packages/core/src/delivery/delivery.ts:5`（`DeliveryStateSchema` 当前四个状态、`ProviderReferenceSchema`）
+- `packages/core/src/delivery/delivery.ts:5`（`DeliveryStateSchema` 五状态含 `suppressed`、`ProviderReferenceSchema`）
 - `packages/core/src/event/event.ts`（`EventRecord` 无抑制字段，支持"Event 不感知抑制"）
 - `packages/core/src/event/normalized-event.ts`（`AlertSeverity` / `AlertStatus` / `fingerprint` / `labels` = matcher 的取值域）
 - `packages/core/src/destination/destination.ts`（`DestinationOperationalConfig.urgentAutoEnabled`，用于"加急影响范围"提示）

@@ -94,6 +94,10 @@ Email 的 `subjectTemplate` / `htmlTemplate`、预览与 TOML 表示均已落地
 
 问题：匹配层支持多条件规则，但 UI 编辑与解释仍偏基础。用户需要更明确地知道一条 Event 为什么匹配或没有匹配某条 Route。
 
+**部分交付（2026-10-21 复核）。** 多条件规则编辑与摘要、Event 详情 route explain、投递缺口解释均已落地
+（`apps/console/src/features/events/ui/event-detail-route-gaps.tsx`、`apps/console/src/features/routes/ui/route-forms.tsx`）；
+剩余为样例 Event 干跑预览（backlog REQ-3）与补投预览一致性修正（REQ-22）。
+
 候选范围：
 
 - 多 source、多 severity/status、多 label、多 title/message 条件的完整编辑体验。
@@ -132,9 +136,12 @@ Email 的 `subjectTemplate` / `htmlTemplate`、预览与 TOML 表示均已落地
 
 ### 4. 搜索、过滤与历史排障
 
-**部分交付（2026-10-18 核实）。** 时间范围过滤（`docs/prd/operations-time-range.md`）、
-source/severity/status/destination/route/state 组合过滤与按路由过滤已落地；fingerprint 聚合、
-raw/debug JSON 搜索、delivery history retention 仍待做（见 backlog REQ-6 / REQ-14 / REQ-8）。
+**部分交付（2026-10-21 复核）。** 时间范围过滤（`docs/prd/operations-time-range.md`）、
+source/severity/status/destination/route/state 组合过滤、按路由过滤、ID/标签/上游 metadata 搜索与
+route explain 已落地；fingerprint 聚合（REQ-6）、绝对时间窗口（REQ-33）与筛选结果导出（REQ-34）
+仍待做。raw/debug JSON 不纳入搜索以避免凭据回显
+（`apps/console/src/infra/sqlite/repositories/history/search.test.ts:340`），delivery history 已决定
+不自动清理（`docs/release/history-retention-and-snapshots.md:14`），二者不再作为待实现项。
 
 问题：Events 和 Deliveries 已经可查看，但生产排障需要更强的过滤、时间范围、fingerprint 聚合和历史保留策略。
 
@@ -157,6 +164,11 @@ raw/debug JSON 搜索、delivery history retention 仍待做（见 backlog REQ-6
 
 问题：仓库已有 Docker runtime 和 health/readiness endpoint，但正式公开试用还需要发布工程闭环。
 
+**大部分已交付（2026-10-21 复核）。** Root CI（`.github/workflows/ci.yml`）、Docker build/compose
+smoke（`scripts/docker-smoke.sh`、`Justfile`）、生产部署与备份/恢复/升级/回滚文档、release checklist、
+脱敏 runtime logs 均已落地；仅浏览器 E2E 尚未接入 CI（脚本 `just e2e` 已存在，见 backlog REL-1/REL-21）。
+以下保留为当时的候选范围记录。
+
 候选范围：
 
 - Root CI workflow。
@@ -176,6 +188,12 @@ raw/debug JSON 搜索、delivery history retention 仍待做（见 backlog REQ-6
 ### 6. Adapter 贡献体验
 
 问题：provider/destination registry 结构已经建立，但外部贡献者仍需要更清楚的 fixture、测试和文档路径。
+
+**Destination 侧已交付（2026-10-21 复核）。** contributor guide
+（`docs/contributing/destination-adapter.md`）、scaffold（`scripts/new-destination-adapter.mjs`）、
+test-kit（`packages/destinations/src/test-kit/`）、registry audit
+（`packages/destinations/src/registry.ts:83`）与 iconName 消费均已落地；剩余缺口是 provider fixture
+目录（REL-2）与 destination 的 kind/secret 路径单一真相（C4 / F2'）。以下保留为当时的候选范围记录。
 
 候选范围：
 
