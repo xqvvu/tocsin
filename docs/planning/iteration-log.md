@@ -2,6 +2,93 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 38 轮）
+
+- 时间：2026-10-20 16:02 – 16:40 CST。
+- 基线：本轮开始时 `origin/main` @ `730316b`；合入后 `origin/main` @ `97434ce`（#214）。
+- 类型：非 full-audit（backlog 有大量 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` + `quality`（第 37 轮超时后的窄范围补跑）。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审（14:27）仅约 1h43m；自那以后仅 1 个
+  行为性 UI 合并（#211），未触发 48h / ≥3 合并 / 新增高严重度发现任一强信号。维持
+  2026-10-21 08:00 前后安排完整评审，硬性最晚 2026-10-22 14:27。
+- `last_ui_review_at`：2026-10-20 14:27（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `friendly-colden-2cfbd8`。结束后已删除并发锁；本会话 `node_modules` 于收尾时清理。
+
+### 本轮交付
+
+- PR #214 `feat(console): search events and deliveries by label and upstream metadata` ——
+  **REQ-154（28）**。
+  - 事件/投递搜索谓词新增 `events.labels_json` 与 `events.provider_metadata_json` 的
+    字面子串匹配，沿用 `escapeLikeTerm`；列表与 `total` 继续共用同一谓词。
+  - `raw_payload_json` / `raw_headers_json` 保持不可搜；新增回归用例固定「敏感 label 值
+    可被搜索命中，但详情投影仍为 `[REDACTED]`」的边界（与既有 title/message 规则一致）。
+  - 中英文占位文案补充「标签、上游元数据」；PRD `docs/prd/operation-search-labels.md`。
+  - 验证：`vp check` 0 errors（12 条既有 warning）；`vp run -r test` 4/4
+    （console 126 files / 690 tests）；`vp run -r build` 通过；CI success。
+  - 备注：环境 `node_modules` 再次出现「Already up to date 但缺包」，按既有记忆清理后重装。
+
+### requirements 车道（5 个新候选）
+
+- **REQ-159（28）** 通用 Webhook 源可配置字段映射：generic schema 为空
+  （`packages/providers/src/generic/schema.ts:3`），解析只猜固定顶层键
+  （`parse.ts:22-53`），而中文界面已宣称支持字段映射且入口指向路由
+  （`zh-Hans.json:929-931`）。
+- **REQ-160（27）** 事件列表显示命中路由名称：列表已选出 `route_matches_json`
+  （`history.repository.ts:60-68`）且快照含 `routeName`（`route.ts:162-168`），
+  DTO 却只投影数量（`operations.ts:50-60`）。
+- **REQ-161（27）** 接入 Token 支持 HTTP Basic：Webhook 只认 Bearer 与
+  `x-tocsin-source-token`（`request-context.ts:82,109-117`）。
+- **REQ-162（25）** 出站投递按目标限速：worker 串行且无目标维度限速
+  （`delivery-worker.service.ts:59-77`）；飞书错误文案已提示降速
+  （`feishu-errors.ts:105`）但无设置项。
+- **REQ-163（27）** 维护窗口批量排期（复制顺延）：静默只有单组绝对起止
+  （`suppression.ts:51-64`），行操作无复制（`suppressions-section.tsx:274-300`）。
+
+### quality 车道（窄范围补跑）
+
+- Q-43/Q-45/Q-46/Q-12/Q-13/Q-5 **全部仍有效**，已按第 38 轮代码位置更新 backlog：
+  - Q-43：Events 列表会因 `route_matches_json` 损坏整页失败
+    （`history.repository.ts:126,406-414`）；`raw_payload_json`/`provider_metadata_json`/
+    `labels_json` 影响详情与 worker claim（`intake.helpers.ts:55-100`）。
+  - Q-46：实现主体漂移到 `operation-filters.tsx:569-613`，测试仍无尾随空格提交、
+    无 `unmount()`、无 fake timers。
+  - Q-12/Q-13：失败分支与脱敏断言仍未被真正触发。
+- 新发现 **Q-47（24）**：oncall 失败路径的 `markFailed` 未兜底
+  （`oncall-execution.ts:106-122,214`），持久化失败会中止整批 worker；与 Q-45 同批处理。
+
+### 发布（第 9.5 步）
+
+三位发布专家独立返回，结论一致 **RELEASE**：
+
+- **发布经理**：beta.23..main 仅 1 个用户可见提交（#214 搜索覆盖标签与上游元数据）；
+  其余为测试/注释/规划文档。建议预发布计数器递增。
+- **阻断审计**：六项 gate 全 PASS —— `97434ce` main CI success、0 open PR、无
+  migration/部署/env 变化、无未修复回归、`v0.1.0-beta.24` 未占用、最近 10 次 main CI 全绿。
+- **运维/回滚**：无 schema/依赖/compose 变化，换镜像即可升级；回滚换回 beta.23 镜像，
+  无需恢复数据库。
+
+- 版本：`0.1.0-beta.24`；PR #215 `chore(release): v0.1.0-beta.24` rebase 合并 `866eeb9`，
+  main CI success。
+- Tag：`v0.1.0-beta.24`（annotated，指向 `866eeb9`）；GitHub Release 已创建（prerelease）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.24
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.24`，index digest
+  `sha256:c3b7326c47424f50bf9fb1a967ab0dc59ac80aa733e7221b533ce72ab33ee09a`，
+  含 `linux/amd64` 与 `linux/arm64`；构建于 tag 的干净检出，
+  `--provenance=false --sbom=false`。
+- 回滚镜像：`0.1.0-beta.23`。
+- 用户可见依据：Events/Deliveries 可按事件标签与上游 provider metadata 搜索。
+
+### 下一轮优先项
+
+1. **REQ-155（28）** 静默规则按生效状态置顶；**REQ-159（28）** 通用 Webhook 字段映射；
+   **REQ-160/161/163（27）** 事件列表路由名、Basic 认证、维护窗口批量排期。
+2. **完整 UI 评审**（2026-10-21 08:00 前后，真实浏览器）：重点 #211 编辑目标流程、
+   UI-17/19/18、UI-13/14。
+3. **Q-47 + Q-45** 同批、Q-43、Q-46/Q-12/Q-13/Q-5 测试补齐。
+4. 车道轮转（第 39 轮）：`requirements` + `ui-triage` + `architecture`（上次第 35 轮）。
+
 ## 2026-10-20（第 37 轮）
 
 - 时间：2026-10-20 14:45 – 16:05 CST。
