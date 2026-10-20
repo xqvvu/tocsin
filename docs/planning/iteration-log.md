@@ -2,6 +2,119 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 36 轮）
+
+- 时间：2026-10-20 13:26 – 14:47 CST。
+- 基线：本轮开始时 `origin/main` @ `4755933`；合入后 `origin/main` @ `6c237fc`
+  （#207 `e64cbef`、#208 `dffb791`、发布 #209 `6c237fc`）。
+- 类型：非 full-audit（backlog 有大量 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）。
+- 车道：`Q-42 EXPERT_PANEL`（3 位专家）+ `requirements` + `ui-triage`（判定
+  `review_now` → 追加 `ui-review`）+ `release-infra`（轮转）+ 发布小组（3 位）。
+- `ui-triage`：**`review_now`** —— 自上次真实浏览器评审（07:56）以来有 3 个行为性 UI
+  合并（#198、#206、#207），达到第 35 轮预承诺的「≥2 个」提前触发条件；10 条未解决
+  UI 发现；#206/#207 均无浏览器验证记录。
+- `last_ui_review_at`：**2026-10-20 14:27 CST**（本轮已完成隔离实例真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器评审、构建均在会话工作树
+  `peaceful-bartik-cd7a90`。结束后已删除并发锁；本会话 `node_modules` 于收尾时清理。
+
+### EXPERT_PANEL（Q-42）
+
+三位专家独立返回，结论一致选择 **A：空 severity 列表等价于 `["critical"]`**。
+
+- **安全与可靠性**：A 的失效方向 fail-closed，最坏只是非 critical 漏呼且可被说明面板
+  发现；B（拒绝）会同时打断卡片投递、预览、编辑与加急（adapter 发送前同一 schema），
+  C（不限）会把 info/unknown 变成电话风暴。规范化必须收敛到 schema 单一出口。
+- **产品与运维**：加急 severity 是计费、扰民的「叫醒许可名单」，不能套用路由/抑制的
+  「空 = 不过滤」；表单、DTO、i18n 与 PRD/ADR 早已写定 critical 默认，Q-42 是让运行时
+  向既有产品意图看齐。
+- **独立评估者**：A 可测试性最好；指出表单空 severity 用例因 receivers 为空提前返回、
+  schema/投影/触发均未测显式 `[]`，并给出层 × 用例矩阵。
+- 决策记录：`docs/planning/decisions/feishu-urgent-empty-severities.md`。
+
+### 本轮交付
+
+- PR #207 `feat(console): show per-route delivery outcomes in event detail` —— **REQ-135（28）**。
+  - 路由匹配表新增「投递结果」列，按 `routeId` 聚合成功/失败/运行中/待处理/已抑制；
+    命中无投递显示「无投递」，未命中显示「未命中」；手工补投 `routeId=null` 不计入。
+  - 新增 `routeDeliveryOutcomes` 纯函数与 `RouteDeliveryOutcomeCell`；PRD
+    `docs/prd/event-route-delivery-outcomes.md`；纯前端，无 DTO/服务端/迁移变化。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4
+    （console 124 files / 673 tests）；`vp run -r build` 通过；CI success。
+- PR #208 `fix(destinations): normalise an empty urgent severity list to critical` ——
+  **Q-42（26）**。
+  - `FeishuConfigSchema` 把显式 `[]` 归一为 `["critical"]`；触发层删除
+    `length > 0` 逃生口；编辑草稿与投递元数据共用 `normalizedUrgentSeverities`。
+  - schema/触发/DTO/草稿/说明/表单/写路径/配置更新共 13 个文件、8 组回归用例；无迁移。
+  - 验证：`vp check` 0 errors；`vp run -r test` 4/4（console 124 files / 676 tests）；
+    `vp run -r build` 通过；CI success。
+- PR #209 `chore(release): v0.1.0-beta.22` —— 版本递增与发布文档同步。
+
+### requirements 车道（4 个新候选）
+
+- **REQ-150（27）** 投递详情内修复目标配置并立即重试：失败详情工具栏无编辑入口，
+  必须在 Destinations 找同一目标再回来（`delivery-detail-page.tsx:56-66`、
+  `destinations-page.tsx:221-252`）；复用 `DestinationEditDialog`，纯前端。
+- **REQ-151（26）** 值班交接摘要：三页手工拼装静默/失败/待重试
+  （`active-suppression-indicator.tsx:38-56`、两个工具栏）；只读 Sheet + 复制。
+- **REQ-152（26）** 首次部署引导检查清单：setup 后落到 Events 空态
+  （`-setup-form-impl.tsx:61-64`、`events-empty-state.tsx:23-40`）；四步派生 + localStorage；
+  吸收 REQ-115 的 CTA 部分。
+- **REQ-153（24）** 告警恢复后取消未执行的自动加急呼叫：resolved 只停止新入队，
+  已 scheduled 的 auto ping 仍会拨出（`oncall.service.ts:151-160`、
+  `oncall.repository.ts:137-153`、`oncall-execution.ts:63-95`）；需 EXPERT_PANEL。
+
+### release-infra 车道
+
+- 四个未勾 gate：E2E 接入 CI **FAIL**（远端仍只有 `ci.yml`）、dedupe cleanup **FAIL**
+  （`delivery.helpers.ts:107-108`、`oncall.repository.ts:38-41` 无 LIMIT）、provider fixture
+  **FAIL**（19 个内联 payload、28 个 `it` 块、6 个拒绝用例）、多版本 payload **PARTIAL**。
+- REL-5/8/9/11/16/19 仍有效；REL-6 收窄为「重启持久化断言」；REL-9 收窄为
+  「WAL/文件库 migration/checksum」；REL-18 证据迁到 `docker-production-deployment.md:56`。
+- 四组重复项已在 backlog 标注合并：REL-1→21、REL-4→22、REL-5/8、REL-2/24、REL-16/23。
+- 本轮不做 AUTO_FIX：时间预算用于两个交付与发布；fixture 抽取、artifact smoke、
+  E2E workflow 均需本地实跑，留待后续轮次。
+
+### ui-review 车道（隔离实例 localhost:6196 + 临时 SQLite）
+
+- 真实浏览器验证通过：#207 路由匹配投递结果列（状态顺序、无投递/未命中区分、手工补投
+  不计入）；#206 投递表仅 failed 行显示重试、点击后刷新。桌面 1440 与移动 390 均截图。
+- 新发现：**UI-17（26）** checks 实际值未本地化、出现「标签 标签」重复、长 badge 截断且
+  完整信息只在 title；**UI-18（24）** 390px 下路由匹配 tab 标题重叠、表格裁切；
+  **UI-19（25）** 投递「下次」只显示时间（2030 年显示 00:00）、最近错误列约 10% 只剩
+  省略号、重试后后台已 failed 但界面停在 pending。
+- UI-14 浏览器复现；UI-13/UI-8/UI-3/UI-12 未全部复核（时间预算）。
+
+### 发布（第 9.5 步）
+
+三位发布专家独立返回：发布经理 **RELEASE**（beta.21..main 3 个用户可见变更：#206、#207、
+#208）；阻断审计 **APPROVE（补 release-prep 后）**（main CI success、0 open PR、无
+migration/Docker/env/锁文件变化、tag 未占用）；运维/回滚 **SAFE**（无迁移，换镜像即可，
+回滚 `0.1.0-beta.21`）。
+
+- 版本：`0.1.0-beta.22`；PR #209 rebase 合并 `6c237fc`，main CI success。
+- Tag：`v0.1.0-beta.22`（annotated，指向 `6c237fc`）；GitHub Release 已创建（prerelease）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.22
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.22`，
+  index digest `sha256:a01471cb98bf56963acfe6352b16994be3496771c6baa5dda4ee8064713efd78`，
+  含 `linux/amd64` 与 `linux/arm64`；构建于 tag 的干净检出，
+  `--provenance=false --sbom=false`。
+- 回滚镜像：`0.1.0-beta.21`。
+- 用户可见依据：事件详情内联重试、按路由投递结果、飞书加急空 severity 语义收紧。
+
+### 下一轮优先项
+
+1. **REQ-150（27）** 投递详情内修复目标配置并立即重试。
+2. **UI-17（26）** checks 本地化；**UI-19（25）** 投递列可读性与重试刷新；
+   **UI-18（24）** 移动端路由匹配布局。
+3. **REQ-138（28）** 目标覆盖率计入告警源启停；**REQ-137（28）** 解析器变更确认；
+   **REQ-147（27）** 目标批量连通性自检。
+4. **REQ-125/130/131/139/140/141（27）**；**REQ-151/152（26）**。
+5. **Q-43（25）**、Q-45/Q-46、SEC-13、SEC-20/21 的 AUTO_FIX 批次。
+6. **REL-21（26）** 独立 `e2e.yml`（先本地跑通 `playwright install chromium` + test）；
+   REL 重复项合并后的 fixture / artifact smoke / required checks。
+7. 车道轮转（第 37 轮）：`requirements` 必跑 + `ui-triage` + **`quality`**（上次第 32 轮）。
+
 ## 2026-10-20（第 35 轮）
 
 - 时间：2026-10-20 12:45 – 13:25 CST。
