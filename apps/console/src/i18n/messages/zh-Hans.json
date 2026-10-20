@@ -535,7 +535,7 @@
   "events.detail.rawPruned.title": "原始数据已按保留策略清理",
   "events.detail.routeGaps.reason.destination_disabled": "该目标已停用",
   "events.detail.routeGaps.reason.destination_missing": "该目标已不存在",
-  "events.detail.routeGaps.reason.duplicate_within_window": "未创建投递：同一告警已就该路由与目标投递过，首次由事件 {eventId} 触发",
+  "events.detail.routeGaps.reason.duplicate_within_window": "未创建投递：同一告警已就该路由与目标投递过，首次由事件 <event>{eventId}</event> 触发",
   "events.detail.routeGaps.reason.route_deleted": "该路由已被删除，其投递记录随之级联删除",
   "events.detail.routeGaps.reason.route_disabled": "路由已停用，接入时未投递",
   "events.detail.routeGaps.reason.unknown": "该路由没有投递记录，且原因无法从 Tocsin 保留的记录中复原",

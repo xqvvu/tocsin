@@ -535,7 +535,7 @@
   "events.detail.rawPruned.title": "Raw data was cleared by the retention policy",
   "events.detail.routeGaps.reason.destination_disabled": "This destination is disabled",
   "events.detail.routeGaps.reason.destination_missing": "This destination no longer exists",
-  "events.detail.routeGaps.reason.duplicate_within_window": "No delivery was created: an identical alert was already delivered for this route and destination, first triggered by event {eventId}",
+  "events.detail.routeGaps.reason.duplicate_within_window": "No delivery was created: an identical alert was already delivered for this route and destination, first triggered by event <event>{eventId}</event>",
   "events.detail.routeGaps.reason.route_deleted": "The route was deleted, and its deliveries cascaded away with it",
   "events.detail.routeGaps.reason.route_disabled": "The route was disabled, so nothing was sent at intake",
   "events.detail.routeGaps.reason.unknown": "No delivery row exists for this route, and the reason cannot be reconstructed from the records Tocsin keeps",
