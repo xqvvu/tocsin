@@ -374,7 +374,7 @@
 | REQ-149 | 目标预览事件选择器支持搜索与时间范围 | requirements lane（第 35 轮） | 26 | candidate | — | 固定最近 20 条（`destination-notices.tsx:101-141`、`operations.queries.ts:48-55`）；PRD 明确后续（`destination-historical-event-preview.md:46-47`） |
 | UI-15 | 路由级浏览器标题 | requirements lane（第 35 轮） | 26 | candidate | — | 所有页面共用静态 `<title>Tocsin</title>`（`__root.tsx:22-27`）；详情标题含 ID；纯前端 |
 | UI-16 | 列表内联徽标一键筛选 | requirements lane（第 35 轮） | 26 | candidate | — | severity/status/delivery state 徽标静态（`severity-badge.tsx:6-22`、`event-state-cell.tsx:12-16`、`deliveries-table.tsx:87-90`）；复用已有 URL 筛选 |
-| UI-17 | 路由匹配 checks 实际值未本地化且被截断 | ui-review（第 36 轮，浏览器实测） | 26 | candidate | — | 中文界面显示「事件实际为 critical/firing」，标签行出现「标签 标签」重复，长 badge 被 `truncate`，完整信息只在原生 title（`route-match-check-badges.tsx:25-26,55-65,84-90`）；最小修复：actual 复用 `common.severity`/`common.alertStatus`、去重「标签」、允许换行或紧凑「字段：实际值」 |
+| UI-17 | 路由匹配 checks 实际值未本地化且被截断 | ui-review（第 36 轮，浏览器实测） | 26 | shipped | #220 | 第 40 轮交付：actual 复用 `common.severity`/`common.alertStatus`、去掉重复「标签」前缀、徽标高度自适应并换行；新增 5 条组件测试；PRD `docs/prd/route-match-check-localization.md` |
 | UI-18 | 390px 下路由匹配 tab 标题重叠、表格裁切 | ui-review（第 36 轮，浏览器实测） | 24 | candidate | — | viewport 390×844 下「路由匹配」与「未投递的原因」标题叠在同一行，表格只露表头（`event-detail-view.tsx:56-75`、`event-detail-route-matches-table.tsx:50-94`）；移动端改为单一外层滚动、自然高度堆叠；截图 `/tmp/tocsin-r36-event-matches-mobile.png` |
 | UI-19 | 事件详情投递列可读性与重试后状态滞后 | ui-review（第 36 轮，浏览器实测） | 25 | candidate | — | 「下次」只显示时间，2030 年显示成「00:00」（`event-detail-deliveries-table.tsx:70-75`）；「最近错误」列约 10% 只剩省略号（`:33-45`）；重试后行停在 pending，后台已 failed，需手动刷新（`delivery-retry-button.tsx:34-44`）；建议 dateTime 格式、错误列两行/加宽、pending/running 时短轮询 |
 | REQ-137 | 告警源解析器变更确认 | requirements lane（第 31 轮） | 28 | candidate | — | 编辑源时解析器下拉始终可改且直接保存（`source-form.tsx:128-163`、`edit-source-form.tsx:42-53`、`source.service.ts:52-64`），切换后只影响后续告警且可能解析失败；保存前 AlertDialog 展示旧→新与「历史不重解析」；纯前端 + i18n |
@@ -413,6 +413,11 @@
 | REQ-167 | 事件详情显示同指纹最新状态 | requirements lane（第 39 轮） | 27 | candidate | — | 详情只展示当前事件 status（`event-detail-summary.tsx:27-35`），不查后续 resolved 事件（`history.repository.ts:155-215`、`operations.ts:63-87`）；用 `operations.list`（sourceId+q）客户端精确过滤 fingerprint，显示「已恢复/仍 firing」；REQ-6 的轻量切片 |
 | REQ-168 | 加急呼叫失败原因可完整查看 | requirements lane（第 39 轮） | 28 | candidate | — | pings 表错误列只有 `truncate`，无 title/对话框/复制（`delivery-pings-table.tsx:104-105`），attempts 表已有完整查看对话框（`delivery-attempt-detail-dialog.tsx:23-30`）；长错误恰是排障关键；纯前端 |
 | REQ-169 | 手动 Worker 显示积压与批次上限 | requirements lane（第 39 轮） | 27 | candidate | — | UI 固定每次 10 条（`deliveries-page.tsx:100-107`），契约允许 1–50（`operations.ts:227-231`），工具栏无 pending 积压数（`deliveries-page-toolbar.tsx:18-48`）；展示 pending total + 10/25/50 批次，运行后刷新；只读查询 + 现有参数 |
+| REQ-170 | 通知目标停用确认披露自动加急影响 | requirements lane（第 40 轮） | 29 | candidate | — | 停用确认只讲路由与排队投递（`destination-actions.tsx:124-131`、`zh-Hans.json:279-283`），但目标开启自动加急时会同时停掉电话呼叫；静默表单已有等价披露（`features/suppressions/model/urgent-impact.ts:30-47`）。纯前端，复用目标 DTO 的 `urgentAutoEnabled/urgentReceivers` |
+| REQ-171 | 补投预览披露将触发的自动加急呼叫 | requirements lane（第 40 轮） | 28 | candidate | — | 补投会创建真实投递并正常执行（`event-replay.service.ts:64-83,139-152`），但预览 DTO 无加急字段（`packages/core/src/operations.ts:196-255`）、确认框无警告（`route-replay-prompt.tsx:100-112`）；需只读 `urgentImpact` 投影与两个预览面展示；与 REQ-83 协同 |
+| REQ-172 | 告警源/通知目标列表显示生效中的静默引用 | requirements lane（第 40 轮） | 27 | candidate | — | 两页都不加载静默规则（`sources-page.tsx:25-27`、`destinations-page.tsx:47-60`）；active 直接引用显示「静默规则引用中」，matcher 维度为空显示「存在未限定规则」；复用 `suppressionsQueryOptions()`，纯前端 |
+| UI-20 | 事件详情投递健康徽标忽略 pending/suppressed | ui-review（第 40 轮，浏览器实测） | 26 | candidate | — | 徽标只统计 succeeded/failed，有 pending 或 suppressed 时显示「成功 0 / 失败 0」（`event-detail-summary.tsx:52-57`、`zh-Hans.json:559`），与旁边「通知投递 2 条」矛盾；统计函数已含全部状态，补计数与文案即可 |
+| UI-21 | 共享 Dialog 关闭按钮英文 `Close` 且错误态透出 `Failed to fetch` | ui-review（第 40 轮，浏览器实测） | 22 | candidate | — | `components/ui/dialog.tsx:63` 硬编码 sr-only `Close`；`destination-edit-dialog-loader.tsx:132-134` 直接渲染 `error.message`；读屏用户听到英文、错误不可本地化；纯前端文案 |
 
 ## 发布记录
 
@@ -437,14 +442,17 @@
 
 ## 下一轮优先项
 
-0. **REQ-164（29）** 删除告警源/通知目标前显示路由级联影响；**REQ-165/166/168（28）**
+0. **REQ-170（29）** 目标停用确认披露自动加急；**REQ-164（29）** 删除告警源/通知目标前
+   显示路由级联影响（建议删除结果携带仓储已算好的 `routeCleanup` 计数）；
+   **REQ-171/172（27-28）** 补投加急披露、列表静默引用；**REQ-165/166/168（28）**
    路由源停用不可达、顶栏投递失败指示器、加急失败原因完整查看；**REQ-167/169（27）**
    同指纹最新状态、Worker 积压与批次。
 1. **REQ-159（28）** 通用 Webhook 可配置字段映射；**REQ-160/161/163（27）** 事件列表
    路由名、Basic 认证、维护窗口批量排期；**REQ-138/137（28）** 目标覆盖率计入源启停、
    源解析器变更确认。
-2. **UI-17（26）** 路由匹配 checks 实际值本地化与换行；**UI-19（25）** 事件详情投递列
-   可读性与重试后刷新；**UI-18（24）** 390px 路由匹配布局。
+2. **UI-20（26）** 投递健康徽标补齐 pending/suppressed；**UI-14（25）** 静默启停确认；
+   **UI-19（25）** 事件详情投递列可读性与重试后刷新；**UI-18（24）** 390px 路由匹配布局；
+   **UI-21（22）** 对话框 `Close` 与 `Failed to fetch` 本地化。
 3. **REQ-147（27）** 通知目标批量连通性自检；**REQ-125/130/131/139/140（27）**
    共享密钥显式清除、补投包含已静默目标、失败投递保留渲染载荷、目标草稿测试发送、
    事件列表批量静默；**REQ-141（27）**；**REQ-151/152（26）**。
@@ -468,9 +476,9 @@
 10. **docs-drift 批次**：第一批 DOC-49/23/24/37/43/46/47/50/51（发布 gate、README、
     抑制 PRD 五状态、post-MVP 过期范围）；第二批 DOC-36/48/53/54/55/56/57/58（状态头、
     ADR 版本、无 importer 的 accessor）。建议拆两个 `docs:` PR；DOC-52 可关闭。
-11. **车道轮转（第 39 轮）**：`requirements` 必跑 + `ui-triage`；非必跑车道本轮跑
-    **`architecture`**，下一轮轮转 **`docs-drift`**。`ui-review` 建议 2026-10-21 08:00
-    前后安排完整真实浏览器评审（硬性最晚 2026-10-22 14:27）。
+11. **车道轮转（第 40 轮）**：`requirements` + `ui-triage` 必跑；非必跑车道本轮跑
+    **`docs-drift`**（并触发完整 `ui-review`），下一轮轮转 **`security-exposure`**。
+    `last_ui_review_at` = 2026-10-20 17:57，48h 内无新的强信号时可继续 `defer`。
 11. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 12. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。
