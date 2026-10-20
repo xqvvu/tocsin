@@ -326,7 +326,7 @@
 | SEC-16 | 读取层不复核存量脱敏 | security lane（第 23 轮） | — | shipped | #176 | 与 SEC-10 同一修复；`intake.helpers` 的 raw payload 读取路径按 SEC-18 在入库时已值形态脱敏 |
 | SEC-17 | providerMetadata 入库/出站前无统一脱敏兜底 | security lane（第 25 轮） | 24 | shipped | #180 | 第 27 轮随 SEC-7 落地：`redactEventRecord` 在读取边界对 providerMetadata 走 `redactJsonValue`（key + 值形态），grafana/alertmanager `externalURL` 的 userinfo 被投影；存储仍为原文（决策已接受） |
 | SEC-18 | raw payload 字符串叶子不做值形态扫描 | security lane（第 25 轮） | 22 | shipped | #176 | `redactJsonValue` 对字符串叶子应用 `redactCredentialText`；parser 仍读取原值，解析/匹配/去重语义不变 |
-| SEC-19 | 脱敏正则二次复杂度可被 Webhook 触发 | security lane（第 31 轮） | 24 | candidate | — | **HIGH（第 32 轮质量车道复核；原记 MEDIUM）**：`SENSITIVE_TEXT_KEY_SOURCE` 的后缀分支 `[A-Za-z0-9._-]*` 在每个词边界回溯，40KB 点分词实测 922ms，第 32 轮实测 8KB≈45–60ms、16KB 181ms、80KB 4045ms（平方增长），1MB ≈ 10 分钟 CPU（`packages/core/src/redaction.ts:55-64,260`；调用点 `intake.service.ts:81,195`、`delivery-execution.ts:152`、`log-safety.ts:94`），单进程 HTTP+worker 会失联；`redaction.test.ts` 无 timing/大输入用例；需 EXPERT_PANEL 在有界量词与扫描式实现间裁决，必须带 40KB/≤100ms 性能回归测试且不得缩小脱敏覆盖 |
+| SEC-19 | 脱敏正则二次复杂度可被 Webhook 触发 | security lane（第 31 轮） | 24 | candidate | — | **HIGH（第 32 轮质量车道复核；原记 MEDIUM）**：`SENSITIVE_TEXT_KEY_SOURCE` 的后缀分支 `[A-Za-z0-9._-]*` 在每个词边界回溯，第 33 轮亲自复刻实测 8KB→49.5ms、16KB→124.5ms、40KB→641.5ms、80KB→2533.5ms（平方增长），默认 1MiB webhook 外推 ≈400s CPU（`redaction.ts:55-64,260`；调用点 `intake.service.ts:81,195`、`delivery-execution.ts:152`、`log-safety.ts:94`）。候选 `{1,64}` 实测线性（40KB→6.4ms、1MiB→155ms）但会放弃 >64 字符前缀键的文本匹配，属缩小覆盖、触碰红线；**第 33 轮 EXPERT_PANEL 因配额饥饿未能召开，下一轮第一件事**：在「手写线性扫描器（覆盖不变）」与有界量词间裁决，必须带 40KB/≤100ms 与 1MiB 有界测试 |
 | SEC-20 | `configurationToTomlDocument` 无自防护 | security lane（第 31 轮） | 20 | candidate | — | 当前唯一调用链已 sanitize 且 `include_secrets` 恒 false，无实际泄漏；但函数直接输出 `app_secret`（`packages/core/src/config.ts:184-202`），未来直连 store 会明文导出；AUTO_FIX：断言拒绝未 sanitize 输入 |
 | SEC-21 | `auth.client.ts` 以 type import 引用 `.server` | security lane（第 31 轮） | 18 | candidate | — | 类型导入会被擦除、无运行时泄漏；但违反 AGENTS「`.server` 不得被另一环境导入」字面规则（`apps/console/src/lib/auth.client.ts:4`）；AUTO_FIX：`Auth` 类型移到共享模块 |
 | UI-1 | 列表搜索吞字符与空格、逐键请求 | ui-review（第 23 轮，浏览器实测） | 29 | shipped | #171 | 本地草稿 + 300ms 防抖后才写 URL；`pruneSearch` 保留空格，仅服务端过滤 trim；清除 chip/重置会取消未提交草稿；同时闭环 REQ-78 |
@@ -376,7 +376,7 @@
 | REQ-146 | 补投结果可下钻验证 | requirements lane（第 32 轮） | 25 | candidate | — | 补投只弹数量 toast，DTO 已带 `createdDeliveryIds`（`event-replay-action.tsx:74-79`、`route-replay-prompt.tsx:69-75`、`operations.ts:213-216,248-256`）；结果面板列出新建投递链接 + 按路由/事件过滤链接 |
 | Q-42 | 空 severity 列表的加急语义三层不一致 | quality lane（第 32 轮） | 26 | candidate | — | **MEDIUM，需 EXPERT_PANEL**：schema 允许 `severities: []`（`feishu/schema.ts:125`），触发层按「不限级别」呼叫（`oncall.service.ts:155-160`），DTO 投影却映射为 `["critical"]`（`destination.helpers.ts:194-205`），说明面板据此给出相反原因（`urgent-ping-explanation.ts:74-79`）；表单把空选择规范为 `["critical"]`，导入配置可绕过；需裁决「规范化/拒绝/不限」三者之一 |
 | Q-43 | 损坏 JSON 会毒死接入与 worker 热路径 | quality lane（第 32 轮） | 25 | candidate | — | MEDIUM：`rule_json`/`matcher_json`/`config_json` 严格解析（`route.helpers.ts:13,23`、`suppression.helpers.ts:15`、`destination.helpers.ts:34-35`），且位于 `routes.list()`、enqueue/claim 事务内（`intake.service.ts:91`、`delivery.repository.ts:97,248,320-326`）；一行损坏会 500 或整批回滚；需失败策略切片，Q-5 的超集 |
-| Q-44 | 路由证据敏感 labelKey 脱敏分支无测试 | quality lane（第 32 轮） | 22 | candidate | — | `redactRouteMatchResults` 的 `labelKey` 分支（`redaction.ts:226-229`）全无用例；删除后 core 60 条测试仍绿，而 `{authorization:"plain-secret"}` 会原样显示；AUTO_FIX：正反例各一条 |
+| Q-44 | 路由证据敏感 labelKey 脱敏分支无测试 | quality lane（第 32 轮） | 22 | shipped | #202 | `redactRouteMatchResults` 的 `labelKey` 分支（`redaction.ts:226-229`）此前无用例；新增凭据 labelKey 隐藏 actual、普通 labelKey 保留并继续值形态脱敏两条用例，变异验证通过 |
 | Q-45 | OncallExecution 两个 catch 分支无测试 | quality lane（第 32 轮） | 21 | candidate | — | `oncall-execution.ts:106-122` 的 DomainValidationError/未知错误分支无覆盖；现有 worker 测试未 claim 到会抛错的 ping；AUTO_FIX：两条执行/worker 用例 |
 | Q-46 | #171 防抖尾随空格与卸载取消无测试 | quality lane（第 32 轮） | 21 | candidate | — | `operation-filters.tsx:553-561,594-604` 的用途是保留尾随空格并取消未提交草稿，但测试无尾随空格、无 `unmount()`、无 fake timers（`operation-filters.test.tsx:130-178`）；AUTO_FIX |
 
@@ -398,10 +398,11 @@
 
 ## 下一轮优先项
 
-0. **SEC-19（24，第 32 轮升级 HIGH）** 脱敏正则二次复杂度交 EXPERT_PANEL：有界量词
-   vs 扫描式实现，必须带 40KB/≤100ms 性能回归且不缩小脱敏覆盖。**Q-42（26）** 空
+0. **SEC-19（24，第 32 轮升级 HIGH；第 33 轮面板因配额饥饿未召开）** 脱敏正则二次
+   复杂度交 EXPERT_PANEL：手写线性扫描器（覆盖不变）vs 有界量词（会缩小 >64 字符前缀
+   键的覆盖，触碰红线）。必须带 40KB/≤100ms 与 1MiB 有界性能回归。**Q-42（26）** 空
    severity 的加急语义交 EXPERT_PANEL：规范化 / 拒绝 / 视为不限，需同时对齐 schema、
-   触发、DTO 投影与说明面板。
+   触发、DTO 投影与说明面板。下一轮开局即启动专家，避免再次被配额饥饿拖垮整轮。
 1. **REQ-138（28）** 通知目标覆盖率计入告警源启停（REQ-129 的镜像）；**REQ-135（28）**
    事件详情按路由显示投递结果；**REQ-137（28）** 告警源解析器变更确认。
 2. **REQ-125/130/131/136/139/140（27）** 共享密钥显式清除、补投包含已静默目标、失败
@@ -424,10 +425,10 @@
 9. **docs-drift 批次**：第一批 DOC-49/23/24/37/43/46/47/50/51（发布 gate、README、
    抑制 PRD 五状态、post-MVP 过期范围）；第二批 DOC-36/48/53/54/55/56/57/58（状态头、
    ADR 版本、无 importer 的 accessor）。建议拆两个 `docs:` PR；DOC-52 可关闭。
-10. **车道轮转（第 33 轮）**：`requirements` 必跑 + `ui-triage`；第 32 轮已完成
-    `requirements` + `quality`，下一轮从 **`architecture`** 继续（第 28 轮后未跑），
-    之后 `release-infra`。`ui-triage` 第 32 轮判定 `defer`，硬性最晚
-    **2026-10-22 07:56 CST**；期间若再合入 ≥2 个行为性 UI 改动则提前触发。
+10. **车道轮转（第 34 轮）**：`requirements` 必跑 + `ui-triage`；第 33 轮
+    `requirements`/`architecture` 均因配额饥饿被终止、无产出，下一轮重跑
+    **`architecture`**（仍未跑完），之后 `release-infra`。`ui-triage` 第 33 轮判定
+    `defer`，硬性最晚 **2026-10-22 07:56 CST**；期间若再合入 ≥2 个行为性 UI 改动则提前触发。
 11. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 12. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。
