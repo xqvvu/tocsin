@@ -1,5 +1,10 @@
 # 下一轮工作决策备忘（Next Round Decision Memo）
 
+> **状态：已过期存档（2026-10-20）。** 基线 `2f48153` 已落后 main 120+ 提交，正文中的
+> S0 脱敏、registry audit、变量面板 D2/D5 等缺口均已交付。本文只保留历史决策背景，
+> **不要按 §3 直接执行**；当前待办以 `docs/planning/iteration-backlog.md` 与
+> `docs/planning/iteration-log.md` 为准。
+
 - 基线：`origin/main` @ `2f48153`（第 9 轮迭代合并后）；工作树由自主迭代 routine 按轮重建，
   见 `docs/planning/iteration-log.md`
 - 状态校正（2026-10-18）：S0 已由 `a460a6f` 修复（`config-portability.ts:358-370` 的穷尽

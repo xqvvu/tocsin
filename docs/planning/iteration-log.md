@@ -2,6 +2,111 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 40 轮）
+
+- 时间：2026-10-20 17:24 – 18:30 CST。
+- 基线：本轮开始时 `origin/main` @ `1e95925`；合入后 `origin/main` @ `5c34ac2`（#220）。
+- 类型：非 full-audit（backlog 有大量 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` + `docs-drift`（第 39 轮预承诺轮转）；`ui-triage`
+  判定 `review_now` 后追加 `ui-review`。
+- `ui-triage`：**`review_now`** —— 距上次真实浏览器评审仅约 3 小时（48h 信号未中），但自
+  14:27 起 UI 路径合并 3 个（#211、#214、#217，达到 ≥3 强信号），未解决 UI 发现 13 条
+  （≥2 强信号），且两个行为性 UI 变更均无浏览器验证记录；第 39 轮预承诺的「再合入 1 个
+  UI 合并即触发」已命中。
+- `ui-review`：本轮执行完整真实浏览器评审（隔离 6190 实例 + 全新临时库，`/setup` 创建
+  文档凭据）。确认 UI-3/4/6/8/14/17/18/19；推翻「静默排序跨页失效」假设（`list` 返回
+  全部规则、客户端分页，排序是全局的）；#211 编辑目标流程通过（加载失败 / 目标已删除 /
+  390px 均可用）。新发现两条：事件详情投递健康徽标忽略 pending/suppressed；共享 Dialog
+  关闭按钮硬编码英文 `Close`，错误态透出 `Failed to fetch`。
+- `last_ui_review_at`：2026-10-20 17:57 CST（完整真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `quizzical-goldstine-5f5bb6`。结束后删除并发锁。
+
+### 本轮交付
+
+- PR #220 `fix(console): localize route match evidence and let badges wrap` ——
+  **UI-17（26）**。
+  - severity/status 的 `actual` 复用 `common.severity.*` / `common.alertStatus.*`，
+    中文界面不再出现 `critical/firing` 等英文枚举。
+  - 徽标高度自适应并允许换行，去掉 `truncate`，长证据不再只能 hover。
+  - `routeChecks.label` / `labelMissing` 去掉重复的「标签 / label」前缀。
+  - 新增 5 条组件测试；更新两处共用该组件的既有断言；PRD
+    `docs/prd/route-match-check-localization.md`。
+  - 验证：`vp check` 0 errors（12 条既有 warning）；`vp run -r test` 129 files / 706
+    tests；`vp run -r build` 通过；CI success（2m8s）。
+
+### 专家发现
+
+**requirements（需求发现，新增 REQ-170..172）**
+
+- REQ-170（29）：通知目标停用确认披露自动加急影响。停用确认只讲路由与排队投递，
+  但目标开启自动加急时会同时停掉电话呼叫；静默表单已有等价披露
+  （`features/suppressions/model/urgent-impact.ts:30-47`），停用确认缺失
+  （`destination-actions.tsx:124-131`、`zh-Hans.json:279-283`）。纯前端。
+- REQ-171（28）：补投预览披露将触发的自动加急呼叫。补投预览 DTO 无加急字段
+  （`packages/core/src/operations.ts:196-255`），确认框无警告
+  （`route-replay-prompt.tsx:100-112`），实操可能未经同意重新呼叫全员。
+- REQ-172（27）：告警源/通知目标列表显示生效中的静默引用。两页都不加载静默规则，
+  排障需跳页确认（`sources-page.tsx:25-27`、`destinations-page.tsx:47-60`）。
+- REQ-164 更优切片：仓储已精确返回 `RouteReferenceCleanupResult { updated, deleted }`
+  （`route.interface.ts:28-31`、`route.repository.ts:111-169`），但 service 丢弃返回值
+  （`source.service.ts:76-85`、`destination.service.ts:120-129`）；建议删除结果携带
+  `routeCleanup`，确认框前端推导、结果 toast 用服务端计数校准。
+
+**docs-drift（文档漂移）**
+
+- DOC-49（高）：RC checklist 概览仍称「只差 E2E 接入 CI」
+  （`docs/release/mvp-rc-checklist.md:18-21,104`），实际还有 dedupe cleanup（`:167`）、
+  provider fixtures（`:173`）、多版本 payload（`:174`）三类未勾选 gate，会误导发布就绪判断。
+- DOC-24/37：抑制 PRD 仍承诺不存在的 `preview`（`alert-suppression.md:238`），AC 全未勾选
+  （`:275-294`），仍称四状态（`:43,338`）；代码已五状态且 preview 属于 REQ-25。
+- DOC-47/25：post-MVP 方向 2 的缺口解释与多条件编辑均已交付
+  （`route-match-gaps.ts:57`、`route-forms.tsx:284,583`），retention 已决定不自动清理。
+- DOC-46/41、DOC-43/45、DOC-23/51/6、DOC-22/36：方向 5/6 缺状态头、README 能力/结构/
+  Roadmap 过期、架构文件树与工厂清单过期、`next-round.md` 基线落后 124 提交。
+- DOC-57、DOC-58 建议关闭（前者是死代码而非文档漂移，后者措辞已正确）。
+
+**ui-review（真实浏览器）**
+
+- UI-17（26，本轮交付）：见上。
+- UI-14（25）：静默规则启停仍单击即生效（`suppressions-section.tsx:302-313`），
+  与源/路由/目标停用确认不一致；误点会立即恢复告警并可能触发呼叫。
+- UI-19（25）：事件详情「下次」用 `format="time"` 显示成 `00:00`
+  （`event-detail-deliveries-table.tsx:70-75`）；最近错误列被截断（`:77-79`）；
+  重试后 UI 停在 pending 不刷新（`delivery-retry-button.tsx:34-44`）。
+- UI-18（24）：390px 下路由匹配表格实际不可用（滚动容器 `clientHeight=2px`，
+  `event-detail-view.tsx:18,45-62`）。
+- 新增 UI-20（26）：事件详情投递健康徽标只统计 succeeded/failed，有 pending/suppressed
+  时显示「成功 0 / 失败 0」（`event-detail-summary.tsx:52-57`），与旁边「通知投递 2 条」
+  矛盾。
+- 新增 UI-21（22）：共享 Dialog 关闭按钮硬编码英文 `Close`
+  （`components/ui/dialog.tsx:63`），编辑目标加载失败直接显示 `Failed to fetch`。
+- UI-4/6/8/3/15 复核仍成立，均属低成本文案/属性批次。
+
+### EXPERT_PANEL
+
+- 发布评估：3 位专家一致 APPROVE。
+  - 发布经理：beta.25..main 仅 1 个用户可见提交（#220）；建议递增预发布计数器。
+  - 阻断审计：6/6 PASS（main CI success、0 open PR、无阻塞回归、无 migration、
+    锁文件未变、tag 未占用）；REL-13（LICENSE）按既有裁决不阻断。
+  - 运维/回滚：纯前端 + i18n + docs，Dockerfile/compose/lock/migration 零改动；
+    升级换镜像，回滚换回 beta.25 镜像，无需恢复数据库。
+  - 版本：`0.1.0-beta.26`；tag `v0.1.0-beta.26`；镜像
+    `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.26`（amd64+arm64）；
+    回滚镜像 `0.1.0-beta.25`。
+
+### 下一轮优先项
+
+1. **REQ-170（29）** 目标停用确认披露自动加急；**REQ-164（29）** 删除级联影响
+   （服务端计数 + 确认框）；**REQ-171/172（27-28）**。
+2. **UI-14（25）** 静默启停确认；**UI-20（26）** 投递健康徽标补齐状态；
+   **UI-19/18** 投递列与 390px 布局；**UI-21** 对话框本地化。
+3. **DOC-49（高）** RC checklist 四类 gate 概览；DOC-24/37、DOC-43/45、DOC-22/36
+   文档批次。
+4. 车道轮转：`requirements` + `ui-triage` 必跑，非必跑车道下一轮 **`security-exposure`**。
+5. 质量项 **Q-43/Q-47/Q-45/Q-46**；**ARCH-36..40** 低风险批次。
+
 ## 2026-10-20（第 39 轮）
 
 - 时间：2026-10-20 16:42 – 17:35 CST。
