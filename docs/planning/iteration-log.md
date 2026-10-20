@@ -5,7 +5,7 @@
 ## 2026-10-20（第 42 轮）
 
 - 时间：2026-10-20 20:14 – 21:20 CST。
-- 基线：本轮开始时 `origin/main` @ `25b8227`；合入后 `origin/main` @ 待填（#230）。
+- 基线：本轮开始时 `origin/main` @ `25b8227`；合入后 `origin/main` @ `86ddfb5`（#230）。
 - 类型：非 full-audit（backlog 有大量 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为
   第 1 轮（2026-10-18 13:30 CST）。
 - 车道：`requirements` + `ui-triage` + `security-exposure`（第 41 轮预承诺轮转）；
@@ -69,6 +69,19 @@
   默认焦点在「保留通知目标」，取消后目标保持启用、焦点回到停用按钮。
 - #220 风险点（未实测）：无 `condition` 的历史快照回退到英文 `check.detail`
   （`route-match-check-badges.tsx:101`），中文界面可能出现英文证据。
+
+### EXPERT_PANEL 与发布
+
+- 发布评估：3 位专家一致 APPROVE。
+  - 发布经理：beta.27..main 仅 1 个用户可见提交（#230）；建议递增预发布计数器。
+  - 阻断审计：6/6 PASS（main CI success `86ddfb5`、0 open PR、最近 8 次 main 全绿、
+    无 migration、锁文件未变、`v0.1.0-beta.28` 未占用）。
+  - 运维/回滚：Dockerfile/compose/Justfile/scripts 零改动，无 schema 变更；
+    升级换镜像，回滚换回 beta.27 镜像，无需恢复数据库。
+- 版本：`0.1.0-beta.28`；PR #231 `chore(release): v0.1.0-beta.28`（待合并）；
+  tag `v0.1.0-beta.28`；镜像
+  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.28`（linux/amd64 + linux/arm64）；
+  回滚镜像 `0.1.0-beta.27`；用户可见依据为 #230 投递健康徽标补齐全部状态。
 
 ### 下一轮优先项
 
