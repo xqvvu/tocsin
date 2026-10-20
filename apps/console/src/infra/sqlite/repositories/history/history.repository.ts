@@ -421,10 +421,12 @@ function countMatchedRoutes(routeMatchesJson: string | null): number {
  * shares this predicate so a page and its `total` cannot disagree.
  *
  * Labels and provider metadata are matched against their stored JSON text, the
- * same way title and message are matched against stored values that are
- * redacted only when projected into a DTO. Raw payloads and headers stay out of
- * scope: they are the only fields that hold credentials verbatim, and matching
- * them would turn search into a secret oracle.
+ * same way title and message are matched: matching uses the raw value, while
+ * the DTO projection still redacts credential-shaped content, and a hit only
+ * reveals that a row exists. Raw payloads and headers stay out of scope: they
+ * are uncurated upstream documents that are only ever displayed as redacted
+ * projections, so matching them would widen that existence check without
+ * helping on-call find an alert by its identity fields.
  */
 function eventSearchPredicate(term: string) {
   const pattern = escapeLikeTerm(term);

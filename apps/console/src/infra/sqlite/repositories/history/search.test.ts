@@ -109,6 +109,11 @@ async function repositoryWithSearchFixtures(): Promise<
       event("event-raw-secret", "fp-raw-secret", "Quiet", "nothing", {
         raw_payload_json: '{"password":"raw-secret-should-not-match"}',
       }),
+      // Labels are stored raw (route matching needs the original value) and
+      // redacted only when projected. Search follows the title/message rule.
+      event("event-secret-label", "fp-secret-label", "Auth", "denied", {
+        labels_json: '{"authorization":"Bearer sekret"}',
+      }),
     ])
     .execute();
 
@@ -340,5 +345,18 @@ describe("history search", () => {
 
     expect(events.total).toBe(0);
     expect(deliveries.total).toBe(0);
+  });
+
+  it("still redacts a sensitive label value in the detail projection", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const page = await repository.listEvents({ q: "sekret" });
+    const detail = await repository.getEventDetail("event-secret-label");
+
+    // Matching uses the stored value, like title and message do, but a hit only
+    // reveals that the row exists.
+    expect(ids(page.items)).toEqual(["event-secret-label"]);
+    expect(page.total).toBe(1);
+    expect(detail?.event.normalized.labels.authorization).toBe("[REDACTED]");
   });
 });
