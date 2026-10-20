@@ -25,6 +25,7 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import type { DestinationListItem } from "#/features/destinations/ui/destination-ui-types";
+import { QueuedDeliveriesNotice } from "#/features/operations/ui/queued-deliveries-notice";
 import type { RouteReferenceImpact } from "#/features/routes/model/route-reference-impact";
 import { useTranslations } from "#/i18n/use-i18n";
 
@@ -140,6 +141,7 @@ export function DestinationActions({
                       destinationName: destination.name,
                     })}
               </AlertDialogDescription>
+              <QueuedDeliveriesNotice scope={{ destinationId: destination.id }} />
               {urgentAutoEnabled ? (
                 <Alert variant="destructive">
                   <RiNotificationOffLine aria-hidden />

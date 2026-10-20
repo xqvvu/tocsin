@@ -19,6 +19,12 @@ type DestinationEditHandler = (destinationId: string) => void;
 // names production ships instead of a test-only mapping.
 const defaultDestinationCatalog = createDefaultDestinationRegistry().toCatalog();
 
+// The queued-delivery count owns its own query-state test; this suite covers
+// the table and the confirmation copy without a query client.
+vi.mock("#/features/operations/ui/queued-deliveries-notice", () => ({
+  QueuedDeliveriesNotice: () => null,
+}));
+
 describe("destinations section table", () => {
   afterEach(() => {
     cleanup();

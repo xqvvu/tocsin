@@ -8,6 +8,12 @@ import type { DestinationSummary, RouteDefinition } from "@tocsin/core";
 import { RoutesSection } from "#/features/routes/ui/routes-section";
 import { AppIntlProvider } from "#/i18n/provider";
 
+// The queued-delivery count owns its own query-state test; this suite covers
+// the table and the confirmation copy without a query client.
+vi.mock("#/features/operations/ui/queued-deliveries-notice", () => ({
+  QueuedDeliveriesNotice: () => null,
+}));
+
 const noop = () => {};
 
 const route: RouteDefinition = {

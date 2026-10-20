@@ -18,6 +18,12 @@ vi.mock("#/lib/browser", () => ({
   urlFromCurrentOrigin: (path: string) => `http://localhost${path}`,
 }));
 
+// The queued-delivery count owns its own query-state test; this suite covers
+// the table and the confirmation copy without a query client.
+vi.mock("#/features/operations/ui/queued-deliveries-notice", () => ({
+  QueuedDeliveriesNotice: () => null,
+}));
+
 describe("sources section table", () => {
   afterEach(() => {
     cleanup();

@@ -721,6 +721,7 @@
   "operations.filters.severity": "严重程度",
   "operations.filters.source": "告警源",
   "operations.filters.status": "状态",
+  "operations.queuedDeliveries.count": "排队中的投递：{count} 条",
   "operations.title": "操作",
   "operations.workerNotice.description": "认领 {claimed} 个，回收卡住 {reclaimed} 个，成功 {succeeded} 个，失败 {failed} 个，等待重试 {retrying} 个",
   "operations.workerNotice.health": "Worker 状态：{state}，最近完成：{lastFinishedAt}",

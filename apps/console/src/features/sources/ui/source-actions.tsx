@@ -22,6 +22,7 @@ import {
   AlertDialogTrigger,
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
+import { QueuedDeliveriesNotice } from "#/features/operations/ui/queued-deliveries-notice";
 import type { RouteReferenceImpact } from "#/features/routes/model/route-reference-impact";
 import type { SourceSummary } from "#/features/sources/ui/source-ui-types";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -153,6 +154,7 @@ export function SourceActions({
                       sourceName: source.name,
                     })}
               </AlertDialogDescription>
+              <QueuedDeliveriesNotice scope={{ sourceId: source.id }} />
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={pending}>
