@@ -2,6 +2,66 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 33 轮）
+
+- 时间：2026-10-20 09:25 – 11:15 CST（严重超出 75 分钟预算，原因是 subagent 车道被配额饥饿）。
+- 基线：`origin/main` @ `12e8393`；本轮交付 PR #202。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `architecture` + `ui-triage`。
+  - `requirements` 与 `architecture` 在 100 分钟后仍停留在读取基线阶段、无任何发现返回，
+    按「单车道超过约 30 分钟无结果即停止」的记忆规则被终止；本轮无新增需求候选与架构发现，
+    留待下一轮重跑（下一轮仍从 `architecture` 继续轮转）。
+  - `ui-triage` 正常返回：**`defer`**。
+- `ui-triage` 理由：距上次真实浏览器评审（07:56）仅约 90 分钟；自那以后只有 1 个行为性 UI
+  合并（#198 时区修复）且有隔离实例浏览器验证记录；8 条未解决 UI 发现全部来自上一轮且已排期；
+  硬性最晚 **2026-10-22 07:56 CST**，提前触发条件为再合入 ≥2 个行为性 UI 改动。
+- `last_ui_review_at`：2026-10-20 07:56（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `funny-boyd-c81eb8`。
+
+### 专家发现
+
+- **SEC-19（HIGH，复核）**：亲自复刻同一正则实测，确认超线性：
+  8KB→49.5ms、16KB→124.5ms、40KB→641.5ms、80KB→2533.5ms；默认
+  `TOCSIN_MAX_WEBHOOK_BYTES` 为 1 MiB（`apps/console/src/env.ts:33-37`），外推 CPU 占用
+  约 400 秒以上。安全专家在被终止前确认核心攻击面：parser 归一化字段原样入库
+  （`intake.service.ts:113`），读取/发送边界再跑慢正则。
+- **候选修复实测**：把后缀分支改为 `[A-Za-z0-9._-]{1,64}` 后为线性
+  （40KB→6.4ms、256KB→37.7ms、1MiB→154.9ms），但会放弃「>64 字符前缀 + 敏感后缀」的
+  文本键匹配，属于**缩小脱敏覆盖**，触碰第 5 步红线；因此不能由编排者直接实施，
+  必须由下一轮 EXPERT_PANEL 在「手写线性扫描器（覆盖不变）」与有界量词之间裁决。
+- **EXPERT_PANEL 未能召开**：并发启动的 3 位专家（安全/产品/evaluator）与本轮车道一样被
+  配额饥饿，安全专家运行 67 分钟只返回「已确认攻击面、正在做语义差分」，其余未返回；
+  为避免继续烧配额已全部终止。本轮**没有**做出 SEC-19/Q-42 裁决，两项保持 candidate。
+- 需求/架构车道无产出；backlog 既有候选未被重复发现。
+
+### 本轮交付
+
+- PR #202 `test(core): cover label-key credential redaction in route evidence` —— **Q-44**。
+  - `redactRouteMatchResults` 的 `labelKey` 分支此前无测试：删除后 core 60 条测试仍绿，
+    `{authorization:"plain-secret"}` 会原样显示（`redaction.ts:226-229`）。
+  - 新增两条用例：凭据形态 labelKey（`authorization`/`apiToken`）隐藏 actual；普通
+    labelKey（`service`）保留 actual，且仍对其值做形态脱敏（`token=upstream-secret` →
+    `token=[REDACTED]`）。
+  - 变异验证：临时删除 `labelKey` 分支后新增用例失败，恢复后通过。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 123 files / 666 tests；
+    `vp run -r build` 通过。
+
+### 发布（第 9.5 步）
+
+- 本轮不发布：唯一交付是测试覆盖，无用户可见变更；按门槛「纯 test 变更不触发发版」跳过。
+
+### 下一轮优先项
+
+1. **SEC-19（HIGH）EXPERT_PANEL 第一件事**：3 位专家必须在轮次开始后尽早启动；裁决
+   「手写线性扫描器」vs「有界量词」，任何方案都不得缩小脱敏覆盖，并必须带 40KB ≤100ms
+   性能回归与 1MiB 有界测试。若车道再次被配额饥饿，记录并保持 candidate，不自行降级修复。
+2. **Q-42（26）EXPERT_PANEL**：空 severity 的加急语义（规范化/拒绝/视为不限）。
+3. 重跑 `requirements` + `architecture` 车道（本轮因饥饿无产出）。
+4. REQ-138（28）、REQ-135（28）、REQ-137（28）；REQ-125/130/131/136/139/140/141（27）。
+5. Q-43（25）、Q-45/Q-46、SEC-13、SEC-20/21 的 AUTO_FIX 批次。
+
 ## 2026-10-20（第 32 轮）
 
 - 时间：2026-10-20 08:25 – 08:53 CST。
