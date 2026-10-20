@@ -2,6 +2,98 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 44 轮）
+
+- 时间：2026-10-21 00:25 – 01:05 CST。
+- 基线：本轮开始时 `origin/main` @ `450005d`；需求合入后 @ `63f77ff`。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 `review_now`，
+  第三个并发名额给 `ui-review`（第 43 轮预承诺的 `docs-drift` 也同时运行，
+  三者并发未超过 3）。
+- `ui-triage`：**`review_now`** —— 距上次真实浏览器评审约 3h17m（未达 48h），
+  自 21:10 起 UI 路径合并 2 个（未达 3），但 13 条未解决 UI 发现（≥2）且两次 UI
+  合并均无浏览器验证，强信号成立。
+- `ui-review`：隔离实例 `http://localhost:6193` + `/tmp/tocsin-ui-r44` 全新库，
+  创建 owner、告警源并发送 2 条真实 webhook，切换中文，在 1280×900 与 390×844
+  实测；dev server 已停止。**独立推荐 REQ-164 为本轮最佳切片**（唯一不可逆数据
+  丢失场景），与 orchestrator 选题一致。其余发现：UI-14 代码确认、UI-21 浏览器
+  确认中文界面 DOM 仍为英文 `Close`、UI-19 无数据未复现、UI-18 空数据下 390px
+  无整页横向溢出（降级待验证）。
+- `docs-drift`：12 组仍过期的断言，最高价值为 README/RC 清单漏列
+  Integrations/Suppressions（`README.md:34-36`、`mvp-rc-checklist.md:27-28`）、
+  抑制 PRD 仍写四状态（`alert-suppression.md:43,338`）、post-MVP 方向 5 仍写成
+  未做（`post-mvp-planning.md:156-174`）、架构文件树与 ADR 版本过期。
+  详见下方「专家发现」。
+- `requirements`：新增 REQ-175..179 五条候选（见 backlog），最高分
+  REQ-175 事件/投递证据包下载（29）、REQ-176 事件投递表抑制原因（29）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `agitated-euclid-8e60b6`。
+
+### 本轮交付
+
+- PR #236 `feat(console): disclose route cascade before deleting sources and destinations` ——
+  **REQ-164（29）**。
+  - 新增纯函数 `routeReferenceImpact`（`features/routes/model/route-reference-impact.ts`），
+    按 `rule.sourceIds` / `destinationIds` 计算「将连带删除 N 条路由」与「将收窄 M 条路由」；
+    判定与仓储 `removeSourceReference`/`removeDestinationReference` 一致，重复 id 按仓储
+    语义计为删除。
+  - 删除告警源/通知目标确认框分别展示 destructive Alert（整条删除）与普通 Alert（仅收窄）；
+    无影响时不渲染。
+  - 中英文文案同步；新增中文 PRD `docs/prd/source-destination-delete-cascade-impact.md`。
+  - 单元测试覆盖删除/收窄/无影响/重复 id；两个列表页组件测试覆盖确认框与回调。
+  - 验证：`vp fmt --write`、`vp check` 0 errors（12 条既有 warning）、
+    `vp run -r test` 132 files / 721 tests、`vp run -r build` 通过；CI success；rebase 合并。
+- 发布评估与镜像：见下文。
+
+### 专家发现
+
+- `requirements`：
+  - REQ-175 证据包下载（29）：两个详情页无导出出口，DTO 数据齐全，`downloadTextFile`
+    已存在；纯前端。
+  - REQ-176 事件投递表抑制原因（29）：DTO 已有 suppressionId/reason，UI 未用；
+    文档 `alert-suppression.md:117` 明确要求。
+  - REQ-177 保留窗口结束时间（28）、REQ-178 路由目标列展开（27）、
+    REQ-179 模板载荷体积预算（25）。
+- `docs-drift`（均可直接改写，留待下轮 docs 批次）：
+  - README/RC 清单漏列 Integrations/Suppressions、worker 状态缺 `suppressed`
+    （`README.md:34-36`、`mvp-rc-checklist.md:27-28,41-42`）。
+  - 抑制 PRD 仍写四状态（`docs/prd/alert-suppression.md:43,289,338`）；`preview`
+    oRPC 被写成已交付（`:238`），实际契约无此 procedure。
+  - post-MVP 方向 5 仍写成未做（`docs/prd/post-mvp-planning.md:156-174`），
+    实际 CI、Docker smoke、发布文档、脱敏日志均已落地，仅 E2E 未接 CI。
+  - 方向 2 仍称缺「投递缺口解释」（`:214-215`），实际已实现
+    （`route-match-gaps.ts:57`、`event-detail-route-gaps.tsx`）。
+  - 架构文件树/工厂清单过期（`frontend-architecture.md:17-19,37-48`、
+    `application-container.md:35,50,57`）；ADR 0008 版本号过期
+    （`0008-migrate-to-vite-plus.md:16,19,20`）。
+  - 未发现新的 `xqvvu/vane` 仓库链接残留；ACR 镜像坐标属发布目标，不应改。
+- `ui-review`：REQ-164 最高优先；UI-14/UI-21 仍有效；UI-19/UI-18 本轮无法复现，
+  保持待验证。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项；REQ-164 为纯前端只读投影，不触碰 schema/投递/auth 语义。
+
+### 发布评估与镜像
+
+- 本轮合入 1 个用户可见功能（#236），满足发布评估的「有用户可见变更」前提；
+  评估结论见下方独立记录（若未发布则写原因）。
+- `0.1.0-beta.29` 多平台镜像重试：`docker buildx imagetools inspect docker/dockerfile:1`
+  仍报 `registry-1.docker.io ... EOF`，Docker Hub 不可达，构建无法开始；tag 与
+  Release 保留，下一轮继续重试（不 force、不删 tag）。
+
+### 下一轮优先项
+
+1. **REQ-175（29）** 证据包下载；**REQ-176（29）** 事件投递表抑制原因；
+   **REQ-171（28）** 补投加急披露；**REQ-172（27）** 列表静默引用。
+2. docs-drift 批次：README/RC 清单、抑制 PRD 状态、post-MVP 方向 2/5、
+   架构文件树与 ADR 版本（建议拆 `docs:` PR）。
+3. **UI-14（25）** 静默启停确认；**UI-21（22）** Dialog `Close` 本地化（浏览器已确认）。
+4. 重试 `0.1.0-beta.29` 镜像推送；验证两个平台 digest。
+5. 无新的 `planned` 项；`blocked-autonomous` 项（LICENSE 等）继续不自动处理。
+- Obsidian 同步：沿用第 43 轮发现，vault 中无 Tocsin 既有笔记，本轮**同步已跳过**。
+
 ## 2026-10-20（第 43 轮）
 
 - 时间：2026-10-20 22:25 – 2026-10-21 00:30 CST。
