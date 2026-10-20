@@ -162,7 +162,7 @@
 | REQ-52 | 模板 `tocsin.eventUrl` 生产恒为空 | requirements lane | 28 | candidate | — | 所有渲染调用点未传 `eventUrl`，且无公开访问地址配置；建议新增 `TOCSIN_PUBLIC_URL`；`template.ts:369-399`、`feishu/payload.ts:18`、`destination.service.ts:299` |
 | REQ-53 | 加急记录缺触发人/呼叫时间/下次重试 | requirements lane | 29 | shipped | #140 | 触发方式下显示 `initiatedBy`；新增呼叫时间/下次重试两列；PRD `docs/prd/oncall-ping-audit-fields.md` |
 | REQ-54 | 告警源覆盖无法区分无路由与仅停用路由 | requirements lane | 27 | candidate | — | Source 侧无 `disabledRouteCount`，0 条统一显示「未匹配路由」；`source-route-coverage.ts:11-27`、`source-route-coverage-cell.tsx:22-30` |
-| REQ-55 | 全静默事件摘要未计入已抑制 | requirements lane | 27 | candidate | — | 摘要只传 succeeded/failed；统计函数已有 suppressed；`event-detail-summary.tsx:43-49`、`event-detail-stats.ts:3-15` |
+| REQ-55 | 全静默事件摘要未计入已抑制 | requirements lane | 27 | shipped | #230 | 第 48 轮复核：`event-detail-stats.ts:5-19` 已统计全部五个状态（含 suppressed），`event-detail-summary.tsx:75-85` 渲染所有非零状态；UI-20（#230）已覆盖该行为 |
 | REQ-56 | 被抑制投递无逐项匹配说明 | requirements lane | 25 | candidate | — | PRD 故事 26；核心 matcher 已有 checks，但未投影；建议只读读时重算并标注口径；`suppression.ts:134-141,155-186`、`delivery-suppression-notice.tsx:20-60` |
 | ARCH-15 | oRPC `runDeliveryWorker` 在 router 内编排 worker | architecture lane | 23 | candidate | — | `server/orpc/features/operations/router.ts:64-77`；建议下沉 worker/health service |
 | ARCH-16 | auth 复杂表单仍在 route-colocated 文件 | architecture lane | 22 | candidate | — | `routes/-login-form-impl.tsx:27-173`、`routes/-setup-form-impl.tsx:23-207`；应迁 `features/auth/{model,ui}` |
@@ -352,7 +352,7 @@
 | UI-11 | 静默停用按钮显示原始 i18n key | ui-review（第 27 轮，浏览器实测） | 24 | shipped | #195 | 第 31 轮浏览器复核症状为未插值占位符「关闭「{suppressionName}」」；启停按钮传入 `suppressionName`，新增可访问名称测试 |
 | UI-12 | 空态文案与实际交互不符 | ui-review（第 27 轮，浏览器实测） | 23 | candidate | — | Sources/Routes 称「右侧会保留新建表单」，实际「新增」打开对话框（`zh-Hans.json:944,822`）；第 31 轮浏览器复核 Sources 可复现；轮换 Token 后仍提示「创建成功」（`source-token-notice-panel.tsx:35,53,70`） |
 | UI-13 | 部分阻断的告警源覆盖率只在 hover 里可见 | ui-review（第 31 轮，浏览器实测） | 26 | candidate | — | REQ-129 交付后，「1/2 条可投递」仍只显示 secondary「1 条可投递」，阻断信息只在原生 `title`，读屏与触屏都看不到；建议显示「1/2 可投递」或加警示图标 + 可视隐藏文本（`source-route-coverage-cell.tsx:8-24`、`zh-Hans.json:964`）；成本约 20 分钟 |
-| UI-14 | 静默规则启停缺少与其他配置一致的确认 | ui-review（第 31 轮，代码+浏览器） | 25 | candidate | — | #187 已给告警源/路由/目标的「启用→停用」加影响确认，但静默规则仍单击立即启停（`suppressions-section.tsx:296-310`）；停用静默会立即恢复告警/可能触发呼叫；第 36、47 轮浏览器复现（第 47 轮实测点击即发出 `setEnabled`，全量静默规则无二次确认），建议复用同一 AlertDialog 模式说明影响窗口；截图 `/tmp/tocsin-r47-suppression-toggle-result.png` |
+| UI-14 | 静默规则启停缺少与其他配置一致的确认 | ui-review（第 31 轮，代码+浏览器） | 25 | shipped | #251 | #187 已给告警源/路由/目标的「启用→停用」加影响确认，但静默规则仍单击立即启停（`suppressions-section.tsx:296-310`）；停用静默会立即恢复告警/可能触发呼叫；第 36、47 轮浏览器复现（第 47 轮实测点击即发出 `setEnabled`，全量静默规则无二次确认），建议复用同一 AlertDialog 模式说明影响窗口；截图 `/tmp/tocsin-r47-suppression-toggle-result.png` |
 | REQ-119 | 接入去重窗口可配置 | requirements lane（第 28 轮） | 27 | candidate | — | Settings 增去重窗口（1–60 分钟），intake 与补投共用；`intake.service.ts:56`、`event-replay.service.ts:35` 硬编码 5 分钟，`settings.repository.ts:20-26` 无此键 |
 | REQ-120 | 投递最大尝试次数可配置 | requirements lane（第 28 轮） | 27 | candidate | — | Settings 增 1–10 次并入队传值；`delivery.repository.ts:90` 默认 3，`EnqueueDeliveriesInput.maxAttempts` 已存在（`delivery.interface.ts:81`）但无生产调用点传入 |
 | REQ-121 | Source Token 轮换宽限期 | requirements lane（第 28 轮） | 24 | candidate | — | 轮换后旧 token 保留 0/15/60 分钟；`source.service.ts:66-73` 直接覆盖、`schema.ts:44` 单列、`zh-Hans.json:907` 承认切换期断流；需 forward-only 迁移 + EXPERT_PANEL |
@@ -447,9 +447,12 @@
 | REQ-187 | 通知目标签名密钥显式清除 | requirements lane（第 46 轮） | 27 | candidate | — | AGENTS 要求 preserve/replace/clear，实际只有前两者（`destination-form.ts:521-533`、`destination.service.ts:94-114`、`configuration-commands.ts:63-69`）；新增 `clearSigningSecret` 位，合并后删除 `signSecret` 与 ref；与 REQ-125/REQ-71 同一模式 |
 | REQ-188 | 可移植配置编辑器未保存草稿保护 | requirements lane（第 46 轮） | 26 | candidate | — | Settings 草稿无基线/dirty（`use-settings-workspace.ts:35-37,50-58,70-95`），路由无 blocker；加 `useBlocker` + `beforeunload`，Tab 切换不提示；与 REQ-92（对话框）、REQ-143（Token）边界不同 |
 | REQ-189 | 取消尚未发送的排队投递 | requirements lane（第 46 轮） | 24 | candidate | — | 无取消终态（`delivery.ts:5-11`），worker 每 5 秒领取 pending（`delivery-worker-runner.ts:50-53`）；需 EXPERT_PANEL 裁决新增 `cancelled` vs 复用 `suppressed`；原子条件更新，无迁移 |
-| REQ-190 | 删除静默规则前的恢复影响确认 | requirements lane（第 47 轮） | 27 | candidate | — | 删除确认只说明「后续不再暂停」（`zh-Hans.json:995`），不提示规则当前是否生效、删除后会立即恢复投递并可能重新触发自动加急；复用 `suppressionStateAt`（`packages/core/src/suppression.ts:79-96`），active 时加 destructive Alert；非 active 保持现状；纯前端 | 
+| REQ-190 | 删除静默规则前的恢复影响确认 | requirements lane（第 47 轮） | 27 | shipped | #251 | 删除确认只说明「后续不再暂停」（`zh-Hans.json:995`），不提示规则当前是否生效、删除后会立即恢复投递并可能重新触发自动加急；复用 `suppressionStateAt`（`packages/core/src/suppression.ts:79-96`），active 时加 destructive Alert；非 active 保持现状；纯前端 | 
 | REQ-191 | 事件补发指定目标与已存在投递的显式重发 | requirements lane（第 47 轮） | 22 | candidate | — | 补发只按事件全量入队且 `skipExistingForEvent: true`（`event-replay.service.ts:55-75`），修好单个目标后无法只补给它、已成功目标无法重发；命令增 `destinationIds` + `force`；语义变更（可能重复呼叫）需 EXPERT_PANEL |
 | REQ-192 | 运维列表查询失败的就地重试 | requirements lane（第 47 轮） | 22 | candidate | — | 列表用 `useSuspenseQuery`（`events-page.tsx:33`、`deliveries-page.tsx:53`），失败时整页被 `_dashboard.tsx:49,82` 错误页替换，筛选/分页上下文丢失；为列表壳提供 error+retry 或页面内 error boundary；无 server 改动 |
+| REQ-193 | 投递详情展示静默判定逐项证据 | requirements lane（第 48 轮） | 28 | candidate | — | PRD 承诺 suppressed checks 但 UI 从不消费：core 已返回 `SuppressionMatchResult.checks`（`packages/core/src/suppression/suppression.ts:165-170,186-218`），投递详情只渲染原因快照（`delivery-suppression-notice.tsx:18-65`、`delivery-detail-view.tsx:13-63`）；用 `evaluateSuppressionMatch` + 现有 `RouteMatchCheckBadges` 按当前规则重算，标注「规则可能已变化」；纯前端只读，不落库；PRD `docs/prd/alert-suppression.md:72,111-121` |
+| REQ-194 | Raw payload 保留天数 0 的语义与确认 | requirements lane（第 48 轮） | 27 | candidate | — | 0 合法（`packages/core/src/config.ts:48`）但表示「下一次 Webhook 后清理所有更早 raw payload/headers」（`intake.service.ts:428-430`、`intake.repository.ts:105-134`），UI 只写「0 到 3650 天」（`settings-preferences-panel.tsx:160-201`）；改为明确语义并在从非 0 改为 0 时 destructive 确认；纯前端 |
+| REQ-195 | 新建通知目标后引导真实测试发送 | requirements lane（第 48 轮） | 27 | candidate | — | 创建成功即关闭对话框，无成功面板也无测试入口（`destination-add-dialog.tsx:79-93`）；测试只在列表行图标（`destination-actions.tsx:70-80`）；新增持久成功面板 + 显式「测试发送」复用 `testDestination`；不自动发送；纯前端 |
 
 ## 发布记录
 
@@ -482,14 +485,14 @@
 
 ## 下一轮优先项
 
-0. **REQ-190（27）** 删除静默规则前的恢复影响确认（与 UI-14 同族）；**REQ-181（27）**
-   删除配置前的级联数量；**REQ-182（27）** 目标测试发送前确认；**REQ-186（28）**
-   设置页从文件导入 TOML/JSON。
+0. **REQ-193（28）** 投递详情静默判定逐项证据（第 48 轮 requirements 首推，复用 core
+   matcher，纯前端只读）；**REQ-181（27）** 删除配置前的事件/投递级联数量（Source/
+   Destination 已有路由数，Route 仍缺）；**REQ-182（27）** 目标测试发送前确认；
+   **REQ-186（28）** 设置页从文件导入 TOML/JSON；**REQ-194/195（27）**。
 1. **SEC-22（27）** endpoint userinfo 密码投影；**SEC-24（25）** 补脱敏 key 形态测试；
    **SEC-13** 精确键 + `sessionId/jwt/signature`；**SEC-25（25）** test/preview 载荷投影。
-2. **UI-14（25）** 静默启停确认（第 47 轮浏览器复现，ui-review 首推）；
-   **UI-22（24）** 编辑面板与分页条重叠（约 30 分钟）；**UI-23（24）** 390px 行操作不可见；
-   **UI-21（22）** 对话框 `Close` 本地化。
+2. **UI-22（24）** 静默编辑面板与分页条重叠（约 30 分钟）；**UI-23（24）** 390px
+   行操作不可见；**UI-21（22）** 对话框 `Close` 本地化。UI-14 已由 #251 交付。
 3. **REQ-147（27）** 通知目标批量连通性自检；**REQ-125/130/131/139/140（27）**
    共享密钥显式清除、补投包含已静默目标、失败投递保留渲染载荷、目标草稿测试发送、
    事件列表批量静默；**REQ-141（27）**；**REQ-151/152（26）**。
@@ -513,10 +516,10 @@
 10. **docs-drift 批次**：第一批 DOC-23/24/37/43/46/47/50/51（README、抑制 PRD 五状态、
     post-MVP 过期范围；DOC-49 已交付 #226）；第二批 DOC-36/48/53/54/55/56/57/58（状态头、
     ADR 版本、无 importer 的 accessor）。建议拆两个 `docs:` PR；DOC-52 可关闭。
-11. **车道轮转（第 47 轮）**：`requirements` + `ui-triage` 必跑；本轮非必跑车道为
-    **`release-infra`**（已完成，新增 REL-25..28）。下一轮非必跑车道为
-    **`security-exposure`**（自第 45 轮起两轮未跑）。`last_ui_review_at` = 2026-10-21 03:47，
-    下次由 `ui-triage` 按强信号（≥48h / ≥3 UI 合并 / ≥2 未解决 UI 发现）决定。
+11. **车道轮转（第 48 轮）**：`requirements` + `ui-triage` 必跑；本轮非必跑车道为
+    **`security-exposure`**（已完成：无新问题，SEC-22/24/13/25 仍为 candidate）。
+    下一轮非必跑车道为 **`docs-drift`**（自第 46 轮起两轮未跑）。`last_ui_review_at` =
+    2026-10-21 03:47，下次由 `ui-triage` 按强信号（≥48h / ≥3 UI 合并 / ≥2 未解决 UI 发现）决定。
 11. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 12. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。

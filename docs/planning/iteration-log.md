@@ -2,6 +2,86 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 48 轮）
+
+- 时间：2026-10-21 05:58 – 06:35 CST。
+- 基线：本轮开始时 `origin/main` @ `5d2b41d`（main CI success，0 open agent PR）。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，且无 open PR）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 `defer`，第三名额给轮转的
+  `security-exposure`。
+- 车道轮转位置：`requirements` / `ui-triage` / `security-exposure` 已完成；下一轮非必跑车道为
+  **`docs-drift`**（自第 46 轮起两轮未跑）。
+- `ui-triage`：**`defer`** —— 距第 47 轮真实浏览器评审仅 2h12m（远未满 48h）；自 03:47 起
+  UI 路径合并 0 个（`git log --since` 只返回 `5d2b41d` 的 docs 改动）；15 条存量 UI 发现
+  刚在第 47 轮逐一编目/复现，数量多是常态；留到 UI 路径再合并 ≥2–3 个或满 48h
+  （2026-10-23 03:47）。
+- `last_ui_review_at`：2026-10-21 03:47 CST（第 47 轮），本轮未做 UI 评审，不更新。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 均在会话工作树
+  `hopeful-mccarthy-199e97`。
+
+### 本轮交付
+
+- PR #251 `feat(console): confirm suppression toggles with delivery consequences` ——
+  **UI-14（25）+ REQ-190（27）** 合并为一个连贯切片。
+  - 静默规则行内启停改为 shadcn `AlertDialog` 确认，确认后才调用 `onToggle`；取消不改状态
+    （`apps/console/src/features/suppressions/ui/suppressions-section.tsx`）。
+  - 文案按 `suppressionStateAt` 投影：生效中 / 待开始 / 已结束；被关闭规则用
+    `enabled: true` 投影时间窗，准确回答「启用后会不会生效」。生效中关闭 →
+    立即停止生效并恢复发送（含自动电话提醒）；已结束启用 → 不会生效，提示先编辑结束时间。
+  - 删除确认在规则当前生效时改用 `confirmDescriptionActive`，说明立即恢复发送；非生效
+    状态保留原文案。
+  - 新增 11 个 `suppressions.toggle.*` 键与 `suppressions.delete.confirmDescriptionActive`；
+    新增 PRD `docs/prd/suppression-toggle-confirmation.md`；新增 7 条组件测试。
+  - 验证：`vp fmt --check`、`vp check` 0 errors（12 条既有 warning）、
+    `vp run -r test` 138 files / 747 tests、`vp run -r build` 通过。
+  - 浏览器实测（隔离实例 `http://localhost:6197` + 全新 SQLite，中文界面）：创建全量静默
+    规则 → 关闭确认显示「关闭后…立即停止生效，后续符合条件的告警会恢复发送通知，包括自动
+    电话提醒」；取消后规则保持「已关闭」；启用确认文案正确；删除生效中规则显示恢复发送说明。
+    截图 `/tmp/tocsin-r48-suppression-disable-confirm.png`、
+    `/tmp/tocsin-r48-suppression-delete-active.png`。dev server 已停止、临时库已删除。
+
+### 专家发现
+
+- `requirements`：复核 REQ-190/181/182/186、SEC-22 均仍成立（REQ-190 行号已漂移，本轮已修）；
+  REQ-55 已由 #230 实现，本轮标 shipped；新增 3 条候选：
+  - REQ-193（28）投递详情展示静默判定逐项证据：PRD 承诺 checks
+    （`docs/prd/alert-suppression.md:72,111-121`），core 已返回
+    `SuppressionMatchResult.checks`（`packages/core/src/suppression/suppression.ts:165-170,186-218`），
+    但 console 无消费者（`delivery-suppression-notice.tsx:18-65`、`delivery-detail-view.tsx:13-63`）。
+  - REQ-194（27）Raw payload 保留天数 0 的语义与确认：0 合法但表示清理所有更早
+    raw payload/headers（`intake.service.ts:428-430`、`intake.repository.ts:105-134`），
+    UI 只写「0 到 3650 天」（`settings-preferences-panel.tsx:160-201`）。
+  - REQ-195（27）新建通知目标后引导真实测试发送：创建成功即关闭对话框
+    （`destination-add-dialog.tsx:79-93`），测试入口只有列表行图标。
+  - 扫描结论：post-MVP 方向 4 与 RC 未勾 gate 均已被既有候选覆盖，无其他漏报。
+- `security-exposure`：**未发现新问题**。核实：脱敏测试已按 destination registry kind
+  参数化（`configuration.integration.test.ts:1363` 且 `:158-164` 断言与
+  `DestinationKindSchema.options` 等价）；26 个 server-ish 模块 marker 齐全（唯一已知缺口
+  `server/runtime/request-context.ts:1`，SEC-14）；Source/Destination/Feishu/Event/Delivery/
+  Session DTO 均无秘密外泄；`xqvvu/vane` 仅剩 ACR 镜像坐标与历史日志。已知未闭合项：
+  SEC-22（endpoint userinfo 密码进入 list/metadata/editor draft，`destination.helpers.ts:63,84,116,129,156`）、
+  SEC-11、SEC-23、SEC-13、SEC-20、SEC-25、SEC-9、SEC-14。
+- `ui-triage`：`defer`（理由见上）。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项；#251 为纯前端只读投影，不触碰 schema/投递/auth 语义。
+
+### 发布评估
+
+- 合并后按第 9.5 步执行；结果补记于后续 `docs(planning)` 提交。
+
+### 下一轮优先项
+
+1. **REQ-193（28）** 投递详情静默判定逐项证据；**REQ-181（27）** 删除配置前事件/投递级联
+   数量；**REQ-182（27）** 目标测试发送前确认；**REQ-186（28）** 文件导入；**REQ-194/195（27）**。
+2. **SEC-22（27）** endpoint userinfo 投影（security lane 首推，覆盖 operational config 与
+   editor draft，发送路径保持原值）；**SEC-13/SEC-24/SEC-25** 测试与精确键加固。
+3. **UI-22（24）** 编辑面板与分页重叠；**UI-23（24）** 390px 行操作不可见；
+   **UI-21（22）** `Close` 本地化。
+4. 车道轮转：`requirements` + `ui-triage` 必跑；非必跑车道下一轮 **`docs-drift`**。
+
 ## 2026-10-21（第 47 轮）
 
 - 时间：2026-10-21 03:26 – 04:00 CST。
