@@ -54,15 +54,15 @@
 | Q-2 | 出站响应体无上限 | 质量 lane | 26 | candidate | — | 与 inbound 的 body limit 对齐 |
 | Q-3 | Provider `*Result` 函数对非对象 payload 直接 throw | 质量 lane | 25 | candidate | — | 边界契约不一致 |
 | Q-4 | Destination service NOT_FOUND 分支无测试 | 质量 lane | 26 | candidate | — | 实测 6 个分支：update/delete/getTemplateDraft/test/preview/previewUpdate + sampleEventId；`configuration.integration.test.ts` 无 missing-id 用例 |
-| Q-5 | History repository 查询覆盖薄 | 质量 lane | 27 | candidate | — | sourceId、组合筛选、越界页均无测试；损坏 `route_matches_json` 会让整页抛错（`history.repository.ts:385-393`）。第 18 轮补充：`raw_payload_json`/`provider_metadata_json`/`labels_json`（`intake.helpers.ts:55-70`）与 `rendered_payload_json`（`delivery.helpers.ts:46-48`）同样无读取容错 |
+| Q-5 | History repository 查询覆盖薄 | 质量 lane | 27 | candidate | — | sourceId、组合筛选、越界页均无测试；损坏 `route_matches_json` 会让整页抛错（`history.repository.ts:385-393`）。第 18 轮补充：`raw_payload_json`/`provider_metadata_json`/`labels_json`（`intake.helpers.ts:55-70`）与 `rendered_payload_json`（`delivery.helpers.ts:46-48`）同样无读取容错。第 38 轮复核：`store.test.ts:839-873` 已覆盖 severity/status/q/destinationId/routeId/state 与翻页；仍缺 `sourceId`、组合筛选、越界页（`history.repository.ts:54,228` clamp）与损坏 JSON 用例 |
 | Q-6 | 超时 `errorKind` 未持久化，Deliveries 只显示英文 `lastError` | Q-1 panel | 24 | candidate | — | `delivery-execution.ts:134-141`；需 forward-only 加列 + UI 文案映射 |
 | Q-7 | 同批投递串行发送，慢投递仍造成队头阻塞 | Q-1 panel | 20 | candidate | — | `delivery-worker.service.ts:75-77`；超时已缓解，并发化需单独设计 |
 | Q-8 | `markSucceeded` 抛错会被当作发送失败并重试，导致重复发送/重复 page | quality lane | 26 | candidate | — | `delivery-execution.ts:102-114` 在发送成功的主 try 内，catch（`:155-175`）按可重试处理；还会跳过 `triggerPings`（`:116-130`）。`delivery-execution.test.ts` fake 的 `markSucceeded` 永不抛错。**第 24 轮 EXPERT_PANEL 裁决单独处理**：投递成功还承载自动加急语义，直接落终态可能抑制呼叫，需单独权衡漏呼/重复 |
 | Q-9 | 同批 attempt 共用 run 开始时间，`finishedAt == startedAt`，退避可能已过期 | quality lane | 24 | shipped | #128 | `DeliveryExecution.execute` 增加实时时钟，`markSucceeded/markFailed` 持久化真实 `startedAt`；耗时列不再恒为 0 |
 | Q-10 | claim 后单条 execute 抛错会中断整批，剩余投递滞留 `running` | quality lane | 24 | candidate | — | `delivery-worker.service.ts:55-77,85-93`；无 post-claim 部分失败测试。第 18 轮补充：oncall worker 同构（`oncall-worker.service.ts:77-79,87-95`），可共用注入式失败测试。第 24 轮补充：`settings.get()` 在 `claimNext` 之后读取（`delivery-worker.service.ts:59-64`），读取失败会让整批已 claim 投递滞留 `running` 并在 5 分钟后被 stale reclaim 重发 |
 | Q-11 | `resolveDestinationConfig` 两条错误分支无测试 | quality lane | 24 | shipped | #119 | 两条 fake resolver 用例：配置错误最终失败、未知错误脱敏 |
-| Q-12 | `testDestination` 失败分支的脱敏 DTO 无测试 | quality lane | 24 | candidate | — | `destination.service.ts:187-194`；现有 fetch 永远 `ok: true` |
-| Q-13 | worker 脱敏测试未注入 secret，只依赖驱动错误文本 | quality lane | 20 | candidate | — | `delivery-worker.service.test.ts:840-854`；应注入带 secret 的 fake store 错误 |
+| Q-12 | `testDestination` 失败分支的脱敏 DTO 无测试 | quality lane | 24 | candidate | — | `destination.service.ts:187-194`；现有 fetch 永远 `ok: true`。第 38 轮复核仍有效：唯一服务层用例固定 `ok: true`（`configuration.integration.test.ts:788-804`） |
+| Q-13 | worker 脱敏测试未注入 secret，只依赖驱动错误文本 | quality lane | 20 | candidate | — | `delivery-worker.service.test.ts:840-854`；应注入带 secret 的 fake store 错误。第 38 轮复核仍有效：`sendContext: {}`（`:844`），断言「不含 token」但错误里本就没有 token |
 | REL-1 | CI 未接入 E2E | RC checklist A | 24 | candidate | — | `ci.yml:16-51` 仅 quality job；`vite.config.ts:51` 排除 `e2e/**`（Vitest 排除，不是 fmt/lint）；全仓无 `playwright install`；`playwright.config.ts:7-9` 注释误称已有 workflow。**token 已有 `workflow` scope（2026-10-18 核实），阻碍是 gate 设计与 spec 覆盖，不是权限**。第 36 轮：与 REL-21 完全重复，合并到 REL-21 |
 | REL-2 | Provider payload fixture 目录 | RC checklist E | 27 | candidate | — | 第 36 轮复核：6 个 adapter 测试文件、19 个内联 payload、28 个 `it` 块（约 30 个场景）、6 个非对象拒绝用例；`packages/providers/src/` 无 fixture 目录；与 REL-24 重复 |
 | REL-3 | Docker smoke 使用全局卷名，`down -v` 会删正常数据卷 | 发布 lane | 28 | shipped | #162 | 新增 `docker-compose.smoke.yml`（`tocsin:smoke` + `tocsin-smoke-data`）；脚本启动前后断言解析配置与 `/data` 实际挂载源，日志在 teardown 前采集，curl 加超时；`just docker-smoke` 本地实跑通过 |
@@ -383,24 +383,31 @@
 | REQ-145 | 列表主标识可点击进入详情 | requirements lane（第 32 轮） | 25 | candidate | — | 事件标题/投递目标均为纯文本，详情只在操作列（`event-title-cell.tsx:14-24`、`deliveries-table.tsx:73-85`）；静默命中表已是直接链接（`suppression-hits-table.tsx:82-93`）；包 `Link`，不做整行点击 |
 | REQ-146 | 补投结果可下钻验证 | requirements lane（第 32 轮） | 25 | candidate | — | 补投只弹数量 toast，DTO 已带 `createdDeliveryIds`（`event-replay-action.tsx:74-79`、`route-replay-prompt.tsx:69-75`、`operations.ts:213-216,248-256`）；结果面板列出新建投递链接 + 按路由/事件过滤链接 |
 | Q-42 | 空 severity 列表的加急语义三层不一致 | quality lane（第 32 轮） | 26 | shipped | #208 | **第 36 轮 EXPERT_PANEL 一致选 A（规范化）**：schema 把显式 `[]` 归一为 `["critical"]`，触发层删除 `length > 0` 逃生口，编辑草稿与投递元数据共用同一规则；无迁移；决策 `docs/planning/decisions/feishu-urgent-empty-severities.md` |
-| Q-43 | 损坏 JSON 会毒死接入与 worker 热路径 | quality lane（第 32 轮） | 25 | candidate | — | MEDIUM：`rule_json`/`matcher_json`/`config_json` 严格解析（`route.helpers.ts:13,23`、`suppression.helpers.ts:15`、`destination.helpers.ts:34-35`），且位于 `routes.list()`、enqueue/claim 事务内（`intake.service.ts:91`、`delivery.repository.ts:97,248,320-326`）；一行损坏会 500 或整批回滚；需失败策略切片，Q-5 的超集 |
+| Q-43 | 损坏 JSON 会毒死接入与 worker 热路径 | quality lane（第 32 轮） | 25 | candidate | — | MEDIUM：`rule_json`/`matcher_json`/`config_json` 严格解析（`route.helpers.ts:13,23`、`suppression.helpers.ts:15`、`destination.helpers.ts:34-35`），且位于 `routes.list()`、enqueue/claim 事务内（`intake.service.ts:91`、`delivery.repository.ts:97,248,320-326`）；一行损坏会 500 或整批回滚；需失败策略切片，Q-5 的超集。第 38 轮复核：Events **列表**会因 `route_matches_json` 损坏整页失败（`history.repository.ts:126,406-414`）；`raw_payload_json`/`provider_metadata_json`/`labels_json` 影响事件详情与 worker claim（`intake.helpers.ts:55-100`）；`rendered_payload_json` 只影响投递详情（`delivery.helpers.ts:55-57`） |
 | Q-44 | 路由证据敏感 labelKey 脱敏分支无测试 | quality lane（第 32 轮） | 22 | shipped | #202 | `redactRouteMatchResults` 的 `labelKey` 分支（`redaction.ts:226-229`）此前无用例；新增凭据 labelKey 隐藏 actual、普通 labelKey 保留并继续值形态脱敏两条用例，变异验证通过 |
-| Q-45 | OncallExecution 两个 catch 分支无测试 | quality lane（第 32 轮） | 21 | candidate | — | `oncall-execution.ts:106-122` 的 DomainValidationError/未知错误分支无覆盖；现有 worker 测试未 claim 到会抛错的 ping；AUTO_FIX：两条执行/worker 用例 |
-| Q-46 | #171 防抖尾随空格与卸载取消无测试 | quality lane（第 32 轮） | 21 | candidate | — | `operation-filters.tsx:553-561,594-604` 的用途是保留尾随空格并取消未提交草稿，但测试无尾随空格、无 `unmount()`、无 fake timers（`operation-filters.test.tsx:130-178`）；AUTO_FIX |
+| Q-45 | OncallExecution 两个 catch 分支无测试 | quality lane（第 32 轮） | 21 | candidate | — | `oncall-execution.ts:106-122` 的 DomainValidationError/未知错误分支无覆盖；现有 worker 测试未 claim 到会抛错的 ping；AUTO_FIX：两条执行/worker 用例。第 38 轮复核仍有效（原描述准确） |
+| Q-46 | #171 防抖尾随空格与卸载取消无测试 | quality lane（第 32 轮） | 21 | candidate | — | `operation-filters.tsx:553-561,594-604` 的用途是保留尾随空格并取消未提交草稿，但测试无尾随空格、无 `unmount()`、无 fake timers（`operation-filters.test.tsx:130-178`）；AUTO_FIX。第 38 轮复核：实现主体已漂移到 `operation-filters.tsx:569-613`，测试仍无尾随空格提交、无 unmount、无 fake timers（`operation-filters.test.tsx:121-178`） |
+| Q-47 | Oncall 失败路径 `markFailed` 未兜底，会中止整批 worker | quality lane（第 38 轮） | 24 | candidate | — | `oncall-execution.ts:106-122` 的 catch 直接 `await markFailed`，`:214` 无保护；对照 fired 路径的 `markDispatchedButUnrecorded:168-207` 明确承诺单行失败不中止批次；`oncall-worker.service.ts:77-95` 逐个 await 且外层重抛。需注入式失败测试 + 与 Q-45 同批处理 |
 | REQ-150 | 投递详情内修复目标配置并立即重试 | requirements lane（第 36 轮） | 27 | shipped | #211 | 失败详情工具栏只有重试/返回（`delivery-detail-page.tsx:56-66`），编辑入口只在 Destinations 页（`destinations-page.tsx:221-252`、`destination-actions.tsx:85-95`）；复用 `DestinationEditDialog` 与 `destinationsQueryOptions`，保存后失效目标与当前详情查询；纯前端、无 endpoint/迁移 |
 | REQ-151 | 值班交接摘要 | requirements lane（第 36 轮） | 26 | candidate | — | 交班需在 Events/Deliveries/Suppressions 三页手工拼装（`active-suppression-indicator.tsx:38-56`、`deliveries-page-toolbar.tsx:15-43`、`events-page-toolbar.tsx:15-43`）；复用 suppressions + operations 查询做只读 Sheet，计数链接到筛选视图并可复制；纯前端 |
 | REQ-152 | 首次部署引导检查清单 | requirements lane（第 36 轮） | 26 | candidate | — | Setup 后落到 Events 空态（`-setup-form-impl.tsx:61-64`、`index.tsx:3-8`、`events-empty-state.tsx:23-40`）；四步清单由现有 sources/destinations/routes/events 查询派生，localStorage 关闭；吸收 REQ-115 |
 | REQ-153 | 告警恢复后取消未执行的自动加急呼叫 | requirements lane（第 36 轮） | 24 | candidate | — | resolved 只停止新入队（`oncall.service.ts:151-160`），已 scheduled 的 auto ping 仍会拨出（`oncall.repository.ts:137-153`、`oncall-execution.ts:63-95`）；在 resolved 事务内置 suppressed 并释放 dedupe key；需 EXPERT_PANEL（投递/加急语义） |
-| REQ-154 | 搜索覆盖标签与上游告警标识 | requirements lane（第 37 轮） | 28 | candidate | — | 事件/投递搜索只覆盖 title/message/fingerprint/id（`history.repository.ts:423-441,449-470`），`labels_json`/`provider_metadata_json` 已落库却不可搜（`schema.ts:74,76`）；列表与 total 同谓词、转义 LIKE、不搜敏感原文；无迁移 |
+| REQ-154 | 搜索覆盖标签与上游告警标识 | requirements lane（第 37 轮） | 28 | shipped | #214 | 事件/投递搜索新增 `labels_json`/`provider_metadata_json` 字面子串匹配，共用 `escapeLikeTerm` 与列表/total 谓词；`raw_payload_json`/`raw_headers_json` 保持不可搜；占位文案与 5 组回归用例；PRD `docs/prd/operation-search-labels.md`；无迁移 |
 | REQ-155 | 静默规则按生效状态置顶 | requirements lane（第 37 轮） | 28 | candidate | — | 决策承诺「置顶 + 徽章」防遗忘（`alert-suppression-decisions.md:74`），仓储固定 `created_at desc`（`suppression.repository.ts:19-25`），过期规则压住生效规则；纯前端按 `suppressionStateAt` 排序 |
 | REQ-156 | 手动加急可指定接收人 | requirements lane（第 37 轮） | 27 | candidate | — | 手动加急固定呼叫全部 `urgent.receivers`（`oncall.service.ts:91-104`、`delivery-buzz-button.tsx:20-26`）；契约增可选 `receiverIds`（省略=全部），service 校验子集，确认框复选框；无迁移 |
 | REQ-157 | 自动加急去重跳过可解释 | requirements lane（第 37 轮） | 26 | candidate | — | dedupe 命中只返回 null + debug 日志（`oncall.service.ts:168-190`、`oncall.repository.ts:42-53`），UI 只能猜（`zh-Hans.json:179`）；只读投影 skippedReceivers 与首次 ping；无迁移 |
 | REQ-158 | 路由规则排除条件 | requirements lane（第 37 轮） | 25 | candidate | — | `RouteRuleSchema` 只有正向数组（`route/route.ts:18-25`），matcher 只做 includes/contains（`:182-205,240-330`）；增可选 exclude* 字段并保持旧快照/TOML 兼容；结构化声明式，无用户代码 |
+| REQ-159 | 通用 Webhook 源可配置字段映射 | requirements lane（第 38 轮） | 28 | candidate | — | Generic schema 为空（`packages/providers/src/generic/schema.ts:3`、`manifest.ts:12`），解析只猜固定顶层键（`parse.ts:22-53`）；但中文界面已宣称支持字段映射且入口指向路由（`zh-Hans.json:929-931`）。新增可选 `fieldMapping`（点号路径，无表达式）+ 值映射，优先级「显式映射 → 启发式 → 默认」；不迁移；需表单回显/清除 |
+| REQ-160 | 事件列表显示命中路由名称 | requirements lane（第 38 轮） | 27 | candidate | — | `EventListItem` 只有 `routeMatchCount`（`operations.ts:50-60`）；列表查询已选出 `route_matches_json`（`history.repository.ts:60-68`）且快照含 `routeName`（`route.ts:162-168,221-228`）；只扩 DTO 投影与表格，无查询/迁移；>2 条折叠 + tooltip |
+| REQ-161 | 接入 Token 支持 HTTP Basic 认证 | requirements lane（第 38 轮） | 27 | candidate | — | Webhook 只认 Bearer / `x-tocsin-source-token`（`request-context.ts:82,109-117`、`intake.service.ts:369-379`）；Basic 取密码部分复用常量时间比较，用户名忽略；统一 401 分支与脱敏；无迁移、无新依赖 |
+| REQ-162 | 出站投递按通知目标限速 | requirements lane（第 38 轮） | 25 | candidate | — | Worker 每批跨目标串行、无按目标限速（`delivery-worker.service.ts:59-77`）；飞书错误文案已提示降速（`feishu-errors.ts:105`）但无设置项（`configuration-results.ts:7-11`）；单进程内存态 + Settings 全局上限，需 worker policy ADR |
+| REQ-163 | 维护窗口批量排期（复制顺延） | requirements lane（第 38 轮） | 27 | candidate | — | 静默只有单组绝对起止（`suppression.ts:51-64`），行操作无复制/顺延（`suppressions-section.tsx:274-300`）；新增对话框按天/周生成 N 个独立窗口，事务内创建、名称唯一预检；无迁移 |
 
 ## 发布记录
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.24` | `866eeb9` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.24`（linux/amd64 + linux/arm64，index digest `sha256:c3b7326c…`） | Events/Deliveries 搜索覆盖事件标签与上游 provider metadata（#214，REQ-154）；无迁移/配置变化；回滚镜像 `0.1.0-beta.23` |
 | `0.1.0-beta.23` | `8a36238` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.23`（linux/amd64 + linux/arm64，index digest `sha256:7240a4af…`） | 失败投递详情内直接编辑通知目标并继续重试（#211，REQ-150）；无迁移/配置变化；回滚镜像 `0.1.0-beta.22` |
 | `0.1.0-beta.22` | `6c237fc` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.22`（linux/amd64 + linux/arm64，index digest `sha256:a01471cb…`） | 事件详情内联重试失败投递（#206，REQ-136）+ 路由匹配表按路由显示投递结果（#207，REQ-135）+ 飞书加急空 severity 列表归一为 critical（#208，Q-42）；无迁移/配置变化；回滚镜像 `0.1.0-beta.21` |
 | `0.1.0-beta.21` | `5932245` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.21`（linux/amd64 + linux/arm64，index digest `sha256:4295956e…`） | 脱敏改为线性扫描（#204，SEC-19）：1 MiB 载荷不再阻塞同步接入/详情/投递证据；覆盖不变，新增性能闸门；无迁移/配置变化；回滚镜像 `0.1.0-beta.20` |
@@ -418,10 +425,11 @@
 
 ## 下一轮优先项
 
-0. **发布 `v0.1.0-beta.23` 已完成**（tag `8a36238`、GitHub Release、多平台镜像）；下一轮
-   在合入新的用户可见变更后重新评估，不重复发同一批变更。
-1. **REQ-154（28）** 搜索覆盖标签与上游告警标识（第 37 轮 requirements 第一名）；
-   **REQ-155（28）** 静默规则按生效状态置顶。
+0. **发布 `v0.1.0-beta.24`**：发布小组评估为 RELEASE（唯一用户可见变更是 #214 搜索覆盖
+   标签与上游元数据）；合入 release-prep PR、CI 绿后打 annotated tag、创建 GitHub Release、
+   构建并推送多平台镜像。
+1. **REQ-155（28）** 静默规则按生效状态置顶；**REQ-159（28）** 通用 Webhook 可配置
+   字段映射；**REQ-160/161/163（27）** 事件列表路由名、Basic 认证、维护窗口批量排期。
 2. **UI-17（26）** 路由匹配 checks 实际值本地化与换行；**UI-19（25）** 事件详情投递列
    可读性与重试后刷新；**UI-18（24）** 390px 路由匹配布局。
 3. **REQ-138（28）** 通知目标覆盖率计入告警源启停（REQ-129 的镜像）；**REQ-137（28）**
@@ -429,7 +437,8 @@
 4. **REQ-125/130/131/139/140（27）** 共享密钥显式清除、补投包含已静默目标、失败
    投递保留渲染载荷、目标草稿测试发送、事件列表批量静默；**REQ-141（27）**；
    **REQ-151（26）** 值班交接摘要、**REQ-152（26）** 首次部署检查清单。
-5. **Q-43（25）** 损坏 JSON 热路径失败策略（Q-5 的超集）；**Q-45/Q-46** 测试补齐；
+5. **Q-43（25）** 损坏 JSON 热路径失败策略（Q-5 的超集）；**Q-47（24）** oncall
+   `markFailed` 兜底与 **Q-45** 同批；**Q-46/Q-12/Q-13/Q-5** 测试补齐；
    **SEC-13** 精确键 + `sessionId/jwt/signature`；**SEC-20/21** AUTO_FIX 加固。
 6. **REQ-142（26）** 事件按路由筛选（建议并入 REQ-21）；**REQ-143（26）** 一次性 Token
    离开保护；**REQ-144（26）** 投递详情告警身份；**REQ-145/146（25）** 主标识可点与
