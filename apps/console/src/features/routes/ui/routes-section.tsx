@@ -36,6 +36,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "#/components/ui/empty";
+import { QueuedDeliveriesNotice } from "#/features/operations/ui/queued-deliveries-notice";
 import { buildRouteRuleChips, describeRouteRule } from "#/features/routes/model/route-rule-summary";
 import { routeRuleSummaryCopy } from "#/features/routes/model/route-rule-summary-copy";
 import { EditRouteForm } from "#/features/routes/ui/route-forms";
@@ -239,6 +240,7 @@ function RouteActions({
                   destinationCount: route.destinationIds.length,
                 })}
               </AlertDialogDescription>
+              <QueuedDeliveriesNotice scope={{ routeId: route.id }} />
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={pending}>

@@ -26,6 +26,38 @@ export const operationsQueryKeys = {
   ],
 };
 
+/** The configuration row a queued-delivery count is scoped to. */
+export type PendingDeliveryScope = {
+  sourceId?: string;
+  routeId?: string;
+  destinationId?: string;
+};
+
+/**
+ * Counts queued deliveries before a configuration row is disabled.
+ *
+ * `operations.list` already filters by source, route, destination and state,
+ * and its `total` counts every match rather than a page, so requesting a single
+ * row keeps this advisory check cheap. The disable confirmations pair the count
+ * with their behavior copy: a disabled source keeps delivering queued jobs,
+ * while a disabled route or destination pauses them.
+ */
+export function pendingDeliveriesQueryOptions(scope: PendingDeliveryScope) {
+  const normalized = {
+    ...(scope.sourceId ? { sourceId: scope.sourceId } : {}),
+    ...(scope.routeId ? { routeId: scope.routeId } : {}),
+    ...(scope.destinationId ? { destinationId: scope.destinationId } : {}),
+  };
+
+  return orpc.operations.list.queryOptions({
+    input: { limit: 1, deliveryState: "pending", ...normalized },
+    queryKey: [...operationsQueryKeys.all, "pending-deliveries", normalized] as const,
+    // The dialog opens on demand; a short cache avoids refetching when the
+    // operator compares rows, while still reflecting recently delivered jobs.
+    staleTime: 15_000,
+  });
+}
+
 export function operationsQueryOptions(filters: OperationFilterData) {
   const normalizedFilters = normalizeOperationFilters(filters);
 
