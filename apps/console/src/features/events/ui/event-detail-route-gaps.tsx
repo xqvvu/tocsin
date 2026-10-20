@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+
 import { Badge } from "#/components/ui/badge";
 import {
   Table,
@@ -82,18 +84,33 @@ function GapReason({ gap }: { gap: RouteMatchGap }) {
   const t = useTranslations();
 
   switch (gap.reason) {
-    case "duplicate_within_window":
+    case "duplicate_within_window": {
       // Only this reason can name the event that won — and only while the
-      // dedupe row still exists.
-      return gap.firstEventId ? (
+      // dedupe row still exists. The winner is linked because the whole point
+      // of naming it is to let the operator open the delivery that did happen.
+      const firstEventId = gap.firstEventId;
+
+      if (!firstEventId) {
+        return <span>{t("events.detail.routeGaps.reason.unknown")}</span>;
+      }
+
+      return (
         <span>
-          {t("events.detail.routeGaps.reason.duplicate_within_window", {
-            eventId: gap.firstEventId,
+          {t.rich("events.detail.routeGaps.reason.duplicate_within_window", {
+            eventId: firstEventId,
+            event: (chunks) => (
+              <Link
+                to="/events/$eventId"
+                params={{ eventId: firstEventId }}
+                className="font-mono underline underline-offset-2 hover:no-underline"
+              >
+                {chunks}
+              </Link>
+            ),
           })}
         </span>
-      ) : (
-        <span>{t("events.detail.routeGaps.reason.unknown")}</span>
       );
+    }
     case "unknown":
       return (
         <span className="text-muted-foreground">{t("events.detail.routeGaps.reason.unknown")}</span>
