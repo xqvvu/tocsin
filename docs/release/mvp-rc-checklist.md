@@ -14,10 +14,12 @@ Docker runtime 形态。
 这个结论的含义是：可以停止继续往 MVP PRD 里追加功能，进入下一轮产品讨论、产出新的 post-MVP PRD，
 再用 `to-issues` 拆分新需求。
 
-它不等于稳定公开发布已经完成。截至 2026-10-13，发布文档（release checklist、Docker 生产部署、
-备份/恢复/升级/回滚）与 README 的状态措辞已经补齐，见 `docs/release/`；仍然缺的是把关键浏览器
-E2E 接入 CI（脚本已存在并在本机实测通过，见下方 gate）。compose smoke 已交付并明确保留为本地
-人工 gate，不计划接入 CI；delivery history retention 已决定不自动清理，理由见
+它不等于稳定公开发布已经完成。截至 2026-10-20，发布文档（release checklist、Docker 生产部署、
+备份/恢复/升级/回滚）与 README 的状态措辞已经补齐，见 `docs/release/`；仍未完成的发布 gate 有
+四类：把关键浏览器 E2E 接入 CI（脚本已存在并在本机实测通过，见 A 节）、dedupe cleanup 成本上限
+（D 节）、provider inline payload fixture 化与多版本 payload 覆盖（E 节），以及 provider 侧
+contributor guide（B/E 节）。compose smoke 已交付并明确保留为本地人工 gate，不计划接入 CI；
+delivery history retention 已决定不自动清理，理由见
 `docs/release/history-retention-and-snapshots.md` §1。
 
 ## 已完成的 MVP 能力
