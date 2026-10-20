@@ -503,6 +503,7 @@
   "events.detail.actions.copyIdempotencyKey": "复制幂等键",
   "events.detail.back": "事件",
   "events.detail.deliveries": "投递 {count} 条",
+  "events.detail.deliveryHeaders.actions": "操作",
   "events.detail.deliveryHeaders.attempts": "尝试",
   "events.detail.deliveryHeaders.destination": "通知目标",
   "events.detail.deliveryHeaders.lastError": "最近错误",

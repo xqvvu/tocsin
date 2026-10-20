@@ -55,7 +55,7 @@ function DeliveryDetailPageToolbar({
       badge={deliveryId}
       actions={
         <>
-          {detail ? <DeliveryRetryButton detail={detail} /> : null}
+          {detail ? <DeliveryRetryButton id={detail.job.id} state={detail.job.state} /> : null}
           <Link
             to="/deliveries"
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-fit")}

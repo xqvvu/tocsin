@@ -1,0 +1,93 @@
+// @vitest-environment jsdom
+
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+
+import { EventDetailDeliveriesTable } from "#/features/events/ui/event-detail-deliveries-table";
+import type { EventDetailData } from "#/features/events/ui/event-detail-types";
+import { AppIntlProvider } from "#/i18n/provider";
+
+const testState = vi.hoisted(() => ({
+  retryDelivery: vi.fn<(input: { id: string }) => Promise<unknown>>(),
+  invalidateOperations: vi.fn<() => Promise<void>>(),
+  toast: {
+    success: vi.fn<(title: string, options?: { description?: string }) => void>(),
+    error: vi.fn<(title: string, options?: { description?: string }) => void>(),
+  },
+}));
+
+vi.mock("#/features/operations/api/operation.mutations", () => ({
+  useOperationMutations: () => ({
+    retryDelivery: testState.retryDelivery,
+    invalidateOperations: testState.invalidateOperations,
+  }),
+}));
+
+vi.mock("sonner", () => ({
+  toast: testState.toast,
+}));
+
+describe("event detail deliveries table", () => {
+  beforeEach(() => {
+    testState.retryDelivery.mockReset().mockResolvedValue({});
+    testState.invalidateOperations.mockReset().mockResolvedValue();
+    testState.toast.success.mockReset();
+    testState.toast.error.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("offers a retry action only on failed deliveries", () => {
+    renderTable([
+      delivery({ id: "delivery-failed", state: "failed" }),
+      delivery({ id: "delivery-succeeded", state: "succeeded" }),
+    ]);
+
+    expect(screen.getByText("Actions")).toBeTruthy();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
+
+  it("re-queues the failed delivery without leaving the event", async () => {
+    renderTable([delivery({ id: "delivery-failed", state: "failed" })]);
+
+    fireEvent.click(screen.getByRole("button"));
+
+    await waitFor(() => {
+      expect(testState.retryDelivery).toHaveBeenCalledExactlyOnceWith({ id: "delivery-failed" });
+    });
+    expect(testState.invalidateOperations).toHaveBeenCalled();
+  });
+
+  it("keeps the empty state readable across the added action column", () => {
+    renderTable([]);
+
+    expect(screen.getByText("No deliveries created")).toBeTruthy();
+  });
+});
+
+function renderTable(deliveries: EventDetailData["deliveries"]) {
+  return render(
+    <AppIntlProvider locale="en-US">
+      <EventDetailDeliveriesTable deliveries={deliveries} />
+    </AppIntlProvider>,
+  );
+}
+
+function delivery(
+  overrides: Partial<EventDetailData["deliveries"][number]> = {},
+): EventDetailData["deliveries"][number] {
+  return {
+    id: "delivery-1",
+    state: "failed",
+    attemptCount: 1,
+    maxAttempts: 3,
+    nextAttemptAt: null,
+    lastError: null,
+    destinationName: "Feishu on-call",
+    destinationKind: "feishu",
+    routeName: "Critical checkout",
+    ...overrides,
+  } as EventDetailData["deliveries"][number];
+}
