@@ -50,6 +50,10 @@
 | SEC-2 | 脱敏回归测试按 registry 而非 `DestinationKindSchema.options` | 安全 lane | 25 | shipped | #150 | 新增 registry kind 集合与 `DestinationKindSchema.options` 相等的断言 |
 | SEC-3 | `env.ts` 直接读 `process.env` 但无 server-only 标记 | 安全 lane | 24 | shipped | #150 | 加 `@tanstack/react-start/server-only`；build 验证无客户端链路 |
 | SEC-4 | Feishu app test 错误消息未过 `redactText` | 安全 lane | 24 | shipped | #150 | 失败消息经 `redactText`；新增平台回显 `app_secret` 用例 |
+| SEC-5 | 通知目标 endpoint 的 URL userinfo 密码进入浏览器 DTO | 安全 lane（第 45 轮） | 27 | candidate | — | `destinationOperationalConfigFromRuntime` 原样返回 endpoint（`destination.helpers.ts:63,84,162`），`z.url()` 允许 `https://user:pass@…`（`email/schema.ts:22`）；导出侧已按 secret_ref 处理（`config-portability.ts:444-451`）；投影 DTO 前仅剥离 userinfo 密码，发送路径保持原值 |
+| SEC-6 | provider 可控 fingerprint 未脱敏进入列表/详情/外发 | 安全 lane（第 45 轮） | 24 | candidate | — | `redactNormalizedEvent` 只投影 title/message/labels（`redaction.ts:231-246`）；generic/alertmanager 把上游 `fingerprint`/`alertId` 原值作为 fingerprint（`generic/parse.ts:32-33`、`alertmanager-compatible.ts:84-85`）；匹配需原值，展示边界应单独投影 |
+| SEC-7 | 读边界脱敏测试未覆盖凭据型 key 形态 | 安全 lane（第 45 轮） | 25 | candidate | — | `read-projection-redaction.test.ts:52-107` 只覆盖 `token`/`Authorization`；`redactJsonText` 的 key 分支仅被 `redactJsonValue` 间接覆盖（`redaction.test.ts:62-73,132-153`）；补 `appSecret`/`clientSecret`/`apiSecret`/`privateKey`/`X-Auth-Token` 直接断言 |
+| SEC-8 | test/preview 的 renderedPayload 无最终脱敏投影 | 安全 lane（第 45 轮） | 25 | candidate | — | `destination.service.ts:193,310-336` 直接返回 adapter payload，未像投递详情那样过 `redactJsonText`（`delivery.helpers.ts:56`）；当前 adapter 未注入 config，属边界不对称；建议套投影并按 kind 参数化断言 |
 | Q-1 | 出站 HTTP 无超时，单个挂起目标会卡住单进程 worker | 质量 lane | — | shipped | #108 | EXPERT_PANEL 一致：共享层 10s deadline，`timeout`/可重试；决策 `docs/planning/decisions/outbound-http-timeout.md` |
 | Q-2 | 出站响应体无上限 | 质量 lane | 26 | candidate | — | 与 inbound 的 body limit 对齐 |
 | Q-3 | Provider `*Result` 函数对非对象 payload 直接 throw | 质量 lane | 25 | candidate | — | 边界契约不一致 |
@@ -421,11 +425,16 @@
 | REQ-174 | 失败投递重试前的可执行性预检 | requirements lane（第 42 轮） | 25 | candidate | — | `retryNow` 仅校验 failed 并把投递置 pending（`delivery.repository.ts:417-440`），但 `claimNext` 要求目标/路由启用（`:229-230`）；目标或路由停用时重试仍提示「已重新入队」但永不投递（`delivery-retry-button.tsx:27-37`）；建议 EXPERT_PANEL 判断是否并入 REQ-60/REQ-89 |
 | UI-20 | 事件详情投递健康徽标忽略 pending/suppressed | ui-review（第 40 轮，浏览器实测） | 26 | shipped | #230 | 第 42 轮交付：按操作优先级展示全部非零状态（失败→运行中→待处理→成功→已抑制），无投递显示「无投递」；新增 4 条组件测试；PRD `docs/prd/event-delivery-health-badges.md` |
 | UI-21 | 共享 Dialog 关闭按钮英文 `Close` 且错误态透出 `Failed to fetch` | ui-review（第 40 轮，浏览器实测） | 22 | candidate | — | `components/ui/dialog.tsx:63` 硬编码 sr-only `Close`；`destination-edit-dialog-loader.tsx:132-134` 直接渲染 `error.message`；读屏用户听到英文、错误不可本地化；纯前端文案；第 44 轮浏览器再次确认中文界面 DOM 仍为 `Close` |
-| REQ-175 | 事件/投递证据包下载（脱敏 JSON） | requirements lane（第 44 轮） | 29 | candidate | — | 两个详情页无导出出口（`event-detail-page.tsx:57-71`、`delivery-detail-page.tsx:57-74`），但 DTO 数据齐全且 `downloadTextFile` 已存在（`lib/browser.ts:20-33`）；纯前端 bundle builder + 脱敏断言；无 oRPC/迁移 |
+| REQ-175 | 事件/投递证据包下载（脱敏 JSON） | requirements lane（第 44 轮） | 29 | shipped | #240 | 第 45 轮交付：`features/operations/model/evidence-bundle.ts` 生成带 `schemaVersion/kind/subjectId/exportedAt` 的文档，导出前二次 `redactJsonText`；两个详情页工具栏「下载证据包」；浏览器实测文件名、脱敏与内容通过；PRD `docs/prd/evidence-bundle-download.md` |
 | REQ-176 | 事件详情投递表显示抑制原因与规则链接 | requirements lane（第 44 轮） | 29 | candidate | — | 投递表只有状态徽标（`event-detail-deliveries-table.tsx:56-83`），但 `DeliveryJob` 已带 suppressionId/reason 快照（`delivery.ts:24-35`），文档明确要求（`alert-suppression.md:117`）；只读投影 |
 | REQ-177 | 原始载荷保留窗口结束时间 | requirements lane（第 44 轮） | 28 | candidate | — | Raw/Payload 标签只区分已清理/未清理（`event-raw-tab.tsx:6-29`、`delivery-payload-tab.tsx:17-48`）；用 `rawPayloadRetentionDays` + receivedAt 计算窗口结束，注明清理是惰性触发（`intake.service.ts:428-430`）；纯前端 |
 | REQ-178 | 路由匹配表目标列展开为可核查名单 | requirements lane（第 44 轮） | 27 | candidate | — | 目标列只显示数量（`event-detail-route-matches-table.tsx:56,79`），文档承认该摩擦（`event-route-delivery-outcomes.md:7-14`）；按 destinationId 关联 deliveries，展示名称/启停/结果；纯前端 |
 | REQ-179 | 模板渲染载荷体积预算与目标限制提示 | requirements lane（第 44 轮） | 25 | candidate | — | 只有 4000 字符文本上限（`template.ts:27-37`），Feishu 30KB/Slack 3000 chars 仅在注释；manifest 无 payloadBudget；诊断只报引擎结果；需 adapter manifest 扩展 + 非阻断 warning |
+| REQ-180 | 静默规则创建/编辑披露将被静默的目标数 | requirements lane（第 45 轮） | 28 | candidate | — | `urgentImpactPreview` 已算 `scopedCount` 但 UI 未用（`urgent-impact.ts:43`）；无加急目标时早退，只显示「不影响自动电话提醒」（`urgent-impact-preview.tsx:28-44`）；PRD 要求展示命中范围（`alert-suppression.md:287`）；纯前端 |
+| REQ-181 | 删除配置前披露将级联删除的事件与投递数 | requirements lane（第 45 轮） | 27 | candidate | — | schema 级联删除 Events/Deliveries（`schema.ts:66,114-119`），三个删除确认框只有定性文案；复用 `operations.list` 的 `total`（`history.interface.ts:24,36-41`），对话框打开时惰性计数；无迁移 |
+| REQ-182 | 通知目标测试发送前确认发送去向 | requirements lane（第 45 轮） | 27 | candidate | — | 测试按钮直接真实发送（`destination-actions.tsx:57-70`、`destination.service.ts:153`），飞书/Slack 测试消息不可撤回；新增确认框展示名称/kind/脱敏去向；纯前端 |
+| REQ-183 | 飞书应用测试结果可复核 | requirements lane（第 45 轮） | 26 | candidate | — | 测试结果只走 toast（`feishu-apps-page.tsx:84-95`），`FeishuAppTestResult` 无状态/时间/复制结构（`feishu-app.ts:39-43`）；失败原因一闪而过；结果对话框 + 复制 + 重试 |
+| REQ-184 | 静默列表显示命中投递数与最近命中时间 | requirements lane（第 45 轮） | 25 | candidate | — | 列表无命中信息（`suppressions-section.tsx:92-132`），只能进详情看；列表 DTO 加 `hitCount/lastHitAt`，一次 `LEFT JOIN deliveries` 聚合；无迁移 |
 
 ## 发布记录
 
