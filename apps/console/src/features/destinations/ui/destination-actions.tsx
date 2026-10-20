@@ -2,6 +2,7 @@ import {
   RiDeleteBinLine,
   RiEditLine,
   RiEyeLine,
+  RiNotificationOffLine,
   RiPlayLine,
   RiShutDownLine,
 } from "@remixicon/react";
@@ -9,6 +10,7 @@ import * as React from "react";
 
 import { IconTooltip } from "#/components/common/icon-tooltip";
 import { powerActionButtonClassName } from "#/components/common/power-action-button";
+import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +57,8 @@ export function DestinationActions({
     ? t("destinations.table.actions.disableTitle")
     : t("destinations.table.actions.enableTitle");
   const deleteLabel = t("destinations.table.actions.deleteTitle", { name: destination.name });
+  const urgentAutoEnabled = destination.operationalConfig.urgentAutoEnabled === true;
+  const urgentReceiverCount = destination.operationalConfig.urgentReceivers?.length ?? 0;
 
   return (
     <div className="flex justify-center gap-1">
@@ -132,6 +136,19 @@ export function DestinationActions({
                       destinationName: destination.name,
                     })}
               </AlertDialogDescription>
+              {urgentAutoEnabled ? (
+                <Alert variant="destructive">
+                  <RiNotificationOffLine aria-hidden />
+                  <AlertTitle>{t("destinations.disable.urgentAutoTitle")}</AlertTitle>
+                  <AlertDescription>
+                    {urgentReceiverCount > 0
+                      ? t("destinations.disable.urgentAutoDescription", {
+                          count: urgentReceiverCount,
+                        })
+                      : t("destinations.disable.urgentAutoDescriptionNoReceivers")}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={pending}>
