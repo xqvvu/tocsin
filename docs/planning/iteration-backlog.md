@@ -326,7 +326,7 @@
 | SEC-16 | 读取层不复核存量脱敏 | security lane（第 23 轮） | — | shipped | #176 | 与 SEC-10 同一修复；`intake.helpers` 的 raw payload 读取路径按 SEC-18 在入库时已值形态脱敏 |
 | SEC-17 | providerMetadata 入库/出站前无统一脱敏兜底 | security lane（第 25 轮） | 24 | shipped | #180 | 第 27 轮随 SEC-7 落地：`redactEventRecord` 在读取边界对 providerMetadata 走 `redactJsonValue`（key + 值形态），grafana/alertmanager `externalURL` 的 userinfo 被投影；存储仍为原文（决策已接受） |
 | SEC-18 | raw payload 字符串叶子不做值形态扫描 | security lane（第 25 轮） | 22 | shipped | #176 | `redactJsonValue` 对字符串叶子应用 `redactCredentialText`；parser 仍读取原值，解析/匹配/去重语义不变 |
-| SEC-19 | 脱敏正则二次复杂度可被 Webhook 触发 | security lane（第 31 轮） | 24 | candidate | — | **HIGH（第 32 轮质量车道复核；原记 MEDIUM）**：`SENSITIVE_TEXT_KEY_SOURCE` 的后缀分支 `[A-Za-z0-9._-]*` 在每个词边界回溯，第 33 轮亲自复刻实测 8KB→49.5ms、16KB→124.5ms、40KB→641.5ms、80KB→2533.5ms（平方增长），默认 1MiB webhook 外推 ≈400s CPU（`redaction.ts:55-64,260`；调用点 `intake.service.ts:81,195`、`delivery-execution.ts:152`、`log-safety.ts:94`）。候选 `{1,64}` 实测线性（40KB→6.4ms、1MiB→155ms）但会放弃 >64 字符前缀键的文本匹配，属缩小覆盖、触碰红线；**第 33 轮 EXPERT_PANEL 因配额饥饿未能召开，下一轮第一件事**：在「手写线性扫描器（覆盖不变）」与有界量词间裁决，必须带 40KB/≤100ms 与 1MiB 有界测试 |
+| SEC-19 | 脱敏正则二次复杂度可被 Webhook 触发 | security lane（第 31 轮） | 24 | shipped | #204 | **已由第 34 轮 EXPERT_PANEL 一致裁决 A+**：assignment 与 URL userinfo 均改为线性扫描器，覆盖不变（冻结旧正则作差分 oracle，10,000 例 fuzz 0 差异）；新增 40KiB ≤100ms / 1MiB ≤2s 性能闸门。安全专家实测旧 userinfo 分支在 1MiB 上 233s，且位于同步 intake 路径。决策记录 `docs/planning/decisions/linear-redaction-scan.md` |
 | SEC-20 | `configurationToTomlDocument` 无自防护 | security lane（第 31 轮） | 20 | candidate | — | 当前唯一调用链已 sanitize 且 `include_secrets` 恒 false，无实际泄漏；但函数直接输出 `app_secret`（`packages/core/src/config.ts:184-202`），未来直连 store 会明文导出；AUTO_FIX：断言拒绝未 sanitize 输入 |
 | SEC-21 | `auth.client.ts` 以 type import 引用 `.server` | security lane（第 31 轮） | 18 | candidate | — | 类型导入会被擦除、无运行时泄漏；但违反 AGENTS「`.server` 不得被另一环境导入」字面规则（`apps/console/src/lib/auth.client.ts:4`）；AUTO_FIX：`Auth` 类型移到共享模块 |
 | UI-1 | 列表搜索吞字符与空格、逐键请求 | ui-review（第 23 轮，浏览器实测） | 29 | shipped | #171 | 本地草稿 + 300ms 防抖后才写 URL；`pruneSearch` 保留空格，仅服务端过滤 trim；清除 chip/重置会取消未提交草稿；同时闭环 REQ-78 |
@@ -398,11 +398,9 @@
 
 ## 下一轮优先项
 
-0. **SEC-19（24，第 32 轮升级 HIGH；第 33 轮面板因配额饥饿未召开）** 脱敏正则二次
-   复杂度交 EXPERT_PANEL：手写线性扫描器（覆盖不变）vs 有界量词（会缩小 >64 字符前缀
-   键的覆盖，触碰红线）。必须带 40KB/≤100ms 与 1MiB 有界性能回归。**Q-42（26）** 空
-   severity 的加急语义交 EXPERT_PANEL：规范化 / 拒绝 / 视为不限，需同时对齐 schema、
-   触发、DTO 投影与说明面板。下一轮开局即启动专家，避免再次被配额饥饿拖垮整轮。
+0. **Q-42（26）** 空 severity 的加急语义交 EXPERT_PANEL：规范化 / 拒绝 / 视为不限，
+   需同时对齐 schema、触发、DTO 投影与说明面板。SEC-19 已关闭（#204），下一轮开局即启动
+   三位专家，避免再次被配额饥饿拖垮整轮。
 1. **REQ-138（28）** 通知目标覆盖率计入告警源启停（REQ-129 的镜像）；**REQ-135（28）**
    事件详情按路由显示投递结果；**REQ-137（28）** 告警源解析器变更确认。
 2. **REQ-125/130/131/136/139/140（27）** 共享密钥显式清除、补投包含已静默目标、失败

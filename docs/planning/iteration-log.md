@@ -2,6 +2,65 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 34 轮）
+
+- 时间：2026-10-20 11:22 – 12:35 CST。
+- 基线：`origin/main` @ `191e47c`；本轮交付 PR #204。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`SEC-19 EXPERT_PANEL`（3 位专家全部返回，结论一致 A+）+ `ui-triage`（`defer`）。
+  `requirements` / `architecture` 未展开：本轮预算被 HIGH 安全修复占用，留待下一轮。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审（07:56）约 4h35m；自那以后 `apps/console/src`
+  只有 1 个行为性 UI 提交（#198，已在隔离实例做过浏览器验证）；8 条未解决 UI 发现均为已排期
+  的旧产物。硬性最晚 **2026-10-22 07:56 CST**；提前触发：再有 2 个行为性 UI 合并，或
+  2026-10-21 08:00 前后那一轮主动安排。
+- `last_ui_review_at`：2026-10-20 07:56（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `eloquent-carson-e5a496`。结束后已删除并发锁与 `agent-iteration` 临时工作树，并清理
+  本会话 `node_modules`。
+
+### EXPERT_PANEL（SEC-19）
+
+三位专家独立返回，结论一致推荐 A+：手写线性 assignment 扫描器 + 线性 URL userinfo。
+
+- **安全与可靠性**：新发现 userinfo 分支在 1 MiB 上实测 **233 s**，且位于同步 intake
+  （`intake.service.ts:79-81`）；只修 assignment 无法关闭 SEC-19。否决有界量词、分块与
+  按大小跳过（缩小覆盖 / 不可证明）。
+- **产品与运维**：覆盖不变是硬条件；按载荷大小区别对待不可接受；纯 core 函数替换，
+  无 schema/迁移/配置，符合 charter，可回滚。
+- **评估者**：冻结旧正则作为测试内 oracle；钉死 `web__hookurl` 可见、`foo.webhook_url`
+  仅未加引号时脱敏、`".token"` 与 `"_token"` 的差异、`token="abc" ` 的未加引号回退、
+  `\s+KEY` 跨行截断；不新增「全局幂等」门槛（旧实现本身并非全局幂等）。
+- 决策记录：`docs/planning/decisions/linear-redaction-scan.md`。
+
+### 本轮交付
+
+- PR #204 `fix(core): redact sensitive text in linear time` —— **SEC-19（HIGH）**。
+  - `redactSensitiveAssignments` 改为单向前进扫描器；键匹配复刻旧语义：精确键字符间至多
+    一个 `[._-]`、后缀前缀长度无上限、`_` 不构成 `\b`、引号键闭合、quoted/unquoted 值
+    回退、Unicode `\s`、`\s+KEY` 跨行截断；每个空白 run 只前瞻一次。
+  - URL userinfo 改为线性扫描器，只替换 password span；redactor 顺序保持
+    slack → feishu → xox → userinfo → authscheme。
+  - 新增 `redaction.scan.test.ts`（冻结 oracle + 10,000 例确定性差分 + 语义钉死）与
+    `redaction.perf.test.ts`（40 KiB ≤100 ms、1 MiB ≤2 s，实测毫秒级）。
+  - 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4 成功
+    （core 127 tests、console 123 files / 666 tests）；`vp run -r build` 通过。
+
+### 发布（第 9.5 步）
+
+- **本轮不发布**：唯一交付是安全/性能修复，PR 在时间预算末尾才进入 CI；按「超出 75 分钟
+  不再启动新的实现/评审工作」规则，不仓促召开发布小组。下一轮第一优先评估
+  `v0.1.0-beta.21`（用户可见依据：1 MiB 以上载荷不再阻塞接入/详情/投递），并补
+  tag、GitHub Release 与多平台镜像。
+
+### 下一轮优先项
+
+1. 评估并发布 `v0.1.0-beta.21`（若 main CI 绿、无阻断 PR）。
+2. **Q-42（26）EXPERT_PANEL**：空 severity 的加急语义（规范化 / 拒绝 / 视为不限）。
+3. 重跑 `requirements` + `architecture` 车道（第 33 轮因配额饥饿无产出）。
+4. REQ-138（28）、REQ-135（28）、REQ-137（28）；REQ-125/130/131/136/139/140/141（27）。
+5. Q-43（25）、Q-45/Q-46、SEC-13、SEC-20/21 的 AUTO_FIX 批次；UI-13/UI-14。
+
 ## 2026-10-20（第 33 轮）
 
 - 时间：2026-10-20 09:25 – 11:15 CST（严重超出 75 分钟预算，原因是 subagent 车道被配额饥饿）。
