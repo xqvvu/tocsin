@@ -324,6 +324,126 @@ describe("redaction", () => {
     ]);
   });
 
+  it("hides a label check's value when the label key is credential-shaped", () => {
+    expect(
+      redactRouteMatchResults([
+        {
+          routeId: "route-1",
+          routeName: "Checkout critical",
+          matched: true,
+          destinationIds: ["destination-1"],
+          checks: [
+            {
+              field: "label",
+              matched: true,
+              detail: "Expected label authorization to equal plain-secret",
+              condition: "compare",
+              labelKey: "authorization",
+              expected: ["plain-secret"],
+              actual: "plain-secret",
+            },
+            {
+              field: "label",
+              matched: true,
+              detail: "Expected label apiToken to equal abc123",
+              condition: "compare",
+              labelKey: "apiToken",
+              expected: ["abc123"],
+              actual: "abc123",
+            },
+          ],
+        },
+      ]),
+    ).toEqual([
+      {
+        routeId: "route-1",
+        routeName: "Checkout critical",
+        matched: true,
+        destinationIds: ["destination-1"],
+        checks: [
+          {
+            field: "label",
+            matched: true,
+            detail: "Expected label authorization to equal plain-secret",
+            condition: "compare",
+            labelKey: "authorization",
+            expected: ["plain-secret"],
+            actual: REDACTED_VALUE,
+          },
+          {
+            field: "label",
+            matched: true,
+            detail: "Expected label apiToken to equal abc123",
+            condition: "compare",
+            labelKey: "apiToken",
+            expected: ["abc123"],
+            actual: REDACTED_VALUE,
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("keeps a benign label check's value and still redacts credential shapes", () => {
+    expect(
+      redactRouteMatchResults([
+        {
+          routeId: "route-1",
+          routeName: "Checkout critical",
+          matched: true,
+          destinationIds: ["destination-1"],
+          checks: [
+            {
+              field: "label",
+              matched: true,
+              detail: "Expected label service to equal checkout",
+              condition: "compare",
+              labelKey: "service",
+              expected: ["checkout"],
+              actual: "checkout",
+            },
+            {
+              field: "label",
+              matched: false,
+              detail: "Expected label note to contain token=upstream-secret",
+              condition: "compare",
+              labelKey: "note",
+              expected: [],
+              actual: "token=upstream-secret",
+            },
+          ],
+        },
+      ]),
+    ).toEqual([
+      {
+        routeId: "route-1",
+        routeName: "Checkout critical",
+        matched: true,
+        destinationIds: ["destination-1"],
+        checks: [
+          {
+            field: "label",
+            matched: true,
+            detail: "Expected label service to equal checkout",
+            condition: "compare",
+            labelKey: "service",
+            expected: ["checkout"],
+            actual: "checkout",
+          },
+          {
+            field: "label",
+            matched: false,
+            detail: "Expected label note to contain token=upstream-secret",
+            condition: "compare",
+            labelKey: "note",
+            expected: [],
+            actual: "token=[REDACTED]",
+          },
+        ],
+      },
+    ]);
+  });
+
   it("projects a stored event's metadata, payload, headers, and route evidence", () => {
     const event = redactEventRecord({
       id: "event-1",
