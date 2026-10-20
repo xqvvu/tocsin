@@ -71,6 +71,10 @@ export function explainMissingUrgentPings(
     return { code: "not_firing", status };
   }
 
+  // `urgentSeverities` is `[]` only when the destination has no urgent block
+  // (already reported as `no_receivers` above). A block with an empty stored
+  // list is projected as ["critical"], matching the adapter schema and the
+  // trigger, so the explanation cannot disagree with what actually ran.
   const severities = metadataStringArray(metadata, "urgentSeverities");
   const severity = detail.event.normalized.severity;
 

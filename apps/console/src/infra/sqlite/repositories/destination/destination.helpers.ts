@@ -135,7 +135,12 @@ export function destinationEditorFormDraftFromRuntime(
       feishuUrgent && typeof feishuUrgent.autoEnabled === "boolean"
         ? feishuUrgent.autoEnabled
         : true,
-    urgentSeverities: feishuUrgent ? configStringArray(feishuUrgent, "severities") : ["critical"],
+    // The form must show the gate that will actually run. A legacy imported
+    // `severities: []` pages critical only, so an empty selection here would
+    // contradict the destination's behaviour the moment the operator saves.
+    urgentSeverities: feishuUrgent
+      ? normalizedUrgentSeverities(configStringArray(feishuUrgent, "severities"))
+      : ["critical"],
     urgentUserIdType: feishuUrgent
       ? (configString(feishuUrgent, "userIdType") ?? "open_id")
       : "open_id",
@@ -196,13 +201,9 @@ export function destinationMetadataFromRuntime(destination: DestinationRuntimeCo
 
       metadata.urgentAutoEnabled = operational.urgentAutoEnabled === true;
       metadata.urgentReceiverCount = operational.urgentReceivers?.length ?? 0;
-      // Mirror the schema default: an urgent block without explicit severities
-      // only pages critical alerts; no block means no auto paging at all.
-      metadata.urgentSeverities = urgent
-        ? urgentSeverities.length > 0
-          ? urgentSeverities
-          : ["critical"]
-        : [];
+      // Mirror the schema: an urgent block with an empty or missing severity
+      // list only pages critical alerts; no block means no auto paging at all.
+      metadata.urgentSeverities = urgent ? normalizedUrgentSeverities(urgentSeverities) : [];
     }
 
     return metadata;
@@ -378,6 +379,17 @@ function configPlainObject(config: JsonObject, key: string): JsonObject | null {
   const value = config[key];
 
   return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonObject) : null;
+}
+
+/**
+ * Paging severities for a stored urgent block.
+ *
+ * An empty or missing list means the critical gate, matching the adapter
+ * schema and the form. Kept in one place so the edit draft and the delivery
+ * metadata cannot drift from what the trigger actually does.
+ */
+function normalizedUrgentSeverities(severities: string[]): string[] {
+  return severities.length > 0 ? severities : ["critical"];
 }
 
 function feishuSendMode(config: JsonObject): "webhook" | "app" | null {

@@ -59,7 +59,7 @@ Tocsin 的投递能"通知"，但不能"叫醒"。告警进入飞书群或邮箱
 - **触发 = 自动 + 手动：**
   - 自动：投递成功、带 provider reference、事件状态为 `firing`、severity 在目标的加急门槛内 → 为每个接收人创建一条 ping。
   - 手动：`operations.buzzDelivery({ deliveryId })`，从投递详情页触发，接收人取目标配置，记录操作者。失败落回队列重试。
-  - 加急配置形状：`{ autoEnabled, severities（默认 ["critical"]）, userIdType, receivers（≥1，唯一） }`；`autoEnabled = false` 即只保留手动。v1 不支持手动指定任意接收人。
+  - 加急配置形状：`{ autoEnabled, severities（默认 ["critical"]）, userIdType, receivers（≥1，唯一） }`；`autoEnabled = false` 即只保留手动。显式空列表按默认 `["critical"]` 处理，不会放宽为不限级别。v1 不支持手动指定任意接收人。
 - **ping 的粒度是一个接收人一条**：独立消息、独立呼叫、独立状态与独立重试；一个接收人失败不影响其他人。状态机为 `scheduled | running | fired | suppressed | failed`，其中 `scheduled` / `suppressed` 为后续延时/确认能力预留，本切片恒不出现。ping 记录投递、接收人、渠道、`message_id`、尝试次数、下次重试时间、最后错误、触发来源（`auto` / `manual` 与操作者）。
 - **重试与退避**复用 delivery 语义：指数退避 + 有界最大尝试次数；可否重试按**飞书业务码**判定而不是按 HTTP 状态（平台把权限、配额、机器人不在群等永久性拒绝一律用 HTTP 400 返回，把限流用 `99991400`/HTTP 429 返回，把"未读加急过多"用 `230023` 返回）；配额/权限/配置类判定为不可重试并在错误信息里给出运维动作，限流与未读加急超限保留重试；接口在部分接收人无效时仍返回 `code 0` 并把无效 id 放进 `data.invalid_user_id_list`，落在该列表里的接收人不能算呼叫成功；ping 失败不回滚、不触碰对应投递的状态。
 - **去重**按 `(fingerprint, 目标, 接收人)` 在一个去重窗口内只建一条 ping；去重键独立成表，不复用 delivery 的去重表。

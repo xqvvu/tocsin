@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { destinationMetadataFromRuntime } from "#/infra/sqlite/repositories/destination/destination.helpers";
+import {
+  destinationEditorFormDraftFromRuntime,
+  destinationMetadataFromRuntime,
+} from "#/infra/sqlite/repositories/destination/destination.helpers";
 import type { DestinationRuntimeConfig } from "#/infra/sqlite/repositories/destination/destination.interface";
 
 describe("destinationMetadataFromRuntime", () => {
@@ -31,6 +34,18 @@ describe("destinationMetadataFromRuntime", () => {
         sendMode: "app",
         app: { appRef: "oncall-bot", chatId: "oc_123" },
         urgent: { autoEnabled: true, receivers: ["ou_1"] },
+      }),
+    );
+
+    expect(metadata.urgentSeverities).toEqual(["critical"]);
+  });
+
+  it("treats an explicit empty severity list as the critical gate", () => {
+    const metadata = destinationMetadataFromRuntime(
+      feishuDestination({
+        sendMode: "app",
+        app: { appRef: "oncall-bot", chatId: "oc_123" },
+        urgent: { autoEnabled: true, severities: [], receivers: ["ou_1"] },
       }),
     );
 
@@ -76,6 +91,17 @@ describe("destinationMetadataFromRuntime", () => {
     const serialized = JSON.stringify(metadata);
     expect(serialized).not.toContain("sign-secret-value");
     expect(serialized).not.toContain("app-secret-value");
+  });
+  it("loads an empty stored severity list as the critical gate in the editor", () => {
+    const draft = destinationEditorFormDraftFromRuntime(
+      feishuDestination({
+        sendMode: "app",
+        app: { appRef: "oncall-bot", chatId: "oc_123" },
+        urgent: { autoEnabled: true, severities: [], receivers: ["ou_1"] },
+      }),
+    );
+
+    expect(draft.urgentSeverities).toEqual(["critical"]);
   });
 });
 
