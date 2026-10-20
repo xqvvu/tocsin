@@ -431,6 +431,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.30` | `0edd56f` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.30`（**未推送**：构建时 Docker Hub 不可达，下一轮重试） | 删除告警源/通知目标前披露路由级联影响（#236，REQ-164）；无迁移/配置变化；回滚镜像 `0.1.0-beta.29`（缺失则 `0.1.0-beta.28`） |
 | `0.1.0-beta.29` | `eea856f` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.29`（**未推送**：构建时 Docker Hub 不可达，下一轮重试） | 去重缺口中的首发事件可直达（#233，REQ-173）；无迁移/配置变化；回滚镜像 `0.1.0-beta.28` |
 | `0.1.0-beta.28` | `c70e8f7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.28`（linux/amd64 + linux/arm64，index digest `sha256:5b30d451…`） | 事件详情投递健康徽标补齐全部状态（#230，UI-20）；无迁移/配置变化；回滚镜像 `0.1.0-beta.27` |
 | `0.1.0-beta.27` | `e8afbce` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.27`（linux/amd64 + linux/arm64，index digest `sha256:724ac014…`） | 通知目标停用确认披露自动加急（#225，REQ-170）；无迁移/配置变化；回滚镜像 `0.1.0-beta.26` |

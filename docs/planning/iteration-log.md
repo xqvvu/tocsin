@@ -77,11 +77,19 @@
 
 ### 发布评估与镜像
 
-- 本轮合入 1 个用户可见功能（#236），满足发布评估的「有用户可见变更」前提；
-  评估结论见下方独立记录（若未发布则写原因）。
-- `0.1.0-beta.29` 多平台镜像重试：`docker buildx imagetools inspect docker/dockerfile:1`
-  仍报 `registry-1.docker.io ... EOF`，Docker Hub 不可达，构建无法开始；tag 与
-  Release 保留，下一轮继续重试（不 force、不删 tag）。
+- 三位专家（发布经理/阻断审计/运维回滚）一致 APPROVE：7/7 门槛 PASS
+  （main CI success `0edd56f`、0 open PR、无 migration/锁文件/部署配置变更、
+  `v0.1.0-beta.30` 未占用）。
+- 版本：`0.1.0-beta.30`；PR #238 `chore(release): v0.1.0-beta.30`（rebase 合并
+  `0edd56f`），main CI success。
+- Tag：`v0.1.0-beta.30`（annotated，指向 `0edd56f`）；GitHub Release：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.30
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.30` **未推送** ——
+  构建在解析 `docker/dockerfile:1` 时再次因 `registry-1.docker.io ... EOF` 失败；
+  tag 与 Release 保留，下一轮重试（不 force、不删 tag）。
+- 回滚镜像：`0.1.0-beta.29`（若镜像缺失则 `0.1.0-beta.28`）。
+- `0.1.0-beta.29` 多平台镜像重试同样失败（Docker Hub 不可达），tag/Release 保留。
+- 收尾 PR #237 `docs(planning): record round 44`（rebase 合并 `ffcbdf6`）。
 
 ### 下一轮优先项
 
