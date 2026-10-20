@@ -2,6 +2,83 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 46 轮）
+
+- 时间：2026-10-21 02:26 – 03:00 CST。
+- 基线：本轮开始时 `origin/main` @ `3caf2c6`；两个 PR 合入后 @ `60e0a17`。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，且无 open PR）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 `defer`，第三个并发名额给轮转的
+  `docs-drift`（与第 45 轮的 `security-exposure` 交替）。
+- 车道轮转位置：下次非必跑车道为 **`release-infra`**（REL-2/REL-4/REL-7/REL-9/REL-21 均为
+  candidate；security-exposure 与 docs-drift 已连续两轮占用第三名额）。
+- `ui-triage`：**`defer`** —— 距第 44 轮真实浏览器评审约 1.4 小时；自上次评审以来 UI 路径仅
+  1 个合并（证据包导出），低于 3 个阈值；13 条未解决 UI 发现均为上一轮编目的存量；
+  第 45 轮的 UI 合并已有浏览器实测记录。建议下次触发：UI 路径再合并 ≥2 个且无浏览器验证，
+  或距第 44 轮满 48h。
+- `last_ui_review_at`：2026-10-21 01:00（第 44 轮）；本轮未做 UI 评审，不更新。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 均在会话工作树
+  `objective-darwin-b8f498`。
+
+### 本轮交付
+
+- PR #243 `feat(console): disclose the silenced scope in the suppression impact preview` ——
+  **REQ-180（28）**。
+  - 影响面板复用模型已算的 `scopedCount`（`urgent-impact.ts:43`），按三分支渲染：
+    无启用目标（规则当前不生效）、有启用目标但无自动呼叫、有自动呼叫并追加范围汇总。
+  - 英文标题补 ICU 单复数；新增 `zeroScopedTitle/zeroScopedDescription/scopedSummary` 三键，
+    `noneDescription` 改为带 `{count}`；中英文同步。
+  - 新增 `urgent-impact-preview.test.tsx` 5 条组件测试；同步修正 `suppression-forms.test.tsx`
+    对标题的断言；新增 PRD `docs/prd/suppression-scope-disclosure.md`。
+  - 自查发现并修正一处文案准确性：范围为空也可能是引用目标被删除，而非「全部停用」，
+    改为「范围内当前没有启用的目标」。
+  - 验证：`vp fmt --write`、`vp check` 0 errors（12 条既有 warning）、`vp run -r test`
+    136 files / 736 tests、`vp run -r build` exit 0；CI success；rebase 合并。
+- PR #244 `docs(prd): reconcile roadmap and suppression status with shipped code` ——
+  **DOC-11 + DOC-21（26）**。
+  - `post-mvp-planning.md` 方向 2/4/5/6 增加复核注记：route explain、组合过滤、CI/docker-smoke、
+    发布文档、destination guide/scaffold/test-kit/registry audit 已交付；剩余 REQ-3/6/22/33/34、
+    provider fixtures 与 REL-1。
+  - `adapter-contribution-experience.md`：状态注记；F2 改写为 F2'（穷尽 switch 已落地，
+    剩余两处手写 secret 路径）；基线表更新。
+  - `alert-suppression.md`：状态头补未交付增量（REQ-25/REQ-29）、五状态、真实 oRPC 面
+    （`list/get/hits/create/update/setEnabled/delete`，无 `preview`）。
+  - `mvp-rc-checklist.md`：补 Suppressions/Integrations 页面与 `suppressed` 状态，
+    dedupe prune 行号改为 `delivery.helpers.ts:107-108`、`delivery.repository.ts:99`。
+  - 验证：`vp fmt --check` 通过；纯文档；CI success；rebase 合并。
+
+### 专家发现
+
+- `requirements`：新增 REQ-185..189（见 backlog）。最高分：
+  - REQ-185（29）停用配置前展示排队投递数与实际发送行为：源停用不阻止已入队投递，
+    路由/目标停用会暂停（`delivery.repository.ts:219-231`）；复用 `operations.list`
+    的 `deliveryState=pending` + `total`，纯前端。
+  - REQ-186（28）设置页从文件导入 TOML/JSON：恢复文档要求重新导入，但只能粘贴
+    （`portable-config-form.tsx:123-172`）；全仓无 `type="file"`/`FileReader`。
+  - REQ-187（27）签名密钥显式清除；REQ-188（26）配置编辑器未保存草稿保护；
+    REQ-189（24）取消 pending 投递（需 EXPERT_PANEL 裁决终态）。
+- `docs-drift`：10 条过期断言，本轮交付 4 个文件（PR #244）；剩余：
+  - DOC-6（架构文档 `application-container.md`、`frontend-architecture.md` 的文件树/页面清单
+    仍缺 suppressions/integrations/operations）。
+  - 过期交叉引用与版本号（ADR 0008 的 vite-plus 1.0.0、`route-authoring-current-state.md:3`
+    的本机路径、`devs/vane` 路径）——低风险，下一轮 docs 批次处理。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项；REQ-180 为纯前端只读投影，DOC 批次为纯文档。
+
+### 发布评估与镜像
+
+- 待填（发布小组评估中）。
+
+### 下一轮优先项
+
+1. **REQ-185（29）** 停用前排队投递披露；**REQ-186（28）** 文件导入 TOML/JSON。
+2. **SEC-22（27）** endpoint userinfo 密码投影；**SEC-24（25）** 补脱敏 key 形态测试。
+3. **REQ-181（27）** 删除级联数量；**REQ-182（27）** 目标测试确认。
+4. **DOC-6** 架构文档文件树；docs 过期交叉引用批次。
+5. **UI-14（25）** 静默启停确认；**UI-21（22）** Dialog `Close` 本地化。
+
 ## 2026-10-21（第 45 轮）
 
 - 时间：2026-10-21 01:35 – 02:20 CST。
