@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { PageToolbar } from "#/components/common/page-toolbar";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { buttonVariants } from "#/components/ui/button";
+import { DeliveryDestinationEditAction } from "#/features/deliveries/ui/delivery-destination-edit-action";
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
 import { DeliveryDetailView } from "#/features/deliveries/ui/delivery-detail-view";
 import { DeliveryRetryButton } from "#/features/deliveries/ui/delivery-retry-button";
@@ -55,6 +56,13 @@ function DeliveryDetailPageToolbar({
       badge={deliveryId}
       actions={
         <>
+          {detail ? (
+            <DeliveryDestinationEditAction
+              deliveryId={detail.job.id}
+              destinationId={detail.destination.id}
+              state={detail.job.state}
+            />
+          ) : null}
           {detail ? <DeliveryRetryButton id={detail.job.id} state={detail.job.state} /> : null}
           <Link
             to="/deliveries"

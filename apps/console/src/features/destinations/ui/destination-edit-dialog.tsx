@@ -26,7 +26,11 @@ export function DestinationEditDialog({
   destination,
   open,
   disabled = false,
+  loading = false,
+  loadError = null,
   onOpenChange,
+  onRetryLoad,
+  onSaved,
   onPreview,
 }: {
   destinationCatalog: DestinationCatalog;
@@ -34,7 +38,14 @@ export function DestinationEditDialog({
   destination: DestinationListItem | null;
   open: boolean;
   disabled?: boolean;
+  /** The caller is still resolving the destination for a remote entry point. */
+  loading?: boolean;
+  /** Message shown when the destination could not be resolved at all. */
+  loadError?: string | null;
   onOpenChange: (open: boolean) => void;
+  onRetryLoad?: () => void;
+  /** Runs after the save is persisted and the list queries are invalidated. */
+  onSaved?: () => void | Promise<void>;
   onPreview: DestinationSubmitHandler<PreviewEditDestinationFormInput>;
 }) {
   const t = useTranslations();
@@ -60,7 +71,29 @@ export function DestinationEditDialog({
           <DialogDescription>{t("destinations.form.edit.description")}</DialogDescription>
         </DialogHeader>
 
-        {destination && templateDraftQuery.data ? (
+        {loading ? (
+          <EditDestinationForm.Skeleton />
+        ) : loadError ? (
+          <Alert variant="destructive">
+            <AlertTitle>{t("destinations.form.edit.loadFailedTitle")}</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-2">
+              <span>{loadError}</span>
+              {onRetryLoad ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  onClick={() => {
+                    onRetryLoad();
+                  }}
+                >
+                  <RiRefreshLine data-icon="inline-start" aria-hidden />
+                  {t("common.actions.retry")}
+                </Button>
+              ) : null}
+            </AlertDescription>
+          </Alert>
+        ) : destination && templateDraftQuery.data ? (
           <EditDestinationForm
             destinationCatalog={destinationCatalog}
             feishuApps={feishuApps}
@@ -79,6 +112,12 @@ export function DestinationEditDialog({
                 await updateDestination(input);
                 await invalidateDestinations();
                 onOpenChange(false);
+                try {
+                  await onSaved?.();
+                } catch {
+                  // The configuration is already persisted; a failed refresh of a
+                  // caller-owned query only delays the next read.
+                }
               } catch (error) {
                 toast.error(t("destinations.page.operationFailed"), {
                   description: error instanceof Error ? error.message : String(error),
@@ -111,7 +150,12 @@ export function DestinationEditDialog({
           </Alert>
         ) : destination ? (
           <EditDestinationForm.Skeleton />
-        ) : null}
+        ) : (
+          <Alert variant="destructive">
+            <AlertTitle>{t("destinations.form.edit.notFoundTitle")}</AlertTitle>
+            <AlertDescription>{t("destinations.form.edit.notFoundDescription")}</AlertDescription>
+          </Alert>
+        )}
       </ConfigurationDialogContent>
     </Dialog>
   );
