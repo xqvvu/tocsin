@@ -426,6 +426,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.28` | `c70e8f7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.28`（linux/amd64 + linux/arm64，index digest `sha256:5b30d451…`） | 事件详情投递健康徽标补齐全部状态（#230，UI-20）；无迁移/配置变化；回滚镜像 `0.1.0-beta.27` |
 | `0.1.0-beta.27` | `e8afbce` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.27`（linux/amd64 + linux/arm64，index digest `sha256:724ac014…`） | 通知目标停用确认披露自动加急（#225，REQ-170）；无迁移/配置变化；回滚镜像 `0.1.0-beta.26` |
 | `0.1.0-beta.26` | `2af4669` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.26`（linux/amd64 + linux/arm64，index digest `sha256:ab90df83…`） | 路由匹配证据本地化与换行（#220，UI-17）；无迁移/配置变化；回滚镜像 `0.1.0-beta.25` |
 | `0.1.0-beta.25` | `4f548d0` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.25`（linux/amd64 + linux/arm64，index digest `sha256:29108b4c…`） | 静默规则列表按生效状态置顶（#217，REQ-155）；无迁移/配置变化；回滚镜像 `0.1.0-beta.24` |
