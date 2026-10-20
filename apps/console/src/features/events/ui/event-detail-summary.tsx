@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import type { DeliveryState } from "@tocsin/core";
+
 import { Badge } from "#/components/ui/badge";
 import type { getEventDeliveryStats } from "#/features/events/ui/event-detail-stats";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
@@ -7,6 +9,35 @@ import { SeverityBadge } from "#/features/events/ui/severity-badge";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
+
+/**
+ * Operational priority: a failed delivery needs attention first, an in-flight
+ * one explains why the event looks quiet, and a suppressed one explains why
+ * nothing was sent at all. Successful deliveries are the least urgent context.
+ */
+const DELIVERY_HEALTH_ORDER: DeliveryState[] = [
+  "failed",
+  "running",
+  "pending",
+  "succeeded",
+  "suppressed",
+];
+
+const DELIVERY_HEALTH_MESSAGE_KEYS: Record<DeliveryState, string> = {
+  failed: "events.detail.summary.deliveryHealthFailed",
+  running: "events.detail.summary.deliveryHealthRunning",
+  pending: "events.detail.summary.deliveryHealthPending",
+  succeeded: "events.detail.summary.deliveryHealthSucceeded",
+  suppressed: "events.detail.summary.deliveryHealthSuppressed",
+};
+
+const DELIVERY_HEALTH_VARIANTS: Record<DeliveryState, "destructive" | "secondary" | "outline"> = {
+  failed: "destructive",
+  running: "secondary",
+  pending: "secondary",
+  succeeded: "outline",
+  suppressed: "outline",
+};
 
 export function EventDetailSummary({
   detail,
@@ -19,6 +50,7 @@ export function EventDetailSummary({
 }) {
   const t = useTranslations();
   const normalized = detail.event.normalized;
+  const deliveryTotal = Object.values(deliveryStats).reduce((total, count) => total + count, 0);
 
   return (
     <section className="border-border bg-card shrink-0 border">
@@ -40,12 +72,17 @@ export function EventDetailSummary({
               total: detail.routeMatches.length,
             })}
           </Badge>
-          <Badge variant={deliveryStats.failed > 0 ? "destructive" : "outline"}>
-            {t("events.detail.summary.deliveryHealth", {
-              succeeded: deliveryStats.succeeded,
-              failed: deliveryStats.failed,
-            })}
-          </Badge>
+          {deliveryTotal === 0 ? (
+            <Badge variant="outline">{t("events.detail.summary.deliveryHealthNone")}</Badge>
+          ) : (
+            DELIVERY_HEALTH_ORDER.filter((state) => deliveryStats[state] > 0).map((state) => (
+              <Badge key={state} variant={DELIVERY_HEALTH_VARIANTS[state]}>
+                {t(DELIVERY_HEALTH_MESSAGE_KEYS[state], {
+                  count: deliveryStats[state],
+                })}
+              </Badge>
+            ))
+          )}
         </div>
       </div>
       <div className="bg-border grid gap-px sm:grid-cols-2 lg:grid-cols-5">
