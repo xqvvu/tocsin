@@ -301,7 +301,7 @@
 | DOC-46 | post-MVP 方向 5 仍整段列为候选 | docs-drift lane（第 27 轮） | 24 | candidate | — | `post-mvp-planning.md:156-174`；CI、Docker smoke、release 文档、脱敏日志均已落地，仅 E2E 未接 CI |
 | DOC-47 | post-MVP 方向 2 缺口描述过期 | docs-drift lane（第 27 轮） | 23 | candidate | — | `post-mvp-planning.md:211-215` 称缺投递缺口解释，实际 `route-match-gaps.ts:57` 与 `history.repository.ts:194` 已实现；仅剩样例 Event 干跑预览 |
 | DOC-48 | 四个已交付 mini-PRD 缺状态头 | docs-drift lane（第 27 轮） | 22 | candidate | — | `active-suppression-indicator.md`、`event-label-silence.md`、`delivery-payload-comparison.md`、`oncall-feishu-urgent.md` 仍用现在时称能力不存在 |
-| DOC-49 | RC 清单概览漏列三类剩余 gate | docs-drift lane（第 27 轮） | 23 | candidate | — | `mvp-rc-checklist.md:17-21,104` 称只剩 E2E，但 dedupe cleanup、provider fixture、多版本 payload 仍未勾选 |
+| DOC-49 | RC 清单概览漏列三类剩余 gate | docs-drift lane（第 27 轮） | 23 | shipped | #226 | 概览改为列出四类剩余 gate（E2E CI、dedupe cleanup、provider fixtures/多版本 payload、provider guide）并指向 A/D/E 节 |
 | DOC-50 | ADR 0008 / restructure-plan 版本与命令过期 | docs-drift lane（第 27 轮） | 22 | candidate | — | `adr/0008...:16,20` 写 vite-plus 1.0.0（实际 `pnpm-workspace.yaml:9` 1.3.0）；`console-server-restructure-plan.md:80` 的 `vp -C apps/console fmt:check` 不存在，`:49` 路径过期 |
 | DOC-51 | frontend-architecture 页面/feature 清单不全 | docs-drift lane（第 27 轮） | 22 | candidate | — | `frontend-architecture.md:17-18,138-148` 缺 integrations、suppressions、auth 与 setup |
 | DOC-52 | adapter-extensibility 剩余范围漏 F3 | docs-drift lane（第 27 轮） | 21 | candidate | — | F3 仍成立：表单只消费 template `modes`，其余 configFields 不参与渲染（`destination-form.ts:294`） |
@@ -413,7 +413,7 @@
 | REQ-167 | 事件详情显示同指纹最新状态 | requirements lane（第 39 轮） | 27 | candidate | — | 详情只展示当前事件 status（`event-detail-summary.tsx:27-35`），不查后续 resolved 事件（`history.repository.ts:155-215`、`operations.ts:63-87`）；用 `operations.list`（sourceId+q）客户端精确过滤 fingerprint，显示「已恢复/仍 firing」；REQ-6 的轻量切片 |
 | REQ-168 | 加急呼叫失败原因可完整查看 | requirements lane（第 39 轮） | 28 | candidate | — | pings 表错误列只有 `truncate`，无 title/对话框/复制（`delivery-pings-table.tsx:104-105`），attempts 表已有完整查看对话框（`delivery-attempt-detail-dialog.tsx:23-30`）；长错误恰是排障关键；纯前端 |
 | REQ-169 | 手动 Worker 显示积压与批次上限 | requirements lane（第 39 轮） | 27 | candidate | — | UI 固定每次 10 条（`deliveries-page.tsx:100-107`），契约允许 1–50（`operations.ts:227-231`），工具栏无 pending 积压数（`deliveries-page-toolbar.tsx:18-48`）；展示 pending total + 10/25/50 批次，运行后刷新；只读查询 + 现有参数 |
-| REQ-170 | 通知目标停用确认披露自动加急影响 | requirements lane（第 40 轮） | 29 | candidate | — | 停用确认只讲路由与排队投递（`destination-actions.tsx:124-131`、`zh-Hans.json:279-283`），但目标开启自动加急时会同时停掉电话呼叫；静默表单已有等价披露（`features/suppressions/model/urgent-impact.ts:30-47`）。纯前端，复用目标 DTO 的 `urgentAutoEnabled/urgentReceivers` |
+| REQ-170 | 通知目标停用确认披露自动加急影响 | requirements lane（第 40 轮） | 29 | shipped | #225 | 停用确认框在 `urgentAutoEnabled` 时追加 destructive 警示与呼叫对象人数；3 个 i18n 键 ×2 语言；PRD `docs/prd/destination-disable-urgent-disclosure.md` |
 | REQ-171 | 补投预览披露将触发的自动加急呼叫 | requirements lane（第 40 轮） | 28 | candidate | — | 补投会创建真实投递并正常执行（`event-replay.service.ts:64-83,139-152`），但预览 DTO 无加急字段（`packages/core/src/operations.ts:196-255`）、确认框无警告（`route-replay-prompt.tsx:100-112`）；需只读 `urgentImpact` 投影与两个预览面展示；与 REQ-83 协同 |
 | REQ-172 | 告警源/通知目标列表显示生效中的静默引用 | requirements lane（第 40 轮） | 27 | candidate | — | 两页都不加载静默规则（`sources-page.tsx:25-27`、`destinations-page.tsx:47-60`）；active 直接引用显示「静默规则引用中」，matcher 维度为空显示「存在未限定规则」；复用 `suppressionsQueryOptions()`，纯前端 |
 | UI-20 | 事件详情投递健康徽标忽略 pending/suppressed | ui-review（第 40 轮，浏览器实测） | 26 | candidate | — | 徽标只统计 succeeded/failed，有 pending 或 suppressed 时显示「成功 0 / 失败 0」（`event-detail-summary.tsx:52-57`、`zh-Hans.json:559`），与旁边「通知投递 2 条」矛盾；统计函数已含全部状态，补计数与文案即可 |
@@ -443,11 +443,10 @@
 
 ## 下一轮优先项
 
-0. **REQ-170（29）** 目标停用确认披露自动加急；**REQ-164（29）** 删除告警源/通知目标前
-   显示路由级联影响（建议删除结果携带仓储已算好的 `routeCleanup` 计数）；
-   **REQ-171/172（27-28）** 补投加急披露、列表静默引用；**REQ-165/166/168（28）**
-   路由源停用不可达、顶栏投递失败指示器、加急失败原因完整查看；**REQ-167/169（27）**
-   同指纹最新状态、Worker 积压与批次。
+0. **REQ-164（29）** 删除告警源/通知目标前显示路由级联影响（建议删除结果携带仓储已算好的
+   `routeCleanup` 计数）；**REQ-171/172（27-28）** 补投加急披露、列表静默引用；
+   **REQ-165/166/168（28）** 路由源停用不可达、顶栏投递失败指示器、加急失败原因完整查看；
+   **REQ-167/169（27）** 同指纹最新状态、Worker 积压与批次。
 1. **REQ-159（28）** 通用 Webhook 可配置字段映射；**REQ-160/161/163（27）** 事件列表
    路由名、Basic 认证、维护窗口批量排期；**REQ-138/137（28）** 目标覆盖率计入源启停、
    源解析器变更确认。
@@ -474,11 +473,11 @@
     migration/checksum、REL-18 证据迁到 `docker-production-deployment.md:56`。
     下一步优先 **REL-21（26）** 独立 `e2e.yml`（先本地跑通 `playwright install chromium`
     + test）、provider fixture、required checks（EXPERT_PANEL）。
-10. **docs-drift 批次**：第一批 DOC-49/23/24/37/43/46/47/50/51（发布 gate、README、
-    抑制 PRD 五状态、post-MVP 过期范围）；第二批 DOC-36/48/53/54/55/56/57/58（状态头、
+10. **docs-drift 批次**：第一批 DOC-23/24/37/43/46/47/50/51（README、抑制 PRD 五状态、
+    post-MVP 过期范围；DOC-49 已交付 #226）；第二批 DOC-36/48/53/54/55/56/57/58（状态头、
     ADR 版本、无 importer 的 accessor）。建议拆两个 `docs:` PR；DOC-52 可关闭。
-11. **车道轮转（第 40 轮）**：`requirements` + `ui-triage` 必跑；非必跑车道本轮跑
-    **`docs-drift`**（并触发完整 `ui-review`），下一轮轮转 **`security-exposure`**。
+11. **车道轮转（第 41 轮）**：`requirements` + `ui-triage` 必跑；非必跑车道本轮为
+    **`security-exposure`**，但该车道运行 41 分钟未产出被终止，下一轮重跑。
     `last_ui_review_at` = 2026-10-20 17:57，48h 内无新的强信号时可继续 `defer`。
 11. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 12. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
