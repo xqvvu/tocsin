@@ -91,7 +91,7 @@
 | DOC-8 | README/AGENTS.md 的 pnpm 版本过期 | docs drift | 23 | shipped | #117 | 对齐 `pnpm@12.14.0` |
 | DOC-9 | 发布文档声称没有 E2E/smoke、迁移只有 0001 | release-infra lane | 27 | shipped | #117 | 区分脚本已存在与 CI 未接入；rel 文档更新 |
 | DOC-10 | `route-explain-delivery-gap.md` 仍称「待实现」 | requirements lane | 24 | shipped | #117 | 状态与 R8 说明已对齐代码 |
-| DOC-11 | `adapter-contribution-experience.md` 的「不存在」盘点部分过期 | docs drift | 24 | candidate | — | 第 13 轮复核：`audit()`(`registry.ts:83`)、test-kit(`package.json:18`)、`iconName`、贡献指南均已落地；剩余范围收窄为 **F5（HTTP 发送信封收敛）**。第 15 轮补充：`:17,117-118,131-158,169-171,341-342` 还称 `destinationSecretPaths` 是嵌套三元（实为穷尽 switch），剩余范围应为 F1/F2'/F5 |
+| DOC-11 | `adapter-contribution-experience.md` 的「不存在」盘点部分过期 | docs drift | 24 | shipped | #244 | 第 46 轮交付：状态注记 + F2 改写为 F2'（穷尽 switch 已落地，剩余两处手写 secret 路径）+ 基线表更新；F1/F3/F5 仍为真实缺口 |
 | DOC-12 | `route-authoring-current-state.md` 去重证据断言过期 | docs drift | 23 | shipped | #127 | 拆成「去重已落库」与「skipExisting 仅计数」两行（`delivery_dedupe_keys`，`schema.ts:164-185`） |
 | REQ-25 | 抑制规则试跑预览（dry-run） | requirements lane | 27 | candidate | — | PRD 承诺 `preview` 与范围预览，代码只有 list/get/hits；复用 `evaluateSuppressionMatch` + `listRecent`；`alert-suppression.md:97,209,238` |
 | REQ-26 | Destination 用真实历史 Event 预览 | requirements lane | 29 | shipped | #122 | 预览对话框新增样例来源选择器（内置 + 最近 20 条历史 Event），三个预览入口均可重放；`recentEventsQueryOptions`、`destination-notices.tsx`、`destinations-page.tsx`；PRD `docs/prd/destination-historical-event-preview.md` |
@@ -138,6 +138,7 @@
 | REQ-46 | 事件排障摘要一键复制 | requirements lane | 27 | candidate | — | 只能复制单个标识符（`event-detail-term.tsx:7-44`）；摘要所需字段均已在页面（`event-detail-summary.tsx:11-71`） |
 | DOC-19 | RC checklist 仍把已交付排障能力列为下一轮候选 | docs drift | 26 | shipped | #127 | `mvp-rc-checklist.md:188` 补状态：筛选/时间范围/ID 搜索/route explain 已落地；fingerprint 视图等仍未做 |
 | DOC-20 | `destination-historical-event-preview.md` 现状陈述与已实现状态矛盾 | docs drift | 22 | shipped | #127 | 现状陈述改为过去时，与顶部「已实现」一致 |
+| DOC-21 | post-MVP 方向 2/4/5/6、抑制 PRD、RC checklist 状态过期 | docs drift（第 46 轮） | 26 | shipped | #244 | 方向 2/4/5/6 增加复核注记；抑制 PRD 补剩余增量（REQ-25/REQ-29）、五状态与真实 oRPC 面；RC checklist 补 Suppressions/Integrations 与 `suppressed`，修正 dedupe 行号。剩余 DOC-6（架构文档文件树）仍为 candidate |
 | DOC-21 | RC checklist 声称 dedupe cleanup 已改为有界批 | docs drift | 27 | shipped | #135 | 已勾选 gate 收窄为 raw payload pruning，新增未勾选的 dedupe cleanup gate；`history-retention-and-snapshots.md` §2 增加范围说明。代码缺口转 Q-23 |
 | DOC-22 | `next-round.md` 仍把 S0 与抑制写成未决安全缺口 | docs drift | 25 | candidate | — | S0 已在 `config-portability.ts:358-370` 用穷尽 switch 修复；抑制主体已落地且 2026-10-12 拍板（`alert-suppression-decisions.md:3`）。第 15 轮补充：基线 `:3` 为 `2f48153`（第 19 轮实测落后 32 提交，以 `git rev-list --count 2f48153..origin/main` 为准），正文 `:22-23,31-43,72-73,119-128,142-154,210-226,313-324,361-369` 仍称 registry 无 audit、test-kit/iconName/F3/F4/F7 待做；`registry.ts:83`、`package.json:18`、`destination-kind-icon.tsx:26-34` 均已落地 |
 | DOC-23 | 架构文档文件树/路由/工厂清单过期 | docs drift | 24 | candidate | — | `frontend-architecture.md:37-108` 缺 suppressions/integrations/settings/setup 与 csrf；`application-container.md:57` 写 `auth/router.ts`（实为 `session/router.ts`）且缺 `createSuppressionService`。第 15 轮补充：`container.ts:85,107,110-112` 另有 `createEventReplayService`/`createOperationsService`/两个 worker runner；frontend 树缺 `auth/integrations/suppressions`（`deliveries/model` 已存在、`configuration/model` 不存在）；server 树缺 `oncall/suppressions` 与 `operations.service.ts`；`frontend-architecture.md:83` 实际另有 `csrf.middleware.ts`（`start.ts:3-7`） |
@@ -430,11 +431,16 @@
 | REQ-177 | 原始载荷保留窗口结束时间 | requirements lane（第 44 轮） | 28 | candidate | — | Raw/Payload 标签只区分已清理/未清理（`event-raw-tab.tsx:6-29`、`delivery-payload-tab.tsx:17-48`）；用 `rawPayloadRetentionDays` + receivedAt 计算窗口结束，注明清理是惰性触发（`intake.service.ts:428-430`）；纯前端 |
 | REQ-178 | 路由匹配表目标列展开为可核查名单 | requirements lane（第 44 轮） | 27 | candidate | — | 目标列只显示数量（`event-detail-route-matches-table.tsx:56,79`），文档承认该摩擦（`event-route-delivery-outcomes.md:7-14`）；按 destinationId 关联 deliveries，展示名称/启停/结果；纯前端 |
 | REQ-179 | 模板渲染载荷体积预算与目标限制提示 | requirements lane（第 44 轮） | 25 | candidate | — | 只有 4000 字符文本上限（`template.ts:27-37`），Feishu 30KB/Slack 3000 chars 仅在注释；manifest 无 payloadBudget；诊断只报引擎结果；需 adapter manifest 扩展 + 非阻断 warning |
-| REQ-180 | 静默规则创建/编辑披露将被静默的目标数 | requirements lane（第 45 轮） | 28 | candidate | — | `urgentImpactPreview` 已算 `scopedCount` 但 UI 未用（`urgent-impact.ts:43`）；无加急目标时早退，只显示「不影响自动电话提醒」（`urgent-impact-preview.tsx:28-44`）；PRD 要求展示命中范围（`alert-suppression.md:287`）；纯前端 |
+| REQ-180 | 静默规则创建/编辑披露将被静默的目标数 | requirements lane（第 45 轮） | 28 | shipped | #243 | 第 46 轮交付：影响面板复用 `scopedCount`，三分支渲染（无启用目标 / 无加急但有静默 / 有加急并追加范围汇总）；英文标题补 ICU 单复数；5 条组件测试；PRD `docs/prd/suppression-scope-disclosure.md` |
 | REQ-181 | 删除配置前披露将级联删除的事件与投递数 | requirements lane（第 45 轮） | 27 | candidate | — | schema 级联删除 Events/Deliveries（`schema.ts:66,114-119`），三个删除确认框只有定性文案；复用 `operations.list` 的 `total`（`history.interface.ts:24,36-41`），对话框打开时惰性计数；无迁移 |
 | REQ-182 | 通知目标测试发送前确认发送去向 | requirements lane（第 45 轮） | 27 | candidate | — | 测试按钮直接真实发送（`destination-actions.tsx:57-70`、`destination.service.ts:153`），飞书/Slack 测试消息不可撤回；新增确认框展示名称/kind/脱敏去向；纯前端 |
 | REQ-183 | 飞书应用测试结果可复核 | requirements lane（第 45 轮） | 26 | candidate | — | 测试结果只走 toast（`feishu-apps-page.tsx:84-95`），`FeishuAppTestResult` 无状态/时间/复制结构（`feishu-app.ts:39-43`）；失败原因一闪而过；结果对话框 + 复制 + 重试 |
 | REQ-184 | 静默列表显示命中投递数与最近命中时间 | requirements lane（第 45 轮） | 25 | candidate | — | 列表无命中信息（`suppressions-section.tsx:92-132`），只能进详情看；列表 DTO 加 `hitCount/lastHitAt`，一次 `LEFT JOIN deliveries` 聚合；无迁移 |
+| REQ-185 | 停用配置前展示排队投递数与实际发送行为 | requirements lane（第 46 轮） | 29 | candidate | — | 三个停用确认框只有路由/目标数量（`source-actions.tsx:143-155`、`destination-actions.tsx:130-155`、`routes-section.tsx:233-242`）；源停用不阻止已入队投递、路由/目标停用会暂停（`delivery.repository.ts:219-231`）；复用 `operations.list` 的 `deliveryState=pending` + `total`，纯前端 |
+| REQ-186 | 设置页从文件导入 TOML/JSON | requirements lane（第 46 轮） | 28 | candidate | — | 恢复文档要求重新导入，但只能粘贴文本（`portable-config-form.tsx:123-172`、`use-settings-workspace.ts:178-210`），全仓无 `type="file"`/`FileReader`；增加文件加载只填草稿，不自动导入；纯前端 + `createClientOnlyFn` |
+| REQ-187 | 通知目标签名密钥显式清除 | requirements lane（第 46 轮） | 27 | candidate | — | AGENTS 要求 preserve/replace/clear，实际只有前两者（`destination-form.ts:521-533`、`destination.service.ts:94-114`、`configuration-commands.ts:63-69`）；新增 `clearSigningSecret` 位，合并后删除 `signSecret` 与 ref；与 REQ-125/REQ-71 同一模式 |
+| REQ-188 | 可移植配置编辑器未保存草稿保护 | requirements lane（第 46 轮） | 26 | candidate | — | Settings 草稿无基线/dirty（`use-settings-workspace.ts:35-37,50-58,70-95`），路由无 blocker；加 `useBlocker` + `beforeunload`，Tab 切换不提示；与 REQ-92（对话框）、REQ-143（Token）边界不同 |
+| REQ-189 | 取消尚未发送的排队投递 | requirements lane（第 46 轮） | 24 | candidate | — | 无取消终态（`delivery.ts:5-11`），worker 每 5 秒领取 pending（`delivery-worker-runner.ts:50-53`）；需 EXPERT_PANEL 裁决新增 `cancelled` vs 复用 `suppressed`；原子条件更新，无迁移 |
 
 ## 发布记录
 
