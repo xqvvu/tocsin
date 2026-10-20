@@ -50,10 +50,10 @@
 | SEC-2 | 脱敏回归测试按 registry 而非 `DestinationKindSchema.options` | 安全 lane | 25 | shipped | #150 | 新增 registry kind 集合与 `DestinationKindSchema.options` 相等的断言 |
 | SEC-3 | `env.ts` 直接读 `process.env` 但无 server-only 标记 | 安全 lane | 24 | shipped | #150 | 加 `@tanstack/react-start/server-only`；build 验证无客户端链路 |
 | SEC-4 | Feishu app test 错误消息未过 `redactText` | 安全 lane | 24 | shipped | #150 | 失败消息经 `redactText`；新增平台回显 `app_secret` 用例 |
-| SEC-5 | 通知目标 endpoint 的 URL userinfo 密码进入浏览器 DTO | 安全 lane（第 45 轮） | 27 | candidate | — | `destinationOperationalConfigFromRuntime` 原样返回 endpoint（`destination.helpers.ts:63,84,162`），`z.url()` 允许 `https://user:pass@…`（`email/schema.ts:22`）；导出侧已按 secret_ref 处理（`config-portability.ts:444-451`）；投影 DTO 前仅剥离 userinfo 密码，发送路径保持原值 |
-| SEC-6 | provider 可控 fingerprint 未脱敏进入列表/详情/外发 | 安全 lane（第 45 轮） | 24 | candidate | — | `redactNormalizedEvent` 只投影 title/message/labels（`redaction.ts:231-246`）；generic/alertmanager 把上游 `fingerprint`/`alertId` 原值作为 fingerprint（`generic/parse.ts:32-33`、`alertmanager-compatible.ts:84-85`）；匹配需原值，展示边界应单独投影 |
-| SEC-7 | 读边界脱敏测试未覆盖凭据型 key 形态 | 安全 lane（第 45 轮） | 25 | candidate | — | `read-projection-redaction.test.ts:52-107` 只覆盖 `token`/`Authorization`；`redactJsonText` 的 key 分支仅被 `redactJsonValue` 间接覆盖（`redaction.test.ts:62-73,132-153`）；补 `appSecret`/`clientSecret`/`apiSecret`/`privateKey`/`X-Auth-Token` 直接断言 |
-| SEC-8 | test/preview 的 renderedPayload 无最终脱敏投影 | 安全 lane（第 45 轮） | 25 | candidate | — | `destination.service.ts:193,310-336` 直接返回 adapter payload，未像投递详情那样过 `redactJsonText`（`delivery.helpers.ts:56`）；当前 adapter 未注入 config，属边界不对称；建议套投影并按 kind 参数化断言 |
+| SEC-22 | 通知目标 endpoint 的 URL userinfo 密码进入浏览器 DTO | 安全 lane（第 45 轮） | 27 | candidate | — | `destinationOperationalConfigFromRuntime` 原样返回 endpoint（`destination.helpers.ts:63,84,162`），`z.url()` 允许 `https://user:pass@…`（`email/schema.ts:22`）；导出侧已按 secret_ref 处理（`config-portability.ts:444-451`）；投影 DTO 前仅剥离 userinfo 密码，发送路径保持原值 |
+| SEC-23 | provider 可控 fingerprint 未脱敏进入列表/详情/外发 | 安全 lane（第 45 轮） | 24 | candidate | — | `redactNormalizedEvent` 只投影 title/message/labels（`redaction.ts:231-246`）；generic/alertmanager 把上游 `fingerprint`/`alertId` 原值作为 fingerprint（`generic/parse.ts:32-33`、`alertmanager-compatible.ts:84-85`）；匹配需原值，展示边界应单独投影 |
+| SEC-24 | 读边界脱敏测试未覆盖凭据型 key 形态 | 安全 lane（第 45 轮） | 25 | candidate | — | `read-projection-redaction.test.ts:52-107` 只覆盖 `token`/`Authorization`；`redactJsonText` 的 key 分支仅被 `redactJsonValue` 间接覆盖（`redaction.test.ts:62-73,132-153`）；补 `appSecret`/`clientSecret`/`apiSecret`/`privateKey`/`X-Auth-Token` 直接断言 |
+| SEC-25 | test/preview 的 renderedPayload 无最终脱敏投影 | 安全 lane（第 45 轮） | 25 | candidate | — | `destination.service.ts:193,310-336` 直接返回 adapter payload，未像投递详情那样过 `redactJsonText`（`delivery.helpers.ts:56`）；当前 adapter 未注入 config，属边界不对称；建议套投影并按 kind 参数化断言 |
 | Q-1 | 出站 HTTP 无超时，单个挂起目标会卡住单进程 worker | 质量 lane | — | shipped | #108 | EXPERT_PANEL 一致：共享层 10s deadline，`timeout`/可重试；决策 `docs/planning/decisions/outbound-http-timeout.md` |
 | Q-2 | 出站响应体无上限 | 质量 lane | 26 | candidate | — | 与 inbound 的 body limit 对齐 |
 | Q-3 | Provider `*Result` 函数对非对象 payload 直接 throw | 质量 lane | 25 | candidate | — | 边界契约不一致 |
@@ -440,8 +440,9 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
-| `0.1.0-beta.30` | `0edd56f` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.30`（**未推送**：构建时 Docker Hub 不可达，下一轮重试） | 删除告警源/通知目标前披露路由级联影响（#236，REQ-164）；无迁移/配置变化；回滚镜像 `0.1.0-beta.29`（缺失则 `0.1.0-beta.28`） |
-| `0.1.0-beta.29` | `eea856f` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.29`（**未推送**：构建时 Docker Hub 不可达，下一轮重试） | 去重缺口中的首发事件可直达（#233，REQ-173）；无迁移/配置变化；回滚镜像 `0.1.0-beta.28` |
+| `0.1.0-beta.31` | `327666a` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.31`（linux/amd64 + linux/arm64，index digest `sha256:2c61014e…`） | 事件/投递证据包下载（#240，REQ-175）；无迁移/配置变化；回滚镜像 `0.1.0-beta.30`；Docker Hub 不可达已用 `docker.m.daocloud.io` 镜像绕过 |
+| `0.1.0-beta.30` | `0edd56f` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.30`（第 45 轮补推成功，双平台，index digest `sha256:5a81e7de…`） | 删除告警源/通知目标前披露路由级联影响（#236，REQ-164）；无迁移/配置变化；回滚镜像 `0.1.0-beta.29` |
+| `0.1.0-beta.29` | `eea856f` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.29`（第 45 轮补推成功，双平台，index digest `sha256:c77a920a…`） | 去重缺口中的首发事件可直达（#233，REQ-173）；无迁移/配置变化；回滚镜像 `0.1.0-beta.28` |
 | `0.1.0-beta.28` | `c70e8f7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.28`（linux/amd64 + linux/arm64，index digest `sha256:5b30d451…`） | 事件详情投递健康徽标补齐全部状态（#230，UI-20）；无迁移/配置变化；回滚镜像 `0.1.0-beta.27` |
 | `0.1.0-beta.27` | `e8afbce` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.27`（linux/amd64 + linux/arm64，index digest `sha256:724ac014…`） | 通知目标停用确认披露自动加急（#225，REQ-170）；无迁移/配置变化；回滚镜像 `0.1.0-beta.26` |
 | `0.1.0-beta.26` | `2af4669` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.26`（linux/amd64 + linux/arm64，index digest `sha256:ab90df83…`） | 路由匹配证据本地化与换行（#220，UI-17）；无迁移/配置变化；回滚镜像 `0.1.0-beta.25` |
