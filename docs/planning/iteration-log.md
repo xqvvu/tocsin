@@ -47,7 +47,20 @@
 
 ### EXPERT_PANEL 与发布
 
-- 见下一节（发布评估在日志末尾补记）。
+- 发布评估：3 位专家一致 APPROVE。
+  - 发布经理：beta.26..main 只有 1 个用户可见提交（#225），其余为文档/规划；建议递增预发布计数器。
+  - 阻断审计：6/6 PASS（main CI success `e8afbce`、0 open PR、无阻塞回归、无 migration、
+    锁文件未变、`v0.1.0-beta.27` 未被占用）；REL-13（LICENSE）按既有裁决不阻断。
+  - 运维/回滚：Dockerfile/compose/lock/migration 零改动；升级换镜像，回滚换回 beta.26 镜像，
+    无需恢复数据库。
+- 版本：`0.1.0-beta.27`；PR #228 `chore(release): v0.1.0-beta.27`（rebase 合并 `e8afbce`），
+  main CI success。
+- Tag：`v0.1.0-beta.27`（annotated，指向 `e8afbce`）；GitHub Release：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.27
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.27`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:724ac01445e29a0d8844e0e017e963c108023ac00d9765ca95316667d67a43d0`）；
+  回滚镜像 `0.1.0-beta.26`。
 
 ### 下一轮优先项
 
