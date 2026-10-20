@@ -6,6 +6,7 @@ import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin
 import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
 import { OperationsTable } from "#/components/common/operations-table";
 import type { ConsoleTableFeatures } from "#/components/common/table-features";
+import { routeReferenceImpact } from "#/features/routes/model/route-reference-impact";
 import { sourceRouteCoverage } from "#/features/sources/model/source-route-coverage";
 import { SourceActions } from "#/features/sources/ui/source-actions";
 import { SourceIdentityCell } from "#/features/sources/ui/source-identity-cell";
@@ -72,6 +73,11 @@ export function SourcesSection({
             enabledRouteCount={
               sourceRouteCoverage(row.original.id, routes, destinations).enabledRouteCount
             }
+            deleteImpact={routeReferenceImpact(
+              routes,
+              (route) => route.rule.sourceIds,
+              row.original.id,
+            )}
             pending={pending}
             onEdit={onEdit}
             onToggle={onToggle}

@@ -17,6 +17,7 @@ import { destinationIconNamesByKind } from "#/features/destinations/ui/destinati
 import { DestinationOperationalConfigCell } from "#/features/destinations/ui/destination-operational-config-cell";
 import { DestinationRouteCoverageCell } from "#/features/destinations/ui/destination-route-coverage-cell";
 import { DestinationsEmptyState } from "#/features/destinations/ui/destinations-empty-state";
+import { routeReferenceImpact } from "#/features/routes/model/route-reference-impact";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export interface DestinationsSectionProps {
@@ -91,6 +92,11 @@ export function DestinationsSection({
           <DestinationActions
             destination={row.original}
             enabledRouteCount={destinationRouteCoverage(row.original.id, routes).enabledRouteCount}
+            deleteImpact={routeReferenceImpact(
+              routes,
+              (route) => route.destinationIds,
+              row.original.id,
+            )}
             pending={pending}
             onTest={onTest}
             onPreview={onPreview}

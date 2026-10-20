@@ -1,8 +1,15 @@
-import { RiDeleteBinLine, RiEditLine, RiKey2Line, RiShutDownLine } from "@remixicon/react";
+import {
+  RiDeleteBinLine,
+  RiEditLine,
+  RiKey2Line,
+  RiRouteLine,
+  RiShutDownLine,
+} from "@remixicon/react";
 import * as React from "react";
 
 import { IconTooltip } from "#/components/common/icon-tooltip";
 import { powerActionButtonClassName } from "#/components/common/power-action-button";
+import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,12 +22,14 @@ import {
   AlertDialogTrigger,
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
+import type { RouteReferenceImpact } from "#/features/routes/model/route-reference-impact";
 import type { SourceSummary } from "#/features/sources/ui/source-ui-types";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function SourceActions({
   source,
   enabledRouteCount,
+  deleteImpact,
   pending,
   onEdit,
   onToggle,
@@ -29,6 +38,7 @@ export function SourceActions({
 }: {
   source: SourceSummary;
   enabledRouteCount: number;
+  deleteImpact: RouteReferenceImpact;
   pending: boolean;
   onEdit: (sourceId: string) => void;
   onToggle: (source: SourceSummary) => void;
@@ -205,6 +215,26 @@ export function SourceActions({
             <AlertDialogDescription>
               {t("sources.delete.confirmDescription", { sourceName: source.name })}
             </AlertDialogDescription>
+            {deleteImpact.deletedRouteCount > 0 ? (
+              <Alert variant="destructive">
+                <RiRouteLine aria-hidden />
+                <AlertTitle>
+                  {t("sources.delete.routeImpactTitle", { count: deleteImpact.deletedRouteCount })}
+                </AlertTitle>
+                <AlertDescription>{t("sources.delete.routeImpactDescription")}</AlertDescription>
+              </Alert>
+            ) : null}
+            {deleteImpact.narrowedRouteCount > 0 ? (
+              <Alert>
+                <RiRouteLine aria-hidden />
+                <AlertTitle>
+                  {t("sources.delete.routeNarrowedTitle", {
+                    count: deleteImpact.narrowedRouteCount,
+                  })}
+                </AlertTitle>
+                <AlertDescription>{t("sources.delete.routeNarrowedDescription")}</AlertDescription>
+              </Alert>
+            ) : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>{t("sources.delete.cancel")}</AlertDialogCancel>
