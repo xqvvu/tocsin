@@ -2,6 +2,83 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 42 轮）
+
+- 时间：2026-10-20 20:14 – 21:20 CST。
+- 基线：本轮开始时 `origin/main` @ `25b8227`；合入后 `origin/main` @ 待填（#230）。
+- 类型：非 full-audit（backlog 有大量 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` + `security-exposure`（第 41 轮预承诺轮转）；
+  `ui-triage` 判定 `review_now` 后追加 `ui-review`。
+- `ui-triage`：**`review_now`** —— 距上次真实浏览器评审仅 2h20m（48h 信号未中），自 17:57
+  以来 UI 路径合并 2 个（#220、#225，未达 3），但 14 条未解决 UI 发现（≥2 强信号）与
+  「两次 UI 合并均无浏览器验证」成立，且 #225 已随 beta.27 发版。
+- `ui-review`：隔离实例 `http://localhost:6191` + `/tmp/tocsin-ui-r42` 全新库，
+  `/setup` 创建 `admin@example.test` 并切换 zh-Hans。**确认 UI-20 为最优切片**；
+  正面验证 #225 停用确认框在 1280×900 与 390×844 下的加急披露、焦点与取消行为；
+  复现 UI-21（共享 Dialog 关闭按钮读屏为英文 `Close`）。未造出 pending/suppressed 事件，
+  UI-20 以代码 + 数据路径核实；#220 徽标仅代码推断。dev server 已停止。
+- `last_ui_review_at`：2026-10-20 21:10 CST（部分覆盖的真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `wonderful-poincare-6299d7`。结束后删除并发锁。
+
+### 本轮交付
+
+- PR #230 `fix(console): count every delivery state in the event health badge` —— **UI-20（26）**。
+  - 事件详情摘要按操作优先级展示所有非零投递状态：失败 → 运行中 → 待处理 → 成功 → 已抑制；
+    失败使用 destructive、进行中使用 secondary、成功/已抑制使用 outline；无投递显示「无投递」。
+  - 移除只含 `succeeded/failed` 的 `events.detail.summary.deliveryHealth` 键，新增 6 个
+    中英文计数键；新增 4 条组件测试覆盖混合状态、失败态、空投递与英文界面。
+  - 新增中文 PRD `docs/prd/event-delivery-health-badges.md`。
+  - 验证：`vp check` 0 errors（12 条既有 warning）；`vp run -r test` 4/4（console
+    130 files / 712 tests）；`vp run -r build` 通过；CI success。
+
+### 专家发现
+
+**requirements（需求发现）**
+
+- REQ-173（29）：去重缺口的首发事件可直达。PRD 承诺 `first_event_id` 可点击
+  （`docs/prd/route-explain-delivery-gap.md:62,84`），实际只渲染文本
+  （`event-detail-route-gaps.tsx:88-96`），DTO 已有 `firstEventId`
+  （`packages/core/src/route/route.ts:156`）。纯前端，下一轮首选。
+- REQ-174（25）：失败投递重试前的可执行性预检。`retryNow` 仅校验 failed
+  （`delivery.repository.ts:417-440`），但 `claimNext` 要求目标/路由启用（`:229-230`）；
+  停用目标/路由上重试会提示「已重新入队」却永不投递。低于门槛，建议并入 REQ-60/REQ-89。
+
+**security-exposure（安全与数据暴露）**
+
+- **SEC-1 已修复（代码核实）**：`isSensitiveKey` 已覆盖 `appSecret/clientSecret/apiSecret/
+  privateKey/X-Auth-Token` 及分隔符变体（`redaction.ts:13-46,168-171`），测试
+  `redaction.test.ts:94-104`、`redaction.scan.test.ts:134-149`。
+- 新增 SEC-20（LOW，22）：`privateKeyPem`（归一 `privatekeypem`）与 `tls.key`
+  （归一 `tlskey`）不命中精确键/后缀规则，PEM 正文也没有值形态规则
+  （`redaction.ts:13,46,63,637`）；建议 AUTO_FIX 补 PEM 值形态与回归测试。
+- oRPC DTO、import protection、日志脱敏均无 HIGH/MEDIUM 发现；脱敏回归测试已用
+  `it.each(registeredDestinationKinds)` 覆盖全部 4 个 kind，并断言 registry 与
+  `DestinationKindSchema.options` 一致（`configuration.integration.test.ts:1363,162-164`）。
+- 旧仓库名 `xqvvu/vane` 仅剩 ACR 镜像坐标与历史日志，属真实发布目标，不改；本地路径
+  `devs/vane` 属既有 DOC-27。
+
+**ui-review（真实浏览器）**
+
+- UI-20（26，本轮交付）：见上。
+- UI-21 复核：`components/ui/dialog.tsx:69,97` 硬编码 `sr-only` `Close`，浏览器快照确认
+  中文界面读屏为英文；`destination-edit-dialog-loader.tsx:115-117` 直接透出
+  `Failed to fetch`。
+- #225 正面验证：自动加急开启 + 3 个呼叫对象时，Alert 在桌面与 390px 均完整显示，
+  默认焦点在「保留通知目标」，取消后目标保持启用、焦点回到停用按钮。
+- #220 风险点（未实测）：无 `condition` 的历史快照回退到英文 `check.detail`
+  （`route-match-check-badges.tsx:101`），中文界面可能出现英文证据。
+
+### 下一轮优先项
+
+1. **REQ-173（29）** 去重缺口首发事件链接。
+2. **REQ-164（29）** 删除级联影响；**REQ-171/172（27-28）**。
+3. **UI-21（22）** 对话框关闭按钮本地化与错误文案；**UI-14（25）** 静默启停确认；
+   **UI-19/18** 投递列与 390px 布局。
+4. **SEC-20** PEM 脱敏 AUTO_FIX；**Q-43/Q-47/Q-45/Q-46**；**ARCH-36..40**。
+5. 车道轮转：`requirements` + `ui-triage` 必跑；非必跑车道下一轮 **`docs-drift`**。
+
 ## 2026-10-20（第 41 轮）
 
 - 时间：2026-10-20 18:55 – 20:00 CST。
