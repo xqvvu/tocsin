@@ -133,8 +133,10 @@ function hasUrlSchemeStart(value: string, marker: number): boolean {
  * readable for operators.
  */
 function redactUrlUserinfo(value: string): string {
-  const edits: Array<{ start: number; end: number }> = [];
   const length = value.length;
+  let output = "";
+  let cursor = 0;
+  let changed = false;
   let searchFrom = 0;
 
   while (searchFrom < length) {
@@ -154,20 +156,13 @@ function redactUrlUserinfo(value: string): string {
     while (index < length && isUrlPasswordCharacter(value[index])) index += 1;
     if (index === passwordStart || value[index] !== "@") continue;
 
-    edits.push({ start: passwordStart, end: index });
+    output += value.slice(cursor, passwordStart) + REDACTED_VALUE;
+    cursor = index;
     searchFrom = index + 1;
+    changed = true;
   }
 
-  if (edits.length === 0) return value;
-
-  let output = "";
-  let cursor = 0;
-  for (const edit of edits) {
-    output += value.slice(cursor, edit.start) + REDACTED_VALUE;
-    cursor = edit.end;
-  }
-
-  return output + value.slice(cursor);
+  return changed ? output + value.slice(cursor) : value;
 }
 
 export function isSensitiveKey(key: string): boolean {
@@ -586,8 +581,10 @@ function parseRedactedValue(value: string, start: number): { end: number; replac
  * rules, so which values are hidden does not change.
  */
 function redactSensitiveAssignments(value: string): string {
-  const edits: Array<{ start: number; end: number; replacement: string }> = [];
   const length = value.length;
+  let output = "";
+  let cursor = 0;
+  let changed = false;
   let index = 0;
 
   while (index < length) {
@@ -606,7 +603,6 @@ function redactSensitiveAssignments(value: string): string {
     // A quote that is not closed is not part of the match: the legacy pattern
     // could still start at the key itself, with the quote left untouched.
     const quotedKey = openingQuote !== "" && value[keyEnd] === openingQuote;
-    const matchStart = quotedKey ? index : keyStart;
     let afterKey = quotedKey ? keyEnd + 1 : keyEnd;
 
     while (afterKey < length && isWhitespace(value[afterKey])) afterKey += 1;
@@ -629,24 +625,13 @@ function redactSensitiveAssignments(value: string): string {
     }
 
     const parsed = parseRedactedValue(value, afterKey);
-    edits.push({
-      start: matchStart,
-      end: parsed.end,
-      replacement: `${value.slice(matchStart, afterKey)}${parsed.replacement}`,
-    });
+    output += value.slice(cursor, afterKey) + parsed.replacement;
+    cursor = parsed.end;
     index = parsed.end;
+    changed = true;
   }
 
-  if (edits.length === 0) return value;
-
-  let output = "";
-  let cursor = 0;
-  for (const edit of edits) {
-    output += value.slice(cursor, edit.start) + edit.replacement;
-    cursor = edit.end;
-  }
-
-  return output + value.slice(cursor);
+  return changed ? output + value.slice(cursor) : value;
 }
 
 function normalizeKey(key: string): string {
