@@ -446,6 +446,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.32` | `8b423a8` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.32`（linux/amd64 + linux/arm64，index digest `sha256:3f1409d2…`） | 静默规则影响预览披露目标数（#243，REQ-180）+ 文档状态校正（#244）；无迁移/配置变化；回滚镜像 `0.1.0-beta.31` |
 | `0.1.0-beta.31` | `327666a` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.31`（linux/amd64 + linux/arm64，index digest `sha256:2c61014e…`） | 事件/投递证据包下载（#240，REQ-175）；无迁移/配置变化；回滚镜像 `0.1.0-beta.30`；Docker Hub 不可达已用 `docker.m.daocloud.io` 镜像绕过 |
 | `0.1.0-beta.30` | `0edd56f` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.30`（第 45 轮补推成功，双平台，index digest `sha256:5a81e7de…`） | 删除告警源/通知目标前披露路由级联影响（#236，REQ-164）；无迁移/配置变化；回滚镜像 `0.1.0-beta.29` |
 | `0.1.0-beta.29` | `eea856f` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.29`（第 45 轮补推成功，双平台，index digest `sha256:c77a920a…`） | 去重缺口中的首发事件可直达（#233，REQ-173）；无迁移/配置变化；回滚镜像 `0.1.0-beta.28` |
