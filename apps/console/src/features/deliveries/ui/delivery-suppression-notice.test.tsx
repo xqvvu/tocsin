@@ -15,6 +15,12 @@ vi.mock("@tanstack/react-router", () => ({
   ClientOnly: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
+// The per-check evidence owns its own query-state test; this suite covers the
+// reason snapshot and the rule link.
+vi.mock("#/features/deliveries/ui/delivery-suppression-checks", () => ({
+  DeliverySuppressionChecks: () => null,
+}));
+
 const SUPPRESS_REASON =
   "Maintenance window 「October database migration」 matched destination in [destination-1]";
 

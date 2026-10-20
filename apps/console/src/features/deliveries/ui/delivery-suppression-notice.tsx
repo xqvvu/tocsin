@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { buttonVariants } from "#/components/ui/button";
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
+import { DeliverySuppressionChecks } from "#/features/deliveries/ui/delivery-suppression-checks";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
@@ -60,6 +61,7 @@ export function DeliverySuppressionNotice({ detail }: { detail: DeliveryDetailDa
             </dd>
           </div>
         </dl>
+        {detail.job.suppressionId ? <DeliverySuppressionChecks detail={detail} /> : null}
       </AlertDescription>
     </Alert>
   );
