@@ -78,10 +78,15 @@
     无 migration、锁文件未变、`v0.1.0-beta.28` 未占用）。
   - 运维/回滚：Dockerfile/compose/Justfile/scripts 零改动，无 schema 变更；
     升级换镜像，回滚换回 beta.27 镜像，无需恢复数据库。
-- 版本：`0.1.0-beta.28`；PR #231 `chore(release): v0.1.0-beta.28`（待合并）；
-  tag `v0.1.0-beta.28`；镜像
-  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.28`（linux/amd64 + linux/arm64）；
-  回滚镜像 `0.1.0-beta.27`；用户可见依据为 #230 投递健康徽标补齐全部状态。
+- 版本：`0.1.0-beta.28`；PR #231 `chore(release): v0.1.0-beta.28`（rebase 合并
+  `c70e8f7`），main CI success。
+- Tag：`v0.1.0-beta.28`（annotated，指向 `c70e8f7`）；GitHub Release：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.28
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.28`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:5b30d4519013b66887eb5a79b519441ffdc3dd1eabf156aa7113b128753c20b4`）；
+  回滚镜像 `0.1.0-beta.27`。
+- 用户可见依据：#230 事件详情投递健康徽标补齐全部状态（UI-20）。
 
 ### 下一轮优先项
 
