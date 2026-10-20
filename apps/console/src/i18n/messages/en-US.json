@@ -1034,6 +1034,8 @@
   "suppressions.form.urgentImpact.title": "{count} destinations with automatic paging fall inside this rule",
   "suppressions.form.validation.nameRequired": "A name is required",
   "suppressions.form.validation.windowInvalid": "The window must end after it starts",
+  "suppressions.form.validation.windowInvalidDate": "Choose a valid start and end time",
+  "suppressions.form.windowTimeZone": "Times use the console time zone ({timeZone})",
   "suppressions.fromEvent.action": "Silence fingerprint",
   "suppressions.fromEvent.context": "Source {sourceName} · fingerprint {fingerprint}",
   "suppressions.fromEvent.description": "Source and fingerprint are prefilled — adjust the window and conditions before saving",

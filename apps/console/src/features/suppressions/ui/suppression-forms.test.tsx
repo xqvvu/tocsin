@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { DestinationListItem, SourceSummary } from "@tocsin/core";
 
+import { emptySuppressionMatcher } from "#/features/suppressions/model/suppression-form";
 import {
   CreateSuppressionForm,
   type SuppressionFormSubmission,
@@ -143,12 +144,77 @@ describe("suppression create form", () => {
 
     expect(onSubmit.mock.calls[0]![0]).toMatchObject({
       name: "Silence: Disk full",
+      // The provider defaults to UTC, so 09:00 wall clock is 09:00Z.
+      startsAt: "2026-10-18T09:00:00.000Z",
+      endsAt: "2026-10-18T11:00:00.000Z",
       matcher: {
         sourceIds: ["source-grafana"],
         fingerprints: ["disk:full"],
       },
     });
     expect(screen.queryByText("This silences everything")).toBeNull();
+  });
+
+  it("interprets the window in the console time zone and names that zone", async () => {
+    const onSubmit = vi.fn<(input: SuppressionFormSubmission) => void>();
+
+    render(
+      <AppIntlProvider locale="en-US" timeZone="Asia/Shanghai">
+        <CreateSuppressionForm
+          sources={sources}
+          destinations={destinations}
+          pending={false}
+          defaultValues={{
+            name: "Silence: Disk full",
+            startsAt: "2026-10-18T09:00",
+            endsAt: "2026-10-18T11:00",
+            matcher: { ...emptySuppressionMatcher(), fingerprints: ["disk:full"] },
+          }}
+          onSubmit={onSubmit}
+        />
+      </AppIntlProvider>,
+    );
+
+    // 09:00 in Shanghai is 01:00Z; a browser-zone reading would store a
+    // different instant and the list would show a shifted window.
+    expect(screen.getByText("Times use the console time zone (Asia/Shanghai)")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Create suppression" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({
+      startsAt: "2026-10-18T01:00:00.000Z",
+      endsAt: "2026-10-18T03:00:00.000Z",
+    });
+  });
+
+  it("reports a wall clock skipped by DST as an invalid date", async () => {
+    const onSubmit = vi.fn<(input: SuppressionFormSubmission) => void>();
+
+    render(
+      <AppIntlProvider locale="en-US" timeZone="America/New_York">
+        <CreateSuppressionForm
+          sources={sources}
+          destinations={destinations}
+          pending={false}
+          defaultValues={{
+            name: "DST gap",
+            startsAt: "2026-03-08T02:30",
+            endsAt: "2026-03-08T03:30",
+            matcher: { ...emptySuppressionMatcher(), fingerprints: ["dst:gap"] },
+          }}
+          onSubmit={onSubmit}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Create suppression" }));
+
+    expect(await screen.findByText("Choose a valid start and end time")).toBeTruthy();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
   it("warns how many automatically paging destinations the rule would mute", () => {

@@ -26,7 +26,8 @@ import {
   CreateSuppressionForm,
   type SuppressionFormSubmission,
 } from "#/features/suppressions/ui/suppression-forms";
-import { useTranslations } from "#/i18n/use-i18n";
+import { fallbackTimeZone } from "#/i18n/time-zone";
+import { useTimeZone, useTranslations } from "#/i18n/use-i18n";
 
 /** Keeps the generated rule name readable in the suppressions table. */
 const MAX_NAME_TITLE_LENGTH = 80;
@@ -56,6 +57,7 @@ export function SuppressionFromEventDialog({
   disabledReason?: string;
 }) {
   const t = useTranslations();
+  const timeZone = useTimeZone() ?? fallbackTimeZone;
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const { createSuppression, invalidateSuppressions } = useSuppressionMutations();
@@ -71,11 +73,12 @@ export function SuppressionFromEventDialog({
     title: clipTitle(event.normalized.title),
   });
   const defaults = label
-    ? suppressionDefaultsFromLabel({ name, sourceId: source.id, label })
+    ? suppressionDefaultsFromLabel({ name, sourceId: source.id, label, timeZone })
     : suppressionDefaultsFromEvent({
         name,
         sourceId: source.id,
         fingerprint: event.normalized.fingerprint,
+        timeZone,
       });
   const actionLabel = label
     ? t("suppressions.fromLabel.actionFor", {

@@ -51,7 +51,8 @@ import {
   type SuppressionFormValues,
 } from "#/features/suppressions/model/suppression-form";
 import { UrgentImpactPreview } from "#/features/suppressions/ui/urgent-impact-preview";
-import { useTranslations } from "#/i18n/use-i18n";
+import { fallbackTimeZone } from "#/i18n/time-zone";
+import { useTimeZone, useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
 
 export interface SuppressionFormSubmission {
@@ -83,13 +84,15 @@ export function CreateSuppressionForm({
   onSubmit: (input: SuppressionFormSubmission) => void;
 }) {
   const t = useTranslations();
-  const window = React.useMemo(() => defaultSuppressionWindow(), []);
+  const timeZone = useTimeZone() ?? fallbackTimeZone;
+  const window = React.useMemo(() => defaultSuppressionWindow(timeZone), [timeZone]);
   const form = (
     <SuppressionForm
       sources={sources}
       destinations={destinations}
       layout={layout}
       pending={pending}
+      timeZone={timeZone}
       defaultValues={{
         name: "",
         kind: "silence",
@@ -140,6 +143,7 @@ export function EditSuppressionForm({
   onSubmit: (input: SuppressionFormSubmission & { id: string }) => void;
 }) {
   const t = useTranslations();
+  const timeZone = useTimeZone() ?? fallbackTimeZone;
 
   return (
     <section className="border-border bg-muted/30 border p-3">
@@ -155,7 +159,8 @@ export function EditSuppressionForm({
         sources={sources}
         destinations={destinations}
         pending={pending}
-        defaultValues={suppressionFormDefaultsFromRule(suppression)}
+        timeZone={timeZone}
+        defaultValues={suppressionFormDefaultsFromRule(suppression, timeZone)}
         submitLabel={t("suppressions.form.edit.submit")}
         submitIcon={<RiSaveLine data-icon="inline-start" aria-hidden />}
         onSubmit={(values) => onSubmit({ ...values, id: suppression.id })}
@@ -170,6 +175,7 @@ function SuppressionForm({
   destinations,
   layout = "panel",
   pending,
+  timeZone,
   defaultValues,
   submitLabel,
   submitIcon,
@@ -181,6 +187,8 @@ function SuppressionForm({
   destinations: DestinationListItem[];
   layout?: "dialog" | "panel";
   pending: boolean;
+  /** Zone the window inputs are interpreted and rendered in. */
+  timeZone: string;
   defaultValues: SuppressionFormValues;
   submitLabel: string;
   submitIcon: React.ReactNode;
@@ -207,15 +215,22 @@ function SuppressionForm({
   }
 
   function submit(options: { confirmEmptyMatcher?: boolean } = {}): void {
-    const startsAt = isoFromDatetimeLocal(values.startsAt);
-    const endsAt = isoFromDatetimeLocal(values.endsAt);
+    const startsAt = isoFromDatetimeLocal(values.startsAt, timeZone);
+    const endsAt = isoFromDatetimeLocal(values.endsAt, timeZone);
 
     if (values.name.trim().length === 0) {
       setError(t("suppressions.form.validation.nameRequired"));
       return;
     }
 
-    if (!startsAt || !endsAt || Date.parse(endsAt) <= Date.parse(startsAt)) {
+    if (!startsAt || !endsAt) {
+      // Covers an empty input and a wall clock that does not exist in the
+      // console zone, such as the hour skipped by a DST transition.
+      setError(t("suppressions.form.validation.windowInvalidDate"));
+      return;
+    }
+
+    if (Date.parse(endsAt) <= Date.parse(startsAt)) {
       setError(t("suppressions.form.validation.windowInvalid"));
       return;
     }
@@ -239,7 +254,7 @@ function SuppressionForm({
     });
 
     if (resetOnSubmit) {
-      const window = defaultSuppressionWindow();
+      const window = defaultSuppressionWindow(timeZone);
 
       setValues({
         name: "",
@@ -335,6 +350,9 @@ function SuppressionForm({
           />
           <FieldDescription>{t("suppressions.form.endsAtDescription")}</FieldDescription>
         </UiField>
+        <FieldDescription className="sm:col-span-2">
+          {t("suppressions.form.windowTimeZone", { timeZone })}
+        </FieldDescription>
       </div>
       <UiField>
         <FieldLabel>{t("suppressions.form.matcherLegend")}</FieldLabel>
