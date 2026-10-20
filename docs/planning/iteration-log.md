@@ -4,7 +4,7 @@
 
 ## 2026-10-20（第 32 轮）
 
-- 时间：2026-10-20 08:25 – 09:xx CST。
+- 时间：2026-10-20 08:25 – 08:53 CST。
 - 基线：`origin/main` @ `3a5414c`；本轮合并 #198（rebase `983f68a`）与 #199（rebase `d44d14b`）。
 - 类型：非 full-audit（backlog 有多个 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为第 1 轮
   （2026-10-18 13:30 CST）。
@@ -82,7 +82,29 @@
 
 ### 发布（第 9.5 步）
 
-RELEASE_PLACEHOLDER
+- 三位专家评估（并发、互不共享结论）：
+  - 发布经理 **RECOMMEND**：`v0.1.0-beta.19..origin/main` 有 2 个用户可见修复（#198、#199）
+    与 3 个 docs 提交；建议预发布号递增为 `0.1.0-beta.20`。
+  - 阻断审计 **APPROVE（7/7）**：main CI success @ `d44d14b`、无 open PR、唯一
+    `blocked-autonomous`（REL-13 LICENSE）不阻断、迁移与锁文件零 diff、无 auth/secret
+    回归、`v0.1.0-beta.20` 未被占用。
+  - 运维/回滚 **SAFE**：Dockerfile/compose/entrypoint/环境变量/端口/卷零差异；SQLite
+    schema 未变；升级只需替换镜像 tag，回滚只需换回 beta.19、无需恢复数据。
+- 版本：`0.1.0-beta.20`；PR #200 `chore(release): v0.1.0-beta.20` rebase 合并 `9c93e03`，
+  main CI success。
+- Tag：`v0.1.0-beta.20`（annotated，指向 `9c93e03`）；GitHub Release 已创建（prerelease）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.20
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.20`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:23f1efdc092491afeee5258095cd7d93985ba82e0194c8fad65df3921340378a`）。
+- 构建：在 tag `v0.1.0-beta.20` 的干净检出上执行
+  `docker buildx build --builder tocsin-multi --platform linux/amd64,linux/arm64 --provenance=false --sbom=false --push`；
+  `imagetools inspect` 已确认两个平台。
+- 回滚镜像：`0.1.0-beta.19`（index digest `sha256:01f2bf26…`）。
+- 过程注记：版本递增提交意外带入了本轮的 planning 文档（含占位符），随后由 docs PR 修正；
+  tag 指向的仍是同一份代码，不影响镜像与运行行为。
+- 工作树：本轮实现与验证使用会话工作树 `modest-bun-edbc30`；结束后已清理其
+  `node_modules`，并删除 `agent-iteration` 并发锁。
 
 ### 下一轮优先项
 
