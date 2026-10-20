@@ -2,6 +2,96 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 32 轮）
+
+- 时间：2026-10-20 08:25 – 09:xx CST。
+- 基线：`origin/main` @ `3a5414c`；本轮合并 #198（rebase `983f68a`）与 #199（rebase `d44d14b`）。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `quality` + `ui-triage`（判定 `defer`）。
+  下一轮建议 `requirements` + `architecture` + `ui-triage`（`architecture` 第 28 轮后未跑）。
+- `ui-triage`：`defer` —— 距第 31 轮真实浏览器评审（07:56）约 34 分钟；自那以后 main 上
+  0 个行为性 UI 合并（只有 `docs(planning)`）；9 条未解决 UI 发现全部来自上一轮且已排期。
+  硬性最晚 **2026-10-22 07:56 CST**；期间若再合入 ≥2 个行为性 UI 改动则提前触发。
+- `last_ui_review_at`：2026-10-20 07:56（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器验证均在会话工作树
+  `modest-bun-edbc30`。
+
+### 本轮交付
+
+- PR #198 `fix(console): interpret suppression windows in the console time zone` ——
+  **UI-9（27）+ REQ-73（28）**。
+  - 根因：`datetime-local` 输入经 `new Date(value)` 按**浏览器时区**解释，而列表/详情用
+    设置时区渲染；浏览器上海 + 设置 UTC 时输入 10:00 保存后显示 02:00。
+  - `suppression-form.ts` 新增显式 IANA 换算：`datetimeLocalFromIso(iso, timeZone)` /
+    `isoFromDatetimeLocal(value, timeZone)`；逐瞬时计算 DST 偏移，拒绝 `2026-02-31` 与
+    被春季调时跳过的时间；无法解析/不存在时返回 `null`。
+  - 新建、编辑、事件/标签一键静默三个入口统一传入 `useTimeZone() ?? fallbackTimeZone`；
+    时间窗字段下方显示「时间按控制台时区 {timeZone} 解释和显示」（中英文）。
+  - 校验拆成「请选择有效的开始和结束时间」与「结束必须晚于开始」两条文案。
+  - 测试：模型 7 条（时区往返、NY 冬夏偏移、非法日期、DST 跳过、默认窗口）、组件 2 条
+    （时区提交 + DST 错误文案）；console 123 files / 666 tests。
+  - 隔离实例（临时 SQLite，`localhost:6192`）真实浏览器验证：设置 Asia/Shanghai 时默认
+    窗口为上海墙上时间；切回 UTC 后输入 `2026-10-21T10:00–12:00`，列表显示 10:00–12:00、
+    库中为 `10:00Z–12:00Z`，编辑回填一致。
+- PR #199 `fix(core): compare suppression window bounds as instants` —— **Q-26（25）**。
+  - `suppressionStateAt` 由字符串比较改为 `Date.parse` 后按瞬时比较，保持
+    `[startsAt, endsAt)`；带 `+08:00` 偏移的窗口不再多静默 8 小时。
+  - 无法解析的行/时钟回退到原字典序，避免损坏行因 `NaN` 比较被判成 `active`。
+  - 新增 3 条 core 测试（偏移窗口、混合表示、损坏边界）；`packages/core` suppression 22 条。
+- 验证：`vp check` 0 errors（11 条既有 warning）；`vp run -r test` 4/4 成功；
+  `vp run -r build` 通过；两个 PR CI success。
+
+### requirements 车道（第 32 轮新增 6 条候选）
+
+- **REQ-141（27）** 通知目标测试结果可复核：测试只弹瞬时 toast，丢弃
+  `DestinationTestResult.renderedPayload`（`destinations-page.tsx:209-217`、
+  `destination-notices.tsx:40-66`）。
+- **REQ-142（26）** 事件列表按路由筛选：接入已写 `route_matches_json`
+  （`intake.service.ts:92-104`），但事件筛选无路由维度（`operation-filters.tsx:37-42`）；
+  建议由 REQ-21 吸收。
+- **REQ-143（26）** 一次性接入 Token 离开保护：Token 只在组件状态
+  （`sources-page.tsx:29,92-94`），关闭/导航即永久丢失（`source-token-notice-panel.tsx:77-87`）。
+- **REQ-144（26）** 投递详情补齐告警身份：详情无严重度/状态/发生时间
+  （`delivery-detail-summary.tsx:27-33,43-68`），DTO 已有字段。
+- **REQ-145（25）** 列表主标识可点击进入详情（`event-title-cell.tsx:14-24`、
+  `deliveries-table.tsx:73-85`）。
+- **REQ-146（25）** 补投结果可下钻验证：DTO 已带 `createdDeliveryIds`
+  （`event-replay-action.tsx:74-79`、`route-replay-prompt.tsx:69-75`）。
+
+### quality 车道（8 条发现）
+
+- **SEC-19（升级 HIGH）** 脱敏正则二次复杂度仍无性能回归：实测 8KB≈45–60ms、16KB 181ms、
+  80KB 4045ms（`redaction.ts:55-64,260`）；`redaction.test.ts` 无 timing/大输入用例。
+  下一轮 EXPERT_PANEL。
+- **Q-42（26，新）** 空 severity 列表语义三层不一致：schema 允许 `[]`，触发层按「不限级别」
+  呼叫（`oncall.service.ts:155-160`），DTO 投影映射为 `["critical"]`
+  （`destination.helpers.ts:194-205`），说明面板据此给出相反原因；需 EXPERT_PANEL。
+- **Q-43（25，新）** 损坏 JSON 毒死接入/worker 热路径：`rule_json`/`matcher_json`/
+  `config_json` 严格解析且位于 `routes.list()`、enqueue/claim 事务内
+  （`intake.service.ts:91`、`delivery.repository.ts:97,248,320-326`）。
+- **Q-44/Q-45/Q-46（新，AUTO_FIX）**：路由证据 labelKey 脱敏分支无测试；OncallExecution
+  两个 catch 分支无测试；#171 防抖尾随空格/卸载取消无测试。
+- 复核确认：Q-13 的断言不可能失败；Q-15 仍有效（行号更新）；Q-27、Q-4、Q-5 仍开放；
+  SEC-13 追加 `sessionId`/`jwt`/`signature`。
+- #194/#195/#191 三个近期功能的回归保护有效，未发现「删实现仍绿」的新缺口。
+
+### EXPERT_PANEL
+
+本轮无新增裁决。SEC-19 升级为 HIGH，与 Q-42 一起排入第 33 轮专家小组。
+
+### 发布（第 9.5 步）
+
+RELEASE_PLACEHOLDER
+
+### 下一轮优先项
+
+1. SEC-19（HIGH）与 Q-42（26）交 EXPERT_PANEL；两条都必须带回归测试。
+2. REQ-138（28）、REQ-135（28）、REQ-137（28）。
+3. REQ-125/130/131/136/139/140（27）、REQ-141（27）。
+4. Q-43（25）失败策略；Q-44/Q-45/Q-46 + SEC-13 + SEC-20/21 的 AUTO_FIX 批次。
+5. REQ-142/143/144/145/146（25-26）；UI-13/UI-14；docs-drift 批次。
+
 ## 2026-10-20（第 31 轮）
 
 - 时间：2026-10-20 07:25 – 08:xx CST。
