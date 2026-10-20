@@ -7,7 +7,6 @@ export interface RouteReferenceImpact {
   narrowedRouteCount: number;
   /** Referencing routes whose only source or destination is the removed entity. */
   deletedRouteCount: number;
-  deletedRouteNames: string[];
 }
 
 /**
@@ -21,7 +20,7 @@ export function routeReferenceImpact(
   entityId: string,
 ): RouteReferenceImpact {
   let narrowedRouteCount = 0;
-  const deletedRouteNames: string[] = [];
+  let deletedRouteCount = 0;
 
   for (const route of routes) {
     const referenceIds = selectReferenceIds(route);
@@ -29,16 +28,14 @@ export function routeReferenceImpact(
       continue;
     }
 
-    if (referenceIds.length === 1) {
-      deletedRouteNames.push(route.name);
+    // The repository removes every occurrence of the entity id and deletes the
+    // route when nothing remains, so duplicate ids must not count as shared.
+    if (referenceIds.every((id) => id === entityId)) {
+      deletedRouteCount += 1;
     } else {
       narrowedRouteCount += 1;
     }
   }
 
-  return {
-    narrowedRouteCount,
-    deletedRouteCount: deletedRouteNames.length,
-    deletedRouteNames,
-  };
+  return { narrowedRouteCount, deletedRouteCount };
 }

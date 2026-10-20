@@ -22,7 +22,6 @@ describe("route reference impact", () => {
     expect(impact).toEqual({
       narrowedRouteCount: 1,
       deletedRouteCount: 1,
-      deletedRouteNames: ["Only source"],
     });
   });
 
@@ -40,7 +39,6 @@ describe("route reference impact", () => {
     expect(impact).toEqual({
       narrowedRouteCount: 1,
       deletedRouteCount: 1,
-      deletedRouteNames: ["Only target"],
     });
   });
 
@@ -54,7 +52,19 @@ describe("route reference impact", () => {
     expect(impact).toEqual({
       narrowedRouteCount: 0,
       deletedRouteCount: 0,
-      deletedRouteNames: [],
+    });
+  });
+
+  it("treats duplicate ids as the same reference, matching the repository cleanup", () => {
+    const impact = routeReferenceImpact(
+      [routeFixture("route-1", "Duplicated", ["source-1", "source-1"], ["destination-1"])],
+      (route) => route.rule.sourceIds,
+      "source-1",
+    );
+
+    expect(impact).toEqual({
+      narrowedRouteCount: 0,
+      deletedRouteCount: 1,
     });
   });
 });
