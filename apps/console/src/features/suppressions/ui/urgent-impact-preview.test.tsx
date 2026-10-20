@@ -23,7 +23,7 @@ describe("urgent impact preview", () => {
     expect(screen.getByText("No automatic paging in scope")).toBeTruthy();
     expect(
       screen.getByText(
-        "Enabled destinations in scope: 2 — their alerts are still silenced and cannot be buzzed manually",
+        "Enabled destinations in scope: 2 — matching alerts are still silenced and cannot be buzzed manually",
       ),
     ).toBeTruthy();
   });
@@ -41,7 +41,7 @@ describe("urgent impact preview", () => {
     expect(screen.getByText("No enabled destinations in scope")).toBeTruthy();
     expect(
       screen.getByText(
-        "This rule cannot silence anything because every destination in scope is disabled",
+        "This rule cannot silence anything because no enabled destination is currently in scope",
       ),
     ).toBeTruthy();
     expect(screen.queryByText("No automatic paging in scope")).toBeNull();
@@ -81,7 +81,7 @@ describe("urgent impact preview", () => {
 
     expect(
       screen.getByText(
-        "Enabled destinations in scope: 1 — their alerts are still silenced and cannot be buzzed manually",
+        "Enabled destinations in scope: 1 — matching alerts are still silenced and cannot be buzzed manually",
       ),
     ).toBeTruthy();
   });
