@@ -320,6 +320,11 @@
 | DOC-56 | ADR 0003 仍称 `server/functions/` 是当前目录 | docs-drift lane（第 30 轮） | 19 | candidate | — | `adr/0003-...:9`；目录已由 ADR 0007 删除，入口为 `server/orpc/features/<capability>/router.ts` |
 | DOC-57 | application-container 把无 importer 的 `store.ts` 写成兼容 accessor | docs-drift lane（第 30 轮） | 18 | candidate | — | `application-container.md:50`；`server/runtime/store.ts:1-16` 仅自身测试引用，与 FIX-9 合并处理 |
 | DOC-58 | import-boundaries 点名已不存在的 `auth` namespace | docs-drift lane（第 30 轮） | 18 | candidate | — | `tanstack-start-import-boundaries.md:84`；public namespace 为 `session`/`health`/`i18n`（`server/orpc/router.ts:15-20`） |
+| DOC-59 | post-mvp-planning 剩余项清单自相矛盾 | docs-drift lane（第 49 轮） | 25 | candidate | — | `:233` 仍列「投递缺口解释、规则编辑一致性」，但同文件 `:97` 与 `event-detail-route-gaps.tsx` 已证明落地；`:234` 的 raw JSON 搜索与 retention 已被 `:141-144` 和 `history-retention-and-snapshots.md:14` 排除；应改为 REQ-3/6/22/33/34 |
+| DOC-60 | frontend-architecture 服务目录与 procedure 写法过期 | docs-drift lane（第 49 轮） | 24 | candidate | — | `frontend-architecture.md:242-245` 称 `server/configuration` 含 source/destination/route service，实际各自独立目录；`:314-315` 称 private procedure 用裸 `requireDashboard()`，10 个 router 已用 `withDashboardService`（`sources/router.ts:5`） |
+| DOC-61 | 七个已交付 mini-PRD 缺状态头 | docs-drift lane（第 49 轮） | 21 | candidate | — | `delivery-detail-edit-destination.md:8`、`evidence-bundle-download.md:9`、`source-destination-delete-cascade-impact.md:5-12`、`queued-deliveries-before-disable.md:8`、`event-delivery-health-badges.md:6`、`suppression-scope-disclosure.md:7-12`、`suppression-toggle-confirmation.md:9` 仍写实现前状态 |
+| DOC-62 | sqlite-store 文件名与 RC checklist provider gate 不一致 | docs-drift lane（第 49 轮） | 20 | candidate | — | `sqlite-store.md:369,483` 写 `better-auth-schema.ts`，实际 `better-auth.schema.ts`；`mvp-rc-checklist.md:19-21,120-121,173-182` 把 provider guide 列为剩余 gate，但 E 节无对应条目 |
+| FIX-9 | 轮换 Token 后新 Token 立即调用 Webhook 返回 invalid_token（待复现） | 第 49 轮浏览器验证观察 | — | candidate | — | 隔离实例：创建告警源→轮换 Token→复制新 Token，DB `token_hash` 与 `sha256(新Token)` 一致，但 `POST /api/sources/:id/webhook` 两次均 401 `invalid_token`；直接改写 `token_hash=sha256("test-token")` 后立即成功。疑似读连接快照或轮换写入不一致，需用测试/日志复现确认 |
 | NEW-D | 顶栏全局 ID 快速查找 | requirements lane（第 27 轮） | 27 | candidate | — | 顶栏只有栏目名与静默指示器（`dashboard-header.tsx:30`）；粘贴事件/投递 ID 直达详情，复用 `operations.queries.ts:56`；纯 console shell + feature API |
 | NEW-E | 通知目标只读配置详情 | requirements lane（第 27 轮） | 27 | candidate | — | DTO 已有 `urgentReceivers/headerNames/replyTo/appRef`（`destination.ts:26`），列表只显示数量（`destination-operational-config-cell.tsx:61`）；行内只读弹层，不碰 secret |
 | NEW-F | 飞书应用删除/换密前影响面预检 | requirements lane（第 27 轮） | 27 | candidate | — | 删除确认只显示应用名（`feishu-app-actions.tsx:89`），引用目标已在 DTO；服务端删除时才拒绝（`feishu-app.service.ts:84`）；纯 feature UI |
@@ -461,6 +466,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.35` | `e86b49d` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.35`（linux/amd64 + linux/arm64，index digest `sha256:1899a398…`） | 投递详情静默判定逐项证据（#254，REQ-193）；无迁移/配置变化；回滚镜像 `0.1.0-beta.34` |
 | `0.1.0-beta.34` | `fc36f48` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.34`（linux/amd64 + linux/arm64，index digest `sha256:69b479ab…`） | 静默规则启停确认披露投递后果（#251，UI-14 + REQ-190）；无迁移/配置变化；回滚镜像 `0.1.0-beta.33` |
 | `0.1.0-beta.33` | `1a38599` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.33`（linux/amd64 + linux/arm64，index digest `sha256:12d21abe…`） | 停用配置前显示排队投递数（#248，REQ-185）；无迁移/配置变化；回滚镜像 `0.1.0-beta.32` |
 | `0.1.0-beta.32` | `8b423a8` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.32`（linux/amd64 + linux/arm64，index digest `sha256:3f1409d2…`） | 静默规则影响预览披露目标数（#243，REQ-180）+ 文档状态校正（#244）；无迁移/配置变化；回滚镜像 `0.1.0-beta.31` |

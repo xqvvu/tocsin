@@ -2,6 +2,98 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 49 轮）
+
+- 时间：2026-10-21 06:36 – 08:05 CST。
+- 基线：本轮开始时 `origin/main` @ `e7ba81c`（第 48 轮 beta.34 发布后）；需求合入后 @ `3e2de89`。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，且无 open PR）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 `defer`，第三名额给轮转的
+  `docs-drift`。
+- 车道轮转位置：`requirements` / `ui-triage` / `docs-drift` 已完成；下一轮非必跑车道为
+  **`release-infra`**（REL-2/4/7/9/21/25–28 均为 candidate，自第 47 轮未跑）。
+- `ui-triage`：**`defer`** —— 距第 47 轮真实浏览器评审仅 2h53m；自 03:47 起 UI 路径仅 1 个
+  合并（#251，已有浏览器实测），低于 ≥3 阈值；14 条存量 UI 发现均为上一轮编目；代码快览
+  无新增不一致。复查时机：满 48h（2026-10-23 03:47）或 UI 合并累计 ≥3。
+- `last_ui_review_at`：2026-10-21 03:47 CST（第 47 轮），本轮未做 UI 评审，不更新。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
+  `recursing-yalow-aa5573`。
+
+### 本轮交付
+
+- PR #254 `feat(console): show per-condition suppression evidence on delivery detail` ——
+  **REQ-193（28）**。
+  - 新增 `DeliverySuppressionChecks`（`features/deliveries/ui/delivery-suppression-checks.tsx`）：
+    规则仍存在时用 core `evaluateSuppressionMatch` 按当前规则重算，复用
+    `RouteMatchCheckBadges` / `RouteMatchResultBadge`；标注「按当前规则重算」，当前规则不再
+    匹配时提示「投递是在当时生效的规则下被抑制」。
+  - 规则已删除不发起查询；查询失败/加载中不渲染，不影响原因快照与规则链接。
+  - 新增 3 条中英文案 + 4 条组件测试；notice 测试补「规则存在才挂载证据、删除后不挂载」断言。
+  - 新增 PRD `docs/prd/delivery-suppression-check-evidence.md`。
+  - 验证：`vp fmt --write`、`vp check` 0 errors（12 条既有 warning）、
+    `vp run -r test` 139 files / 751 tests、`vp run -r build` 通过、CI success、rebase 合并。
+  - 浏览器实测（隔离实例 `http://localhost:6198` + 全新 SQLite，中文界面）：创建告警源/
+    通知目标/路由/静默规则并发送 Webhook，产生 suppressed 投递；详情页显示
+    「匹配条件（当前规则）」「命中」、8 项条件徽标（通知目标显示期望/实际）与重算说明。
+    截图 `/tmp/tocsin-r49-suppression-checks.png`。dev server 已停止、临时库已删除。
+  - 自查（code-review skill）：发现并修复 1 条 test-coverage 发现——notice 测试此前把新组件
+    mock 成 null，挂载行被删也不会失败；已改为断言挂载/不挂载。
+
+### 专家发现
+
+- `requirements`：复核 REQ-181/182/186/193/194/195 六项均仍成立，仅行号漂移；新增 3 条候选：
+  - REQ-196（28）配置编辑对已排队投递的实际影响披露
+    （`delivery.repository.ts:323-325`、`delivery-execution.ts:82-100`、
+    `destination-edit-dialog.tsx:112`、`routes-section.tsx:141-145`）。
+  - REQ-197（27）静默规则创建/编辑披露对已排队投递的再判定
+    （`delivery.repository.ts:248-291`、`suppression-forms.tsx:427`）。
+  - REQ-198（26）投递列表直接展示静默原因与规则
+    （`history.repository.ts:238-254`、`deliveries-table.tsx:87-90`）。
+- `docs-drift`：16 条已核实漂移，新增 backlog DOC-59–DOC-62；最值得修的三组：
+  - `post-mvp-planning.md:233-234` 剩余项与同文件 `:97,141-144` 自相矛盾；
+  - `frontend-architecture.md:242-245,314-315` 服务目录与 `withDashboardService` 写法过期；
+  - 七个已交付 mini-PRD 缺状态头 + `sqlite-store.md:369,483` 文件名拼写 +
+    RC checklist provider guide gate。
+- `ui-triage`：`defer`（理由见上）。
+
+### 其他观察
+
+- 浏览器验证时发现：轮换接入 Token 后立即用新 Token 调用 Webhook 连续返回 401
+  `invalid_token`，而 DB `token_hash` 与 `sha256(新Token)` 一致；直接改写
+  `token_hash=sha256("test-token")` 后同一请求立即成功。疑似 SQLite 读连接快照或轮换写入
+  时机问题，未能在本轮定性，已记为 **FIX-9** 待 quality lane 用测试/日志复现。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项；#254 为纯前端只读投影，不触碰 schema/投递/auth 语义。
+
+### 发布评估与镜像
+
+- 三方专家一致 APPROVE：
+  - 发布经理：自 `v0.1.0-beta.34` 以来唯一用户可见变更为 #254（REQ-193），其余为 docs/test；
+    建议预发布递增。
+  - 阻断审计：5/5 PASS —— `3e2de89` main CI success、0 open PR、无阻塞回归
+    （唯一 `blocked-autonomous` 为 REL-13 法律决策）、migration 零 diff、`v0.1.0-beta.35` 未占用。
+  - 运维回滚：Dockerfile/compose/env/scripts/migrate 均零 diff；回滚只需换回 beta.34 镜像。
+- 版本：`0.1.0-beta.35`；PR #255 `chore(release): v0.1.0-beta.35`（rebase 合并 `e86b49d`），
+  main CI success。
+- Tag：`v0.1.0-beta.35`（annotated，指向 `e86b49d`）；GitHub Release：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.35
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.35` **已推送**，
+  linux/amd64 + linux/arm64，index digest `sha256:1899a398…`（`imagetools inspect` 已核实双平台）。
+- 回滚镜像：`0.1.0-beta.34`；本版本无迁移/配置变化。
+- Obsidian 同步：本会话未提供 `obsidian-vault` skill，且第 43 轮已确认 vault 中无 Tocsin
+  既有笔记，本轮**同步已跳过**。
+
+### 下一轮优先项
+
+1. **REQ-196（28）** 配置编辑排队影响；**REQ-186（28）** 文件导入；
+   **REQ-181（27）** 删除级联数量；**REQ-182/194/195（27）**。
+2. **SEC-22（27）** endpoint userinfo 投影；**FIX-9** 复现轮换 Token。
+3. **UI-22（24）** 编辑面板与分页重叠；**UI-23（24）** 390px 行操作不可见；
+   **UI-21（22）** `Close` 本地化。
+4. 车道轮转：`requirements` + `ui-triage` 必跑；非必跑车道下一轮 **`release-infra`**。
+
 ## 2026-10-21（第 48 轮）
 
 - 时间：2026-10-21 05:58 – 06:35 CST。
