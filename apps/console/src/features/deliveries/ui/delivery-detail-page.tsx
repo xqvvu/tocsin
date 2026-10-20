@@ -8,6 +8,7 @@ import { buttonVariants } from "#/components/ui/button";
 import { DeliveryDestinationEditAction } from "#/features/deliveries/ui/delivery-destination-edit-action";
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
 import { DeliveryDetailView } from "#/features/deliveries/ui/delivery-detail-view";
+import { DeliveryEvidenceDownload } from "#/features/deliveries/ui/delivery-evidence-download";
 import { DeliveryRetryButton } from "#/features/deliveries/ui/delivery-retry-button";
 import { deliveryDetailQueryOptions } from "#/features/operations/api/operations.queries";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -64,6 +65,7 @@ function DeliveryDetailPageToolbar({
             />
           ) : null}
           {detail ? <DeliveryRetryButton id={detail.job.id} state={detail.job.state} /> : null}
+          {detail ? <DeliveryEvidenceDownload detail={detail} /> : null}
           <Link
             to="/deliveries"
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-fit")}

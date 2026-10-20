@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { buttonVariants } from "#/components/ui/button";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { EventDetailView } from "#/features/events/ui/event-detail-view";
+import { EventEvidenceDownload } from "#/features/events/ui/event-evidence-download";
 import { EventReplayAction } from "#/features/events/ui/event-replay-action";
 import { eventDetailQueryOptions } from "#/features/operations/api/operations.queries";
 import { SuppressionFromEventDialog } from "#/features/suppressions/ui/suppression-from-event-dialog";
@@ -59,6 +60,7 @@ function EventDetailPageToolbar({
           {detail ? (
             <SuppressionFromEventDialog event={detail.event} source={detail.source} />
           ) : null}
+          {detail ? <EventEvidenceDownload detail={detail} /> : null}
           <EventReplayAction eventId={eventId} disabled={detail === null} />
           <Link
             to="/events"
