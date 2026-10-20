@@ -61,6 +61,41 @@ describe("destinations section table", () => {
     expect(screen.queryByText("Destination 10")).toBeNull();
   });
 
+  it("discloses the route cascade before deleting a destination", () => {
+    const onDelete = vi.fn<DestinationActionHandler>();
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <DestinationsSection
+          destinations={[destinationFixture(1)]}
+          destinationCatalog={defaultDestinationCatalog}
+          routes={[
+            routeFixture("only-route", "Only route", ["destination-1"], true),
+            routeFixture("shared-route", "Shared route", ["destination-1", "destination-2"], true),
+            routeFixture("other-route", "Other route", ["destination-3"], true),
+          ]}
+          pending={false}
+          onTest={vi.fn<DestinationActionHandler>()}
+          onPreview={vi.fn<DestinationActionHandler>()}
+          onEdit={vi.fn<DestinationEditHandler>()}
+          onToggle={vi.fn<DestinationActionHandler>()}
+          onDelete={onDelete}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Destination 1" }));
+    expect(onDelete).not.toHaveBeenCalled();
+
+    const deleteDialog = screen.getByRole("alertdialog");
+    expect(within(deleteDialog).getByText("This also deletes 1 route")).toBeTruthy();
+    expect(within(deleteDialog).getByText("This narrows 1 route")).toBeTruthy();
+
+    fireEvent.click(within(deleteDialog).getByRole("button", { name: "Delete destination" }));
+
+    expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: "destination-1" }));
+  });
+
   it("renders an operational empty state", () => {
     render(
       <AppIntlProvider locale="en-US">

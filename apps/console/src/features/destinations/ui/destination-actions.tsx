@@ -4,6 +4,7 @@ import {
   RiEyeLine,
   RiNotificationOffLine,
   RiPlayLine,
+  RiRouteLine,
   RiShutDownLine,
 } from "@remixicon/react";
 import * as React from "react";
@@ -24,11 +25,13 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import type { DestinationListItem } from "#/features/destinations/ui/destination-ui-types";
+import type { RouteReferenceImpact } from "#/features/routes/model/route-reference-impact";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function DestinationActions({
   destination,
   enabledRouteCount,
+  deleteImpact,
   pending,
   onTest,
   onPreview,
@@ -38,6 +41,7 @@ export function DestinationActions({
 }: {
   destination: DestinationListItem;
   enabledRouteCount: number;
+  deleteImpact: RouteReferenceImpact;
   pending: boolean;
   onTest: (destination: DestinationListItem) => void;
   onPreview: (destination: DestinationListItem) => void;
@@ -213,6 +217,32 @@ export function DestinationActions({
                 destinationName: destination.name,
               })}
             </AlertDialogDescription>
+            {deleteImpact.deletedRouteCount > 0 ? (
+              <Alert variant="destructive">
+                <RiRouteLine aria-hidden />
+                <AlertTitle>
+                  {t("destinations.delete.routeImpactTitle", {
+                    count: deleteImpact.deletedRouteCount,
+                  })}
+                </AlertTitle>
+                <AlertDescription>
+                  {t("destinations.delete.routeImpactDescription")}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            {deleteImpact.narrowedRouteCount > 0 ? (
+              <Alert>
+                <RiRouteLine aria-hidden />
+                <AlertTitle>
+                  {t("destinations.delete.routeNarrowedTitle", {
+                    count: deleteImpact.narrowedRouteCount,
+                  })}
+                </AlertTitle>
+                <AlertDescription>
+                  {t("destinations.delete.routeNarrowedDescription")}
+                </AlertDescription>
+              </Alert>
+            ) : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>

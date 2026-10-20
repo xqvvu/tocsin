@@ -170,6 +170,40 @@ describe("sources section table", () => {
     expect(onToggle).toHaveBeenCalledWith(expect.objectContaining({ id: "source-2" }));
   });
 
+  it("discloses the route cascade before deleting a source", () => {
+    const onDelete = vi.fn<SourceActionHandler>();
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <SourcesSection
+          sources={[sourceFixture(1)]}
+          routes={[
+            routeFixture("only-route", "Only route", ["source-1"], true),
+            routeFixture("shared-route", "Shared route", ["source-1", "source-2"], true),
+            routeFixture("catch-all-route", "Catch all route", [], true),
+          ]}
+          destinations={[destinationFixture("destination-1", true)]}
+          pending={false}
+          onEdit={vi.fn<SourceEditHandler>()}
+          onToggle={vi.fn<SourceActionHandler>()}
+          onRotateToken={vi.fn<SourceActionHandler>()}
+          onDelete={onDelete}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete source" }));
+    expect(onDelete).not.toHaveBeenCalled();
+
+    const deleteDialog = screen.getByRole("alertdialog");
+    expect(within(deleteDialog).getByText("This also deletes 1 route")).toBeTruthy();
+    expect(within(deleteDialog).getByText("This narrows 1 route")).toBeTruthy();
+
+    fireEvent.click(within(deleteDialog).getByRole("button", { name: "Delete source" }));
+
+    expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: "source-1" }));
+  });
+
   it("enables a disabled source without a confirmation step", () => {
     const onToggle = vi.fn<SourceActionHandler>();
 
