@@ -2,6 +2,86 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 45 轮）
+
+- 时间：2026-10-21 01:35 – 02:20 CST。
+- 基线：本轮开始时 `origin/main` @ `c7d14b8`；需求合入后 @ `b6b9dc6`；发布后 @ `327666a`。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 `defer`，
+  第三个并发名额给轮转的 `security-exposure`。
+- `ui-triage`：**`defer`** —— 距第 44 轮真实浏览器评审仅约 30–60 分钟
+  （`iteration-log.md:17-22`），评审后 UI 路径合并 0 个；11 条未解决 UI 发现均是
+  上一轮刚编目的存量，按车道间歇性原则不重复触发。建议下次触发条件：UI 路径再合并
+  ≥2 个，或 UI-14 落地后一并做一次短评审。
+- `last_ui_review_at`：2026-10-21 01:00（第 44 轮）；本轮未做 UI 评审，不更新。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR、镜像构建均在会话工作树
+  `fervent-pascal-ac79d7`。
+
+### 本轮交付
+
+- PR #240 `feat(console): export redacted event and delivery evidence bundles` ——
+  **REQ-175（29）**。
+  - 新增 `features/operations/model/evidence-bundle.ts`：`buildEventEvidenceBundle` /
+    `buildDeliveryEvidenceBundle` 输出带 `schemaVersion`、`kind`、`subjectId`、`exportedAt`
+    的 JSON 文档；导出前对整份文档再执行一次 `redactJsonText`（纵深防御）。
+  - 事件/投递详情页工具栏新增「下载证据包」；文件名
+    `tocsin-<kind>-<id>-<UTC 时间戳>.json`，复用既有 `downloadTextFile`。
+  - 中英文文案同步；新增中文 PRD `docs/prd/evidence-bundle-download.md`；9 条新测试。
+  - 验证：`vp fmt --write`、`vp check` 0 errors（12 条既有 warning）、
+    `vp run -r test` 135 files / 731 tests、`vp run -r build` exit 0；CI success；rebase 合并。
+  - 浏览器实测：隔离实例 `http://localhost:6194` + 全新 SQLite，创建 owner、告警源并发送
+    真实 webhook，中文界面点击下载；捕获 `tocsin-event-<id>-20261020T175149Z.json`，
+    `kind=event`、`schemaVersion=1`，标题中的 `token=abcd1234` 已为 `[REDACTED]`。
+    dev server 已停止、临时库已删除。
+- 自查（code-review，low）：2 条非阻断发现 —— 两个下载组件有少量重复；详情为 null 时
+  隐藏按钮的分支无组件测试。已记录，未在本轮返工。
+
+### 专家发现
+
+- `requirements`：新增 REQ-180..184（见 backlog）。最高分：
+  - REQ-180（28）静默创建/编辑披露将被静默的目标数：`urgentImpactPreview` 已算
+    `scopedCount` 但 UI 未用，无加急目标时只显示「不影响自动电话提醒」
+    （`urgent-impact.ts:43`、`urgent-impact-preview.tsx:28-44`）。
+  - REQ-181（27）删除配置前披露将级联删除的事件与投递数；REQ-182（27）目标测试发送前
+    确认去向；REQ-183（26）飞书应用测试结果可复核；REQ-184（25）静默列表命中数。
+- `security-exposure`：**0 HIGH / 0 MEDIUM / 4 LOW**。读边界主链路、import protection、
+  `xqvvu/vane` 残留均 clean。新增 SEC-22..25：
+  - SEC-22（27）目标 endpoint 的 URL userinfo 密码进入浏览器 DTO
+    （`destination.helpers.ts:63,84,162`）。
+  - SEC-23（24）provider 可控 fingerprint 未脱敏进入列表/详情/外发
+    （`redaction.ts:231-246`）。
+  - SEC-24（25）读边界脱敏测试未覆盖 `appSecret`/`privateKey`/`X-Auth-Token` 等 key 形态。
+  - SEC-25（25）test/preview 的 renderedPayload 未套最终 `redactJsonText` 投影。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项；REQ-175 为纯前端只读导出，不触碰 schema/投递/auth 语义。
+
+### 发布评估与镜像
+
+- 三位专家（发布经理/阻断审计/运维回滚）一致 APPROVE：CI success（`b6b9dc6`）、
+  0 open PR、无 migration/部署配置变更、`v0.1.0-beta.31` 未占用。
+- 版本：`0.1.0-beta.31`；PR #241 `chore(release): v0.1.0-beta.31`（rebase 合并
+  `327666a`），main CI success。
+- Tag：`v0.1.0-beta.31`（annotated，指向 `327666a`）；GitHub Release：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.31
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.31` **已推送**，
+  linux/amd64 + linux/arm64，index digest `sha256:2c61014e…`。
+- **Docker Hub 不可达的长期问题已解决**：给 `tocsin-multi` builder 增加
+  `[registry."docker.io"] mirrors = ["docker.m.daocloud.io"]` 后构建成功；本轮同时补推
+  `0.1.0-beta.30`（`sha256:5a81e7de…`）与 `0.1.0-beta.29`（`sha256:c77a920a…`），
+  均为双平台，并更新了两个 GitHub Release 的说明。
+- 回滚镜像：`0.1.0-beta.30`（现已在 ACR 可用；更保守可回 `0.1.0-beta.28`）。
+
+### 下一轮优先项
+
+1. **REQ-180（28）** 静默创建/编辑披露目标数；**REQ-181（27）** 删除级联数量；
+   **REQ-182（27）** 目标测试确认。
+2. **SEC-22（27）** endpoint userinfo 密码投影；**SEC-24（25）** 补脱敏 key 形态测试。
+3. docs-drift 批次（README/RC 清单、抑制 PRD 状态、post-MVP 方向 2/5、架构文件树）。
+4. **UI-14（25）** 静默启停确认；**UI-21（22）** Dialog `Close` 本地化。
+
 ## 2026-10-21（第 44 轮）
 
 - 时间：2026-10-21 00:25 – 01:05 CST。
