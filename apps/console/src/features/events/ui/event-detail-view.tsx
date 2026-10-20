@@ -53,6 +53,7 @@ export function EventDetailView({ detail }: { detail: EventDetailData }) {
               matches={detail.routeMatches}
               matchedRouteCount={matchedRouteCount}
               provenance={detail.routeMatchesProvenance}
+              deliveries={detail.deliveries}
             />
             {detail.routeMatchGaps.length > 0 ? (
               <EventDetailRouteGaps gaps={detail.routeMatchGaps} />

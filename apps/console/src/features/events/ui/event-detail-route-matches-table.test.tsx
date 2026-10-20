@@ -9,6 +9,8 @@ import { AppIntlProvider } from "#/i18n/provider";
 
 type RouteMatches = EventDetailData["routeMatches"];
 type Provenance = EventDetailData["routeMatchesProvenance"];
+type Deliveries = EventDetailData["deliveries"];
+type Delivery = Deliveries[number];
 
 describe("event detail route matches table", () => {
   afterEach(() => {
@@ -98,6 +100,46 @@ describe("event detail route matches table", () => {
     expect(screen.getByText(legacyDetail)).toBeTruthy();
   });
 
+  it("shows what each matched route actually delivered", () => {
+    renderTable(
+      [
+        match({ routeId: "route-1", routeName: "Critical checkout" }),
+        match({ routeId: "route-2", routeName: "Warning digest" }),
+      ],
+      "intake_snapshot",
+      [
+        delivery({ id: "delivery-1", routeId: "route-1", state: "succeeded" }),
+        delivery({ id: "delivery-2", routeId: "route-1", state: "succeeded" }),
+        delivery({ id: "delivery-3", routeId: "route-1", state: "failed" }),
+        delivery({ id: "delivery-4", routeId: "route-2", state: "pending" }),
+      ],
+    );
+
+    expect(screen.getByText("Succeeded 2")).toBeTruthy();
+    expect(screen.getByText("Failed 1")).toBeTruthy();
+    expect(screen.getByText("Pending 1")).toBeTruthy();
+  });
+
+  it("explains a matched route that produced no delivery", () => {
+    renderTable([match({ routeId: "route-1" })], "intake_snapshot", []);
+
+    expect(screen.getByText("No deliveries")).toBeTruthy();
+  });
+
+  it("does not attribute a manual delivery to a route", () => {
+    renderTable([match({ routeId: "route-1" })], "intake_snapshot", [
+      delivery({ routeId: null, routeName: null }),
+    ]);
+
+    expect(screen.getByText("No deliveries")).toBeTruthy();
+  });
+
+  it("marks an unmatched route instead of claiming it delivered nothing", () => {
+    renderTable([match({ matched: false })], "intake_snapshot", []);
+
+    expect(screen.getByText("Not matched")).toBeTruthy();
+  });
+
   it("distinguishes an intake snapshot from a recomputed result", () => {
     const { unmount } = renderTable([match({})], "intake_snapshot");
 
@@ -119,16 +161,44 @@ describe("event detail route matches table", () => {
   });
 });
 
-function renderTable(matches: RouteMatches, provenance: Provenance = "intake_snapshot") {
+function renderTable(
+  matches: RouteMatches,
+  provenance: Provenance = "intake_snapshot",
+  deliveries: Deliveries = [],
+) {
   return render(
     <AppIntlProvider locale="en-US">
       <EventDetailRouteMatchesTable
         matches={matches}
         matchedRouteCount={matches.filter((entry) => entry.matched).length}
         provenance={provenance}
+        deliveries={deliveries}
       />
     </AppIntlProvider>,
   );
+}
+
+function delivery(overrides: Partial<Delivery> = {}): Delivery {
+  return {
+    id: "delivery-1",
+    eventId: "event-1",
+    destinationId: "destination-1",
+    routeId: "route-1",
+    state: "succeeded",
+    attemptCount: 1,
+    maxAttempts: 3,
+    nextAttemptAt: null,
+    lastError: null,
+    suppressionId: null,
+    suppressedAt: null,
+    suppressReason: null,
+    createdAt: "2026-10-20T00:00:00.000Z",
+    updatedAt: "2026-10-20T00:00:01.000Z",
+    finishedAt: "2026-10-20T00:00:01.000Z",
+    destinationName: "Feishu on-call",
+    routeName: "Critical checkout",
+    ...overrides,
+  };
 }
 
 function match(overrides: Partial<RouteMatches[number]> = {}): RouteMatches[number] {
