@@ -46,25 +46,9 @@ const SENSITIVE_EXACT_KEYS = new Set([
 const SENSITIVE_KEY_SUFFIX_PATTERN =
   /(?:secret|token|password|passwd|passphrase|credential|privatekey|apikey|authorization|cookie)$/;
 
-/**
- * Text logs carry the original key spelling, not a normalized one. The
- * alternation is generated from the same set and suffix rule used by
- * `isSensitiveKey`, with optional separators between exact-key characters, so
- * `webhook_url`, `webhook-url`, and `webhookUrl` share one branch.
- */
-const SENSITIVE_TEXT_KEY_SOURCE = [
-  ...[...SENSITIVE_EXACT_KEYS].map((key) => key.split("").join("[._-]?")),
-  "[A-Za-z0-9._-]*(?:secret|token|password|passwd|passphrase|credential|privatekey|apikey|authorization|cookie)",
-].join("|");
-
-// The `\b` keeps identifiers that merely end in a sensitive suffix, such as
-// `max_tokens`, from matching from their tail (`tokens: 4096`).
-const TEXT_ASSIGNMENT_PATTERN = new RegExp(
-  `(["']?)\\b(${SENSITIVE_TEXT_KEY_SOURCE})\\1(\\s*[:=]\\s*)(?:"((?:\\\\.|[^"\\\\])*)"(?=\\s*[,;}\\]\\n\\r]|$)|'((?:\\\\.|[^'\\\\])*)'(?=\\s*[,;}\\]\\n\\r]|$)|([^,;\\n\\r]*?)(?=\\s+["']?(?:${SENSITIVE_TEXT_KEY_SOURCE})["']?\\s*[:=]|[,;\\n\\r]|$))`,
-  "gi",
-);
-
 export const REDACTED_VALUE = "[REDACTED]";
+
+type CredentialTextRedactor = (value: string) => string;
 
 /**
  * Credential shapes that can appear without a `key=value` prefix, such as a
@@ -72,43 +56,35 @@ export const REDACTED_VALUE = "[REDACTED]";
  * userinfo, or a chat-provider webhook URL. The matchers stay deliberately
  * narrow: prose such as `Bearer token`, operational identifiers such as
  * `disk-space-low`, and ordinary URLs stay visible.
+ *
+ * The order matters: userinfo runs before the authentication-scheme rule so a
+ * credential pasted into a URL password is handled as userinfo first.
  */
-const CREDENTIAL_VALUE_PATTERNS: ReadonlyArray<{
-  pattern: RegExp;
-  replacement: string;
-}> = [
+const CREDENTIAL_VALUE_REDACTORS: ReadonlyArray<CredentialTextRedactor> = [
   // Chat webhook URLs carry their secret in the path. Capture scheme and host
   // so the same URL inside and outside an assignment converges to one shape.
-  {
-    pattern: /(https?:\/\/hooks\.slack\.com\/services\/)[A-Za-z0-9/_-]+/gi,
-    replacement: "$1[REDACTED]",
-  },
-  {
-    pattern:
+  (value) =>
+    value.replace(/(https?:\/\/hooks\.slack\.com\/services\/)[A-Za-z0-9/_-]+/gi, "$1[REDACTED]"),
+  (value) =>
+    value.replace(
       /(https?:\/\/open\.(?:feishu\.cn|larksuite\.com)\/open-apis\/bot\/v2\/hook\/)[A-Za-z0-9-]+/gi,
-    replacement: "$1[REDACTED]",
-  },
+      "$1[REDACTED]",
+    ),
   // Slack app tokens have a fixed prefix. Requiring a plausible body keeps the
   // bare prefix intact when it appears as prose.
-  {
-    pattern: /\bxox[baprs]-[A-Za-z0-9-]{8,}\b/g,
-    replacement: REDACTED_VALUE,
-  },
+  (value) => value.replace(/\bxox[baprs]-[A-Za-z0-9-]{8,}\b/g, REDACTED_VALUE),
   // URL userinfo password. Keep user and host so operators can still tell
   // which endpoint failed; only the password is replaced.
-  {
-    pattern: /\b([a-z][a-z0-9+.-]*:\/\/)([^\s/@:]+):([^\s/@]+)@/gi,
-    replacement: "$1$2:[REDACTED]@",
-  },
+  redactUrlUserinfo,
   // Authentication schemes in free text. The value must be at least eight
   // characters and contain a digit or symbol, so prose such as
   // `Basic authentication` and `Bearer token` stays readable. Generic `Bot`
   // is omitted on purpose so ordinary English is untouched.
-  {
-    pattern:
+  (value) =>
+    value.replace(
       /\b(Bearer|Basic|Token)\s+((?=[A-Za-z0-9._~+/=-]{8,}(?![A-Za-z0-9._~+/=-]))(?=[A-Za-z0-9._~+/=-]*[0-9._~+/=-])[A-Za-z0-9._~+/=-]+)/gi,
-    replacement: "$1 [REDACTED]",
-  },
+      "$1 [REDACTED]",
+    ),
 ];
 
 /**
@@ -117,10 +93,81 @@ const CREDENTIAL_VALUE_PATTERNS: ReadonlyArray<{
  * matcher on the next pass.
  */
 export function redactCredentialText(value: string): string {
-  return CREDENTIAL_VALUE_PATTERNS.reduce(
-    (text, { pattern, replacement }) => text.replace(pattern, replacement),
-    value,
-  );
+  return CREDENTIAL_VALUE_REDACTORS.reduce((text, redact) => redact(text), value);
+}
+
+function isUrlSchemeCharacter(char: string | undefined): boolean {
+  return isAsciiLetter(char) || isAsciiDigit(char) || char === "+" || char === "." || char === "-";
+}
+
+function isUrlUserCharacter(char: string | undefined): boolean {
+  return char !== undefined && !isWhitespace(char) && char !== "/" && char !== "@" && char !== ":";
+}
+
+function isUrlPasswordCharacter(char: string | undefined): boolean {
+  return char !== undefined && !isWhitespace(char) && char !== "/" && char !== "@";
+}
+
+/**
+ * The legacy userinfo pattern ended a scheme with `://`, so the regex engine
+ * retried every prefix of a long dotted run before giving up — minutes of CPU
+ * on a 1 MiB payload. This scan anchors on the separator and walks back over
+ * the scheme run once.
+ */
+function hasUrlSchemeStart(value: string, marker: number): boolean {
+  let runStart = marker;
+  while (runStart > 0 && isUrlSchemeCharacter(value[runStart - 1])) runStart -= 1;
+
+  for (let index = runStart; index < marker; index += 1) {
+    if (isAsciiLetter(value[index]) && (index === 0 || !isWordCharacter(value[index - 1]))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * `\b([a-z][a-z0-9+.-]*:\/\/)([^\s/@:]+):([^\s/@]+)@` rewritten as a linear
+ * scan. Only the password span is replaced, so the scheme, user, and host stay
+ * readable for operators.
+ */
+function redactUrlUserinfo(value: string): string {
+  const edits: Array<{ start: number; end: number }> = [];
+  const length = value.length;
+  let searchFrom = 0;
+
+  while (searchFrom < length) {
+    const marker = value.indexOf("://", searchFrom);
+    if (marker === -1) break;
+    searchFrom = marker + 3;
+
+    if (!hasUrlSchemeStart(value, marker)) continue;
+
+    let index = marker + 3;
+    const userStart = index;
+    while (index < length && isUrlUserCharacter(value[index])) index += 1;
+    if (index === userStart || value[index] !== ":") continue;
+
+    index += 1;
+    const passwordStart = index;
+    while (index < length && isUrlPasswordCharacter(value[index])) index += 1;
+    if (index === passwordStart || value[index] !== "@") continue;
+
+    edits.push({ start: passwordStart, end: index });
+    searchFrom = index + 1;
+  }
+
+  if (edits.length === 0) return value;
+
+  let output = "";
+  let cursor = 0;
+  for (const edit of edits) {
+    output += value.slice(cursor, edit.start) + REDACTED_VALUE;
+    cursor = edit.end;
+  }
+
+  return output + value.slice(cursor);
 }
 
 export function isSensitiveKey(key: string): boolean {
@@ -255,35 +302,351 @@ export function redactEventRecord(event: EventRecord): EventRecord {
   };
 }
 
-function redactSensitiveAssignments(value: string): string {
-  return value.replace(
-    TEXT_ASSIGNMENT_PATTERN,
-    (
-      match,
-      quote: string,
-      key: string,
-      separator: string,
-      doubleQuotedValue: string | undefined,
-      singleQuotedValue: string | undefined,
-      unquotedValue: string | undefined,
-    ) => {
-      if (!isSensitiveKey(key)) {
-        return match;
+const WHITESPACE_PATTERN = /\s/;
+const LINE_TERMINATORS = new Set(["\n", "\r", "\u2028", "\u2029"]);
+
+const SENSITIVE_KEY_SUFFIXES = [
+  "secret",
+  "token",
+  "password",
+  "passwd",
+  "passphrase",
+  "credential",
+  "privatekey",
+  "apikey",
+  "authorization",
+  "cookie",
+] as const;
+
+// The longest exact key is `passwordconfirmation` (20 characters), and the
+// text pattern allows one separator after every character.
+const MAX_EXACT_KEY_RAW_LENGTH = 48;
+
+function isAsciiLetter(char: string | undefined): boolean {
+  return (
+    char !== undefined &&
+    char.length === 1 &&
+    ((char >= "a" && char <= "z") || (char >= "A" && char <= "Z"))
+  );
+}
+
+function isAsciiDigit(char: string | undefined): boolean {
+  return char !== undefined && char.length === 1 && char >= "0" && char <= "9";
+}
+
+function isWordCharacter(char: string | undefined): boolean {
+  return isAsciiLetter(char) || isAsciiDigit(char) || char === "_";
+}
+
+function isKeyCharacter(char: string | undefined): boolean {
+  return isWordCharacter(char) || char === "." || char === "-";
+}
+
+function isKeySeparator(char: string | undefined): boolean {
+  return char === "." || char === "_" || char === "-";
+}
+
+// `_` is an ASCII word character, so it cannot create the `\b` transition the
+// legacy pattern needed before a key; `.` and `-` can.
+function isBoundarySeparator(char: string | undefined): boolean {
+  return char === "." || char === "-";
+}
+
+function isWhitespace(char: string | undefined): boolean {
+  if (char === undefined) return false;
+
+  return (
+    char === " " ||
+    char === "\t" ||
+    char === "\n" ||
+    char === "\r" ||
+    char === "\f" ||
+    char === "\v" ||
+    (char > "\u007f" && WHITESPACE_PATTERN.test(char))
+  );
+}
+
+/**
+ * `[A-Za-z0-9._-]*(?:secret|token|...)` anchored at the end of the value. The
+ * prefix is unbounded on purpose: a credential behind a long identifier is
+ * still a credential, and bounding it would silently narrow redaction.
+ */
+function endsWithSensitiveKeySuffix(value: string, start: number): boolean {
+  const remainderLength = value.length - start;
+
+  return SENSITIVE_KEY_SUFFIXES.some((suffix) => {
+    if (remainderLength < suffix.length) return false;
+
+    const suffixStart = value.length - suffix.length;
+    for (let index = 0; index < suffix.length; index += 1) {
+      if (value[suffixStart + index]?.toLowerCase() !== suffix[index]) return false;
+    }
+
+    return true;
+  });
+}
+
+/**
+ * The exact-key branch of the legacy text pattern: each key character may be
+ * followed by at most one `[._-]`, so `webhook_url` matches while
+ * `web__hookurl` stays an operational field.
+ */
+function matchesExactKeyShape(value: string, start: number): boolean {
+  const remaining = value.length - start;
+  if (remaining <= 0 || remaining > MAX_EXACT_KEY_RAW_LENGTH) return false;
+
+  let normalized = "";
+  for (let index = start; index < value.length; index += 1) {
+    const char = value[index]?.toLowerCase();
+    if (isAsciiLetter(char) || isAsciiDigit(char)) normalized += char;
+  }
+
+  if (!SENSITIVE_EXACT_KEYS.has(normalized)) return false;
+
+  let index = start;
+  for (let position = 0; position < normalized.length; position += 1) {
+    if (value[index]?.toLowerCase() !== normalized[position]) return false;
+    index += 1;
+    if (position < normalized.length - 1 && isKeySeparator(value[index])) index += 1;
+  }
+
+  return index === value.length;
+}
+
+function matchesSensitiveKeyRemainder(value: string, start: number): boolean {
+  return endsWithSensitiveKeySuffix(value, start) || matchesExactKeyShape(value, start);
+}
+
+/**
+ * An unquoted key may match from a later word boundary inside the run, because
+ * the legacy pattern's `\b` only required a word/non-word transition. This is
+ * what keeps `foo.webhook_url=secret` redacted while a 100-character prefix
+ * glued directly to `webhook_url` stays visible.
+ */
+function matchesUnquotedSensitiveKey(value: string): boolean {
+  const suffixMatches = endsWithSensitiveKeySuffix(value, 0);
+
+  if (isWordCharacter(value[0]) && (suffixMatches || matchesExactKeyShape(value, 0))) {
+    return true;
+  }
+
+  const exactStart = Math.max(1, value.length - MAX_EXACT_KEY_RAW_LENGTH);
+  for (let index = exactStart; index < value.length; index += 1) {
+    if (!isBoundarySeparator(value[index - 1]) || !isWordCharacter(value[index])) continue;
+    if (suffixMatches || matchesExactKeyShape(value, index)) return true;
+  }
+
+  if (suffixMatches && !isWordCharacter(value[0])) {
+    for (let index = 1; index < value.length; index += 1) {
+      if (isBoundarySeparator(value[index - 1]) && isWordCharacter(value[index])) return true;
+    }
+  }
+
+  return false;
+}
+
+function endsAtValueDelimiter(value: string, start: number): boolean {
+  // `(?:\s*[,;}\]\n\r]|$)` is greedier than it looks: when whitespace
+  // follows the closing quote, `$` is tested before that whitespace, so
+  // `token="abc" ` falls back to the unquoted branch while `token="abc"` does
+  // not. Reproduce both alternatives in that order.
+  let index = start;
+  while (index < value.length && isWhitespace(value[index])) {
+    // A line break inside the whitespace run can be the delimiter itself.
+    if (value[index] === "\n" || value[index] === "\r") return true;
+    index += 1;
+  }
+
+  if (index < value.length) {
+    const char = value[index];
+
+    return char === "," || char === ";" || char === "}" || char === "]";
+  }
+
+  return start >= value.length;
+}
+
+function readQuotedValue(value: string, start: number): { end: number; quote: string } | null {
+  const quote = value[start];
+  if (quote !== '"' && quote !== "'") return null;
+
+  let index = start + 1;
+  while (index < value.length) {
+    const char = value[index];
+
+    if (char === "\\") {
+      const escaped = value[index + 1];
+      // The legacy `\\.` escape cannot cross a line terminator.
+      if (escaped === undefined || LINE_TERMINATORS.has(escaped)) return null;
+      index += 2;
+      continue;
+    }
+
+    if (char === quote) {
+      const end = index + 1;
+      return endsAtValueDelimiter(value, end) ? { end, quote } : null;
+    }
+
+    index += 1;
+  }
+
+  return null;
+}
+
+/**
+ * `\s+["']?KEY["']?\s*[:=]`, where the lookahead's KEY has no `\b`, so a
+ * sensitive key may start with a separator. Checking once at the start of a
+ * whitespace run is equivalent to checking every position in it and keeps the
+ * value scan linear.
+ */
+function startsSensitiveAssignment(value: string, start: number): boolean {
+  let index = start;
+
+  if (value[index] === '"' || value[index] === "'") index += 1;
+
+  const keyStart = index;
+  while (index < value.length && isKeyCharacter(value[index])) index += 1;
+  if (index === keyStart) return false;
+
+  const key = value.slice(keyStart, index);
+
+  if (value[index] === '"' || value[index] === "'") index += 1;
+  while (index < value.length && isWhitespace(value[index])) index += 1;
+
+  return (value[index] === ":" || value[index] === "=") && matchesSensitiveKeyRemainder(key, 0);
+}
+
+function readUnquotedValueEnd(value: string, start: number): number {
+  let index = start;
+
+  while (index < value.length) {
+    const char = value[index];
+
+    if (char === "," || char === ";" || char === "\n" || char === "\r") break;
+
+    if (isWhitespace(char)) {
+      let whitespaceEnd = index;
+      while (whitespaceEnd < value.length && isWhitespace(value[whitespaceEnd])) {
+        whitespaceEnd += 1;
       }
 
-      const quoteChar =
-        doubleQuotedValue !== undefined
-          ? '"'
-          : singleQuotedValue !== undefined
-            ? "'"
-            : quotedFallback(unquotedValue);
-      const redactedValue = quoteChar
-        ? `${quoteChar}${REDACTED_VALUE}${quoteChar}`
-        : REDACTED_VALUE;
+      // `\s+KEY` may span a line break, so it is checked before the line
+      // break terminates the value; then the whitespace before the break stays
+      // inside the value, as the lazy unquoted branch did.
+      if (startsSensitiveAssignment(value, whitespaceEnd)) break;
 
-      return `${quote}${key}${quote}${separator}${redactedValue}`;
-    },
-  );
+      let lineBreak = index;
+      while (lineBreak < whitespaceEnd && value[lineBreak] !== "\n" && value[lineBreak] !== "\r") {
+        lineBreak += 1;
+      }
+
+      if (lineBreak < whitespaceEnd) {
+        index = lineBreak;
+        break;
+      }
+
+      index = whitespaceEnd;
+      continue;
+    }
+
+    index += 1;
+  }
+
+  return index;
+}
+
+function parseRedactedValue(value: string, start: number): { end: number; replacement: string } {
+  const quoted = readQuotedValue(value, start);
+  if (quoted !== null) {
+    return {
+      end: quoted.end,
+      replacement: `${quoted.quote}${REDACTED_VALUE}${quoted.quote}`,
+    };
+  }
+
+  const end = readUnquotedValueEnd(value, start);
+  const quote = quotedFallback(value.slice(start, end));
+
+  return {
+    end,
+    replacement: quote ? `${quote}${REDACTED_VALUE}${quote}` : REDACTED_VALUE,
+  };
+}
+
+/**
+ * Redacts `key=value` assignments in free text.
+ *
+ * The previous implementation let the regex engine search every prefix of a
+ * long identifier for a sensitive suffix, so an adversarial payload made the
+ * cost grow with the square of its length (80 KiB took seconds; a 1 MiB
+ * webhook could pin the single-process worker for minutes). This scanner
+ * walks the text once, records the value span for each sensitive key, and
+ * applies the edits in a single pass. Key matching deliberately mirrors the
+ * legacy alternation, including its one-separator exact keys and its `\b`
+ * rules, so which values are hidden does not change.
+ */
+function redactSensitiveAssignments(value: string): string {
+  const edits: Array<{ start: number; end: number; replacement: string }> = [];
+  const length = value.length;
+  let index = 0;
+
+  while (index < length) {
+    const openingQuote = value[index] === '"' || value[index] === "'" ? value[index] : "";
+    const keyStart = openingQuote ? index + 1 : index;
+
+    if (!isKeyCharacter(value[keyStart])) {
+      index += 1;
+      continue;
+    }
+
+    let keyEnd = keyStart;
+    while (keyEnd < length && isKeyCharacter(value[keyEnd])) keyEnd += 1;
+    const key = value.slice(keyStart, keyEnd);
+
+    // A quote that is not closed is not part of the match: the legacy pattern
+    // could still start at the key itself, with the quote left untouched.
+    const quotedKey = openingQuote !== "" && value[keyEnd] === openingQuote;
+    const matchStart = quotedKey ? index : keyStart;
+    let afterKey = quotedKey ? keyEnd + 1 : keyEnd;
+
+    while (afterKey < length && isWhitespace(value[afterKey])) afterKey += 1;
+    if (value[afterKey] !== ":" && value[afterKey] !== "=") {
+      index = keyEnd;
+      continue;
+    }
+    afterKey += 1;
+    while (afterKey < length && isWhitespace(value[afterKey])) afterKey += 1;
+
+    const sensitive = quotedKey
+      ? isWordCharacter(value[keyStart]) && matchesSensitiveKeyRemainder(key, 0)
+      : matchesUnquotedSensitiveKey(key);
+
+    if (!sensitive) {
+      // The legacy pattern only matched sensitive keys, so scanning continues
+      // inside the value and still finds a nested `token=...`.
+      index = afterKey;
+      continue;
+    }
+
+    const parsed = parseRedactedValue(value, afterKey);
+    edits.push({
+      start: matchStart,
+      end: parsed.end,
+      replacement: `${value.slice(matchStart, afterKey)}${parsed.replacement}`,
+    });
+    index = parsed.end;
+  }
+
+  if (edits.length === 0) return value;
+
+  let output = "";
+  let cursor = 0;
+  for (const edit of edits) {
+    output += value.slice(cursor, edit.start) + edit.replacement;
+    cursor = edit.end;
+  }
+
+  return output + value.slice(cursor);
 }
 
 function normalizeKey(key: string): string {
