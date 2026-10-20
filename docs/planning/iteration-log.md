@@ -2,6 +2,64 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 41 轮）
+
+- 时间：2026-10-20 18:55 – 20:00 CST。
+- 基线：本轮开始时 `origin/main` @ `ce36e75`；合入后 `origin/main` @ `7eb219c`
+  （#225、#226）。
+- 类型：非 full-audit（backlog 仍有大量 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` + `security-exposure`（第 40 轮预承诺轮转）。
+  `ui-triage` 正常返回 `defer`；`requirements` 与 `security-exposure` 运行 41 分钟未返回
+  报告，按限时规则终止，留待下一轮重跑。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审（17:57）仅约 58 分钟；上次评审后
+  UI 路径合并 1 个（#220）；14 条未解决 UI 发现属长期基线，无新增强信号。下次触发：
+  自 17:57 起再合入 2 个 UI 路径提交，或 2026-10-22 17:57 硬上限；建议 2026-10-21
+  08:00 前后主动排一次。
+- `last_ui_review_at`：2026-10-20 17:57（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `nice-heyrovsky-1a14aa`。
+
+### 本轮交付
+
+- PR #225 `feat(console): disclose urgent paging when disabling a destination` ——
+  **REQ-170（29）**。
+  - 停用确认框在 `operationalConfig.urgentAutoEnabled === true` 时追加 destructive 警示：
+    「停用后自动加急也会停止」+ 呼叫对象人数；无对象时使用不含数量的文案。
+  - 新增 `destinations.disable.urgentAutoTitle/urgentAutoDescription/urgentAutoDescriptionNoReceivers`
+    中英文键；2 条组件测试覆盖开启与关闭分支。
+  - 新增中文 PRD `docs/prd/destination-disable-urgent-disclosure.md`。
+  - 验证：`vp check` 0 errors（12 条既有 warning）；`vp run -r test` 4/4（console
+    129 files / 708 tests）；`vp run -r build` exit 0；CI success（1m55s）。
+- PR #226 `docs(release): list every remaining RC gate in the overview` —— **DOC-49**。
+  - RC checklist 概览从「只差 E2E」更正为四类剩余 gate：E2E 接入 CI、dedupe cleanup
+    成本上限、provider fixture 化与多版本 payload、provider 侧 contributor guide。
+  - 仅文档；`vp fmt --check` 通过；CI success（2m4s）。
+
+### 专家发现
+
+- `ui-triage`：`defer`（理由见上）。
+- `requirements` / `security-exposure`：41 分钟未产出报告，终止后无发现可写；下一轮重跑
+  这两个车道，不要重复本轮未落盘的工作。
+- 环境记录：会话工作树的 `node_modules` 链接残缺，且 zsh 对不存在的 glob 会让整条
+  `rm -rf` 中止。按记忆做法用 `setopt nullglob` 后彻底删除再 `vp install --frozen-lockfile`
+  修复（2.5s，store 已热）。
+
+### EXPERT_PANEL 与发布
+
+- 见下一节（发布评估在日志末尾补记）。
+
+### 下一轮优先项
+
+1. **REQ-164（29）** 删除级联影响；**REQ-171/172（27-28）** 补投加急披露、列表静默引用；
+   **REQ-165/166/168（28）**、**REQ-167/169（27）**。
+2. **UI-20（26）** 投递健康徽标补齐 pending/suppressed；**UI-14（25）** 静默启停确认；
+   **UI-19/18** 投递列与 390px 布局；**UI-21** 对话框本地化。
+3. **docs-drift 批次**：DOC-23/24/37、DOC-43/45、DOC-22/36、DOC-46/41。
+4. 车道轮转：`requirements` + `ui-triage` 必跑；非必跑车道下一轮重跑 **`security-exposure`**
+   （本轮未产出）。
+5. **Q-43/Q-47/Q-45/Q-46**；**ARCH-36..40** 低风险批次。
+
 ## 2026-10-20（第 40 轮）
 
 - 时间：2026-10-20 17:24 – 18:52 CST。
