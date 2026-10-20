@@ -191,11 +191,69 @@ describe("destinations section table", () => {
     fireEvent.click(within(disableDialog).getByRole("button", { name: "Disable destination" }));
     expect(onToggle).toHaveBeenCalledWith(destination);
   });
+
+  it("discloses automatic urgent paging when disabling a destination", () => {
+    const destination = destinationFixture(2, "feishu", {
+      urgentAutoEnabled: true,
+      urgentReceivers: ["ou_1", "ou_2"],
+    });
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <DestinationsSection
+          destinations={[destination]}
+          destinationCatalog={defaultDestinationCatalog}
+          routes={[]}
+          pending={false}
+          onTest={vi.fn<DestinationActionHandler>()}
+          onPreview={vi.fn<DestinationActionHandler>()}
+          onEdit={vi.fn<DestinationEditHandler>()}
+          onToggle={vi.fn<DestinationActionHandler>()}
+          onDelete={vi.fn<DestinationActionHandler>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Disable destination" }));
+
+    const disableDialog = screen.getByRole("alertdialog");
+    expect(within(disableDialog).getByText("Automatic urgent paging will stop too")).toBeTruthy();
+    expect(within(disableDialog).getByText(/will not call 2 receivers/)).toBeTruthy();
+  });
+
+  it("keeps the urgent paging warning off destinations without automatic paging", () => {
+    const destination = destinationFixture(2, "feishu", {
+      urgentAutoEnabled: false,
+      urgentReceivers: ["ou_1"],
+    });
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <DestinationsSection
+          destinations={[destination]}
+          destinationCatalog={defaultDestinationCatalog}
+          routes={[]}
+          pending={false}
+          onTest={vi.fn<DestinationActionHandler>()}
+          onPreview={vi.fn<DestinationActionHandler>()}
+          onEdit={vi.fn<DestinationEditHandler>()}
+          onToggle={vi.fn<DestinationActionHandler>()}
+          onDelete={vi.fn<DestinationActionHandler>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Disable destination" }));
+
+    const disableDialog = screen.getByRole("alertdialog");
+    expect(within(disableDialog).queryByText("Automatic urgent paging will stop too")).toBeNull();
+  });
 });
 
 function destinationFixture(
   index: number,
   kind: DestinationListItem["kind"] = index % 2 === 0 ? "feishu" : "generic_webhook",
+  operationalConfig: Partial<DestinationListItem["operationalConfig"]> = {},
 ): DestinationListItem {
   return {
     id: `destination-${index}`,
@@ -221,6 +279,7 @@ function destinationFixture(
       chatId: null,
       urgentAutoEnabled: null,
       urgentReceivers: null,
+      ...operationalConfig,
     },
   };
 }
