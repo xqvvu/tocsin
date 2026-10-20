@@ -84,6 +84,37 @@ export function suppressionStateAt(suppression: Suppression, now: string): Suppr
     return "disabled";
   }
 
+  const nowMs = Date.parse(now);
+  const startsAtMs = Date.parse(suppression.startsAt);
+  const endsAtMs = Date.parse(suppression.endsAt);
+
+  // The API accepts any zoned timestamp, so compare instants rather than
+  // strings: `2026-10-20T10:00:00+08:00` is 02:00Z, and a lexical comparison
+  // would keep the rule scheduled for eight extra hours (or silence too long).
+  if (Number.isNaN(nowMs) || Number.isNaN(startsAtMs) || Number.isNaN(endsAtMs)) {
+    return stateFromLexicalOrder(suppression, now);
+  }
+
+  if (nowMs < startsAtMs) {
+    return "scheduled";
+  }
+
+  if (nowMs >= endsAtMs) {
+    return "expired";
+  }
+
+  return "active";
+}
+
+/**
+ * Fallback for rows or clocks that cannot be parsed.
+ *
+ * Stored rules always come from validated ISO input, but a row written before
+ * timestamp validation (or a hand-edited database) must not become "active"
+ * just because every comparison with `NaN` is false — that would mute alerts.
+ * Keeping the previous lexical ordering makes the failure mode unchanged.
+ */
+function stateFromLexicalOrder(suppression: Suppression, now: string): SuppressionState {
   if (now < suppression.startsAt) {
     return "scheduled";
   }
