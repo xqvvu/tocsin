@@ -4,7 +4,7 @@
 
 ## 2026-10-21（第 46 轮）
 
-- 时间：2026-10-21 02:26 – 03:00 CST。
+- 时间：2026-10-21 02:26 – 03:10 CST。
 - 基线：本轮开始时 `origin/main` @ `3caf2c6`；两个 PR 合入后 @ `60e0a17`。
 - 类型：非 full-audit（backlog 有多个 ≥27 分候选，且无 open PR）；最近全量审计仍为第 1 轮
   （2026-10-18 13:30 CST）。
@@ -69,7 +69,19 @@
 
 ### 发布评估与镜像
 
-- 待填（发布小组评估中）。
+- 三位专家（发布经理 / 阻断审计 / 运维回滚）一致 APPROVE：
+  - 发布经理：自 `v0.1.0-beta.31` 以来 1 feat + 1 fix 为用户可见变更，建议预发布号递增。
+  - 阻断审计：6/6 PASS —— `60e0a17` main CI success、0 open PR、无未修复回归、
+    migration 零变化、beta.32 tag 未占用。
+  - 运维回滚：Dockerfile/compose/env/端口/卷/启动命令与 `packages/core` 均零 diff，
+    回滚只需换回旧镜像；条件为 tag 必须指向含版本递增的 commit。
+- 版本：`0.1.0-beta.32`；PR #246 `chore(release): v0.1.0-beta.32`（rebase 合并 `8b423a8`），
+  main CI success。
+- Tag：`v0.1.0-beta.32`（annotated，指向 `8b423a8`）；GitHub Release：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.32
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.32` **已推送**，
+  linux/amd64 + linux/arm64，index digest `sha256:3f1409d2…`。
+- 回滚镜像：`0.1.0-beta.31`（`sha256:2c61014e…`）；本版本无迁移/配置变化，无需数据恢复。
 
 ### 下一轮优先项
 
