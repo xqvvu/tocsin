@@ -94,6 +94,36 @@ describe("feishu destination config", () => {
     });
   });
 
+  it("normalises an explicit empty severity list to the critical gate", () => {
+    const config = FeishuConfigSchema.parse({
+      sendMode: "app",
+      app: appTarget,
+      urgent: { ...urgent, severities: [] },
+    });
+
+    expect(config.urgent?.severities).toEqual(["critical"]);
+  });
+
+  it("keeps an explicit severity list unchanged", () => {
+    const config = FeishuConfigSchema.parse({
+      sendMode: "app",
+      app: appTarget,
+      urgent: { ...urgent, severities: ["critical", "warning"] },
+    });
+
+    expect(config.urgent?.severities).toEqual(["critical", "warning"]);
+  });
+
+  it("rejects an unknown severity instead of silently dropping it", () => {
+    expect(() =>
+      FeishuConfigSchema.parse({
+        sendMode: "app",
+        app: appTarget,
+        urgent: { ...urgent, severities: ["critical", "bogus"] },
+      }),
+    ).toThrow();
+  });
+
   it("keeps a leftover webhook URL in app mode so switching modes is lossless", () => {
     const config = FeishuConfigSchema.parse({
       sendMode: "app",

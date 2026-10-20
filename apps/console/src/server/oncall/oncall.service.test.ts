@@ -123,6 +123,16 @@ describe("oncall auto paging trigger", () => {
       { name: "resolved alert", status: "resolved" },
       { name: "warning below the critical gate", severity: "warning" },
       { name: "auto paging disabled", config: appModeConfig({ autoEnabled: false }) },
+      {
+        name: "empty severity list must not widen paging to warning",
+        severity: "warning",
+        config: appModeConfig({ severities: [] }),
+      },
+      {
+        name: "empty severity list must not widen paging to info",
+        severity: "info",
+        config: appModeConfig({ severities: [] }),
+      },
     ];
 
     for (const testCase of cases) {
@@ -145,6 +155,23 @@ describe("oncall auto paging trigger", () => {
         `expected no pages for: ${testCase.name}`,
       ).toEqual([]);
     }
+  });
+
+  it("pages critical alerts for a stored empty severity list", async () => {
+    const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
+    const { delivery } = await seedDelivery(store, {
+      config: appModeConfig({ severities: [] }),
+      severity: "critical",
+    });
+    const service = new OncallService({ store });
+
+    await service.triggerPingsForDelivery({
+      delivery,
+      providerReference: messageReference,
+      now,
+    });
+
+    expect(await store.oncall.listForDelivery(delivery.job.id)).toHaveLength(2);
   });
 });
 

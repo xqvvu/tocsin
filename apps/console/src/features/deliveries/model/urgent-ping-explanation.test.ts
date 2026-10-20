@@ -4,6 +4,7 @@ import type { OncallPing } from "@tocsin/core";
 
 import { explainMissingUrgentPings } from "#/features/deliveries/model/urgent-ping-explanation";
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
+import { destinationMetadataFromRuntime } from "#/infra/sqlite/repositories/destination/destination.helpers";
 
 describe("explainMissingUrgentPings", () => {
   it("says nothing when the delivery already has pings", () => {
@@ -108,6 +109,30 @@ describe("explainMissingUrgentPings", () => {
         }),
       ),
     ).toEqual({ code: "not_created" });
+  });
+
+  it("agrees with the projection when a stored severity list is empty", () => {
+    const metadata = destinationMetadataFromRuntime({
+      id: "destination-1",
+      name: "SRE pager",
+      kind: "feishu",
+      enabled: true,
+      config: {
+        sendMode: "app",
+        app: { appRef: "app-1", chatId: "oc_group" },
+        urgent: { autoEnabled: true, severities: [], receivers: ["ou_1"] },
+      },
+      secretRefs: {},
+    });
+
+    expect(
+      explainMissingUrgentPings(
+        detailFixture([], {
+          event: eventFixture({ severity: "warning" }),
+          destinationMetadata: metadata,
+        }),
+      ),
+    ).toEqual({ code: "severity_excluded", severity: "warning", severities: ["critical"] });
   });
 
   it("checks the auto gate before the severity gate", () => {

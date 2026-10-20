@@ -152,10 +152,10 @@ export class OncallService {
       return;
     }
 
-    if (
-      urgent.severities.length > 0 &&
-      !urgent.severities.some((severity) => severity === event.normalized.severity)
-    ) {
+    // The schema normalises an empty list to the critical gate, so membership
+    // is the whole rule. Keep it unconditional: an `length > 0` escape hatch
+    // here is what let an empty imported list page every severity at once.
+    if (!urgent.severities.some((severity) => severity === event.normalized.severity)) {
       return;
     }
 

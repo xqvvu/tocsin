@@ -122,7 +122,15 @@ const FeishuAppTargetSchema = z.strictObject({
  */
 const FeishuUrgentSchema = z.strictObject({
   autoEnabled: z.boolean(),
-  severities: z.array(AlertSeveritySchema).default(["critical"]),
+  // An empty list is the default critical gate, not "every severity" and not
+  // "paging disabled". Paging is a loud, metered action, so the narrowest
+  // interpretation is the only safe one; the form and the projection already
+  // say critical, and this makes the runtime agree with them. Normalising here
+  // keeps trigger, send, import, and preview on one definition.
+  severities: z
+    .array(AlertSeveritySchema)
+    .default(["critical"])
+    .transform((severities) => (severities.length > 0 ? severities : ["critical"])),
   userIdType: FeishuUrgentUserIdTypeSchema.default("open_id"),
   receivers: z
     .array(NonEmptyFeishuStringSchema)

@@ -302,6 +302,72 @@ describe("configuration capabilities", () => {
     await store.close();
   });
 
+  it("stores an empty urgent severity list as the critical gate", async () => {
+    const { store, services } = await createTestContext();
+    const app = await store.feishuApps.create({
+      name: "SRE pager",
+      appId: "cli_sre",
+      appSecret: "secret-1",
+    });
+
+    const destination = await services.destinations.createDestination({
+      name: "Feishu on-call",
+      kind: "feishu",
+      config: {
+        sendMode: "app",
+        app: { appRef: app.id, chatId: "oc_group" },
+        urgent: {
+          autoEnabled: true,
+          severities: [],
+          userIdType: "open_id",
+          receivers: ["ou_1"],
+        },
+      },
+    });
+    const stored = await store.destinations.get(destination.id);
+
+    expect(stored?.config).toMatchObject({ urgent: { severities: ["critical"] } });
+
+    await store.close();
+  });
+
+  it("normalises a legacy empty severity list when the destination config is updated", async () => {
+    const { store, services } = await createTestContext();
+    const app = await store.feishuApps.create({
+      name: "SRE pager",
+      appId: "cli_sre",
+      appSecret: "secret-1",
+    });
+    const legacy = await store.destinations.create({
+      name: "Legacy Feishu",
+      kind: "feishu",
+      config: {
+        sendMode: "app",
+        app: { appRef: app.id, chatId: "oc_group" },
+        urgent: {
+          autoEnabled: true,
+          severities: [],
+          userIdType: "open_id",
+          receivers: ["ou_1"],
+        },
+      },
+    });
+
+    // A config patch goes through merge + parse, which is the moment a legacy
+    // row is rewritten with the normalised gate. A name-only update leaves the
+    // stored JSON untouched by design.
+    await services.destinations.updateDestination({
+      id: legacy.id,
+      config: { urgent: { autoEnabled: true } },
+    });
+
+    const stored = await store.destinations.get(legacy.id);
+
+    expect(stored?.config).toMatchObject({ urgent: { severities: ["critical"] } });
+
+    await store.close();
+  });
+
   it("validates email destination config through the registered destination sender", async () => {
     const { store, services } = await createTestContext();
 

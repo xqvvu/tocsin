@@ -39,7 +39,7 @@
 
 3. **加急挂在某一次 delivery 上，不引入策略实体。** 加急对象就是这条 delivery 自己发出的消息，因此只有应用发送模式的投递可加急；webhook 投递在 UI 上明确标注"无法加急（消息非应用发送）"。初版的 `oncall_policies` 表、策略 CRUD 与 `oncall` namespace 全部取消。
 
-4. **触发 = 自动 + 手动。** destination 的 `urgent` 配置形状：`{ autoEnabled, severities（默认 ["critical"]）, userIdType, receivers（≥1 且唯一） }`；`urgent` 存在才允许加急，`autoEnabled = false` 即"只手动"。
+4. **触发 = 自动 + 手动。** destination 的 `urgent` 配置形状：`{ autoEnabled, severities（默认 ["critical"]）, userIdType, receivers（≥1 且唯一） }`；`urgent` 存在才允许加急，`autoEnabled = false` 即"只手动"。显式空列表与缺失同义，按 `["critical"]` 处理（决策记录 `docs/planning/decisions/feishu-urgent-empty-severities.md`）。
    - 自动：delivery 成功、带 `providerReference`、事件 `status = firing`、severity 在 `urgent.severities` 内 → 为每个接收人建一条 ping（`trigger: auto`）。
    - 手动：`operations.buzzDelivery({ deliveryId })`，接收人取 destination 配置，记录操作者（`trigger: manual` + `initiated_by`）；立即派发，失败落回队列重试。v1 不支持手动指定任意接收人。
    - 触发判断收口在 `delivery-execution.ts` 的成功分支，通过注入的窄接口（`enqueueUrgentPings`）调用；执行器不读 Feishu 配置细节，无该依赖时行为与今天完全一致（既有测试与单 destination 场景不感知）。

@@ -232,6 +232,28 @@ describe("destination form helpers", () => {
     });
   });
 
+  it("falls back to critical when receivers exist but no severity is selected", () => {
+    const data = new FormData();
+
+    data.set("kind", "feishu");
+    data.set("sendMode", "app");
+    data.set("appRef", "feishu-app-1");
+    data.set("chatId", "oc_group");
+    data.set("urgentAutoEnabled", "true");
+    data.set("urgentSeverities", JSON.stringify([]));
+    data.set("urgentUserIdType", "open_id");
+    data.set("urgentReceivers", "ou_1");
+    data.set("templateText", "{{event.title}}");
+
+    const config = destinationConfigFromForm("feishu", data);
+
+    expect(config.urgent).toMatchObject({
+      autoEnabled: true,
+      severities: ["critical"],
+      receivers: ["ou_1"],
+    });
+  });
+
   it("omits the urgent block when no receivers are configured", () => {
     const data = new FormData();
 
