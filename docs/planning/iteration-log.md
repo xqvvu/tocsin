@@ -2,6 +2,92 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-20（第 39 轮）
+
+- 时间：2026-10-20 16:42 – 17:35 CST。
+- 基线：本轮开始时 `origin/main` @ `a66b51f`；合入后 `origin/main` @ `4f548d0`
+  （#217 `e4d6877`、release #218 `4f548d0`）。
+- 类型：非 full-audit（backlog 有大量 ≥27 分候选，按第 1.5 步继续）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` + `architecture`（第 38 轮预承诺轮转）。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审（14:27）仅 2h15m；自那以后 UI 路径
+  合并 2 个（#211、#214），未达 ≥3；13 条未解决 UI 发现均为既有清单，无新增强信号。
+  下一次建议 **2026-10-21 08:00 前后**完整评审；硬性最晚 **2026-10-22 14:27**；
+  若 08:00 前再合入 1 个 UI 合并（累计 3 个）立即触发。
+- `last_ui_review_at`：2026-10-20 14:27（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 均在会话工作树
+  `priceless-taussig-69ab77`；发布镜像在 tag 的独立干净检出 `release-build-r39` 构建。
+  结束后删除并发锁并清理临时工作树。
+
+### 本轮交付
+
+- PR #217 `feat(console): order suppressions by operational state priority` ——
+  **REQ-155（28）**。
+  - 新增 `features/suppressions/model/suppression-order.ts`：按 `suppressionStateAt`
+    分档 fixed operational priority：`active`（`endsAt` 升序）→ `scheduled`
+    （`startsAt` 升序）→ `disabled`（`updatedAt` 降序）→ `expired`（`endsAt` 降序）；
+    同档兜底 `createdAt desc`、`id desc`。
+  - `SuppressionsSection` 用排序结果渲染表格；仓储 `list()` 顺序不变，分页与行 id 不变。
+  - 新增中文 PRD `docs/prd/suppression-state-ordering.md`；单元测试覆盖四档、档内方向、
+    时区瞬时比较、不可解析时间戳、输入不可变；jsdom 用例固定系统时间验证渲染顺序。
+  - 验证：`vp check` 0 errors（12 条既有 warning）；`vp run -r test` 4/4
+    （console 128 files / 701 tests）；`vp run -r build` 通过；CI success。
+- PR #218 `chore(release): v0.1.0-beta.25`（rebase 合并 `4f548d0`）。
+
+### 发布
+
+- 发布小组三项评估一致通过：用户可见变更为 #217；`4f548d0` main CI success、0 open PR、
+  无 migration/锁文件变化；回滚只需换回旧镜像。
+- Tag：`v0.1.0-beta.25`（annotated，指向 `4f548d0`）；GitHub Release 已创建（prerelease）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.25
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.25`
+  （linux/amd64 + linux/arm64，index digest `sha256:29108b4c…`）；回滚镜像
+  `0.1.0-beta.24`。
+
+### 专家发现
+
+**requirements（需求发现，新增 REQ-164..169）**
+
+- REQ-164（29）：删除告警源/通知目标前显示路由级联影响。确认框只提「清理路由引用」
+  （`zh-Hans.json:277,893`），实际最后一个 source/destination 被移除时删除整条路由并
+  级联删除该路由投递（`route.repository.ts:111-164`、`schema.ts:116-119`）。本轮推荐项，
+  但已被 REQ-155 选为交付，顺延下一轮。
+- REQ-165（28）：路由列表显示源停用导致的不可达（`routes-section.tsx:337-368` 不看源启停，
+  目标侧却显示停用数量 `:382-394`）。
+- REQ-166（28）：顶栏投递失败指示器（`dashboard-header.tsx:30-32` 只有静默指示器）。
+- REQ-168（28）：加急呼叫失败原因完整查看（`delivery-pings-table.tsx:104-105` 只有
+  `truncate`；attempts 已有对话框 `delivery-attempt-detail-dialog.tsx:23-30`）。
+- REQ-167（27）：事件详情显示同指纹最新状态（`event-detail-summary.tsx:27-35`）。
+- REQ-169（27）：手动 Worker 显示积压与批次上限（`deliveries-page.tsx:100-107` 固定 10 条）。
+
+**architecture（架构一致性，新增 ARCH-36..40，均为低严重度）**
+
+- ARCH-36：设置页 Tab 用 `useState` 而非 URL（`use-settings-workspace.ts:35`、
+  `_dashboard.settings.tsx:10-22`）。
+- ARCH-37：便携配置编辑器绕过 TanStack Form（`portable-config-form.tsx:31-34`）。
+- ARCH-38：目标预览编排在 `destinations-page.tsx:127-155` 与
+  `destination-edit-dialog-loader.tsx:72-99` 重复。
+- ARCH-39：纯视图模型落在 `ui/`（`event-detail-route-delivery-outcomes.ts:1-32`）。
+- ARCH-40：feature model 测试直连 infra（`urgent-ping-explanation.test.ts:7`）。
+- 复核已知项：ARCH-2/12/23/33 仍成立，仅行号漂移；服务端分层、容器装配、oRPC 边界、
+  DTO 保密、adapter 形状未发现新的确定性高/中严重度违规。
+
+### EXPERT_PANEL
+
+- 发布评估：3 位专家（发布经理 / 阻断审计 / 运维回滚）一致 APPROVE，结论与证据见
+  PR #218 正文与本轮发布记录；无其它 EXPERT_PANEL 事项。
+
+### 下一轮优先项
+
+1. **REQ-164（29）** 删除配置前显示路由级联影响；**REQ-165/166/168（28）**；
+   **REQ-167/169（27）**。
+2. **REQ-159（28）** 通用 Webhook 字段映射；**REQ-160/161/163（27）**；
+   **REQ-138/137（28）**。
+3. **UI-17（26）**、**UI-19（25）**、**UI-18（24）**；完整 UI 评审安排在
+   2026-10-21 08:00 前后（硬性最晚 2026-10-22 14:27）。
+4. 车道轮转：`requirements` + `ui-triage` 必跑，非必跑车道下一轮 **`docs-drift`**。
+5. 质量项 **Q-43/Q-47/Q-45/Q-46**；**ARCH-36..40** 可在低风险批次中一起处理。
+
 ## 2026-10-20（第 38 轮）
 
 - 时间：2026-10-20 16:02 – 16:40 CST。

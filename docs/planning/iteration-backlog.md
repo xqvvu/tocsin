@@ -356,6 +356,11 @@
 | Q-40 | 语言解析顺序与注释/文案不一致 | requirements lane（第 28 轮） | 24 | candidate | — | `i18n/router.ts:9-13` 称 cookie→Accept-Language→settings，`:21` 却把 settings 当 cookieLocale 传入，Accept-Language 不可达；通知渲染用 `settings.locale`（`delivery-worker.service.ts:64`、`destination.service.ts:296`） |
 | Q-41 | 配置名 UNIQUE 冲突返回不透明 500 | requirements lane（第 28 轮） | 22 | candidate | — | `schema.ts:42,55,88,101` 有 UNIQUE，服务无预检、`errors.ts:24-57` 未映射 SQLite 约束错误且剥离 message（`:12`），重名创建只得到 INTERNAL_SERVER_ERROR |
 | ARCH-35 | client-only 标记过度使用 | architecture lane（第 28 轮） | 16 | candidate | — | `components/ui/dropdown-menu.tsx:1`、`routes/-login-form-impl.tsx:1`、`routes/-setup-form-impl.tsx:1`、`i18n/language-switcher-impl.tsx:1`、`shell/dashboard-user-menu-impl.tsx:1` 自身无浏览器 API；建议并入 ARCH-14 |
+| ARCH-36 | 设置页 Tab 未进 URL | architecture lane（第 39 轮） | 18 | candidate | — | `use-settings-workspace.ts:35` 用 `useState` 持有 `activeTab`，`_dashboard.settings.tsx:10-22` 无 `validateSearch`；AGENTS 把 tabs 归 URL state；增 `tab` search，草稿仍留本地 |
+| ARCH-37 | 便携配置编辑器绕过 TanStack Form | architecture lane（第 39 轮） | 16 | candidate | — | `portable-config-form.tsx:31-34` 以 `value/onChange` 受控，草稿由 `use-settings-workspace.ts:36` 的 `useState` 管理；AGENTS 把 TOML import/export 列入 TanStack Form；改由 Form 管提交/校验或就近注明例外 |
+| ARCH-38 | 目标预览编排重复 | architecture lane（第 39 轮） | 18 | candidate | — | `destinations-page.tsx:127-155` 与 `destination-edit-dialog-loader.tsx:72-99` 各自维护 previewNotice/previewInput/onSampleChange/toast；抽 `features/destinations/model/use-destination-preview.ts` |
+| ARCH-39 | 事件路由投递结果视图模型落在 `ui/` | architecture lane（第 39 轮） | 15 | candidate | — | `event-detail-route-delivery-outcomes.ts:1-32` 只导出类型与纯函数；AGENTS 将 view model 归 `features/*/model`；移到 `features/events/model/` |
+| ARCH-40 | feature model 测试直连 infra | architecture lane（第 39 轮） | 14 | candidate | — | `urgent-ping-explanation.test.ts:7` 导入 `#/infra/sqlite/repositories/destination/destination.helpers`；虽当前环境中性，仍把持久化层带入 feature model 测试边界；改本地 fixture 或上移投影函数 |
 | REQ-129 | 告警源覆盖率按「可投递性」计算 | requirements lane（第 30 轮） | 28 | shipped | #194 | 第 31 轮交付：`sourceRouteCoverage` 增加目标输入，派生可投递/阻断路由数与名单；0 条可投递时显示 destructive「目标全停用」，部分阻断时说明阻断路由；来源页与 loader 复用 `destinationsQueryOptions()`；PRD `docs/prd/source-deliverable-coverage.md`；纯前端、无迁移 |
 | REQ-130 | 补投可显式包含已静默目标 | requirements lane（第 30 轮） | 27 | candidate | — | `skipExistingForEvent` 在抑制判断前执行且不筛状态（`delivery.repository.ts:91-110,553-562`）；补投把 suppressed 目标静默算作 existing（`event-replay.service.ts:271-283`）；命令增 `includeSuppressed`，无迁移 |
 | REQ-131 | 失败投递保留最近一次渲染载荷 | requirements lane（第 30 轮） | 27 | candidate | — | adapter 失败结果已带 `renderedPayload`（`packages/destinations/src/types.ts:63-79`）但 `markFailed` 丢弃（`delivery-execution.ts:149-157`）；载荷页失败投递永远显示 `{}`；DTO 已有字段，无迁移 |
@@ -393,7 +398,7 @@
 | REQ-152 | 首次部署引导检查清单 | requirements lane（第 36 轮） | 26 | candidate | — | Setup 后落到 Events 空态（`-setup-form-impl.tsx:61-64`、`index.tsx:3-8`、`events-empty-state.tsx:23-40`）；四步清单由现有 sources/destinations/routes/events 查询派生，localStorage 关闭；吸收 REQ-115 |
 | REQ-153 | 告警恢复后取消未执行的自动加急呼叫 | requirements lane（第 36 轮） | 24 | candidate | — | resolved 只停止新入队（`oncall.service.ts:151-160`），已 scheduled 的 auto ping 仍会拨出（`oncall.repository.ts:137-153`、`oncall-execution.ts:63-95`）；在 resolved 事务内置 suppressed 并释放 dedupe key；需 EXPERT_PANEL（投递/加急语义） |
 | REQ-154 | 搜索覆盖标签与上游告警标识 | requirements lane（第 37 轮） | 28 | shipped | #214 | 事件/投递搜索新增 `labels_json`/`provider_metadata_json` 字面子串匹配，共用 `escapeLikeTerm` 与列表/total 谓词；`raw_payload_json`/`raw_headers_json` 保持不可搜；占位文案与 5 组回归用例；PRD `docs/prd/operation-search-labels.md`；无迁移 |
-| REQ-155 | 静默规则按生效状态置顶 | requirements lane（第 37 轮） | 28 | in-progress | #217 | 决策承诺「置顶 + 徽章」防遗忘（`alert-suppression-decisions.md:74`），仓储固定 `created_at desc`（`suppression.repository.ts:19-25`）；纯前端按 `suppressionStateAt` 排序（active→scheduled→disabled→expired，档内按到期/开始时间）；PRD `docs/prd/suppression-state-ordering.md` |
+| REQ-155 | 静默规则按生效状态置顶 | requirements lane（第 37 轮） | 28 | shipped | #217 | 决策承诺「置顶 + 徽章」防遗忘（`alert-suppression-decisions.md:74`），仓储固定 `created_at desc`（`suppression.repository.ts:19-25`）；纯前端按 `suppressionStateAt` 排序（active→scheduled→disabled→expired，档内按到期/开始时间）；PRD `docs/prd/suppression-state-ordering.md` |
 | REQ-156 | 手动加急可指定接收人 | requirements lane（第 37 轮） | 27 | candidate | — | 手动加急固定呼叫全部 `urgent.receivers`（`oncall.service.ts:91-104`、`delivery-buzz-button.tsx:20-26`）；契约增可选 `receiverIds`（省略=全部），service 校验子集，确认框复选框；无迁移 |
 | REQ-157 | 自动加急去重跳过可解释 | requirements lane（第 37 轮） | 26 | candidate | — | dedupe 命中只返回 null + debug 日志（`oncall.service.ts:168-190`、`oncall.repository.ts:42-53`），UI 只能猜（`zh-Hans.json:179`）；只读投影 skippedReceivers 与首次 ping；无迁移 |
 | REQ-158 | 路由规则排除条件 | requirements lane（第 37 轮） | 25 | candidate | — | `RouteRuleSchema` 只有正向数组（`route/route.ts:18-25`），matcher 只做 includes/contains（`:182-205,240-330`）；增可选 exclude* 字段并保持旧快照/TOML 兼容；结构化声明式，无用户代码 |
@@ -402,11 +407,18 @@
 | REQ-161 | 接入 Token 支持 HTTP Basic 认证 | requirements lane（第 38 轮） | 27 | candidate | — | Webhook 只认 Bearer / `x-tocsin-source-token`（`request-context.ts:82,109-117`、`intake.service.ts:369-379`）；Basic 取密码部分复用常量时间比较，用户名忽略；统一 401 分支与脱敏；无迁移、无新依赖 |
 | REQ-162 | 出站投递按通知目标限速 | requirements lane（第 38 轮） | 25 | candidate | — | Worker 每批跨目标串行、无按目标限速（`delivery-worker.service.ts:59-77`）；飞书错误文案已提示降速（`feishu-errors.ts:105`）但无设置项（`configuration-results.ts:7-11`）；单进程内存态 + Settings 全局上限，需 worker policy ADR |
 | REQ-163 | 维护窗口批量排期（复制顺延） | requirements lane（第 38 轮） | 27 | candidate | — | 静默只有单组绝对起止（`suppression.ts:51-64`），行操作无复制/顺延（`suppressions-section.tsx:274-300`）；新增对话框按天/周生成 N 个独立窗口，事务内创建、名称唯一预检；无迁移 |
+| REQ-164 | 删除告警源/通知目标前显示路由级联影响 | requirements lane（第 39 轮） | 29 | candidate | — | 确认框只提「清理路由引用」（`zh-Hans.json:277,893`），实际最后一个 source/destination 被移除时会删除整条路由并级联删除该路由投递（`route.repository.ts:111-164`、`schema.ts:116-119`）；两页已加载 routes，纯前端计算「将删除 N 条路由/将收窄 M 条」；补充 REQ-48 最危险的一半 |
+| REQ-165 | 路由列表显示源停用导致的不可达 | requirements lane（第 39 轮） | 28 | candidate | — | Routes 页已加载 sources（`routes-page.tsx:22-24`），但规则单元格不看源启停（`routes-section.tsx:337-368`），目标侧却显示停用数量（`:382-394`）；源全停用时路由仍显示启用；纯前端徽标，与 REQ-129/REQ-138 形成覆盖率三角 |
+| REQ-166 | 顶栏投递失败指示器 | requirements lane（第 39 轮） | 28 | candidate | — | 顶栏只有静默指示器（`dashboard-header.tsx:30-32`），投递失败在非 Deliveries 页无任何信号；复用 `operations.list` 的 `deliveryState=failed&range=24h` 读取 `deliveries.total`，点击进入同筛选；60s 刷新，0/失败时隐藏；只读、无迁移 |
+| REQ-167 | 事件详情显示同指纹最新状态 | requirements lane（第 39 轮） | 27 | candidate | — | 详情只展示当前事件 status（`event-detail-summary.tsx:27-35`），不查后续 resolved 事件（`history.repository.ts:155-215`、`operations.ts:63-87`）；用 `operations.list`（sourceId+q）客户端精确过滤 fingerprint，显示「已恢复/仍 firing」；REQ-6 的轻量切片 |
+| REQ-168 | 加急呼叫失败原因可完整查看 | requirements lane（第 39 轮） | 28 | candidate | — | pings 表错误列只有 `truncate`，无 title/对话框/复制（`delivery-pings-table.tsx:104-105`），attempts 表已有完整查看对话框（`delivery-attempt-detail-dialog.tsx:23-30`）；长错误恰是排障关键；纯前端 |
+| REQ-169 | 手动 Worker 显示积压与批次上限 | requirements lane（第 39 轮） | 27 | candidate | — | UI 固定每次 10 条（`deliveries-page.tsx:100-107`），契约允许 1–50（`operations.ts:227-231`），工具栏无 pending 积压数（`deliveries-page-toolbar.tsx:18-48`）；展示 pending total + 10/25/50 批次，运行后刷新；只读查询 + 现有参数 |
 
 ## 发布记录
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.25` | `4f548d0` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.25`（linux/amd64 + linux/arm64，index digest `sha256:29108b4c…`） | 静默规则列表按生效状态置顶（#217，REQ-155）；无迁移/配置变化；回滚镜像 `0.1.0-beta.24` |
 | `0.1.0-beta.24` | `866eeb9` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.24`（linux/amd64 + linux/arm64，index digest `sha256:c3b7326c…`） | Events/Deliveries 搜索覆盖事件标签与上游 provider metadata（#214，REQ-154）；无迁移/配置变化；回滚镜像 `0.1.0-beta.23` |
 | `0.1.0-beta.23` | `8a36238` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.23`（linux/amd64 + linux/arm64，index digest `sha256:7240a4af…`） | 失败投递详情内直接编辑通知目标并继续重试（#211，REQ-150）；无迁移/配置变化；回滚镜像 `0.1.0-beta.22` |
 | `0.1.0-beta.22` | `6c237fc` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.22`（linux/amd64 + linux/arm64，index digest `sha256:a01471cb…`） | 事件详情内联重试失败投递（#206，REQ-136）+ 路由匹配表按路由显示投递结果（#207，REQ-135）+ 飞书加急空 severity 列表归一为 critical（#208，Q-42）；无迁移/配置变化；回滚镜像 `0.1.0-beta.21` |
@@ -425,42 +437,40 @@
 
 ## 下一轮优先项
 
-0. **发布 `v0.1.0-beta.24`**：发布小组评估为 RELEASE（唯一用户可见变更是 #214 搜索覆盖
-   标签与上游元数据）；合入 release-prep PR、CI 绿后打 annotated tag、创建 GitHub Release、
-   构建并推送多平台镜像。
-1. **REQ-155（28）** 静默规则按生效状态置顶；**REQ-159（28）** 通用 Webhook 可配置
-   字段映射；**REQ-160/161/163（27）** 事件列表路由名、Basic 认证、维护窗口批量排期。
+0. **REQ-164（29）** 删除告警源/通知目标前显示路由级联影响；**REQ-165/166/168（28）**
+   路由源停用不可达、顶栏投递失败指示器、加急失败原因完整查看；**REQ-167/169（27）**
+   同指纹最新状态、Worker 积压与批次。
+1. **REQ-159（28）** 通用 Webhook 可配置字段映射；**REQ-160/161/163（27）** 事件列表
+   路由名、Basic 认证、维护窗口批量排期；**REQ-138/137（28）** 目标覆盖率计入源启停、
+   源解析器变更确认。
 2. **UI-17（26）** 路由匹配 checks 实际值本地化与换行；**UI-19（25）** 事件详情投递列
    可读性与重试后刷新；**UI-18（24）** 390px 路由匹配布局。
-3. **REQ-138（28）** 通知目标覆盖率计入告警源启停（REQ-129 的镜像）；**REQ-137（28）**
-   告警源解析器变更确认；**REQ-147（27）** 通知目标批量连通性自检。
-4. **REQ-125/130/131/139/140（27）** 共享密钥显式清除、补投包含已静默目标、失败
-   投递保留渲染载荷、目标草稿测试发送、事件列表批量静默；**REQ-141（27）**；
-   **REQ-151（26）** 值班交接摘要、**REQ-152（26）** 首次部署检查清单。
-5. **Q-43（25）** 损坏 JSON 热路径失败策略（Q-5 的超集）；**Q-47（24）** oncall
+3. **REQ-147（27）** 通知目标批量连通性自检；**REQ-125/130/131/139/140（27）**
+   共享密钥显式清除、补投包含已静默目标、失败投递保留渲染载荷、目标草稿测试发送、
+   事件列表批量静默；**REQ-141（27）**；**REQ-151/152（26）**。
+4. **Q-43（25）** 损坏 JSON 热路径失败策略（Q-5 的超集）；**Q-47（24）** oncall
    `markFailed` 兜底与 **Q-45** 同批；**Q-46/Q-12/Q-13/Q-5** 测试补齐；
    **SEC-13** 精确键 + `sessionId/jwt/signature`；**SEC-20/21** AUTO_FIX 加固。
-6. **REQ-142（26）** 事件按路由筛选（建议并入 REQ-21）；**REQ-143（26）** 一次性 Token
+5. **REQ-142（26）** 事件按路由筛选（建议并入 REQ-21）；**REQ-143（26）** 一次性 Token
    离开保护；**REQ-144（26）** 投递详情告警身份；**REQ-145/146（25）** 主标识可点与
-   补投结果下钻；第 35 轮新增 **UI-15 / REQ-148 / UI-16 / REQ-149（26）**。
-7. **REQ-111（27）** 初始化 Owner 密码确认；**REQ-119/120（27）** 去重窗口与最大尝试
+   补投结果下钻；**UI-15 / REQ-148 / UI-16 / REQ-149（26）**。
+6. **REQ-111（27）** 初始化 Owner 密码确认；**REQ-119/120（27）** 去重窗口与最大尝试
    次数可配置；仍待裁决：REQ-93、Q-8、REQ-107、REQ-134、**REQ-153（24）**。
-8. **REQ-108（28）** 多值属性筛选、**REQ-48（28）** 配置删除预检（并入 REQ-105）、
-   **REQ-52（28）** `tocsin.eventUrl` 与公开地址、**REQ-110（28）** 静默即将到期提示。
-9. **UI-13（26）** 部分阻断只在 hover 可见；**UI-14（25）** 静默启停确认（第 36 轮浏览器
+7. **REQ-108（28）** 多值属性筛选、**REQ-48（28）** 配置删除预检（REQ-164 已落地最危险
+   一半）、**REQ-52（28）** `tocsin.eventUrl` 与公开地址、**REQ-110（28）** 静默即将到期提示。
+8. **UI-13（26）** 部分阻断只在 hover 可见；**UI-14（25）** 静默启停确认（第 36 轮浏览器
    复现）；**UI-4/5/6/8/12** 侧栏与文案；**UI-3（24）** Payload 标签。
-10. **REL 去重与收窄（第 36 轮）**：REL-1→REL-21、REL-4→REL-22、REL-5/8 合并、
+9. **REL 去重与收窄（第 36 轮）**：REL-1→REL-21、REL-4→REL-22、REL-5/8 合并、
     REL-2/24 合并、REL-16/23 合并；REL-6 只剩重启持久化断言、REL-9 只剩 WAL/文件库
     migration/checksum、REL-18 证据迁到 `docker-production-deployment.md:56`。
     下一步优先 **REL-21（26）** 独立 `e2e.yml`（先本地跑通 `playwright install chromium`
     + test）、provider fixture、required checks（EXPERT_PANEL）。
-11. **docs-drift 批次**：第一批 DOC-49/23/24/37/43/46/47/50/51（发布 gate、README、
+10. **docs-drift 批次**：第一批 DOC-49/23/24/37/43/46/47/50/51（发布 gate、README、
     抑制 PRD 五状态、post-MVP 过期范围）；第二批 DOC-36/48/53/54/55/56/57/58（状态头、
     ADR 版本、无 importer 的 accessor）。建议拆两个 `docs:` PR；DOC-52 可关闭。
-12. **车道轮转（第 38 轮）**：`requirements` 必跑 + `ui-triage`；非必跑车道补跑
-    **`quality`**（第 37 轮超时未产出，缩小范围到 Q-43/Q-45/Q-46/Q-12/Q-13/Q-5），之后
-    轮转 `architecture`。`ui-review` 建议下一轮安排完整真实浏览器评审（硬性最晚
-    2026-10-22 14:27）。
+11. **车道轮转（第 39 轮）**：`requirements` 必跑 + `ui-triage`；非必跑车道本轮跑
+    **`architecture`**，下一轮轮转 **`docs-drift`**。`ui-review` 建议 2026-10-21 08:00
+    前后安排完整真实浏览器评审（硬性最晚 2026-10-22 14:27）。
 11. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 12. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。
