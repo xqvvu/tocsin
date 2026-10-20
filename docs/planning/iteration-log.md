@@ -68,9 +68,20 @@
 
 - 本轮无 EXPERT_PANEL 事项；#251 为纯前端只读投影，不触碰 schema/投递/auth 语义。
 
-### 发布评估
+### 发布评估与镜像
 
-- 合并后按第 9.5 步执行；结果补记于后续 `docs(planning)` 提交。
+- 三位专家（发布经理 / 阻断审计 / 运维回滚）一致 APPROVE：
+  - 发布经理：自 `v0.1.0-beta.33` 以来 1 个用户可见 feat（#251），建议预发布号递增。
+  - 阻断审计：6/6 PASS —— `c78acd7` 与 `fc36f48` main CI success、0 open PR、无阻塞回归、
+    migration 零 diff、`v0.1.0-beta.34` 未占用、依赖锁零 diff。
+  - 运维回滚：Dockerfile/compose/env/runtime/SQLite 均零 diff；回滚只需换回旧镜像。
+- 版本：`0.1.0-beta.34`；PR #252 `chore(release): v0.1.0-beta.34`（rebase 合并 `fc36f48`），
+  main CI success。
+- Tag：`v0.1.0-beta.34`（annotated，指向 `fc36f48`）；GitHub Release：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.34
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.34` **已推送**，
+  linux/amd64 + linux/arm64，index digest `sha256:69b479ab…`（`imagetools inspect` 已核实双平台）。
+- 回滚镜像：`0.1.0-beta.33`；本版本无迁移/配置变化。
 
 ### 下一轮优先项
 

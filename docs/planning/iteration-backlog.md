@@ -458,6 +458,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.34` | `fc36f48` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.34`（linux/amd64 + linux/arm64，index digest `sha256:69b479ab…`） | 静默规则启停确认披露投递后果（#251，UI-14 + REQ-190）；无迁移/配置变化；回滚镜像 `0.1.0-beta.33` |
 | `0.1.0-beta.33` | `1a38599` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.33`（linux/amd64 + linux/arm64，index digest `sha256:12d21abe…`） | 停用配置前显示排队投递数（#248，REQ-185）；无迁移/配置变化；回滚镜像 `0.1.0-beta.32` |
 | `0.1.0-beta.32` | `8b423a8` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.32`（linux/amd64 + linux/arm64，index digest `sha256:3f1409d2…`） | 静默规则影响预览披露目标数（#243，REQ-180）+ 文档状态校正（#244）；无迁移/配置变化；回滚镜像 `0.1.0-beta.31` |
 | `0.1.0-beta.31` | `327666a` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.31`（linux/amd64 + linux/arm64，index digest `sha256:2c61014e…`） | 事件/投递证据包下载（#240，REQ-175）；无迁移/配置变化；回滚镜像 `0.1.0-beta.30`；Docker Hub 不可达已用 `docker.m.daocloud.io` 镜像绕过 |
