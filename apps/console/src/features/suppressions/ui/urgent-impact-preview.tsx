@@ -25,12 +25,32 @@ export function UrgentImpactPreview({
   const t = useTranslations();
   const preview = urgentImpactPreview(destinations, matcher);
 
+  // The scope can hold no enabled destination at all, for example when an edit
+  // narrows `destinationIds` to targets that were disabled afterwards. Saying
+  // "no automatic paging" here would hide that the rule is inert, which is a
+  // different fact from "targets are silenced but nobody is paged".
+  if (preview.scopedCount === 0) {
+    return (
+      <Alert>
+        <RiNotificationOffLine aria-hidden />
+        <AlertTitle>{t("suppressions.form.urgentImpact.zeroScopedTitle")}</AlertTitle>
+        <AlertDescription>
+          {t("suppressions.form.urgentImpact.zeroScopedDescription")}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   if (preview.destinations.length === 0) {
     return (
       <Alert>
         <RiNotificationOffLine aria-hidden />
         <AlertTitle>{t("suppressions.form.urgentImpact.noneTitle")}</AlertTitle>
-        <AlertDescription>{t("suppressions.form.urgentImpact.noneDescription")}</AlertDescription>
+        <AlertDescription>
+          {t("suppressions.form.urgentImpact.noneDescription", {
+            count: preview.scopedCount,
+          })}
+        </AlertDescription>
       </Alert>
     );
   }
@@ -54,6 +74,13 @@ export function UrgentImpactPreview({
             names: preview.destinations.map((destination) => destination.name).join(", "),
           })}
         </p>
+        {preview.scopedCount > preview.destinations.length ? (
+          <p className="mt-1">
+            {t("suppressions.form.urgentImpact.scopedSummary", {
+              count: preview.scopedCount,
+            })}
+          </p>
+        ) : null}
       </AlertDescription>
     </Alert>
   );
