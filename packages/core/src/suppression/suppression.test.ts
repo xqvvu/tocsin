@@ -56,6 +56,38 @@ describe("suppression lifecycle", () => {
     expect(suppressionIsActive(suppression(), "2026-10-12T11:00:00.000Z")).toBe(true);
   });
 
+  it("compares zoned bounds as instants, not as strings", () => {
+    // 10:00+08:00 is 02:00Z and 14:00+08:00 is 06:00Z. Lexically the start is
+    // "10:00", so a string comparison would call 03:00Z scheduled.
+    const zoned = suppression({
+      startsAt: "2026-10-20T10:00:00+08:00",
+      endsAt: "2026-10-20T14:00:00+08:00",
+    });
+
+    expect(suppressionStateAt(zoned, "2026-10-20T01:00:00.000Z")).toBe("scheduled");
+    expect(suppressionStateAt(zoned, "2026-10-20T03:00:00.000Z")).toBe("active");
+    // Half-open at the real end instant, whichever representation stores it.
+    expect(suppressionStateAt(zoned, "2026-10-20T06:00:00.000Z")).toBe("expired");
+  });
+
+  it("compares mixed timestamp representations by instant", () => {
+    const mixed = suppression({
+      startsAt: "2026-10-20T02:00:00.000Z",
+      endsAt: "2026-10-20T14:00:00+08:00",
+    });
+
+    expect(suppressionStateAt(mixed, "2026-10-20T05:59:59.000Z")).toBe("active");
+    expect(suppressionStateAt(mixed, "2026-10-20T06:00:00.000Z")).toBe("expired");
+  });
+
+  it("keeps a deterministic state for an unparseable bound", () => {
+    const corrupt = suppression({ startsAt: "not-a-timestamp" });
+
+    // Fallback is the old lexical ordering; the point is that a corrupt row
+    // never turns into "active" merely because Date.parse returned NaN.
+    expect(suppressionStateAt(corrupt, "2026-10-12T12:00:00.000Z")).toBe("scheduled");
+  });
+
   it("reports disabled ahead of expired", () => {
     // An operator who switched a rule off wants to see that, not that its window
     // also happened to lapse — the two need different next actions.
