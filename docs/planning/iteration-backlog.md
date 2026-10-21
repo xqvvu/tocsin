@@ -538,6 +538,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.48` | `3c724df` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.48`（linux/amd64 + linux/arm64，index digest `sha256:c28fca9c…`） | 投递「下次重试」跨天保留日期（#307，NEW-V）+ 云厂商前缀凭据键脱敏（#308，SEC-28/SEC-29）；无迁移/配置变化；回滚镜像 `0.1.0-beta.47` |
 | `0.1.0-beta.47` | `edd431a` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.47`（linux/amd64 + linux/arm64，index digest `sha256:99087a4f…`） | Settings「界面」页签 390px 可滚动、保存按钮可达（#303，UI-32）+ 事件详情投递补齐 `destinationKind` 投影（#302，Q-14）；无迁移/配置变化；回滚镜像 `0.1.0-beta.46` |
 | `0.1.0-beta.46` | `0d3c78d` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.46`（linux/amd64 + linux/arm64，index digest `sha256:9dbf9b17…`） | Settings 运行时与生效参数只读投影（#298，REQ-84 + REQ-216）；无迁移/配置变化；回滚镜像 `0.1.0-beta.45` |
 | `0.1.0-beta.45` | `2cbc6cd` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.45`（linux/amd64 + linux/arm64，index digest `sha256:0603bcc6…`） | 通知目标行内临时静默（#295，REQ-220）+ Operations 表格 1280px 适配（#293，UI-25）+ 筛选内联重置补清 `destinationKind`（#292，FIX-15）；无迁移/配置变化；回滚镜像 `0.1.0-beta.44` |

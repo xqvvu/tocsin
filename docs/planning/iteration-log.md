@@ -55,6 +55,16 @@
 - 本轮两个代码 PR 均为只读展示/脱敏加固，无 schema/迁移/投递/路由/auth 语义变更，按 AUTO_SHIP 交付。
 - **SEC-27** 改变部署契约（缺 secret 时拒绝启动），登记为 EXPERT_PANEL 事项，下一轮由三位专家裁决。
 
+### 发布决策
+
+- 发布经理 / 阻断审计 / 回滚专家三人一致通过 `v0.1.0-beta.48`（PR #310）：
+  自 beta.47 以来 2 个用户可见修复（#307 跨天重试时间、#308 云凭据键脱敏），其余为 docs(planning)；
+  阻断审计 6/6 门槛通过（main CI `3c724df` success、无 open PR、近 5 次 main run 全绿、零迁移、
+  tag 未占用、仅 REL-13 法律项持续挂起）；回滚风险 LOW，仅换回 beta.47 镜像即可，无需恢复数据库。
+- tag：`v0.1.0-beta.48` → `3c724df`；GitHub Release 已创建（prerelease，正文非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.48`
+  （linux/amd64 + linux/arm64，index digest `sha256:c28fca9c3db16a0fca1f446b98201ff9fa590dad8441eaa23aa69a462d1e26d9`）。
+
 ### 下一轮优先项
 
 1. **NEW-AA（28）** 全局暂停出站投递（主切片首选，无迁移）。
