@@ -2,6 +2,90 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 65 轮）
+
+- 时间：2026-10-22 05:38 – 06:12 CST。
+- 基线：本轮开始时 `origin/main` @ `c24d218`；main CI success；无 open PR。
+- 类型：**语义修复 + 需求切片 + UI 评审**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 `review_now（限缩）`，第三名额给 **`ui-review`**；
+  轮转车道 **`architecture`** 在 ui-triage 结束后补跑。并发始终 ≤3。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`review_now（限缩）`** —— 距上次全量评审（03:10）2h28m、自那以来 4 个 UI 提交（≥3 阈值），
+  其中只有 #313 从未被评审车道看过；18 条未解决 UI 候选属稳定存量。聚焦 #313 的跨页可见性与 390px。
+- `last_ui_review_at`：**2026-10-22 05:47 CST**（本轮真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证在会话工作树
+  `angry-grothendieck-d55df9`。工作树已清理。
+
+### 本轮交付
+
+- PR #318 `fix(console): keep operational timestamps advancing`（Q-51，rebase 合并 `24e2d32`）。
+  - 新增 `#/i18n/use-operational-now`：`useOperationalNow()` 默认 30s tick，导出
+    `OPERATIONAL_CLOCK_REFRESH_MS`；替换抑制列表（状态徽标/排序/启停确认）、抑制详情页与
+    `RetryTimestamp` 共 4 处 `useNow()`；header 指示器复用同一常量。
+  - 新增 fake-timer 回归：重试标签跨午夜后从 `dateTime` 切到 `time`。
+  - 验证：`vp check` 0 errors；`vp run -r test` 153 文件 / 821 项；`vp run -r build` 通过。
+- PR #319 `feat(console): surface a paused delivery state in the header`（NEW-AF，rebase 合并 `08ec3dd`）。
+  - `DeliveryPauseIndicator` 读 `appSettingsQueryOptions`，暂停时渲染 destructive 徽标并链接 `/deliveries`；
+    加载/失败静默；< `sm` 仅图标 + `aria-label`；设置 mutation 的 `setQueryData` 使恢复即时消失。
+  - 组件测试覆盖暂停/未暂停/查询失败三态；header 测试补断言；PRD `docs/prd/delivery-pause-visibility.md`。
+  - 浏览器实测（隔离实例 `localhost:6193` + 临时 SQLite）：暂停后 Events 页 1280 显示徽标、390 仅图标
+    且标题不截断、无横向溢出；点击进入 Deliveries 横幅；恢复后徽标立即消失；无 console/网络错误。
+  - 验证：`vp check` 0 errors；`vp run -r test` 154 文件 / 824 项；`vp run -r build` 通过。
+
+### 专家发现
+
+- `requirements`（2 条新候选，已写入 backlog）：
+  - **NEW-AF（29）** 全局投递暂停的常驻可见性——与本轮 ui-review 的唯一切片建议一致，已交付（#319）。
+  - **NEW-AG（28）** 恢复投递前的加急影响披露：恢复后发送成功的 app 模式飞书投递会按目标自动建 ping
+    （`delivery-execution.ts:119-130`；门控 `oncall.service.ts:147-160`），去重窗口仅 5 分钟
+    （`oncall.service.ts:18`）；两个恢复入口均直接执行且文案只说「恢复后继续发送」
+    （`deliveries-paused-notice.tsx:30-35`、`settings-delivery-pause-panel.tsx:44-47`、`zh-Hans.json:89,260`）。
+- `architecture`（2 条新发现 + 既有候选复核）：
+  - **ARCH-45（S）** `getAuthBootstrap` 在入口直连全局 container（`server/orpc/features/session/router.ts:35-39`）。
+  - **ARCH-46（S）** 「重复暂停保留首次时间」产品规则落在仓储（`settings.repository.ts:63-80`）。
+  - 既有候选仍成立：ARCH-28（core/api 双份已扩到 `AppSettings`/`WorkerRunNotice`，无 parity 守卫）、
+    ARCH-30（分页本地 state）、ARCH-27（provider catalog 无消费者）、ARCH-5、ARCH-6、ARCH-13、
+    ARCH-14、ARCH-23（部分）。
+  - 近 12 次提交未引入其他边界问题；`2d8d1ff` 反而加强了启动期失败边界。
+- `ui-review`（限缩，浏览器实测；截图 /tmp/ui65-*.png）：
+  1. **暂停在 Deliveries/Settings 外零信号**（Events header 仅「Events」）→ 本轮 NEW-AF 交付。
+  2. 暂停开关与「保存设置」同页却点击即生效，无「立即生效」说明、无成功 toast，仅红字
+     （`settings-delivery-pause-panel.tsx:40-64`）。
+  3. Deliveries 横幅用默认 Alert，视觉等同普通信息；`Run worker` 仅靠 title 解释禁用，移动端无 hover
+     （`deliveries-paused-notice.tsx:45`、`deliveries-page-toolbar.tsx:40-46`）。
+  4. 暂停不读 on-call runner（`container.ts:378-380`），手动加急与已排队 ping 仍会呼叫，但文案未说明
+     （`zh-Hans.json:89,260`）→ 并入 NEW-AG。
+  - 390px 无横向溢出、按钮可达；全程无 console/网络错误。
+- `security-exposure` 车道本轮未跑（第三名额给 ui-review），SEC-22/25/26 仍待裁决。
+
+### EXPERT_PANEL
+
+- 本轮无新增裁决事项。
+
+### 发布决策
+
+- 发布经理 / 阻断审计 / 运维回滚三位专家一致 **APPROVE** `v0.1.0-beta.50`：
+  自 beta.49 以来 2 个用户可见变更（#318 运维时间推进、#319 全局暂停顶栏徽标）；
+  `origin/main` @ `08ec3dd` 与版本提交 `51f4f34` 的 main CI 均 success、无 open PR、零迁移、
+  `v0.1.0-beta.50` 未被占用；回滚风险 LOW（换回 beta.49 镜像即可，暂停状态与队列保持不变）。
+- 版本 PR #320 `chore(release): v0.1.0-beta.50`（rebase 合并 `51f4f34`），根 `package.json` 为唯一版本来源；
+  `release-checklist.md` 的当前版本与 tag 计数（42）同步。
+- tag：`v0.1.0-beta.50` → `51f4f34`（main CI success 后创建）；GitHub Release 已创建（prerelease，正文非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.50`
+  （linux/amd64 + linux/arm64，index digest `sha256:54710b641636f88afdb38b9e6edc30efcdbe29feb5aa2a16238b58a252767ceb`）。
+- 发布说明提示：顶栏全局暂停指示 + 运维时间不再冻结；无迁移/配置/环境变量变化；
+  回滚镜像 `0.1.0-beta.49`（回滚后顶栏徽标消失，但暂停状态仍保留）。
+
+### 下一轮优先项
+
+1. **NEW-AG（28）** 恢复投递前的加急影响披露。
+2. **NEW-AE（27）** 事件详情加急呼叫结果；**NEW-W（27）** 中文输入法组合期间不提交搜索；
+   **NEW-AB（27）** 主题切换；**NEW-AC（26）** 目标级请求超时。
+3. 轮转车道 **`security-exposure`**；SEC-22/25/26 交 EXPERT_PANEL。
+4. UI 评审遗留：暂停开关即时生效说明/成功 toast、Deliveries 横幅视觉强化与 `Run worker` 禁用原因。
+5. Q-52/Q-53/Q-54 低成本测试补齐；ARCH-45/46 两个 S 级分层修正。
+
 ## 2026-10-22（第 64 轮）
 
 - 时间：2026-10-22 04:32 – 05:1x CST。
