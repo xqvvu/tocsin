@@ -18,7 +18,8 @@
 - `last_ui_review_at`：**2026-10-22 03:10 CST**（本轮真实浏览器评审，隔离实例 6202 + 临时 SQLite，
   `admin@example.test`）。
 - 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证在会话工作树
-  `xenodochial-kirch-f16b53`。
+  `xenodochial-kirch-f16b53`。工作树已清理（删除 `agent-iteration` 与本会话 `node_modules`，
+  并删除已合并的本地 agent 分支）。
 
 ### 本轮交付
 
