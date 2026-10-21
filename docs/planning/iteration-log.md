@@ -81,7 +81,19 @@
 
 ### 发布
 
-- 见本节下方「发布记录」；本轮两个用户可见变更合入 main（UI-13 展示改进、脱敏范围扩大）。
+- 发布评估三方专家一致 APPROVE（发布经理 / 阻断审计 / 运维回滚）：自 beta.42 有 3 个用户可见修复，
+  main CI 绿，仅本轮的 docs PR 处于 open（豁免），无迁移/配置/启动变化，`v0.1.0-beta.43` 未被占用。
+- 版本：`0.1.0-beta.43`；PR #287 `chore(release): v0.1.0-beta.43`（rebase 合并 `f82814b`）；该 commit CI success。
+- Tag：`v0.1.0-beta.43`（annotated，指向 `f82814b`）；GitHub Release：
+  `https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.43`（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.43`
+  - index digest `sha256:986db180b0f2186fcc46d9f87889a3af07f34f0b86214ea387693d73cd9771e4`
+  - `linux/amd64` @ `sha256:8f5015b9…`，`linux/arm64` @ `sha256:781634b7…`
+  - 构建参数：`--provenance=false --sbom=false`；未推 `latest`；回滚镜像 `0.1.0-beta.42`。
+- 运维提示：展示/导出/日志会看到更多 `[REDACTED]`（`sessionId`/`jwt`/`signature` 等），存储不重写；
+  回滚只需换回 `0.1.0-beta.42` 镜像。
+- 携带项：SEC-26 / SEC-11 仍为已知 MEDIUM（下一轮 EXPERT_PANEL）；REL-13（LICENSE）保持
+  `blocked-autonomous`，不阻断预发布。
 
 ### 下一轮优先项
 
