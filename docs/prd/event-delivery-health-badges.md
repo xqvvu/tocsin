@@ -1,5 +1,8 @@
 # 事件详情投递健康徽标
 
+> 状态：已实现（2026-10-22 核实：`event-detail-summary.tsx` 已渲染 succeeded / failed /
+> pending / suppressed 四态）。以下「问题」节为实现前的历史背景。
+
 ## 问题
 
 事件详情页顶部的投递健康徽标只渲染 `succeeded` 与 `failed` 两个计数

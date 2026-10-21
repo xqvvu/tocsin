@@ -8,6 +8,9 @@ Tocsin console 保持**运行环境边界为第一边界**：顶层目录区分 
 
 `server/` 内部**按业务能力（领域）分子目录，而不是按技术种类**。重构前 `application/` 把 `services`、`runtime`、`http`、`portability`、`functions`、`contracts` 这些不同性质的东西平铺在一起，导致单个领域（如 Source）的服务逻辑、server function、密钥处理散落在多个技术分组里，阅读时必须横跨整棵树。重构后 `server/sources`、`server/destinations`、`server/routes`、`server/deliveries`、`server/intake`、`server/configuration` 各自聚合该能力的服务，并与 `features/<同名>` 左右对称，使"某个领域在前端和服务端分别做了什么"成为一次性可见的事实。当前 `*.functions.ts` 暂统一放在 `server/functions/`。
 
+> 2026-10-22 更新：`server/functions/` 已不存在；dashboard 数据入口统一为
+> `server/orpc/features/<capability>/router.ts`（契约在 `packages/api`）。
+
 `runtime` 仍是 `server/` 下的独立子目录，承载**真正跨领域的服务端基础设施**：application container、request context、dashboard session/auth 类型、delivery worker runner。它们不属于任何单一能力，强行塞进某个能力目录会制造错误的归属感。能力服务依赖 runtime，runtime 不依赖任何单一能力服务。
 
 历史上 `application/contracts/` 曾被提升为顶层 `apps/console/src/contracts/`，作为 client 与 server 之间的共享缝。0004 之后这层目录已删除：共享 command schema、输入校验器、跨边界 DTO 和共享枚举投影进入 `@tocsin/core`；仅后端使用的 dashboard session 类型留在 `server/runtime/dashboard-session.ts`。实现私有的 option/input/row-mapping 类型仍贴近实现文件，不强制外置。

@@ -229,9 +229,10 @@ test-kit（`packages/destinations/src/test-kit/`）、registry audit
 
 新的优先级建议：
 
-1. **Route Authoring 与 Explain 的剩余切片**：它是“提升用户对告警路由的信任”的主线，方向 2 中
-   explain 已落地，仍缺投递缺口解释、规则编辑一致性等增量。
-2. **方向 4 的剩余排障能力**：fingerprint 聚合、raw/debug JSON 搜索、delivery history retention。
+1. **Route Authoring 与 Explain 的剩余切片**：方向 2 中 explain、多条件规则编辑与投递缺口解释均已
+   落地；剩余增量是样例 Event 干跑预览（REQ-3）与补投预览一致性（REQ-22）。
+2. **方向 4 的剩余排障能力**：fingerprint 聚合视图、绝对时间窗口与筛选结果导出；raw/debug JSON 搜索与
+   delivery history retention 已明确不再作为待实现项（见本文方向 4 小节）。
 3. **方向 5 自托管发布硬化与方向 6 Adapter 贡献体验**：按 backlog 中的 release-infra 与
    architecture 条目推进。
 

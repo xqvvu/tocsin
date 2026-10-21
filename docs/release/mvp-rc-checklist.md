@@ -195,14 +195,15 @@ sink 仍应在发布或 post-MVP 中继续设计。
   （2026-10-18 校正：Events/Deliveries 筛选、相对时间范围、按事件/投递 ID 搜索、投递按失败原因/
   目标/路由搜索与 route explain 均已落地；仍未实现的是 fingerprint 聚合视图、绝对时间窗口与筛选结果导出。）
 - 自托管发布硬化：CI/E2E/Docker smoke、部署文档、备份恢复、升级回滚。
-  （2026-10-18 校正：部署、备份恢复、升级回滚文档与 release checklist 已完成；E2E 与 Docker smoke 脚本
-  已落地，但尚未接入 CI。）
+  （2026-10-18 校正：部署、备份恢复、升级回滚文档与 release checklist 已完成；E2E 脚本已落地但尚未
+  接入 CI；Docker smoke 脚本已落地，按既定决定保持本地人工 gate，不接入 CI。）
 - Adapter 贡献体验：fixture 体系、contributor guide、adapter scaffold。
   （2026-10-13 校正：destination 的 contributor guide 与 scaffold 已完成；provider 的 fixture 体系仍缺。）
 
 ## 验收标准
 
-MVP baseline 已能覆盖以下演示路径；发布前仍需要把已存在的 E2E 与 Docker smoke 接入发布 gate 并人工执行：
+MVP baseline 已能覆盖以下演示路径；发布前仍需人工执行已存在的 E2E 与 Docker smoke（E2E 待接入 CI；
+Docker smoke 保持本地人工 gate）：
 
 1. 使用 Docker 或本地命令启动 Tocsin。
 2. 首次 setup owner/admin 并登录 dashboard。

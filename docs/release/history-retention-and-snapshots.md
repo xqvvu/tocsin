@@ -40,7 +40,7 @@
 
 **行为等价性**：保留设置仍然生效（保留策略不变，只是把工作挪走），既有测试「prunes retained raw payloads after the configured retention window」仍通过；新增测试覆盖「单次有界调用只清一批且可继续推进」「sweep 能清空整个积压」「经 webhook 端到端仍会清理」。
 
-**本节不覆盖 dedupe cleanup**：`pruneDedupeKeys` 仍是**无界** `DELETE FROM delivery_dedupe_keys`，并且在每次 `enqueueForEvent` 内执行（`delivery.helpers.ts:98-99`、`delivery.repository.ts:95`）。它与 raw payload pruning 是两条独立路径，成本上限仍待设计，见 `mvp-rc-checklist.md` 的未勾选项。
+**本节不覆盖 dedupe cleanup**：`pruneDedupeKeys` 仍是**无界** `DELETE FROM delivery_dedupe_keys`，并且在每次 `enqueueForEvent` 内执行（`delivery.helpers.ts:107-108`、`delivery.repository.ts:99`）。它与 raw payload pruning 是两条独立路径，成本上限仍待设计，见 `mvp-rc-checklist.md` 的未勾选项。
 
 **sweep 故意不 await**：webhook 不应等房子打扫完。失败被吞掉（下一次 webhook 会重试）——在这里抛出会把一个**已成功**的 webhook 报成失败。
 
@@ -53,7 +53,7 @@
 投递详情显示的 destination / route 名字是**读取时实时 join 出来的**：
 
 ```
-apps/console/src/infra/sqlite/repositories/history/history.repository.ts:159
+apps/console/src/infra/sqlite/repositories/history/history.repository.ts:176
   .select(["destinations.name as destination_name", "routes.name as route_name"])
 ```
 
@@ -71,7 +71,7 @@ apps/console/src/infra/sqlite/repositories/destination/destination.repository.ts
 | 操作 | 对历史投递的影响 |
 |---|---|
 | **改名** | 投递行保留，但显示名被追溯替换（本缺陷） |
-| **删除** | `deliveries.destination_id` / `route_id` 外键是 `onDelete("cascade")`（`schema.ts:132`、`:135`）→ **投递行连同 attempt 历史一起消失** |
+| **删除** | `deliveries.destination_id` / `route_id` 外键是 `onDelete("cascade")`（`schema.ts:117`、`:119`）→ **投递行连同 attempt 历史一起消失** |
 
 删除那条同样是"历史被抹掉"，但它是**有意设计**（配置不存在了，投递也无从解释）；改名这条不是——没有任何人决定过"改名要改写历史"。
 
