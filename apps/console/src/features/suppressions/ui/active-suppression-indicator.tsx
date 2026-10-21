@@ -7,9 +7,7 @@ import { Badge } from "#/components/ui/badge";
 import { suppressionsQueryOptions } from "#/features/suppressions/api/suppression.queries";
 import { summarizeActiveSuppressions } from "#/features/suppressions/model/suppression-summary";
 import { useTranslations } from "#/i18n/use-i18n";
-
-/** Suppression windows are minute-grained; 30s keeps expiry visually honest. */
-const STATE_REFRESH_MS = 30_000;
+import { OPERATIONAL_CLOCK_REFRESH_MS } from "#/i18n/use-operational-now";
 
 /**
  * Always-visible evidence that a suppression is in force.
@@ -67,7 +65,7 @@ function useMountedNow(): string | null {
     const update = () => setNow(new Date().toISOString());
 
     update();
-    const timer = setInterval(update, STATE_REFRESH_MS);
+    const timer = setInterval(update, OPERATIONAL_CLOCK_REFRESH_MS);
 
     return () => clearInterval(timer);
   }, []);

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
+import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { RetryTimestamp } from "#/features/operations/ui/retry-timestamp";
@@ -15,6 +16,7 @@ vi.mock("#/features/operations/ui/operation-timestamp", () => ({
 describe("retry timestamp", () => {
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   it("shows only the clock time for a retry later the same day", () => {
@@ -43,6 +45,29 @@ describe("retry timestamp", () => {
     renderTimestamp("not-a-date", { now: "2026-10-21T09:00:00.000Z" });
 
     expect(formatOf("not-a-date")).toBe("dateTime");
+  });
+
+  it("re-evaluates the calendar day as the console clock advances", () => {
+    // The retry is 20 minutes out but still on the next calendar day; the
+    // label must drop the date once the clock crosses midnight, which only
+    // happens if the shared clock ticks instead of freezing at mount.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-21T23:50:00.000Z"));
+
+    render(
+      <AppIntlProvider locale="en-US" timeZone="UTC">
+        <RetryTimestamp value="2026-10-22T00:10:00.000Z" />
+      </AppIntlProvider>,
+    );
+
+    expect(formatOf("2026-10-22T00:10:00.000Z")).toBe("dateTime");
+
+    act(() => {
+      vi.setSystemTime(new Date("2026-10-22T00:00:20.000Z"));
+      vi.advanceTimersByTime(30_000);
+    });
+
+    expect(formatOf("2026-10-22T00:10:00.000Z")).toBe("time");
   });
 });
 

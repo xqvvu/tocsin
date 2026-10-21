@@ -22,7 +22,8 @@ import {
 } from "#/features/suppressions/model/suppression-summary";
 import { SuppressionHitsTable } from "#/features/suppressions/ui/suppression-hits-table";
 import { SuppressionStateBadge } from "#/features/suppressions/ui/suppression-state-badge";
-import { useNow, useTranslations } from "#/i18n/use-i18n";
+import { useTranslations } from "#/i18n/use-i18n";
+import { useOperationalNow } from "#/i18n/use-operational-now";
 import { cn } from "#/lib/utils";
 import { DashboardContentLayout } from "#/shell/dashboard-layout";
 
@@ -30,7 +31,7 @@ export function SuppressionDetailPage({ suppressionId }: { suppressionId: string
   const t = useTranslations();
   // The console's shared clock, so the derived state re-renders as time passes
   // instead of freezing a `new Date()` taken during render.
-  const now = useNow();
+  const now = useOperationalNow();
   const [hitsPage, setHitsPage] = React.useState(1);
   const [{ data: suppression }, { data: hits }, { data: sources }, { data: destinations }] =
     useSuspenseQueries({

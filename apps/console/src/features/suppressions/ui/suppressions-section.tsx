@@ -45,7 +45,8 @@ import {
 } from "#/features/suppressions/model/suppression-summary";
 import { EditSuppressionForm } from "#/features/suppressions/ui/suppression-forms";
 import { SuppressionStateBadge } from "#/features/suppressions/ui/suppression-state-badge";
-import { useNow, useTranslations } from "#/i18n/use-i18n";
+import { useTranslations } from "#/i18n/use-i18n";
+import { useOperationalNow } from "#/i18n/use-operational-now";
 
 export interface SuppressionsSectionProps {
   suppressions: Suppression[];
@@ -82,7 +83,7 @@ export function SuppressionsSection({
   onSubmitEdit,
 }: SuppressionsSectionProps) {
   const t = useTranslations();
-  const now = useNow();
+  const now = useOperationalNow();
   // Fixed operational priority, not a user preference: rules that are silencing
   // alerts right now must not be pushed below expired ones by creation time.
   const data = React.useMemo(
@@ -276,7 +277,7 @@ function SuppressionActions({
   onDelete: (suppression: Suppression) => void;
 }) {
   const t = useTranslations();
-  const now = useNow();
+  const now = useOperationalNow();
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [toggleDialogOpen, setToggleDialogOpen] = React.useState(false);
   const editLabel = t("suppressions.table.actions.edit");
