@@ -75,6 +75,44 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByTitle("Clear Destination kind")).toBeNull();
   });
 
+  it("clears every delivery filter from the inline reset", () => {
+    // The inline reset sits next to the chips. It must clear the same keys as
+    // the page-level reset, or the destination kind survives a "reset" and
+    // keeps filtering the table.
+    const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
+    renderFilters(
+      "deliveries",
+      {
+        sourceId: "source-1",
+        severity: "critical",
+        status: "firing",
+        destinationId: "destination-1",
+        destinationKind: "feishu",
+        routeId: "route-1",
+        deliveryState: "failed",
+        range: "1h",
+        q: "checkout",
+      },
+      "toolbar",
+      onChange,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith({
+      sourceId: "",
+      severity: "",
+      status: "",
+      destinationId: "",
+      destinationKind: "",
+      routeId: "",
+      deliveryState: "",
+      range: "",
+      q: "",
+    });
+  });
+
   it("does not surface delivery-only chips on the events page", () => {
     // A hand-written URL can still carry these keys. The events panel must not
     // pretend they filter the table it renders.

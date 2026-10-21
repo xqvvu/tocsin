@@ -183,6 +183,7 @@ export function OperationFilters({
                 severity: "",
                 status: "",
                 destinationId: "",
+                destinationKind: "",
                 routeId: "",
                 deliveryState: "",
                 range: "",
