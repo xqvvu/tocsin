@@ -252,7 +252,7 @@
 | REL-27 | Docker smoke 固定宿主机端口 3100 | release-infra lane（第 47 轮） | 20 | candidate | — | 并发 worktree 会冲突（`scripts/docker-smoke.sh:21`）；与 REL-7 同类，改为按端口/临时目录隔离 |
 | REL-28 | E2E 双入口可能漂移 | release-infra lane（第 47 轮） | 17 | candidate | — | `apps/console/package.json` 声明 `e2e` 脚本，`Justfile:79` 用 `vp exec` 绕过；建议保留单一路径 |
 | ARCH-27 | Provider catalog/`iconName` 无消费者，Source UI 硬编码 | architecture lane | 24 | candidate | — | `registry.ts:73-85` 已投影，但 `source-provider-icon.tsx:1-40` 按 provider 穷尽 switch、`source-form.tsx:57-67,149-158` 重复列表；缺 provider catalog procedure。第 52 轮补充第 4 处硬编码：`feishu-dynamic-properties-field.tsx:28-61` 手写 provider/kind 枚举；可先切「catalog procedure + icon provider」一半 |
-| ARCH-28 | Operations DTO 在 core 与 api 双份定义，无 parity 守卫 | architecture lane | 21 | candidate | — | 手写 interface（`packages/core/src/operations.ts:120,132`）与 zod schema（`packages/api/src/schemas/operations.ts:37,59,78,99,111`）各维护一份；无 `satisfies` 断言。第 21 轮实测已漂移：core `EventDetailDelivery`（`operations.ts:89-92`）无 `destinationKind`，API schema（`schemas/operations.ts:51-57`）有。第 52 轮复核：漂移仍在，`DeliveryListItem` 两边一致（core `:94-118` / api `:78-97`），无 parity 守卫；成本 S |
+| ARCH-28 | Operations DTO 在 core 与 api 双份定义，无 parity 守卫 | architecture lane | 21 | candidate | — | 手写 interface（`packages/core/src/operations.ts:120,132`）与 zod schema（`packages/api/src/schemas/operations.ts:37,59,78,99,111`）各维护一份；无 `satisfies` 断言。第 21 轮实测已漂移：core `EventDetailDelivery`（`operations.ts:89-92`）无 `destinationKind`，API schema（`schemas/operations.ts:51-57`）有。第 52 轮复核：漂移仍在，`DeliveryListItem` 两边一致（core `:94-118` / api `:78-97`），无 parity 守卫；成本 S；第 65 轮复核：`destinationKind` 两边均已 optional、漂移已修，但同类双份扩到 `AppSettings`（`packages/core/src/configuration/configuration-results.ts:7` vs `packages/api/src/schemas/settings.ts:5`）与 `WorkerRunNotice`，仍无 parity 测试 |
 | ARCH-29 | `configuration-support.ts` 成为跨能力 helper 集散地 | architecture lane | 21 | candidate | — | 同时导出 token 生成、测试事件、脱敏、配置解析与引用校验（`configuration-support.ts:11-125`），被 7 个能力服务导入 |
 | ARCH-30 | `OperationsTable` 分页固定在本地 state | architecture lane | 21 | candidate | — | `operations-table.tsx:56-59` 本地 `useState`（第 52 轮行号），`:61-79` clamp effect；5 个配置列表均未传分页控制（`sources-section.tsx:94-105`、`destinations-section.tsx:114-127`、`routes-section.tsx:128-139`、`suppressions-section.tsx:147-160`、`feishu-apps-section.tsx:89-102`）；AGENTS 要求分页进 URL |
 | ARCH-31 | 契约与 runtime 的 auth 错误文案双份维护 | architecture lane | 20 | candidate | — | `dashboard-auth.ts:5-15` 注释要求同步，`dashboard-session.ts` 另写一份；无 parity 测试 |
@@ -535,15 +535,20 @@
 | UI-32 | 390px 下 Settings「界面」页签不可滚动，保存按钮不可达 | ui-review（第 62 轮，浏览器实测） | 27 | shipped | #303 | 面板 651/863、`overflow: hidden`，滚轮/触摸 `scrollTop` 恒 0；偏好表单被压成 26px，保存按钮在屏幕外（`settings-page.tsx:31`、`settings-preferences-panel.tsx:74`）。修复：`sm` 以下面板 `overflow-y-auto`、表单 `flex-none`；桌面保持 747/747；补布局契约测试与 mini-PRD `docs/prd/settings-mobile-scroll.md`；实测滚动 0→587、保存 y=783–811 |
 | NEW-AE | 事件详情展示该事件的加急呼叫结果 | requirements lane（第 64 轮） | 27 | candidate | — | PRD 承诺「事件详情与投递详情能看到谁被叫了、成没成」（`docs/prd/oncall-feishu-urgent.md:21`），实际只有投递详情挂 `DeliveryPingsTable`（`delivery-detail-view.tsx:54`），事件详情投递表无加急列（`event-detail-deliveries-table.tsx:35-49`），仓储只有 `listForDelivery`（`oncall.repository.ts:228-238`）。方案：`listForEvent` + `EventDetail.pings` + 事件详情区块；现有索引可查，无迁移 |
 | UI-33 | 投递列表跨天重试时间溢出到「最近错误」列 | ui-triage 复核 + 浏览器实测（第 64 轮） | 27 | shipped | #314 | #307 让跨天值渲染完整日期（约 112px），`next` 列 8%（内容约 55px）且无裁剪；1280×900 实测文本结束 x=892、单元格右界 x=847、相邻列从 x=847 开始。修复：列宽 11% + `truncate`（从 `lastError` 22%→19%），补回归测试；含浏览器实测 |
-| Q-51 | `useNow()` 不推进时间，抑制状态/排序/确认文案与跨天重试标签冻结 | quality lane（第 64 轮） | 27 | candidate | — | use-intl 4.14.9 的 `useNow()` 未传 `updateInterval` 时只取挂载时刻（`node_modules/use-intl/.../react.js:136-152`），生产 `AppIntlProvider` 未传 `now`（`__root.tsx:50`）；`suppressions-section.tsx:85,89,125,279,292` 的状态/排序/停用确认、`retry-timestamp.tsx:13` 全部冻结；header 指示器却每 30s 自 tick（`active-suppression-indicator.tsx:63-76`），出现自相矛盾；`suppression-detail-page.tsx:31-33` 注释与实现不符。建议共享 `useOperationalNow(30s)` + fake-timer 回归 |
+| Q-51 | `useNow()` 不推进时间，抑制状态/排序/确认文案与跨天重试标签冻结 | quality lane（第 64 轮） | 27 | shipped | #318 | 第 65 轮交付：新增 `#/i18n/use-operational-now`（`useOperationalNow()` 默认 30s tick，导出 `OPERATIONAL_CLOCK_REFRESH_MS`），替换抑制列表/详情与 `retry-timestamp.tsx` 的 4 处 `useNow()`，header 指示器复用同一常量；fake-timer 回归验证跨午夜后标签从 `dateTime` 切到 `time`。原始证据：use-intl 4.14.9 的 `useNow()` 未传 `updateInterval` 时只取挂载时刻，生产 `AppIntlProvider` 未传 `now` |
 | Q-52 | 加急执行「凭据/引用/渠道无效」终止分支无测试 | quality lane（第 64 轮） | 26 | candidate | — | `oncall-execution.ts:71-84` 必须终态失败且不调用 provider，若被误删会落入 `:106-121` 的 retryable catch-all 反复重试；现有测试 resolver 始终带凭据（`oncall-worker.service.test.ts:26-31`）。仅补表驱动测试 |
 | Q-53 | 已删除抑制规则的详情链接落到通用错误页 | quality lane（第 64 轮） | 24 | candidate | — | `suppression.service.ts:49-51` 抛 NOT_FOUND，详情 loader 无 catch（`_dashboard.suppressions_.$suppressionId.tsx:11-17`），落到父级 `DashboardErrorPage`（`_dashboard.tsx:49`）；事件/投递详情是就地 not-found。建议 loader catch → `notFound()` + `notFoundComponent` |
 | Q-54 | 补投服务 nullable 与停用路由分支无测试 | quality lane（第 64 轮） | 23 | candidate | — | 契约四个输出 nullable（`packages/api/src/contract/operations.ts:50-78`），UI 有 notFound/disabled 分支（`route-replay-prompt.tsx:140-143`），`event-replay.service.test.ts` 仅 happy path。补四条断言 |
+| NEW-AF | 全局投递暂停的常驻可见性 | requirements lane（第 65 轮）+ ui-review 浏览器实测 | 29 | shipped | #319 | 第 65 轮交付：header 新增 `DeliveryPauseIndicator`，读 `appSettingsQueryOptions`，暂停时 destructive 徽标链接 `/deliveries`，加载/失败静默，< `sm` 仅图标 + `aria-label`；设置 mutation 已 `setQueryData`，恢复即消失。PRD `docs/prd/delivery-pause-visibility.md`；1280/390 浏览器实测 |
+| NEW-AG | 恢复投递前的加急影响披露 | requirements lane（第 65 轮） | 28 | candidate | — | 恢复后发送成功的 app 模式飞书投递会按目标自动建 ping（`delivery-execution.ts:119-130`；门控 `oncall.service.ts:147-160`），去重窗口仅 5 分钟（`oncall.service.ts:18`）；暂停数小时后恢复会对旧 firing 告警重新打电话。两个恢复入口都直接执行（`deliveries-paused-notice.tsx:30-35`、`settings-delivery-pause-panel.tsx:44-47`），文案只说「恢复后继续发送」。方案：共用确认对话框，复用 `pendingDeliveriesQueryOptions` 与目标 `urgentAutoEnabled`；查询失败降级放行 |
+| ARCH-45 | `getAuthBootstrap` 在入口直连全局 container | architecture lane（第 65 轮） | 24 | candidate | — | `server/orpc/features/session/router.ts:35-39` 直接 `getApplicationContainer().hasRegisteredUsers()`，既未走 service 也未用注入 container，违反 AGENTS.md:124-135。最小修复：抽 `AuthBootstrapService` 或等价注入式 middleware；S |
+| ARCH-46 | 「重复暂停保留首次时间」产品规则落在仓储 | architecture lane（第 65 轮） | 22 | candidate | — | `settings.repository.ts:63-80` 把暂停时间语义写进仓储，service 仅透传，违反 AGENTS.md:137-140 的业务逻辑归属。建议上移 `AppSettingsService`；S |
 
 ## 发布记录
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.50` | `51f4f34` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.50`（linux/amd64 + linux/arm64，index digest `sha256:54710b64…`） | 全局暂停顶栏指示（#319，NEW-AF）+ 运维时间不再冻结（#318，Q-51）；无迁移/配置变化；回滚镜像 `0.1.0-beta.49` |
 | `0.1.0-beta.49` | `9ceebb4` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.49`（linux/amd64 + linux/arm64，index digest `sha256:55eb3de3…`） | 全局暂停出站投递（#313，NEW-AA）+ 跨天重试列溢出（#314，UI-33）+ 生产拒绝公开/缺失 `BETTER_AUTH_SECRET`（#315，SEC-27）；无迁移；部署契约变化：缺 secret/占位值会拒绝服务；回滚镜像 `0.1.0-beta.48` |
 | `0.1.0-beta.48` | `3c724df` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.48`（linux/amd64 + linux/arm64，index digest `sha256:c28fca9c…`） | 投递「下次重试」跨天保留日期（#307，NEW-V）+ 云厂商前缀凭据键脱敏（#308，SEC-28/SEC-29）；无迁移/配置变化；回滚镜像 `0.1.0-beta.47` |
 | `0.1.0-beta.47` | `edd431a` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.47`（linux/amd64 + linux/arm64，index digest `sha256:99087a4f…`） | Settings「界面」页签 390px 可滚动、保存按钮可达（#303，UI-32）+ 事件详情投递补齐 `destinationKind` 投影（#302，Q-14）；无迁移/配置变化；回滚镜像 `0.1.0-beta.46` |
@@ -587,6 +592,18 @@
 
 ## 下一轮优先项
 
+0. **第 65 轮交付**：Q-51（27）共享 `useOperationalNow` 修复时间冻结（#318）+
+   NEW-AF（29）全局暂停的常驻可见性（#319）。
+   下一优先：**NEW-AG（28）** 恢复投递前的加急影响披露（ui-review 文案发现 + requirements）；
+   **NEW-AE（27）** 事件详情加急呼叫结果；**NEW-W（27）** 中文输入法组合期间不提交搜索；
+   **NEW-AB（27）** 主题切换；**NEW-AC（26）** 目标级请求超时。
+   UI 评审遗留（未实现）：暂停开关「点击即生效」无说明/无成功 toast（`settings-delivery-pause-panel.tsx:40-64`）；
+   Deliveries 横幅视觉等同普通信息、`Run worker` 禁用仅靠 title（`deliveries-paused-notice.tsx:45`、
+   `deliveries-page-toolbar.tsx:40-46`）；暂停文案未说明加急仍会呼叫（并入 NEW-AG）。
+   **SEC-22/25/26** 仍待 EXPERT_PANEL；**Q-52/Q-53/Q-54** 低成本测试补齐；
+   **ARCH-45/46** 两个 S 级分层修正。
+   车道轮转：第 65 轮 `architecture` 已跑（`ui-review` 同时触发），下一轮非必跑车道为 **`security-exposure`**。
+   `ui-triage` 本轮 `review_now（限缩）`，已完成真实浏览器评审并交付 NEW-AF。
 0. **第 64 轮交付**：NEW-AA（28）全局暂停出站投递（#313）+ UI-33（27）跨天重试时间列溢出（#314）。
    下一优先：**Q-51（27）** 共享 `useOperationalNow` 修复时间冻结；**NEW-AE（27）** 事件详情加急呼叫结果；
    **NEW-W（27）** 中文输入法组合期间不提交搜索；**NEW-AB（27）** 主题切换；**NEW-AC（26）** 目标级请求超时。
