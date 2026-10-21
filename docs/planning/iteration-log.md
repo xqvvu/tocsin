@@ -17,7 +17,8 @@
   留下的「sticky 列遮挡」待确认项已连续两轮顺延。强信号「≥3 UI 合并」成立，评审有增量价值。
 - `last_ui_review_at`：**2026-10-21 11:54 CST**（已更新）。
 - 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
-  `pensive-feynman-70c8a7`。
+  `pensive-feynman-70c8a7`。本轮结束已清理 `agent-iteration` 工作树、本地已合并的
+  agent 分支与会话工作树的 `node_modules`。
 
 ### 本轮交付
 
