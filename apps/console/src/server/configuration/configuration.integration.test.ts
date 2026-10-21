@@ -9,12 +9,13 @@ import {
 } from "@tocsin/core";
 import { createDefaultDestinationRegistry } from "@tocsin/destinations";
 import type { DestinationSendContext } from "@tocsin/destinations";
+import { createDefaultProviderRegistry } from "@tocsin/providers";
 
 import { openSqliteStore } from "#/infra/sqlite/store";
 import { AppSettingsService } from "#/server/configuration/app-settings.service";
 import { ConfigPortabilityService } from "#/server/configuration/config-portability.service";
 import { DestinationService } from "#/server/destinations/destination.service";
-import { hashSourceToken } from "#/server/intake/intake.service";
+import { hashSourceToken, WebhookIntakeService } from "#/server/intake/intake.service";
 import { RouteService } from "#/server/routes/route.service";
 import { SourceService } from "#/server/sources/source.service";
 
@@ -109,9 +110,9 @@ async function createStore() {
 function createTestContexts(
   store: Awaited<ReturnType<typeof createStore>>,
   destinationSendContext?: DestinationSendContext,
+  generateSourceToken: () => string = () => "tocsin_src_test_token",
 ) {
   const destinationRegistry = createDefaultDestinationRegistry();
-  const generateSourceToken = () => "tocsin_src_test_token";
 
   const sources = new SourceService({ store, generateSourceToken });
   const destinations = new DestinationService({
@@ -136,12 +137,15 @@ function createTestContexts(
   };
 }
 
-async function createTestContext(store?: Awaited<ReturnType<typeof createStore>>) {
+async function createTestContext(
+  store?: Awaited<ReturnType<typeof createStore>>,
+  generateSourceToken?: () => string,
+) {
   store ??= await createStore();
 
   return {
     store,
-    services: createTestContexts(store),
+    services: createTestContexts(store, undefined, generateSourceToken),
   };
 }
 
@@ -201,6 +205,60 @@ describe("configuration capabilities", () => {
     expect((await store.sources.get(created.source.id))?.tokenHash).toBe(
       hashSourceToken("tocsin_src_test_token"),
     );
+
+    await store.close();
+  });
+
+  // The rotation write and the webhook read are separate boundaries; asserting
+  // the stored hash against the same constant the test issued is self-proving
+  // and would not catch a return/persist mismatch or a double generation. This
+  // drives the rotated token through the real intake verification path.
+  it("accepts the rotated token at the webhook boundary and rejects the previous one", async () => {
+    let issued = 0;
+    const { store, services } = await createTestContext(
+      undefined,
+      () => `tocsin_src_test_token_${++issued}`,
+    );
+    const created = await services.sources.createSource({
+      name: "Rotating source",
+      provider: "generic",
+    });
+    const rotated = await services.sources.rotateSourceToken({ id: created.source.id });
+    const intake = new WebhookIntakeService({
+      store,
+      providers: createDefaultProviderRegistry(),
+      now: () => now,
+    });
+
+    expect(rotated.token).not.toBe(created.token);
+
+    const accepted = await intake.acceptWebhook({
+      sourceId: created.source.id,
+      token: rotated.token,
+      headers: {},
+      payload: {
+        title: "Checkout unavailable",
+        message: "checkout returned 503",
+        severity: "critical",
+      },
+      receivedAt: now,
+    });
+
+    expect(accepted.accepted).toBe(true);
+
+    await expect(
+      intake.acceptWebhook({
+        sourceId: created.source.id,
+        token: created.token,
+        headers: {},
+        payload: {
+          title: "Checkout unavailable",
+          message: "checkout returned 503",
+          severity: "critical",
+        },
+        receivedAt: now,
+      }),
+    ).rejects.toMatchObject({ reason: "invalid_token" });
 
     await store.close();
   });
