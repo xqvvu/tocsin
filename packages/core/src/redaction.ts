@@ -38,6 +38,11 @@ const SENSITIVE_EXACT_KEYS = new Set([
   // whose suffix is ambiguous. Kept exact so `dbPass`, `bypass`,
   // `signatureAlgorithm`, and `privateKeyId` stay readable.
   "secretaccesskey",
+  "awssecretaccesskey",
+  "storageaccountkey",
+  "sharedaccesskey",
+  "storageconnectionstring",
+  "databaseconnectionstring",
   "sessionkey",
   "sessionid",
   "pwd",
@@ -60,6 +65,13 @@ const SENSITIVE_EXACT_KEYS = new Set([
  * noun-shaped on purpose: `tokenCount`, `maxTokens`, and `privateKeyId` are
  * operational fields, not credentials. `token$` rather than `tokens$` keeps
  * `maxTokens` visible; plural nouns are handled by the exact set above.
+ *
+ * Cloud providers prefix their credential keys, so the exact set carries the
+ * normalized prefixed forms: `aws_secret_access_key`, `storage_account_key`,
+ * `shared_access_key`, and `storage_connection_string`. A suffix rule cannot
+ * catch them — the raw text ends in `key` or `string`, not in the sensitive
+ * noun. Identifier fields such as `aws_access_key_id` and `account_key_id`
+ * still end in `id` and stay readable.
  */
 const SENSITIVE_KEY_SUFFIX_PATTERN =
   /(?:secret|token|password|passwd|passphrase|credential|privatekey|apikey|authorization|cookie)$/;

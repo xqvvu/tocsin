@@ -111,6 +111,12 @@ describe("redaction", () => {
     "token_hash",
     "token-hash",
     "secretAccessKey",
+    "aws_secret_access_key",
+    "AWS_SECRET_ACCESS_KEY",
+    "storage_account_key",
+    "shared_access_key",
+    "storage_connection_string",
+    "databaseConnectionString",
     "sessionKey",
     "sessionId",
     "pwd",
@@ -133,6 +139,8 @@ describe("redaction", () => {
     "tokenCount",
     "maxTokens",
     "privateKeyId",
+    "aws_access_key_id",
+    "account_key_id",
     "secretName",
     "publicKey",
     "monkey",
@@ -168,6 +176,30 @@ describe("redaction", () => {
       maxTokens: 4096,
       privateKeyId: "key-1",
     });
+  });
+
+  it("redacts cloud-prefixed credential keys but keeps their identifiers", () => {
+    expect(
+      redactJsonValue({
+        aws_secret_access_key: "aws-secret",
+        storage_account_key: "storage-secret",
+        storage_connection_string: "AccountName=ops;AccountKey=storage-secret",
+        aws_access_key_id: "AKIAEXAMPLE",
+        account_key_id: "key-1",
+      }),
+    ).toEqual({
+      aws_secret_access_key: REDACTED_VALUE,
+      storage_account_key: REDACTED_VALUE,
+      storage_connection_string: REDACTED_VALUE,
+      aws_access_key_id: "AKIAEXAMPLE",
+      account_key_id: "key-1",
+    });
+  });
+
+  it("redacts cloud-prefixed credential assignments inside JSON text", () => {
+    expect(
+      redactText('{"aws_secret_access_key":"aws-secret","aws_access_key_id":"AKIAEXAMPLE"}'),
+    ).toBe(`{"aws_secret_access_key":"${REDACTED_VALUE}","aws_access_key_id":"AKIAEXAMPLE"}`);
   });
 
   it("redacts sensitive assignments inside JSON text", () => {
