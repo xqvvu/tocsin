@@ -2,6 +2,86 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 62 轮）
+
+- 时间：2026-10-22 02:55 – 03:4x CST。
+- 基线：本轮开始时 `origin/main` @ `09b9797`；main CI success；无 open PR。本轮合并后 main @ `edd431a`。
+- 类型：**UI 评审主交付 + 小修复 + 需求发现 + 发布**（非 full-audit）。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）；backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`review_now（限缩）`**，第三名额给 `ui-review`；
+  轮转车道 `security-exposure` 未跑。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`review_now（限缩）`** —— 自上次真实评审（2026-10-21 23:55）以来有 4 个 UI 路径提交
+  （`3231470` 目标行静默、`4f8388d` 对话框重构、`a50469d` Settings 运行时面板、`9215d98` 移除未用变体），
+  其中两个行为变化晚于上次评审；未解决 UI 候选 18 条；#295/#298 只有实现者桌面验证，缺 390px 复验。
+  限缩到 `/settings` UI 标签与 `/destinations` 六操作列/静默流程。
+- `last_ui_review_at`：**2026-10-22 03:10 CST**（本轮真实浏览器评审，隔离实例 6202 + 临时 SQLite，
+  `admin@example.test`）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证在会话工作树
+  `xenodochial-kirch-f16b53`。
+
+### 本轮交付
+
+- PR #302 `fix(operations): project destination kind into event detail deliveries`（Q-14，rebase 合并 `563ea03`）。
+  - `getEventDetail` 补选 `destinations.kind`，`eventDetailDeliveryFromRow` 透传，core 类型补可选字段；
+    `delivery-list-kind.test.ts` 新增走真实 SQL 的仓储断言。
+  - 验证：`vp check` 0 errors；`vp run -r test` 802 tests；`vp run -r build` 通过。
+- PR #303 `fix(settings): let the UI tab scroll on mobile`（UI-32，rebase 合并 `261416a`）。
+  - `sm` 以下「界面」页签自身滚动（`overflow-y-auto`）、偏好表单 `flex-none`；桌面保持 `overflow-hidden` / `flex-1`。
+  - 浏览器实测：移动端 `scrollTop` 0→587，保存按钮 y=783–811（视口 844）；1280×900 面板 747/747 与修复前一致。
+  - 新增 `settings-layout.ts` + 结构回归测试、mini-PRD `docs/prd/settings-mobile-scroll.md`；
+    150 files / 804 tests。
+- 发布 `v0.1.0-beta.47`（PR #304，tag → `edd431a`，GitHub Release 已创建）：发布经理 / 阻断审计 /
+  回滚专家三人一致通过；无迁移与配置变化，回滚镜像 `0.1.0-beta.46`。
+  - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.47`
+    （linux/amd64 + linux/arm64，index digest `sha256:99087a4f…`）。
+
+### 专家发现
+
+- `requirements`（5 条新候选，均已写入 backlog）：
+  - **NEW-V（28）** 投递列表「下次重试」跨天只显示 `HH:mm`（`deliveries-table.tsx:96-105`），
+    事件详情已用 `retryTimestampFormat`（`event-detail-deliveries-table.tsx:78-87`）；加急记录同病
+    （`delivery-pings-table.tsx:88-103`）；纯前端。
+  - **NEW-W（27）** 中文输入法组合期间仍按 300ms 提交搜索草稿（`operation-filters.tsx:610-688`），
+    拼音半成品会写入 URL 并发起查询。
+  - **NEW-Y（27）** 事件级多目标投递时序视图；job 级时间字段已齐（`delivery.ts:19-35`、
+    `operations.ts:89-96`），纯客户端派生，与 NEW-U 的 attempt 级边界区分。
+  - **NEW-X（26）** 详情页按当前筛选顺序连续查看；详情路由无 `validateSearch`
+    （`_dashboard.events_.$eventId.tsx:6-12`、`_dashboard.deliveries_.$deliveryId.tsx:6-12`），与 REQ-40 互补。
+  - **NEW-Z（22，EXPERT_PANEL）** 手动重试的操作者与时间不可追溯（`operations.service.ts:72-74`、
+    `operations/router.ts:37-40`），需 forward-only `0004`。
+- `ui-review`（浏览器实测，隔离实例 6202 + 临时 SQLite）：
+  - 新高危 **UI-32（27，已修）**：390×844 下 Settings UI 页签 `651/863` 且 `overflow: hidden`，
+    滚轮/触摸 `scrollTop` 恒 0；偏好表单被压成 26px，保存按钮在屏幕外
+    （`settings-page.tsx:31`、`settings-preferences-panel.tsx:74`）。
+  - 复核 UI-23、UI-21 仍复现（不重复计分）；UI-22/30/31 未重复复现。
+  - 已验证正常：运行时 12 项在 1280 为 4 列、390 为 1 列且无截断；目标行六操作在 1280 操作列 275px /
+    按钮组 164px、390 横滑后亦无重叠；静默对话框预填目标与 2h 窗口，保存后 `/suppressions` 显示
+    「通知目标: Ops Webhook Alpha」；Escape 关闭回焦、焦点陷阱 5 轮正常、无 console 错误。
+- `security-exposure`：未跑（第三名额被 `ui-review` 占用），下一轮补。
+
+### EXPERT_PANEL
+
+- 本轮两个代码 PR 均为只读投影/布局，无 schema/迁移/投递/路由/auth 语义变更，按 AUTO_SHIP 交付。
+- 新候选 **NEW-Z（22）** 涉及 forward-only 迁移与审计语义，标记 EXPERT_PANEL，实现前裁决。
+
+### 发布决策
+
+- 三人一致发布 `v0.1.0-beta.47`：自 beta.46 以来唯一用户可见变更为 Settings 移动端滚动修复（#303）；
+  #302 为只读投影补齐。阻断审计 5/5 gate 通过（main CI `edd431a` success、无 open PR、无迁移、
+  tag 未占用、仅 REL-13 法律项 blocked）；回滚专家判定 LOW，回滚只需换回 `0.1.0-beta.46` 镜像，
+  无需恢复数据库。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.47`（linux/amd64 + linux/arm64，
+  index digest `sha256:99087a4f698ffbae587b305d5926b926f39ea69e1a495735790b0db48c48fffe`）。
+
+### 下一轮优先项
+
+1. **NEW-V（28）** 投递列表下次重试跨天显示日期；**NEW-W（27）** 中文输入法组合期间不提交。
+2. **NEW-R（28）** 告警源断流预警（迁移部分先交 EXPERT_PANEL）；**NEW-S（27）** 加急呼叫全局审计页；
+   **NEW-Y（27）** 事件级时序视图。
+3. 轮转车道 **`security-exposure`**；UI-21（对话框关闭按钮本地化）。
+4. Q-14 后续：事件详情投递表消费 `destinationKind` 渲染适配器图标。
+
 ## 2026-10-22（第 61 轮）
 
 - 时间：2026-10-22 00:26 – 01:1x CST。
