@@ -2,6 +2,65 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 63 轮）
+
+- 时间：2026-10-22 03:42 – 04:xx CST。
+- 基线：本轮开始时 `origin/main` @ `c1f41ce`；main CI success；无 open PR。
+- 类型：**需求切片 + 安全加固**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；第三名额给轮转车道 **`security-exposure`**（第 62 轮记录的下一车道）。
+- 车道轮转位置：**`quality`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审（2026-10-22 03:10）仅 32 分钟；自那以来唯一 UI 路径提交
+  是评审自身的修复 `261416a`（已浏览器复验）；未解决 UI 候选 18 条属稳定存量（重评阈值 >20）。
+- `last_ui_review_at`：**2026-10-22 03:10 CST**（未变；本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证在会话工作树
+  `vibrant-cohen-1d0fce`。
+
+### 本轮交付
+
+- PR #307 `fix(operations): keep the date on cross-day retry timestamps`（NEW-V，rebase 合并 `40cefe5`）。
+  - 新增共享 `RetryTimestamp`，按控制台时区与 `useNow()` 选择 `time`/`dateTime`；投递列表、加急记录表、
+    事件详情投递表统一消费；表头「下次 / Next」→「下次重试 / Next retry」。
+  - `AppIntlProvider` 新增可选 `now`，让依赖「今天」的渲染可确定性测试。
+  - 新增 `retry-timestamp.test.tsx`、`deliveries-table-next-retry.test.tsx`，扩充加急表用例；
+    PRD `docs/prd/retry-timestamp-cross-day.md`。
+  - 验证：`vp check` 0 errors；`vp run -r test` 152 files / 813 tests；`vp run -r build` 通过。
+- PR #308 `fix(core): redact provider-prefixed cloud credential keys`（SEC-28 + SEC-29，rebase 合并 `cdccbe0`）。
+  - `SENSITIVE_EXACT_KEYS` 增加 `awssecretaccesskey`/`storageaccountkey`/`sharedaccesskey`/
+    `storageconnectionstring`/`databaseconnectionstring`，键名与自由文本赋值两条路径同时生效；
+    `aws_access_key_id`、`account_key_id` 保持可见。
+  - `server/runtime/dashboard-session.ts` 补 `@tanstack/react-start/server-only`。
+  - 验证：core 91 项脱敏测试、全仓 813 项、`vp run -r build` 均通过。
+
+### 专家发现
+
+- `requirements`（4 条新候选，已写入 backlog）：
+  - **NEW-AA（28）** 全局暂停出站投递（运维急停）：worker 无条件 claim（`delivery-worker.service.ts:47-62`），
+    settings 无暂停位；全局静默会把排队投递终态丢弃（`delivery.repository.ts:252-284`）。无迁移，单轮可交付，
+    **本轮最推荐**（已被本轮的 NEW-V 占用主切片名额，下一轮优先）。
+  - **NEW-AB（27）** 主题切换：深色 token 已定义（`styles.css:8,55`）但从未启用（`__root.tsx:44`）。
+  - **NEW-AC（26）** 目标级请求超时：全局单一超时（`env.ts:23-28`、`container.ts:193`），目标 schema 无字段。
+  - **NEW-AD（21）** Owner 管理本地成员账号：角色已声明但拒绝创建（`auth-owner-bootstrap.ts:21-29`），
+    L 成本，需 EXPERT_PANEL。
+- `security-exposure`：
+  - **SEC-27（HIGH，27）** `docker-compose.yml:13,17` 在 production 下用仓库公开的 `BETTER_AUTH_SECRET`
+    默认值启动，`auth-config.ts:3-4,67-80` 黑名单未覆盖；修复需改为 fail-fast，**交 EXPERT_PANEL**。
+  - **SEC-28（MEDIUM，25，已修）** 带前缀云凭据键（`aws_secret_access_key` 等）绕过脱敏。
+  - **SEC-29（LOW，22，已修）** `dashboard-session.ts` 缺 server-only 标记。
+  - 复核无回归：SEC-1 覆盖完整、SEC-24/SEC-2 已闭环；`node:*`/SQLite/`process.env` 边界标记齐全；
+    全仓代码/脚本无 `xqvvu/vane` 失效引用。
+
+### EXPERT_PANEL
+
+- 本轮两个代码 PR 均为只读展示/脱敏加固，无 schema/迁移/投递/路由/auth 语义变更，按 AUTO_SHIP 交付。
+- **SEC-27** 改变部署契约（缺 secret 时拒绝启动），登记为 EXPERT_PANEL 事项，下一轮由三位专家裁决。
+
+### 下一轮优先项
+
+1. **NEW-AA（28）** 全局暂停出站投递（主切片首选，无迁移）。
+2. **NEW-W（27）** 中文输入法组合期间不提交搜索；**NEW-AB（27）** 主题切换。
+3. 轮转车道 **`quality`**；SEC-27 交 EXPERT_PANEL；SEC-22/25/26 待裁决。
+
 ## 2026-10-22（第 62 轮）
 
 - 时间：2026-10-22 02:55 – 03:4x CST。
