@@ -199,6 +199,9 @@ function createFakeContainer(): ApplicationContainer {
     createAppSettingsService: async () => {
       throw new Error("Configuration services are not used by request context tests");
     },
+    createRuntimeInformationService: async () => {
+      throw new Error("Runtime information service is not used by request context tests");
+    },
     createConfigPortabilityService: async () => {
       throw new Error("Configuration services are not used by request context tests");
     },

@@ -1,6 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 
-import { appSettingsQueryKeys } from "#/features/configuration/api/configuration.queries";
+import {
+  appSettingsQueryKeys,
+  runtimeInformationQueryKeys,
+} from "#/features/configuration/api/configuration.queries";
 import { destinationQueryKeys } from "#/features/destinations/api/destination.queries";
 import { routeQueryKeys } from "#/features/routes/api/route.queries";
 import { sourceQueryKeys } from "#/features/sources/api/source.queries";
@@ -17,6 +20,7 @@ export function useConfigurationMutations() {
     invalidateConfiguration: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: appSettingsQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: runtimeInformationQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: sourceQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: destinationQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: routeQueryKeys.all }),
