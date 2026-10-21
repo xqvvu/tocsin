@@ -58,8 +58,10 @@ Better Auth 自带默认值与 `change-me-…`，不包含这两个值。
    `change-me-to-at-least-32-characters`（不再提供可用密钥），保留 compose 的
    `config`/`ps`/`logs`/`down` 在未导出 secret 时仍可用。
 2. `server.ts` 的 `bootstrap()` 在打开 SQLite 之前调用 `requireBetterAuthSecret`，
-   让 production 缺 secret / 占位值时启动即失败，避免 `/api/ready` 假绿；覆盖
-   compose、`docker run`、K8s 等所有部署方式。
+   让 production 缺 secret / 占位值时拒绝服务，避免 `/api/ready` 假绿；覆盖
+   compose、`docker run`、K8s 等所有部署方式。实测 Nitro 会懒加载该入口，因此表现为
+   **所有请求（含 `/api/ready`）返回 500 + 容器 unhealthy**，而不是进程启动即退出；
+   同样达到 fail-fast 效果且日志可读。
 3. `auth-config.ts` 黑名单加入两个历史公开值，并做 `trim().toLowerCase()` 归一化。
 4. `apps/console/.env.example` 改用占位值；根 `.env` 加入 `.gitignore`。
 5. 单测 + 新增 `deployment-secrets.contract.test.ts` 防止未来重新写死 secret。

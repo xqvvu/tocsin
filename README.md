@@ -176,7 +176,7 @@ BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 默认服务会暴露在 `http://localhost:3000`，SQLite 数据放在 `tocsin-data` volume 中。
 
 这份 compose 文件是本机试运行形态，不是生产方案：未显式提供 `BETTER_AUTH_SECRET` 时，它只会回落到一个
-公开占位值，应用在 production 模式下会拒绝启动；它也没有 TLS 与 secret 注入。生产部署、反向代理、环境变量与健康检查见
+公开占位值，应用在 production 模式下会拒绝提供服务（含健康检查）；它也没有 TLS 与 secret 注入。生产部署、反向代理、环境变量与健康检查见
 `docs/release/docker-production-deployment.md`；备份、恢复、升级与回滚见
 `docs/release/backup-restore-upgrade.md`；切 tag 的流程见 `docs/release/release-checklist.md`。
 

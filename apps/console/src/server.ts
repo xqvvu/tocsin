@@ -12,8 +12,10 @@ async function bootstrap() {
 
   // Auth is assembled lazily on the first session request, so without this
   // check a production container with a missing or published secret would pass
-  // its health check and only fail when an operator tries to log in. Prod
-  // fail-fast here keeps `/api/ready` honest.
+  // its health check and only fail when an operator tries to log in. Nitro
+  // loads this entry on the first request, so a bad secret makes every request
+  // (including `/api/ready`) fail with the actionable error instead of just
+  // `/api/auth/*`, and the container health check turns unhealthy.
   requireBetterAuthSecret(env.BETTER_AUTH_SECRET);
 
   await logger();
