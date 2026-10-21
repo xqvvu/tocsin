@@ -14,8 +14,8 @@
 | 运维预期                     | 现状                                                                             |
 | ---------------------------- | -------------------------------------------------------------------------------- |
 | TLS 终止                     | **没有。** 应用只监听明文 HTTP；生产必须在反向代理终止 TLS                        |
-| Secret 注入                   | **没有 Docker secret / `*_FILE` 支持。** 只能用环境变量（env file 或 compose 自带的默认值） |
-| 默认 secret 安全              | **不安全。** `docker-compose.yml` 给 `BETTER_AUTH_SECRET` 内置了公开默认值，且不在占位值黑名单里，不覆盖也能启动 |
+| Secret 注入                   | **没有 Docker secret / `*_FILE` 支持。** 只能用环境变量（env file 或编排平台 secret） |
+| 默认 secret 安全              | **已修复。** compose 不再内置可用默认值：未设置时回落到公开占位值，应用在 production 模式启动即拒绝；历史公开值也进入黑名单 |
 | 端口暴露范围                  | compose 默认把 3000 发布在所有网卡（`"${TOCSIN_HTTP_PORT:-3000}:3000"`），不会自动只绑 127.0.0.1 |
 | 多副本 / 横向扩容             | **不支持。** 单进程 + 进程内 worker + 单文件 SQLite 是设计约束                    |
 | unhealthy 自动重启            | **没有。** compose 只有 `restart: unless-stopped`；容器变 unhealthy 不会自动重建  |
@@ -69,7 +69,7 @@ docker compose logs --tail=50 console
 | 变量                              | 默认值（容器内）      | 作用与约束                                                                 |
 | --------------------------------- | --------------------- | -------------------------------------------------------------------------- |
 | `HOST` / `PORT`                   | `0.0.0.0` / `3000`    | Nitro node-server 监听地址与端口（镜像里已设）                             |
-| `BETTER_AUTH_SECRET`              | 无（compose 有内置默认值） | 生产**必需**：≥32 字符，且不能是占位值；缺失或过短会让进程启动失败     |
+| `BETTER_AUTH_SECRET`              | 无（compose 只回落到已拒绝的占位值） | 生产**必需**：≥32 字符，且不能是占位值或历史公开值；缺失/占位时进程在 bootstrap 阶段退出 |
 | `BETTER_AUTH_URL`                 | 无                    | 生产**必需**（或提供 `SERVER_URL`）：Better Auth 的对外 base URL，必须是合法 URL |
 | `SERVER_URL`                      | 无                    | 对外访问 URL；`BETTER_AUTH_URL` 缺省时作为回落值                            |
 | `BETTER_AUTH_ALLOWED_HOSTS`       | 无                    | 可选，逗号/换行分隔的 Host 白名单（走 PVC、反代、临时域名时使用）           |
@@ -128,9 +128,14 @@ docker compose logs --tail=50 console
 
 ## 7. Secrets
 
-- **必须替换 `BETTER_AUTH_SECRET`。** compose 里内置的默认值是一个公开的 64 位十六进制串，不在
-  `auth-config.ts` 的占位值黑名单里，所以不设它也能在生产模式启动 —— 这等于把 session 签名密钥公开。
-  部署时用 `openssl rand -hex 32` 之类生成并显式注入。
+- **必须显式提供 `BETTER_AUTH_SECRET`。** compose 不再内置可用的默认值：未设置时回落到公开占位值，
+  应用会在 bootstrap 阶段以 `BETTER_AUTH_SECRET must be replaced with a deployment-specific secret`
+  退出，`/api/ready` 不会假绿。生成一次并持久化复用，不要每次部署都重新生成：
+  ```bash
+  openssl rand -hex 32   # 写入受保护的 .env（已 gitignore）或编排平台的 secret
+  ```
+  历史 compose 默认值与 `.env.example` 旧值都已加入黑名单。轮换 secret 会让所有 dashboard session
+  失效，用户需要重新登录；数据库与其他配置不受影响。
 - 应用**不支持** Docker secret、`*_FILE` 或外部 secret manager；secret 通过环境变量进入进程。
   这意味着 `docker inspect` / `docker compose config` 会看到明文，请限制宿主访问权限，并使用
   `--env-file` 或编排平台的 secret 机制管理文件本身。

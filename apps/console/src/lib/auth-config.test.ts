@@ -39,6 +39,27 @@ describe("auth runtime config", () => {
     ).toBe("0123456789abcdef0123456789abcdef");
   });
 
+  it("rejects secrets that were published in this repository", () => {
+    const published = [
+      // Historical docker-compose.yml fallback.
+      "70c18d50d2b212c625494ffb8e5963878cb72447c2ff3a0f97fcfb793f90d444",
+      // Historical apps/console/.env.example value.
+      "47b719bff0508af756de6afba54ccd2deae022d1a6cb9d2c89f4f558dcd79ce2",
+    ];
+
+    for (const secret of published) {
+      expect(() => requireBetterAuthSecret(secret, { NODE_ENV: "production" })).toThrow(
+        "BETTER_AUTH_SECRET must be replaced with a deployment-specific secret",
+      );
+      // A case or whitespace variant must not slip past the denylist.
+      expect(() =>
+        requireBetterAuthSecret(`  ${secret.toUpperCase()}\n`, { NODE_ENV: "production" }),
+      ).toThrow("BETTER_AUTH_SECRET must be replaced with a deployment-specific secret");
+      // Local development may still use the example file.
+      expect(requireBetterAuthSecret(secret, { NODE_ENV: "development" })).toBe(secret);
+    }
+  });
+
   it("uses dynamic base URL host allowlists when multiple public hosts are configured", () => {
     expect(
       requireBetterAuthBaseUrl(

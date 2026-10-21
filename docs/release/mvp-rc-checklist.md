@@ -98,7 +98,8 @@ https://github.com/xqvvu/tocsin/issues/47 已在 `xqvvu/tocsin` 关闭，清单�
 
 - `docs/release/release-checklist.md`：切第一个 tag 的人工流程，含“仓库没有任何 release 自动化”的事实。
 - `docs/release/docker-production-deployment.md`：反向代理/TLS、环境变量、数据卷、secret、健康检查，
-  并把“没有 TLS 终止、没有 Docker secret 注入、compose 内置公开默认 `BETTER_AUTH_SECRET`”写成已知缺口。
+  并把“没有 TLS 终止、没有 Docker secret 注入”写成已知缺口；compose 公开默认 `BETTER_AUTH_SECRET`
+  已移除，缺失或沿用历史公开值会让生产进程启动失败。
 - `docs/release/backup-restore-upgrade.md`：SQLite 冷备份/恢复、升级、回滚，以及 baseline + forward
   repair migration（0001–0003）的升级约束。
 
