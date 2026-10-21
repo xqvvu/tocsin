@@ -144,6 +144,57 @@ describe("operations service", () => {
     expect(calls).toEqual([{ deliveryId: "delivery-1", initiatedBy: "user-1" }]);
     await store.close();
   });
+
+  it("projects the claimable backlog with the service clock", async () => {
+    const store = await createStore();
+    const service = new OperationsService({ store, oncall: new OncallService({ store }) });
+
+    await store.sources.create({
+      id: "source-1",
+      name: "Generic source",
+      provider: "generic",
+      tokenHash: "token-hash",
+    });
+    await store.destinations.create({
+      id: "destination-1",
+      name: "Ops webhook",
+      kind: "generic_webhook",
+    });
+    await store.routes.create({
+      id: "route-1",
+      name: "Critical checkout",
+      rule: { severities: ["critical"] },
+      destinationIds: ["destination-1"],
+    });
+    const event = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: "request-backlog",
+      normalized: {
+        title: "Checkout unavailable",
+        message: "checkout returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout:unavailable",
+        labels: { service: "checkout" },
+        occurredAt: now,
+      },
+      rawPayload: {},
+      routeMatches: [],
+    });
+    await store.deliveries.enqueueForEvent({
+      event,
+      matches: [{ routeId: "route-1", destinationIds: ["destination-1"] }],
+      dedupeWindowStartsAt: now,
+      now,
+    });
+
+    await expect(service.getDeliveryBacklog()).resolves.toEqual({
+      claimable: 1,
+      oldestCreatedAt: now,
+    });
+
+    await store.close();
+  });
 });
 
 describe("operations service time range", () => {

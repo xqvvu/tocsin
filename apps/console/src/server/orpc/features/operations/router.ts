@@ -34,6 +34,10 @@ export const operationsRouter = os.operations.router({
     .use(withOperationsService)
     .handler(({ context, input }) => context.service.getDeliveryDetail(input.id)),
 
+  getDeliveryBacklog: os.operations.getDeliveryBacklog
+    .use(withOperationsService)
+    .handler(({ context }) => context.service.getDeliveryBacklog()),
+
   retryDelivery: os.operations.retryDelivery
     .use(withOperationsService)
     .handler(({ context, input }) => context.service.retryDelivery(input.id)),

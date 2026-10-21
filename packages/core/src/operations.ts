@@ -264,3 +264,16 @@ export interface RouteReplayResult {
   createdDeliveryIds: string[];
   skippedExistingCount: number;
 }
+
+/**
+ * What the delivery worker could claim on its next run.
+ *
+ * The predicate mirrors `claimNext`: pending rows whose destination and route
+ * are enabled, whose retry backoff has elapsed, and which still have attempts
+ * left. Claim-time suppression is decided after the claim query, so this is an
+ * upper bound rather than a promise of delivery.
+ */
+export interface DeliveryBacklogSummary {
+  claimable: number;
+  oldestCreatedAt: IsoDateTimeString | null;
+}
