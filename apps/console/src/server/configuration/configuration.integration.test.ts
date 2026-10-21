@@ -888,6 +888,78 @@ describe("configuration capabilities", () => {
     await store.close();
   });
 
+  it("tests destinations with a historical Event sample, redaction, and console presentation", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const { store, services } = await createTestContextWithDestinationFetch(async (url, init) => {
+      calls.push({ url, init });
+      return { ok: true, status: 202, text: async () => "accepted" };
+    });
+    const currentSettings = await services.settings.getAppSettings();
+    await services.settings.updateAppSettings({
+      locale: "en-US",
+      timeZone: "UTC",
+      rawPayloadRetentionDays: currentSettings.rawPayloadRetentionDays,
+    });
+    const source = await services.sources.createSource({
+      name: "SigNoz",
+      provider: "signoz",
+    });
+    const event = await store.intake.recordEvent({
+      id: "event-test-sample",
+      sourceId: source.source.id,
+      idempotencyKey: null,
+      normalized: {
+        title: "High CPU",
+        message: "CPU above threshold",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "signoz:cpu:api",
+        labels: { service: "api" },
+        occurredAt: "2026-06-09T07:59:00.000Z",
+      },
+      rawPayload: {
+        alertname: "HighCPU",
+        token: "raw-token",
+      },
+      rawHeaders: {
+        authorization: "Bearer source-token",
+      },
+    });
+    const destination = await services.destinations.createDestination({
+      name: "Ops webhook",
+      kind: "generic_webhook",
+      config: {
+        url: "https://example.test/webhook",
+        template: {
+          mode: "text",
+          text: "{{event.title}} {{event.fingerprint}} {{payload.alertname}} token={{payload.token}} locale={{presentation.locale}} tz={{presentation.timeZone}}",
+        },
+      },
+    });
+
+    const result = await services.destinations.testDestination({
+      id: destination.id,
+      sampleEventId: event.id,
+    });
+
+    expect(result).toMatchObject({
+      destination: { id: destination.id, name: destination.name },
+      success: true,
+      statusCode: 202,
+      error: null,
+    });
+    expect(JSON.parse(calls[0]?.init.body as string)).toMatchObject({
+      eventId: event.id,
+      source: { id: source.source.id, name: source.source.name },
+      alert: { title: "High CPU", fingerprint: "signoz:cpu:api" },
+      message: "High CPU signoz:cpu:api HighCPU token=[REDACTED] locale=en-US tz=UTC",
+    });
+    expect(JSON.stringify(result)).not.toContain("raw-token");
+    expect(JSON.stringify(result)).not.toContain("source-token");
+
+    await store.close();
+  });
+
   it("previews destination templates without sending or returning config", async () => {
     const { store, services } = await createTestContext();
     const destination = await services.destinations.createDestination({

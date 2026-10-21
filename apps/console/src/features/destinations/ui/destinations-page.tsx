@@ -16,7 +16,9 @@ import {
   DestinationPreviewDialog,
   showDestinationTestToast,
 } from "#/features/destinations/ui/destination-notices";
+import { DestinationTestDialog } from "#/features/destinations/ui/destination-test-dialog";
 import type {
+  DestinationListItem,
   PreviewDestinationFormInput,
   PreviewEditDestinationFormInput,
 } from "#/features/destinations/ui/destination-ui-types";
@@ -66,9 +68,12 @@ export function DestinationsPage() {
     React.useState<DestinationPreviewNotice | null>(null);
   const [previewRequest, setPreviewRequest] = React.useState<PreviewRequest | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = React.useState(false);
+  const [testDestinationTarget, setTestDestinationTarget] =
+    React.useState<DestinationListItem | null>(null);
+  const [testDialogOpen, setTestDialogOpen] = React.useState(false);
   const recentEventsQuery = useQuery({
     ...recentEventsQueryOptions(),
-    enabled: previewDialogOpen,
+    enabled: previewDialogOpen || testDialogOpen,
   });
   const [editingDestinationId, setEditingDestinationId] = React.useState<string | null>(null);
   const [destinationEditorOpen, setDestinationEditorOpen] = React.useState(false);
@@ -152,6 +157,26 @@ export function DestinationsPage() {
     return runPreview({ source: "draft", input }, null);
   }
 
+  /**
+   * Send one test through the saved destination. `null` keeps the built-in
+   * sample; an Event id renders the stored Event so the operator sees the same
+   * fields and message shape a real alert would produce.
+   */
+  function sendTest(sampleEventId: string | null) {
+    if (!testDestinationTarget) {
+      return Promise.resolve(null);
+    }
+
+    return runAction(`test-destination-${testDestinationTarget.id}`, async () => {
+      const result = await testDestination({
+        id: testDestinationTarget.id,
+        ...(sampleEventId ? { sampleEventId } : {}),
+      });
+      showDestinationTestToast(result, t);
+      return result;
+    });
+  }
+
   function previewEdit(input: PreviewEditDestinationFormInput) {
     return runPreview({ source: "update", input }, null);
   }
@@ -201,20 +226,31 @@ export function DestinationsPage() {
               }
             }}
           />
+          <DestinationTestDialog
+            key={testDestinationTarget?.id ?? "no-test-destination"}
+            destinationName={testDestinationTarget?.name ?? ""}
+            open={testDialogOpen && testDestinationTarget !== null}
+            onOpenChange={(open) => {
+              setTestDialogOpen(open);
+
+              if (!open) {
+                setTestDestinationTarget(null);
+              }
+            }}
+            sampleEvents={recentEventsQuery.data?.events.items ?? []}
+            sampleEventsPending={recentEventsQuery.isPending}
+            sampleEventsError={recentEventsQuery.isError}
+            onSend={sendTest}
+          />
           <DestinationsSection
             destinations={destinations}
             destinationCatalog={destinationCatalog}
             routes={routes}
             pending={pending}
-            onTest={(destination) =>
-              void runAction(`test-destination-${destination.id}`, async () => {
-                const result = await testDestination({
-                  id: destination.id,
-                });
-                showDestinationTestToast(result, t);
-                return result;
-              })
-            }
+            onTest={(destination) => {
+              setTestDestinationTarget(destination);
+              setTestDialogOpen(true);
+            }}
             onPreview={(destination) =>
               void runPreview({ source: "destination", id: destination.id }, null)
             }
