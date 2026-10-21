@@ -15,6 +15,7 @@ const testState = vi.hoisted(() => ({
   invalidateConfiguration: vi.fn<() => Promise<void>>(),
   updateAppSettings: vi.fn<(input: { rawPayloadRetentionDays: number }) => Promise<unknown>>(),
   downloadTextFile: vi.fn<(input: { filename: string; text: string; type: string }) => void>(),
+  readTextFile: vi.fn<(file: File) => Promise<string>>(),
   toast: {
     error: vi.fn<(title: string, options?: { description?: string }) => void>(),
   },
@@ -37,6 +38,7 @@ vi.mock("#/i18n/use-i18n", () => ({
 
 vi.mock("#/lib/browser", () => ({
   downloadTextFile: testState.downloadTextFile,
+  readTextFile: testState.readTextFile,
 }));
 
 vi.mock("sonner", () => ({
@@ -52,6 +54,7 @@ describe("settings workspace", () => {
     testState.invalidateConfiguration.mockReset().mockResolvedValue();
     testState.updateAppSettings.mockReset().mockResolvedValue(undefined);
     testState.downloadTextFile.mockReset();
+    testState.readTextFile.mockReset();
     testState.toast.error.mockReset();
   });
 
@@ -185,5 +188,52 @@ describe("settings workspace", () => {
 
     expect(testState.invalidateConfiguration).toHaveBeenCalledTimes(1);
     expect(testState.exportConfigurationToml).toHaveBeenCalledTimes(2);
+  });
+
+  it("loads a picked file into the draft without importing it", async () => {
+    testState.readTextFile.mockResolvedValue('[settings]\ntime_zone = "Asia/Shanghai"\n');
+    const { result } = renderHook(() => useSettingsWorkspace());
+
+    act(() => result.current.portable.toml.onLoadFile(new File(["[settings]\n"], "tocsin.toml")));
+
+    await vi.waitFor(() => {
+      expect(result.current.portable.toml.value).toBe('[settings]\ntime_zone = "Asia/Shanghai"\n');
+    });
+
+    expect(testState.readTextFile).toHaveBeenCalledTimes(1);
+    expect(testState.importConfigurationToml).not.toHaveBeenCalled();
+    expect(result.current.importNotice).toBeNull();
+  });
+
+  it("rejects oversized config files before reading them", async () => {
+    const { result } = renderHook(() => useSettingsWorkspace());
+    const oversized = new File(["x"], "huge.toml");
+
+    Object.defineProperty(oversized, "size", { value: 1024 * 1024 + 1 });
+
+    act(() => result.current.portable.toml.onLoadFile(oversized));
+
+    await vi.waitFor(() => {
+      expect(testState.toast.error).toHaveBeenCalledWith(
+        "configuration.portableConfig.fileTooLarge",
+      );
+    });
+
+    expect(testState.readTextFile).not.toHaveBeenCalled();
+    expect(result.current.portable.toml.value).toBe("");
+  });
+
+  it("rejects an empty picked file without replacing the draft", async () => {
+    testState.readTextFile.mockResolvedValue("  \n");
+    const { result } = renderHook(() => useSettingsWorkspace());
+
+    act(() => result.current.portable.toml.onChange("[settings]\nexisting = true\n"));
+    act(() => result.current.portable.toml.onLoadFile(new File(["  \n"], "empty.toml")));
+
+    await vi.waitFor(() => {
+      expect(testState.toast.error).toHaveBeenCalledWith("configuration.portableConfig.fileEmpty");
+    });
+
+    expect(result.current.portable.toml.value).toBe("[settings]\nexisting = true\n");
   });
 });

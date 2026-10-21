@@ -5,11 +5,13 @@ import type { ImportConfigurationResult } from "@tocsin/core";
 
 import { useConfigurationMutations } from "#/features/configuration/api/configuration.mutations";
 import { useTranslations } from "#/i18n/use-i18n";
-import { downloadTextFile } from "#/lib/browser";
+import { downloadTextFile, readTextFile } from "#/lib/browser";
 
 type SettingsTab = "ui" | PortableConfigFormat;
 type PortableConfigFormat = "toml" | "json";
 type DraftStatus = "idle" | "loading" | "loaded" | "failed";
+
+const maxConfigFileBytes = 1024 * 1024;
 
 interface PortableConfigDraft {
   value: string;
@@ -175,6 +177,29 @@ export function useSettingsWorkspace() {
     [invalidatePortableConfigDrafts, submitAction],
   );
 
+  const loadConfigFile = React.useCallback(
+    async (format: PortableConfigFormat, file: File) => {
+      if (file.size > maxConfigFileBytes) {
+        toast.error(t("configuration.portableConfig.fileTooLarge"));
+        return;
+      }
+
+      try {
+        const value = await readTextFile(file);
+
+        if (value.trim().length === 0) {
+          toast.error(t("configuration.portableConfig.fileEmpty"));
+          return;
+        }
+
+        setDraft(format, value);
+      } catch (error) {
+        showOperationError(error);
+      }
+    },
+    [setDraft, showOperationError, t],
+  );
+
   const exportConfig = React.useCallback(
     (format: PortableConfigFormat) =>
       submitAction(format === "toml" ? "export-config" : "export-config-json", async () => {
@@ -221,12 +246,14 @@ export function useSettingsWorkspace() {
       toml: {
         value: drafts.toml.value,
         onChange: (value: string) => setDraft("toml", value),
+        onLoadFile: (file: File) => void loadConfigFile("toml", file),
         onExport: () => exportConfig("toml"),
         onImport: (value: string) => importConfig("toml", value),
       },
       json: {
         value: drafts.json.value,
         onChange: (value: string) => setDraft("json", value),
+        onLoadFile: (file: File) => void loadConfigFile("json", file),
         onExport: () => exportConfig("json"),
         onImport: (value: string) => importConfig("json", value),
       },
