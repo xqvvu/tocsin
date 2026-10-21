@@ -2,6 +2,81 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 59 轮）
+
+- 时间：2026-10-21 21:38 – 23:2x CST。
+- 基线：本轮开始时 `origin/main` @ `48833e4`；main CI success；无 open PR。
+- 类型：**非 full-audit**（backlog 有多个 ≥27 分候选；最近全量审计仍为第 1 轮，但 backlog 未清空）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`review_now（限缩）`**，第三名额给轮转车道 **`quality`**，
+  随后补发 `ui-review`（并发峰值 3）。
+- 车道轮转位置：`quality` 已完成；下一轮非必跑车道为 **`docs-drift`**。
+- `ui-triage`：**`review_now（限缩）`** —— 距上次真实浏览器评审 2h15m（未满 48h）、UI 合并只有 #289 一个；
+  但 #289 的内联重置漏 `destinationKind` 是真实交互回归，且存量 UI 发现 ≥2，故限缩评审范围到
+  `/deliveries` 筛选 Popover 与 1280px 表格遮挡。
+- `ui-review`：**本轮未产出**。只读浏览器评审 subagent 运行约 95 分钟未返回，已停止以控制配额；
+  UI-25 的证据沿用第 57 轮实测（容器 982 / 内容 1100、遮挡 118px）。本轮的表格修复因此只有
+  测试级验证，**没有新的浏览器复验**，下一轮应补一次 1280×900 实测。
+- `last_ui_review_at`：2026-10-21 16:50 CST（未变；本轮未完成新的浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证在会话工作树 `lucid-wu-ccc63f`。
+  会话工作树 `node_modules` 再次残缺（`@rolldown/plugin-babel` 解析失败），删除根与各 workspace
+  的 `node_modules` 后 `vp install --frozen-lockfile` 恢复。
+
+### 本轮交付
+
+- PR #292 `fix(operations): clear the destination kind filter from the inline reset`（rebase 合并 `6b1cd34`），FIX-15。
+  - 内联「重置筛选」补 `destinationKind: ""`，与页级重置一致；新增 9 键全开的载荷断言。
+  - 验证：`operation-filters.test.tsx` 12 passed；`vp check` 0 errors。
+- PR #293 `fix(operations): fit events and deliveries tables in the 1280px viewport`（rebase 合并 `91c0eee`），UI-25。
+  - Events `min-w-275` → `min-w-230`（920px）、Deliveries `min-w-320` → `min-w-240`（960px），
+    落在 1280×900 侧栏展开时 982px 的表格视口内；新增 `operations-table-fit.test.ts` 固化 982px 基线。
+  - 验证：`operations-table-fit.test.ts` 2 passed；`vp check` 0 errors（12 条存量 warning）。
+  - **未做浏览器复验**：见上。
+
+### 专家发现
+
+- `requirements`（三项复核，均仍成立、均无需迁移）：
+  - **REQ-220（28）** 目标行临时静默：`destination-actions.tsx:68-105` 无入口，matcher 已支持
+    `destinationIds`（`suppression.ts:32-34`），表单支持目标多选与 `defaultValues`
+    （`suppression-forms.tsx:368-377`、`:83,:96-104`）。注意：原描述的 30m/1h/4h/24h 快捷时长
+    **并不存在**（`suppression-form.ts:125` 固定 2h），应并入 NEW-B，别重复计分。
+  - **REQ-84 + REQ-216（合并 28）** Settings 只读运行时投影：`system-information.ts:12-33` 已有
+    版本/Node/平台/SQLite 但只有启动日志消费；`env.ts:23-40` 的有效运行参数未进入 Settings；
+    `contract/settings.ts:10-17` 只有 get/update。必须白名单投影，绝不返回原始 env。
+  - **NEW-I（27）** 出站禁止自动跟随重定向：`transport.ts:73-77` 未设 `redirect`；所有出站路径经
+    `Adapter.getTransportContext`（`utils.ts:99-107`）可集中注入 `redirect: "manual"`。
+- `quality`（8 条中 5 条有效，均带 file:line）：
+  - **FIX-15（MEDIUM）** 内联重置漏 `destinationKind` —— 本轮已修（#292）。
+  - **Q-14（MEDIUM）** `EventDetailDelivery.destinationKind` 恒为 undefined：事件详情 SQL 未取
+    `destinations.kind`（`history.repository.ts:176`），core 类型无此字段
+    （`packages/core/src/operations.ts:89-92`）而 API schema 声明 optional
+    （`packages/api/src/schemas/operations.ts:55`）；第 58 轮测试只手造对象喂 schema，未走仓储。
+  - **Q-15（LOW）** `hasOperationFilters` 不分 scope（`operation-search.ts:82-94`），手工带
+    `destinationKind` 访问 `/events` 会把空态误报成「筛选无匹配」。
+  - **Q-16（LOW）** `httpStatusToRetryHint` 的 408/409/425 无任何用例（`utils.ts:46-52`）。
+  - **REQ-221（LOW，语义待定）** kind 取实时 join（`history.repository.ts:250,315,507-512`），
+    目标改类型会重分类历史投递；是否要快照列需产品判断。
+- 已核实无新增缺口：kind 列表/total 共用谓词与非法值回退、抑制 `destinationIds` 边界、
+  oRPC 形状约束均正常。
+
+### EXPERT_PANEL
+
+- 本轮两个切片均不触碰 schema/迁移/投递/路由/auth 语义，无需 panel。
+- 仍登记：**SEC-26**、**SEC-11**；新增 **REQ-221** 若要做需要决定是否加 kind 快照列。
+
+### 发布
+
+- **本轮不发布**：超出单轮时间预算，未能完成 3 位专家的发布评估。本轮两个用户可见修复
+  （#292、#293）留待下一轮评估 `0.1.0-beta.45`。
+
+### 下一轮优先项
+
+1. **REQ-220（28）** 目标行临时静默；**REQ-84 + REQ-216（28）** Settings 只读运行参数；
+   **NEW-I（27）** 出站禁止自动跟随重定向。
+2. **Q-14（27）** 事件详情 `destinationKind` 投影补齐或删除；**FIX-15 已修**。
+3. **UI-25 浏览器复验**：1280×900 侧栏展开/收起各截一次；并确认 1024px 仍可横向滚动。
+4. 下一轮轮转车道 **`docs-drift`**；`quality` 本轮已跑。
+5. 发布评估：若下一轮有新用户可见变更，一并评估 beta.45。
+
 ## 2026-10-21（第 58 轮）
 
 - 时间：2026-10-21 17:25 – 18:2x CST。
