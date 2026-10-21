@@ -18,7 +18,8 @@
   仍有 ≥1 个 UI 合并。建议下次评审首查 Delays/Events 表格 sticky 列遮挡与 UI-22/23 复验。
 - `last_ui_review_at`：2026-10-21 09:34 CST（未变）。
 - 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
-  `nostalgic-babbage-1d61a5`。
+  `nostalgic-babbage-1d61a5`。本轮结束已清理 `agent-iteration` 工作树、本地已合并的
+  agent 分支与会话工作树的 `node_modules`。
 
 ### 本轮交付
 
