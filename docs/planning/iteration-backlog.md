@@ -507,6 +507,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.44` | `788a5b4` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.44`（linux/amd64 + linux/arm64，index digest `sha256:4dce90b0…`） | 投递列表按通知目标类型筛选（#289，REQ-206）；无迁移/配置变化；回滚镜像 `0.1.0-beta.43` |
 | `0.1.0-beta.43` | `f82814b` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.43`（linux/amd64 + linux/arm64，index digest `sha256:986db180…`） | 告警源部分受阻覆盖率可见（#284，UI-13）+ 脱敏精确键与 server-only 标记（#285，SEC-13/14/24）；无迁移/配置变化；回滚镜像 `0.1.0-beta.42` |
 | `0.1.0-beta.42` | `e7d2b53` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.42`（linux/amd64 + linux/arm64，index digest `sha256:9a94158e…`） | 事件详情按标题/消息一键静默相似告警（#281）；无迁移/配置变化；回滚镜像 `0.1.0-beta.41` |
 | `0.1.0-beta.41` | `3831a06` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.41`（linux/amd64 + linux/arm64，index digest `sha256:750b38f3…`） | 测试发送选择真实历史事件（#278）+ 服务端构建切换 Nitro v2 stable（#276）；无迁移/配置变化；Docker smoke 通过；回滚镜像 `0.1.0-beta.40` |
