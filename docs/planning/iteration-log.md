@@ -2,6 +2,97 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 51 轮）
+
+- 时间：2026-10-21 08:54 – 09:45 CST。
+- 基线：本轮开始时 `origin/main` @ `15e2e16`（第 50 轮 beta.36 发布后）。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，且无 open PR）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`review_now`**，第三名额给
+  `ui-review`（真实浏览器）；`quality` 车道同时用于 FIX-12 的复现审计（4 条车道，最大并发 3）。
+- 车道轮转位置：`requirements` / `ui-triage` / `quality` / `ui-review` 已完成；下一轮非必跑
+  车道为 **`architecture`**（自第 38–39 轮后未跑）。
+- `ui-triage`：**`review_now`** —— 距第 47 轮评审 5h09m（未满 48h），但自 03:47 起已有
+  3 个非测试 UI 合并（#251 `8ba0f75`、#254 `c9df684`、#257 `d218cbd`），触发第 49/50 轮
+  triage 自述的「≥3 UI 合并」阈值；且 backlog 仍有 14 条 candidate 级 UI 发现。
+- `last_ui_review_at`：2026-10-21 09:34 CST（第 51 轮，含三轮浏览器复验）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
+  `pensive-dubinsky-924ece`。
+
+### 本轮交付
+
+- PR #260 `test(console): cover token rotation at the webhook boundary`（rebase 合并
+  `2cab822`）：轮换 Token 后必须能通过真实 `WebhookIntakeService.acceptWebhook`，旧 Token
+  必须 `invalid_token`；`vp check` 0 errors，60/60 用例通过，CI success。
+- 本轮 PR（UI-24）`fix(console): keep destination dialog footer reachable`。
+  - 根因有两层：目标编辑表单用扣除固定标题高度的 `max-h`，无法容纳 #257 插入的排队投递
+    提示；仅改为 `flex-1` 后，弹窗外壳仍是自动高度，且 `EditDestinationForm` 的 `<section>`
+    是块级包裹，`flex-1` 无法收缩。
+  - 修复：编辑弹窗使用确定高度 `h-[min(760px,calc(100dvh-2rem))]`；dialog 模式下包裹
+    `<section>` 改为 `flex min-h-0 flex-1 flex-col`；表单 `min-h-0 flex-1`；提示容器
+    `shrink-0`；新增 2 条结构回归测试。
+  - 浏览器实测（隔离实例 `localhost:6200` + 临时 SQLite，中文界面）：排队 3 条与 0 条、
+    1280x900 与 390x844、新建弹窗、长表单内部滚动共 7 个组合全部 PASS；页脚按钮底部
+    814/830（桌面）与 786/802（窄屏），`elementFromPoint` 命中；滚动区
+    `clientHeight/scrollHeight = 573/979`（桌面）、`462/1496`（窄屏）。
+  - 新增 PRD `docs/prd/destination-dialog-footer-visibility.md`。
+- 验证：`vp fmt --write`、`vp check` 0 errors（12 条既有 warning）、`vp run -r test`
+  141 files / 761 tests、`vp run -r build` 通过。
+
+### 专家发现
+
+- `quality`（FIX-12 复核）：**FIX-9 不是产品缺陷**。逐字比对两轮复现会话的原始命令，
+  Token 前缀被手抄成 `toksin_src_`（第 50 轮）与 `totsin_src_`（第 49 轮），正确为
+  `tocsin_src_`；DB `token_hash` 始终等于 `sha256(正确 Token)`，两轮用于对比的
+  `printf` 输入都是正确拼写，因此从未哈希真正发送的字符串。轮换写入（`source.service.ts:66-74`）、
+  仓储绑定（`source.repository.ts:97`）、哈希函数（`intake.service.ts:354-356`）、
+  鉴权（`:363-379`）全部正确。已改为 FIX-12 并结案，补跨边界回归测试。
+  - 新增 **Q-48（27）**：`SqliteSourceRepository.update` 整行读-改-写
+    （`source.repository.ts:88-105`），并发时可能把 `token_hash` 回写成旧值。
+  - 新增 **Q-49（22）**：`invalid_token` 日志无可诊断指纹（`intake.service.ts:74-77,342-352`），
+    一字符拼写错误消耗了两轮专家时间。
+- `requirements`：复核 REQ-181/182/186/194/195/199/200 七项全部仍有效（行号漂移已更新；
+  REQ-181 描述收窄为只剩 Events/Deliveries 级联数）。新增 **REQ-201（27）** 顶栏提示
+  scheduled 静默即将生效、**REQ-202（26）** 事件详情「接入快照 vs 当前规则」对照。
+- `ui-review`：8 条发现，按影响排序 ——
+  1. **UI-24（28，已修）** 有排队投递时目标编辑对话框页脚被裁出弹窗，保存/预览不可点。
+  2. **UI-22（24）** 静默编辑面板与分页条重叠，**新发现路由页同样中招**
+     （`routes-section.tsx:127-154`）；桌面重叠约 27px。
+  3. **UI-23（24）** 390px 静默规则操作列在 x≈930，横滑后规则名滑出屏幕。
+  4. **UI-21（22）** 对话框关闭按钮读屏仍为英文 `Close`（`dialog.tsx:63,97`、`sheet.tsx:68`）。
+  5. **UI-13（26）** 部分阻断覆盖率仍只在 hover 标题里可见，无 `aria-label`。
+  6. 投递抑制证据显示原始 UUID 而非告警源/目标名称与规则名（`delivery-suppression-checks.tsx:50-55`）。
+  7. 原因快照为英文内部文本（既有 i18n 债务，不建议本切片处理）。
+  8. `zh-Hans.json:740` 的 `Fingerprint` 与列表「告警指纹」不一致。
+  - #257 复核：路由/目标/停用确认三处文案层级一致，0 条与 loading/失败静默；#251 的
+    390px 启停/删除确认框可用、无回归；#254 徽标无横向溢出。
+  - 冒烟：Deliveries 1280px「最近错误/更新时间」列超视口、Events「接收时间」被右侧操作列
+    遮挡，疑似既有 sticky 列问题，留待下一轮 UI 评审确认。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项；UI-24 为纯前端布局修复，不触碰 schema/投递/auth 语义。
+
+### 发布评估与镜像
+
+- 待补。
+
+### 文档同步
+
+- `obsidian-vault` skill 仍不可用；按 AGENTS.md 从 Obsidian 配置发现 vault 后手工同步
+  （见本轮末尾）。
+
+### 下一轮优先项
+
+1. **REQ-186（28）** 设置页从文件导入 TOML/JSON；**REQ-199（28）** 事件详情投递表按操作
+   优先级排序；**REQ-181（27）** 删除配置前事件/投递级联数；**REQ-182（27）** 目标测试
+   发送前确认。
+2. **Q-48（27）** 告警源更新整行读-改-写并发回滚 `token_hash`（建议小切口修复 + 交错测试）。
+3. **UI-22（24）** 静默/路由编辑面板与分页条重叠（两页同改）；**UI-23（24）** 390px
+   行操作不可见；**UI-21（22）** 对话框 `Close` 本地化。
+4. **REQ-201（27）** 顶栏 scheduled 静默即将生效；**REQ-202（26）** 事件快照 vs 当前规则。
+5. 车道轮转：下一轮 `architecture`（ARCH-1/2/5/6/7/8/27/28/29/30）。
+
 ## 2026-10-21（第 50 轮）
 
 - 时间：2026-10-21 07:48 – 08:46 CST。

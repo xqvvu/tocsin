@@ -118,6 +118,9 @@ describe("destination edit dialog queued delivery impact", () => {
       ),
     ).toBeTruthy();
     expect(screen.getByText("2 queued deliveries")).toBeTruthy();
+    // The edit form is taller than the viewport; without a definite dialog
+    // height the flex-1 form cannot shrink and its footer is clipped.
+    expect(screen.getByRole("dialog").className).toContain("h-[min(760px,calc(100dvh-2rem))]");
   });
 
   it("stays silent when nothing is queued", async () => {

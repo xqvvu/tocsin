@@ -1052,9 +1052,12 @@ export function DestinationForm({
     <form
       className={cn(
         "flex flex-col",
-        isDialogLayout
-          ? "min-h-0 max-h-[calc(min(760px,calc(100dvh-2rem))-6rem)] overflow-hidden"
-          : "gap-3",
+        // The dialog shell is a max-height flex column. The form must consume the
+        // remaining space instead of subtracting a fixed header height: an
+        // advisory notice (for example the queued-delivery impact line) can
+        // appear between the header and the form, and a fixed max-height would
+        // push the footer outside the dialog's overflow-hidden box.
+        isDialogLayout ? "min-h-0 flex-1 overflow-hidden" : "gap-3",
       )}
       onSubmit={(event) => {
         event.preventDefault();

@@ -17,6 +17,25 @@ import type {
 } from "#/features/destinations/ui/destination-ui-types";
 import { useTranslations } from "#/i18n/use-i18n";
 
+/**
+ * In a dialog this wrapper is the popup's flex child. Leaving it as a block box
+ * makes the inner form grow to content height, so the dialog clips the footer
+ * instead of scrolling the body. Keep the dialog-mode wrapper a flex consumer.
+ */
+export function editDestinationFormSectionClass({
+  framed,
+  layout,
+}: {
+  framed: boolean;
+  layout: "panel" | "dialog";
+}): string | undefined {
+  if (framed) {
+    return "border-border bg-muted/30 mt-3 border p-3";
+  }
+
+  return layout === "dialog" ? "flex min-h-0 flex-1 flex-col" : undefined;
+}
+
 export function EditDestinationForm({
   destinationCatalog,
   feishuApps,
@@ -47,7 +66,7 @@ export function EditDestinationForm({
   const t = useTranslations();
 
   return (
-    <section className={framed ? "border-border bg-muted/30 mt-3 border p-3" : undefined}>
+    <section className={editDestinationFormSectionClass({ framed, layout })}>
       {showHeader ? (
         <div className="mb-3">
           <h3 className="flex items-center gap-2 text-xs font-semibold">

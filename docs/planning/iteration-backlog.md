@@ -324,7 +324,7 @@
 | DOC-60 | frontend-architecture 服务目录与 procedure 写法过期 | docs-drift lane（第 49 轮） | 24 | candidate | — | `frontend-architecture.md:242-245` 称 `server/configuration` 含 source/destination/route service，实际各自独立目录；`:314-315` 称 private procedure 用裸 `requireDashboard()`，10 个 router 已用 `withDashboardService`（`sources/router.ts:5`） |
 | DOC-61 | 七个已交付 mini-PRD 缺状态头 | docs-drift lane（第 49 轮） | 21 | candidate | — | `delivery-detail-edit-destination.md:8`、`evidence-bundle-download.md:9`、`source-destination-delete-cascade-impact.md:5-12`、`queued-deliveries-before-disable.md:8`、`event-delivery-health-badges.md:6`、`suppression-scope-disclosure.md:7-12`、`suppression-toggle-confirmation.md:9` 仍写实现前状态 |
 | DOC-62 | sqlite-store 文件名与 RC checklist provider gate 不一致 | docs-drift lane（第 49 轮） | 20 | candidate | — | `sqlite-store.md:369,483` 写 `better-auth-schema.ts`，实际 `better-auth.schema.ts`；`mvp-rc-checklist.md:19-21,120-121,173-182` 把 provider guide 列为剩余 gate，但 E 节无对应条目 |
-| FIX-9 | 轮换 Token 后新 Token 立即调用 Webhook 返回 invalid_token | 第 49 轮浏览器验证观察 | — | candidate | — | **第 50 轮再次复现并加强证据**：隔离实例通过 oRPC `sources.rotateToken` 拿到新 Token，DB `token_hash` 与 `sha256(新Token)` 完全一致；重启 dev server 后 Webhook 仍 401；改用 `sqlite3` 直接把 `token_hash` 改为 `sha256("test-token")` 后同一请求立即 202。说明读路径在直接改写后可工作；轮换写入的值为何未被接收仍需定位（可能是运行中进程的读快照/缓存，或接口响应的 Token 与实际持久化值不一致），需加日志/测试确认；**高优**，影响 Token 轮换后立即恢复接入这一核心运维流程 |
+| FIX-12 | 轮换 Token 后新 Token 立即调用 Webhook 返回 invalid_token | 第 49 轮浏览器验证观察 | — | shipped | #260 | **第 51 轮定位：非产品缺陷**。逐字比对两轮复现会话的原始命令，Token 前缀被手抄成 `toksin_src_` / `totsin_src_`（正确为 `tocsin_src_`）；DB `token_hash` 始终等于 `sha256(正确 Token)`，写入、持久化、读取、鉴权链路均正确。已补跨边界回归测试：轮换后的新 Token 必须通过 `WebhookIntakeService.acceptWebhook`，旧 Token 必须返回 `invalid_token`（`configuration.integration.test.ts`）。残余并发风险见 Q-48 |
 | NEW-D | 顶栏全局 ID 快速查找 | requirements lane（第 27 轮） | 27 | candidate | — | 顶栏只有栏目名与静默指示器（`dashboard-header.tsx:30`）；粘贴事件/投递 ID 直达详情，复用 `operations.queries.ts:56`；纯 console shell + feature API |
 | NEW-E | 通知目标只读配置详情 | requirements lane（第 27 轮） | 27 | candidate | — | DTO 已有 `urgentReceivers/headerNames/replyTo/appRef`（`destination.ts:26`），列表只显示数量（`destination-operational-config-cell.tsx:61`）；行内只读弹层，不碰 secret |
 | NEW-F | 飞书应用删除/换密前影响面预检 | requirements lane（第 27 轮） | 27 | candidate | — | 删除确认只显示应用名（`feishu-app-actions.tsx:89`），引用目标已在 DTO；服务端删除时才拒绝（`feishu-app.service.ts:84`）；纯 feature UI |
@@ -408,6 +408,8 @@
 | Q-45 | OncallExecution 两个 catch 分支无测试 | quality lane（第 32 轮） | 21 | candidate | — | `oncall-execution.ts:106-122` 的 DomainValidationError/未知错误分支无覆盖；现有 worker 测试未 claim 到会抛错的 ping；AUTO_FIX：两条执行/worker 用例。第 38 轮复核仍有效（原描述准确） |
 | Q-46 | #171 防抖尾随空格与卸载取消无测试 | quality lane（第 32 轮） | 21 | candidate | — | `operation-filters.tsx:553-561,594-604` 的用途是保留尾随空格并取消未提交草稿，但测试无尾随空格、无 `unmount()`、无 fake timers（`operation-filters.test.tsx:130-178`）；AUTO_FIX。第 38 轮复核：实现主体已漂移到 `operation-filters.tsx:569-613`，测试仍无尾随空格提交、无 unmount、无 fake timers（`operation-filters.test.tsx:121-178`） |
 | Q-47 | Oncall 失败路径 `markFailed` 未兜底，会中止整批 worker | quality lane（第 38 轮） | 24 | candidate | — | `oncall-execution.ts:106-122` 的 catch 直接 `await markFailed`，`:214` 无保护；对照 fired 路径的 `markDispatchedButUnrecorded:168-207` 明确承诺单行失败不中止批次；`oncall-worker.service.ts:77-95` 逐个 await 且外层重抛。需注入式失败测试 + 与 Q-45 同批处理 |
+| Q-48 | `SqliteSourceRepository.update` 整行读-改-写，并发时可能回滚 `token_hash` | quality lane（第 51 轮） | 27 | candidate | — | `source.repository.ts:88-105` 先 `get(id)` 快照，再把 `name/provider/token_hash/enabled/config_json` 全部按快照写回；`setEnabled`（`:108-110`）与 `updateSource`（`source.service.ts:52-64`）都走此路径。A 读取后暂停、B 轮换 Token、A 恢复写回，会把新的 `token_hash` 覆盖成旧值（新 Token 立即失效、旧 Token 复活）。建议只在 `input` 提供字段时写入对应列并加 `updated_at`，配置合并已在 service 完成；需两 store 交错测试 |
+| Q-49 | `invalid_token` 日志无任何可诊断指纹 | quality lane（第 51 轮） | 22 | candidate | — | `intake.service.ts:74-77,342-352` 只记录 sourceId/reason/provider，无法区分「Token 拼写错误」「旧 Token」「DB 不一致」；FIX-12 的一字符拼写错误因此消耗两轮专家时间。建议在 `verifySourceToken` 返回枚举后记录 presented/stored 哈希的不可逆短前缀与长度（绝不记录明文），需安全评估后实施 |
 | REQ-150 | 投递详情内修复目标配置并立即重试 | requirements lane（第 36 轮） | 27 | shipped | #211 | 失败详情工具栏只有重试/返回（`delivery-detail-page.tsx:56-66`），编辑入口只在 Destinations 页（`destinations-page.tsx:221-252`、`destination-actions.tsx:85-95`）；复用 `DestinationEditDialog` 与 `destinationsQueryOptions`，保存后失效目标与当前详情查询；纯前端、无 endpoint/迁移 |
 | REQ-151 | 值班交接摘要 | requirements lane（第 36 轮） | 26 | candidate | — | 交班需在 Events/Deliveries/Suppressions 三页手工拼装（`active-suppression-indicator.tsx:38-56`、`deliveries-page-toolbar.tsx:15-43`、`events-page-toolbar.tsx:15-43`）；复用 suppressions + operations 查询做只读 Sheet，计数链接到筛选视图并可复制；纯前端 |
 | REQ-152 | 首次部署引导检查清单 | requirements lane（第 36 轮） | 26 | candidate | — | Setup 后落到 Events 空态（`-setup-form-impl.tsx:61-64`、`index.tsx:3-8`、`events-empty-state.tsx:23-40`）；四步清单由现有 sources/destinations/routes/events 查询派生，localStorage 关闭；吸收 REQ-115 |
@@ -435,8 +437,9 @@
 | REQ-174 | 失败投递重试前的可执行性预检 | requirements lane（第 42 轮） | 25 | candidate | — | `retryNow` 仅校验 failed 并把投递置 pending（`delivery.repository.ts:417-440`），但 `claimNext` 要求目标/路由启用（`:229-230`）；目标或路由停用时重试仍提示「已重新入队」但永不投递（`delivery-retry-button.tsx:27-37`）；建议 EXPERT_PANEL 判断是否并入 REQ-60/REQ-89 |
 | UI-20 | 事件详情投递健康徽标忽略 pending/suppressed | ui-review（第 40 轮，浏览器实测） | 26 | shipped | #230 | 第 42 轮交付：按操作优先级展示全部非零状态（失败→运行中→待处理→成功→已抑制），无投递显示「无投递」；新增 4 条组件测试；PRD `docs/prd/event-delivery-health-badges.md` |
 | UI-21 | 共享 Dialog 关闭按钮英文 `Close` 且错误态透出 `Failed to fetch` | ui-review（第 40 轮，浏览器实测） | 22 | candidate | — | `components/ui/dialog.tsx:63` 硬编码 sr-only `Close`；`destination-edit-dialog-loader.tsx:132-134` 直接渲染 `error.message`；读屏用户听到英文、错误不可本地化；纯前端文案；第 44、47 轮浏览器再次确认中文界面 DOM 仍为 `Close`（`Failed to fetch` 分支第 47 轮未复现，仅代码核实） |
-| UI-22 | 静默规则编辑面板与分页条重叠 | ui-review（第 47 轮，浏览器实测） | 24 | candidate | — | 点击「编辑规则」后表格行隐藏，但分页条仍绘制在编辑面板顶部（分页 y=148、表单标题 y=154），页面看起来错位（`suppressions-section.tsx:145-173`：`OperationsTable` 无条件渲染，编辑表单追加在挤压的 flex 列下方）；建议 `editingSuppression` 时隐藏表格与分页；截图 `/tmp/tocsin-r47-edit-overlap.png` |
-| UI-23 | 390px 下静默规则状态与行操作在屏幕外 | ui-review（第 47 轮，浏览器实测） | 24 | candidate | — | 表格最小宽 980px 置于 348px 滚动容器，390px 下状态/窗口/编辑·启停·删除均在 x≈902-982，无可见提示（`suppressions-section.tsx:401-417` 12% 操作列 + `operations-table` 最小宽）；移动端值班需横向滚动才能启停规则；建议移动端堆叠或固定操作列；截图 `/tmp/tocsin-r47-suppressions-mobile.png` |
+| UI-22 | 静默规则编辑面板与分页条重叠 | ui-review（第 47 轮，浏览器实测） | 24 | candidate | — | 点击「编辑规则」后表格行隐藏，但分页条仍绘制在编辑面板顶部（分页 y=148、表单标题 y=154），页面看起来错位（`suppressions-section.tsx:145-173`：`OperationsTable` 无条件渲染，编辑表单追加在挤压的 flex 列下方）；建议 `editingSuppression` 时隐藏表格与分页；截图 `/tmp/tocsin-r47-edit-overlap.png`。**第 51 轮复测**：桌面分页条 y=131 h=51、表单标题 y=154，重叠约 27px；`routes-section.tsx:127-154` 内联编辑同样中招（「1 条路由 / 第 1/1 页」压在「编辑路由」标题上），应两页一起改；截图 `/tmp/tocsin-r51-ui22-edit-overlap.png`、`/tmp/tocsin-r51-route-edit-queued.png` |
+| UI-23 | 390px 下静默规则状态与行操作在屏幕外 | ui-review（第 47 轮，浏览器实测） | 24 | candidate | — | 表格最小宽 980px 置于 348px 滚动容器，390px 下状态/窗口/编辑·启停·删除均在 x≈902-982，无可见提示（`suppressions-section.tsx:401-417` 12% 操作列 + `operations-table` 最小宽）；移动端值班需横向滚动才能启停规则；建议移动端堆叠或固定操作列；截图 `/tmp/tocsin-r47-suppressions-mobile.png`。**第 51 轮复测**：`scrollWidth=980 / clientWidth=348`，操作按钮 x≈930；横滑到操作列后规则名滑出屏幕，无法确认操作对象；截图 `/tmp/tocsin-r51-suppressions-mobile.png`、`/tmp/tocsin-r51-suppressions-mobile-scrolled.png` |
+| UI-24 | 有排队投递时目标编辑对话框页脚被裁出弹窗 | ui-review（第 51 轮，浏览器实测） | 28 | shipped | 本轮 PR | #257 的排队投递提示插入标题与表单之间，而目标表单仍用扣除固定标题高度的 `max-h`，导致「取消/预览/保存」被 `overflow-hidden` 裁掉；1280x900 与 390x844 均不可点击（`destination-form.tsx:1053-1059`、`configuration-dialog-content.tsx:13`）。修复：表单改为 `min-h-0 flex-1`，提示容器 `shrink-0`，新增结构回归测试；PRD `docs/prd/destination-dialog-footer-visibility.md`；截图 `/tmp/tocsin-r51-destination-save-clipped.png` |
 | REQ-175 | 事件/投递证据包下载（脱敏 JSON） | requirements lane（第 44 轮） | 29 | shipped | #240 | 第 45 轮交付：`features/operations/model/evidence-bundle.ts` 生成带 `schemaVersion/kind/subjectId/exportedAt` 的文档，导出前二次 `redactJsonText`；两个详情页工具栏「下载证据包」；浏览器实测文件名、脱敏与内容通过；PRD `docs/prd/evidence-bundle-download.md` |
 | REQ-176 | 事件详情投递表显示抑制原因与规则链接 | requirements lane（第 44 轮） | 29 | candidate | — | 投递表只有状态徽标（`event-detail-deliveries-table.tsx:56-83`），但 `DeliveryJob` 已带 suppressionId/reason 快照（`delivery.ts:24-35`），文档明确要求（`alert-suppression.md:117`）；只读投影 |
 | REQ-177 | 原始载荷保留窗口结束时间 | requirements lane（第 44 轮） | 28 | candidate | — | Raw/Payload 标签只区分已清理/未清理（`event-raw-tab.tsx:6-29`、`delivery-payload-tab.tsx:17-48`）；用 `rawPayloadRetentionDays` + receivedAt 计算窗口结束，注明清理是惰性触发（`intake.service.ts:428-430`）；纯前端 |
@@ -461,6 +464,8 @@
 | REQ-196 | 配置编辑对已排队投递的实际影响披露 | requirements lane（第 49 轮） | 28 | shipped | #257 | 第 50 轮交付：`QueuedDeliveriesNotice` 增加 `description`/`hideWhenEmpty`，目标编辑对话框与路由编辑面板在排队数 >0 时显示影响说明；0/加载/失败不渲染、不阻断保存；PRD `docs/prd/queued-delivery-config-impact.md`；中英文案各 2 条；浏览器实测两处均显示 1 条排队投递 |
 | REQ-199 | 事件详情投递表按操作优先级排序 | requirements lane（第 50 轮） | 28 | candidate | — | 摘要已按失败→运行中→待处理→成功→已抑制展示健康徽标（`event-detail-summary.tsx:18-26,78`），投递表仍按 `created_at` 升序（`history.repository.ts:172`、`event-detail-deliveries-table.tsx:49-83`）；仅在客户端稳定排序，同状态保持输入顺序；不改服务端/DTO/迁移；纯前端只读 |
 | REQ-200 | 投递详情「元数据」标注为当前目标配置 | requirements lane（第 50 轮） | 27 | candidate | — | 元数据由读取详情时的当前目标运行时配置生成（`delivery.repository.ts:460`、`destination.helpers.ts:155-235`），UI 只写「通知目标元数据」（`delivery-detail-view.tsx:57-61`、`zh-Hans.json:160`）；补一行「依据当前配置，历史投递可能不同」并保留 JSON/复制；纯前端只读 |
+| REQ-201 | 顶栏提示「静默即将生效」的 scheduled 窗口 | requirements lane（第 51 轮） | 27 | candidate | — | 顶栏指示器只统计 `active`（`suppression-summary.ts:66-80`、`active-suppression-indicator.tsx:35-37`），10 分钟后开始的维护窗口全站无信号；扩展 summary 增加 `scheduled` 且 `startsAt ∈ (now, now+30m]` 的计数与最近一条，active 计数语义不变；纯前端派生 + 中英文案；与 REQ-110（即将到期）互补 |
+| REQ-202 | 事件详情并列「接入快照 vs 当前规则」对照 | requirements lane（第 51 轮） | 26 | candidate | — | 事件匹配页签只展示接入快照，`routeMatches === null` 时才按当前规则重算（`history.repository.ts:149-163`、`event-detail-route-matches-table.tsx:40-49`）；新增只读重算区块，分类仍命中/不再命中/新增命中/路由已删除，脱敏事件不重算；复用 `evaluateRouteMatch` 与现有徽标；纯前端只读，不改变历史投递 |
 | REQ-197 | 静默规则创建/编辑披露对已排队投递的再判定 | requirements lane（第 49 轮） | 27 | candidate | — | 静默在入队与认领时各判定一次（`docs/prd/alert-suppression.md:106`），`claimNext` 会加载 active 规则抑制 pending（`delivery.repository.ts:248-291`）；创建/编辑表单只展示加急影响（`suppression-forms.tsx:427`、`urgent-impact-preview.tsx:24-70`）；有 sourceId/destinationId 时用既有 scope 查询，否则显示全局 pending；仅提示不阻断；纯前端 |
 | REQ-198 | 投递列表直接展示静默原因与规则 | requirements lane（第 49 轮） | 26 | candidate | — | `DeliveryListItem` 无抑制字段（`packages/core/src/operations.ts:94-118`、`packages/api/src/schemas/operations.ts:78-97`），仓储列表投影未选 `suppression_id/suppress_reason`（`history.repository.ts:238-254`）；筛选 suppressed 后需逐条打开详情；列表 DTO 增两字段 + 状态单元格原因摘要与规则链接；无迁移 |
 
@@ -498,15 +503,17 @@
 
 ## 下一轮优先项
 
-0. **REQ-186（28）** 设置页从文件导入 TOML/JSON（第 50 轮 requirements 复核仍成立，纯前端
+0. **REQ-186（28）** 设置页从文件导入 TOML/JSON（第 51 轮 requirements 复核仍成立，纯前端
    只读草稿填充）；**REQ-199（28）** 事件详情投递表按操作优先级排序；**REQ-181（27）**
    删除配置前的事件/投递级联数量；**REQ-182（27）** 目标测试发送前确认；
    **REQ-194/195（27）**；**REQ-200（27）** 投递元数据标注当前配置。
-   **FIX-9（高优）** Token 轮换后 Webhook 401 应优先用测试/日志定位。
+   **FIX-12 已结案**（复现命令 Token 拼写错误，非产品缺陷；#260 已补跨边界回归测试）。
+   **Q-48（27）** 告警源更新整行读-改-写会在并发时回滚 `token_hash`，建议下一轮小切口修复。
 1. **SEC-22（27）** endpoint userinfo 密码投影；**SEC-24（25）** 补脱敏 key 形态测试；
    **SEC-13** 精确键 + `sessionId/jwt/signature`；**SEC-25（25）** test/preview 载荷投影。
-2. **UI-22（24）** 静默编辑面板与分页条重叠（约 30 分钟）；**UI-23（24）** 390px
-   行操作不可见；**UI-21（22）** 对话框 `Close` 本地化。UI-14 已由 #251 交付。
+2. **UI-22（24，现含路由页）** 静默/路由内联编辑面板与分页条重叠（约 30 分钟，两页同改）；
+   **UI-23（24）** 390px 行操作不可见；**UI-21（22）** 对话框 `Close` 本地化。
+   UI-24（对话框页脚裁切，28）已由第 51 轮交付；UI-14 已由 #251 交付。
 3. **REQ-147（27）** 通知目标批量连通性自检；**REQ-125/130/131/139/140（27）**
    共享密钥显式清除、补投包含已静默目标、失败投递保留渲染载荷、目标草稿测试发送、
    事件列表批量静默；**REQ-141（27）**；**REQ-151/152（26）**。
@@ -530,10 +537,11 @@
 10. **docs-drift 批次**：第一批 DOC-23/24/37/43/46/47/50/51（README、抑制 PRD 五状态、
     post-MVP 过期范围；DOC-49 已交付 #226）；第二批 DOC-36/48/53/54/55/56/57/58（状态头、
     ADR 版本、无 importer 的 accessor）。建议拆两个 `docs:` PR；DOC-52 可关闭。
-11. **车道轮转（第 50 轮）**：`requirements` + `ui-triage` 必跑；本轮非必跑车道为
-    **`release-infra`**（已完成：REL-21/25/26/27/28、REL-19 仍成立，`e2e.yml` 方案已成文）。
-    下一轮非必跑车道为 **`quality`**（自第 38 轮后未跑）。`last_ui_review_at` =
-    2026-10-21 03:47，下次由 `ui-triage` 按强信号（≥48h / ≥3 UI 合并 / ≥2 未解决 UI 发现）决定。
+11. **车道轮转（第 51 轮）**：`requirements` + `ui-triage` 必跑；`ui-triage` 判定
+    **`review_now`**（自 03:47 起第 3 个 UI 合并触发自述阈值），第三名额给 `ui-review`；
+    `quality` 未跑但 FIX-12 的复现审计实际覆盖了质量车道。下一轮非必跑车道为
+    **`architecture`**（自第 38–39 轮后未跑；ARCH-1/2/5/6/7/8/27/28/29/30 均待续）。
+    `last_ui_review_at` = 2026-10-21 09:21 CST（第 51 轮真实浏览器评审）。
 11. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 12. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
     事件摘要计入已抑制。
