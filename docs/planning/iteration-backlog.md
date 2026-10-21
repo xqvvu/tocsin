@@ -409,8 +409,8 @@
 | Q-45 | OncallExecution 两个 catch 分支无测试 | quality lane（第 32 轮） | 21 | candidate | — | `oncall-execution.ts:106-122` 的 DomainValidationError/未知错误分支无覆盖；现有 worker 测试未 claim 到会抛错的 ping；AUTO_FIX：两条执行/worker 用例。第 38 轮复核仍有效（原描述准确） |
 | Q-46 | #171 防抖尾随空格与卸载取消无测试 | quality lane（第 32 轮） | 21 | candidate | — | `operation-filters.tsx:553-561,594-604` 的用途是保留尾随空格并取消未提交草稿，但测试无尾随空格、无 `unmount()`、无 fake timers（`operation-filters.test.tsx:130-178`）；AUTO_FIX。第 38 轮复核：实现主体已漂移到 `operation-filters.tsx:569-613`，测试仍无尾随空格提交、无 unmount、无 fake timers（`operation-filters.test.tsx:121-178`） |
 | Q-47 | Oncall 失败路径 `markFailed` 未兜底，会中止整批 worker | quality lane（第 38 轮） | 24 | candidate | — | `oncall-execution.ts:106-122` 的 catch 直接 `await markFailed`，`:214` 无保护；对照 fired 路径的 `markDispatchedButUnrecorded:168-207` 明确承诺单行失败不中止批次；`oncall-worker.service.ts:77-95` 逐个 await 且外层重抛。需注入式失败测试 + 与 Q-45 同批处理 |
-| Q-48 | `SqliteSourceRepository.update` 整行读-改-写，并发时可能回滚 `token_hash` | quality lane（第 51 轮） | 27 | candidate | — | `source.repository.ts:88-105` 先 `get(id)` 快照，再把 `name/provider/token_hash/enabled/config_json` 全部按快照写回；`setEnabled`（`:108-110`）与 `updateSource`（`source.service.ts:52-64`）都走此路径。A 读取后暂停、B 轮换 Token、A 恢复写回，会把新的 `token_hash` 覆盖成旧值（新 Token 立即失效、旧 Token 复活）。建议只在 `input` 提供字段时写入对应列并加 `updated_at`，配置合并已在 service 完成；需两 store 交错测试 |
-| Q-49 | `invalid_token` 日志无任何可诊断指纹 | quality lane（第 51 轮） | 22 | candidate | — | `intake.service.ts:74-77,342-352` 只记录 sourceId/reason/provider，无法区分「Token 拼写错误」「旧 Token」「DB 不一致」；FIX-12 的一字符拼写错误因此消耗两轮专家时间。建议在 `verifySourceToken` 返回枚举后记录 presented/stored 哈希的不可逆短前缀与长度（绝不记录明文），需安全评估后实施 |
+| Q-48 | `SqliteSourceRepository.update` 整行读-改-写，并发时可能回滚 `token_hash` | quality lane（第 51 轮） | 27 | shipped | #268 | 第 53 轮交付：`update` 只写调用方显式提供的列（`name/provider/token_hash/enabled/config_json` + `updated_at`），不再用旧快照覆盖未触碰列；404 语义与 DTO 不变；新增交错回归测试，已验证旧实现上失败（`'old-hash'` vs `'rotated-hash'`）。原证据：`source.repository.ts:88-105` 先 `get(id)` 快照，再把 `name/provider/token_hash/enabled/config_json` `source.repository.ts:88-105` 先 `get(id)` 快照，再把 `name/provider/token_hash/enabled/config_json` 全部按快照写回；`setEnabled`（`:108-110`）与 `updateSource`（`source.service.ts:52-64`）都走此路径。A 读取后暂停、B 轮换 Token、A 恢复写回，会把新的 `token_hash` 覆盖成旧值（新 Token 立即失效、旧 Token 复活）。建议只在 `input` 提供字段时写入对应列并加 `updated_at`，配置合并已在 service 完成；需两 store 交错测试 |
+| Q-49 | `invalid_token` 日志无任何可诊断指纹 | quality lane（第 51 轮） | 22 | candidate | — | `intake.service.ts:74-77,342-352` 只记录 sourceId/reason/provider，无法区分「Token 拼写错误」「旧 Token」「DB 不一致」；FIX-12 的一字符拼写错误因此消耗两轮专家时间。建议在 `verifySourceToken` 返回枚举后记录 presented/stored 哈希的不可逆短前缀与长度（绝不记录明文），需安全评估后实施；第 53 轮已核实：只记录请求方 token 的哈希前缀与「是否携带 token / provider secret header」布尔值，绝不记录 stored hash 或任何 header 值 |
 | REQ-150 | 投递详情内修复目标配置并立即重试 | requirements lane（第 36 轮） | 27 | shipped | #211 | 失败详情工具栏只有重试/返回（`delivery-detail-page.tsx:56-66`），编辑入口只在 Destinations 页（`destinations-page.tsx:221-252`、`destination-actions.tsx:85-95`）；复用 `DestinationEditDialog` 与 `destinationsQueryOptions`，保存后失效目标与当前详情查询；纯前端、无 endpoint/迁移 |
 | REQ-151 | 值班交接摘要 | requirements lane（第 36 轮） | 26 | candidate | — | 交班需在 Events/Deliveries/Suppressions 三页手工拼装（`active-suppression-indicator.tsx:38-56`、`deliveries-page-toolbar.tsx:15-43`、`events-page-toolbar.tsx:15-43`）；复用 suppressions + operations 查询做只读 Sheet，计数链接到筛选视图并可复制；纯前端 |
 | REQ-152 | 首次部署引导检查清单 | requirements lane（第 36 轮） | 26 | candidate | — | Setup 后落到 Events 空态（`-setup-form-impl.tsx:61-64`、`index.tsx:3-8`、`events-empty-state.tsx:23-40`）；四步清单由现有 sources/destinations/routes/events 查询派生，localStorage 关闭；吸收 REQ-115 |
@@ -436,6 +436,10 @@
 | REQ-172 | 告警源/通知目标列表显示生效中的静默引用 | requirements lane（第 40 轮） | 27 | candidate | — | 两页都不加载静默规则（`sources-page.tsx:25-27`、`destinations-page.tsx:47-60`）；active 直接引用显示「静默规则引用中」，matcher 维度为空显示「存在未限定规则」；复用 `suppressionsQueryOptions()`，纯前端 |
 | REQ-173 | 去重缺口中的首发事件可直达 | requirements lane（第 42 轮） | 29 | shipped | #233 | 第 43 轮交付：`duplicate_within_window` 且 `firstEventId` 非空时渲染 `/events/$eventId` 类型化链接；文案改 `<event>` 富文本标签；新增 4 条组件测试；PRD `docs/prd/delivery-gap-first-event-link.md` |
 | REQ-174 | 失败投递重试前的可执行性预检 | requirements lane（第 42 轮） | 25 | candidate | — | `retryNow` 仅校验 failed 并把投递置 pending（`delivery.repository.ts:417-440`），但 `claimNext` 要求目标/路由启用（`:229-230`）；目标或路由停用时重试仍提示「已重新入队」但永不投递（`delivery-retry-button.tsx:27-37`）；建议 EXPERT_PANEL 判断是否并入 REQ-60/REQ-89 |
+| REQ-203 | 通知目标测试发送支持选择真实历史事件 | requirements lane（第 53 轮） | 28 | candidate | — | 测试固定发送内置合成事件（`destination.service.ts:153-194` → `createTestNormalizedEvent`），只能验凭证、无法验真实模板字段与消息格式；复用 preview 的 `resolvePreviewSample`（`:341-374`）与 `recentEventsQueryOptions()`（`operations.queries.ts:69-80`）；command schema 增可选 `sampleEventId`，不传保持现状；不写 events/deliveries；MVP 故事 24 |
+| REQ-204 | 事件详情按标题/消息一键静默相似告警 | requirements lane（第 53 轮） | 28 | candidate | — | matcher 已支持 `titleContains`/`messageContains`（`suppression.ts:47-48,207-208`）、完整表单已支持（`suppression-forms.tsx:414-425`），但一键入口只预填 fingerprint 或标签（`suppression-from-event-dialog.tsx:24-40`、`suppression-form.ts:147-201`）；复用 `CreateSuppressionForm`，预填 `sourceIds` + 单个 contains；不改判定语义 |
+| REQ-205 | 跨实体排障搜索页（事件 + 投递分组） | requirements lane（第 53 轮） | 27 | candidate | — | `operations.list` 同一 `q` 已同时返回两类（`operations.service.ts:33-60`），但顶栏无搜索入口、两页各自搜索（`dashboard-header.tsx:13-39`）；新增 `/search?q=` 分组结果页并复用现有 procedure；建议吸收 NEW-D（顶栏 ID 直达），不要并行做两个入口；纯前端只读 |
+| Q-50 | Destination/Route 仓储同样整行读-改-写 | quality lane（第 53 轮） | 24 | candidate | — | `destination.repository.ts:77-99` 并发编辑互相覆盖 `config_json`/`secret_refs_json`；`route.repository.ts:82-105` 覆盖 `rule_json`/`destination_ids_json`；修复方式同 Q-48（只写调用方提供的列）；`SourceService` 的 config 合并仍在事务外（`source.service.ts:54-63`），需乐观并发，成本 M |
 | UI-20 | 事件详情投递健康徽标忽略 pending/suppressed | ui-review（第 40 轮，浏览器实测） | 26 | shipped | #230 | 第 42 轮交付：按操作优先级展示全部非零状态（失败→运行中→待处理→成功→已抑制），无投递显示「无投递」；新增 4 条组件测试；PRD `docs/prd/event-delivery-health-badges.md` |
 | UI-21 | 共享 Dialog 关闭按钮英文 `Close` 且错误态透出 `Failed to fetch` | ui-review（第 40 轮，浏览器实测） | 22 | candidate | — | `components/ui/dialog.tsx:63` 硬编码 sr-only `Close`；`destination-edit-dialog-loader.tsx:132-134` 直接渲染 `error.message`；读屏用户听到英文、错误不可本地化；纯前端文案；第 44、47 轮浏览器再次确认中文界面 DOM 仍为 `Close`（`Failed to fetch` 分支第 47 轮未复现，仅代码核实） |
 | UI-22 | 静默规则编辑面板与分页条重叠 | ui-review（第 47 轮，浏览器实测） | 24 | candidate | — | 点击「编辑规则」后表格行隐藏，但分页条仍绘制在编辑面板顶部（分页 y=148、表单标题 y=154），页面看起来错位（`suppressions-section.tsx:145-173`：`OperationsTable` 无条件渲染，编辑表单追加在挤压的 flex 列下方）；建议 `editingSuppression` 时隐藏表格与分页；截图 `/tmp/tocsin-r47-edit-overlap.png`。**第 51 轮复测**：桌面分页条 y=131 h=51、表单标题 y=154，重叠约 27px；`routes-section.tsx:127-154` 内联编辑同样中招（「1 条路由 / 第 1/1 页」压在「编辑路由」标题上），应两页一起改；截图 `/tmp/tocsin-r51-ui22-edit-overlap.png`、`/tmp/tocsin-r51-route-edit-queued.png` |
@@ -463,7 +467,7 @@
 | REQ-194 | Raw payload 保留天数 0 的语义与确认 | requirements lane（第 48 轮） | 27 | candidate | — | 0 合法（`packages/core/src/config.ts:48`）但表示「下一次 Webhook 后清理所有更早 raw payload/headers」（`intake.service.ts:428-430`、`intake.repository.ts:105-134`），UI 只写「0 到 3650 天」（`settings-preferences-panel.tsx:160-201`）；改为明确语义并在从非 0 改为 0 时 destructive 确认；纯前端 |
 | REQ-195 | 新建通知目标后引导真实测试发送 | requirements lane（第 48 轮） | 27 | candidate | — | 创建成功即关闭对话框，无成功面板也无测试入口（`destination-add-dialog.tsx:79-93`）；测试只在列表行图标（`destination-actions.tsx:70-80`）；新增持久成功面板 + 显式「测试发送」复用 `testDestination`；不自动发送；纯前端 |
 | REQ-196 | 配置编辑对已排队投递的实际影响披露 | requirements lane（第 49 轮） | 28 | shipped | #257 | 第 50 轮交付：`QueuedDeliveriesNotice` 增加 `description`/`hideWhenEmpty`，目标编辑对话框与路由编辑面板在排队数 >0 时显示影响说明；0/加载/失败不渲染、不阻断保存；PRD `docs/prd/queued-delivery-config-impact.md`；中英文案各 2 条；浏览器实测两处均显示 1 条排队投递 |
-| REQ-199 | 事件详情投递表按操作优先级排序 | requirements lane（第 50 轮） | 28 | candidate | — | 摘要已按失败→运行中→待处理→成功→已抑制展示健康徽标（`event-detail-summary.tsx:18-26,78`），投递表仍按 `created_at` 升序（`history.repository.ts:172`、`event-detail-deliveries-table.tsx:49-83`）；仅在客户端稳定排序，同状态保持输入顺序；不改服务端/DTO/迁移；纯前端只读 |
+| REQ-199 | 事件详情投递表按操作优先级排序 | requirements lane（第 50 轮） | 28 | shipped | #267 | 第 53 轮交付：新增 `features/events/model/delivery-priority.ts` 共享优先级常量与稳定排序；投递表按失败→运行中→待处理→成功→已抑制排序，同状态保持服务端 `created_at` 升序；摘要徽标改用同一常量；PRD `docs/prd/event-delivery-priority-sort.md`；模型 3 条 + 组件 1 条测试。摘要已按失败→运行中→待处理→成功→已抑制展示健康徽标（`event-detail-summary.tsx:18-26,78`），投递表仍按 `created_at` 升序（`history.repository.ts:172`、`event-detail-deliveries-table.tsx:49-83`）；仅在客户端稳定排序，同状态保持输入顺序；不改服务端/DTO/迁移；纯前端只读 |
 | REQ-200 | 投递详情「元数据」标注为当前目标配置 | requirements lane（第 50 轮） | 27 | candidate | — | 元数据由读取详情时的当前目标运行时配置生成（`delivery.repository.ts:460`、`destination.helpers.ts:155-235`），UI 只写「通知目标元数据」（`delivery-detail-view.tsx:57-61`、`zh-Hans.json:160`）；补一行「依据当前配置，历史投递可能不同」并保留 JSON/复制；纯前端只读 |
 | REQ-201 | 顶栏提示「静默即将生效」的 scheduled 窗口 | requirements lane（第 51 轮） | 27 | candidate | — | 顶栏指示器只统计 `active`（`suppression-summary.ts:66-80`、`active-suppression-indicator.tsx:35-37`），10 分钟后开始的维护窗口全站无信号；扩展 summary 增加 `scheduled` 且 `startsAt ∈ (now, now+30m]` 的计数与最近一条，active 计数语义不变；纯前端派生 + 中英文案；与 REQ-110（即将到期）互补 |
 | REQ-202 | 事件详情并列「接入快照 vs 当前规则」对照 | requirements lane（第 51 轮） | 26 | candidate | — | 事件匹配页签只展示接入快照，`routeMatches === null` 时才按当前规则重算（`history.repository.ts:149-163`、`event-detail-route-matches-table.tsx:40-49`）；新增只读重算区块，分类仍命中/不再命中/新增命中/路由已删除，脱敏事件不重算；复用 `evaluateRouteMatch` 与现有徽标；纯前端只读，不改变历史投递 |
@@ -474,6 +478,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.39` | `7f5eea1` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.39`（linux/amd64 + linux/arm64，index digest `sha256:ca2cab50…`） | 事件详情投递表按操作优先级排序（#267，REQ-199）+ 告警源更新不再回滚并发 Token 轮换（#268，Q-48）；无迁移/配置变化；回滚镜像 `0.1.0-beta.38` |
 | `0.1.0-beta.38` | `894dc16` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.38`（linux/amd64 + linux/arm64，index digest `sha256:7b1a0f36…`） | 设置页从文件载入可移植配置（#264，REQ-186）；无迁移/配置变化；回滚镜像 `0.1.0-beta.37` |
 | `0.1.0-beta.37` | `4a5cbd4` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.37`（linux/amd64 + linux/arm64，index digest `sha256:6192ca60…`） | 目标编辑对话框页脚可见性（#261，UI-24）；无迁移/配置变化；回滚镜像 `0.1.0-beta.36` |
 | `0.1.0-beta.36` | `12559e4` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.36`（linux/amd64 + linux/arm64，index digest `sha256:19f48114…`） | 配置编辑披露排队投递影响（#257，REQ-196）；无迁移/配置变化；回滚镜像 `0.1.0-beta.35` |
@@ -506,12 +511,14 @@
 
 ## 下一轮优先项
 
-0. **REQ-186（28）已由第 52 轮交付（#264）**：设置页从文件载入 TOML/JSON 草稿。
-   下一优先：**REQ-199（28）** 事件详情投递表按操作优先级排序；**REQ-181（27）**
-   删除配置前的事件/投递级联数量；**REQ-182（27）** 目标测试发送前确认；
-   **REQ-194/195（27）**；**REQ-200（27）** 投递元数据标注当前配置。
-   **FIX-12 已结案**（复现命令 Token 拼写错误，非产品缺陷；#260 已补跨边界回归测试）。
-   **Q-48（27）** 告警源更新整行读-改-写会在并发时回滚 `token_hash`，建议下一轮小切口修复。
+0. **第 53 轮交付**：REQ-199（28）投递表操作优先级排序（#267）；Q-48（27）告警源更新
+   并发回滚 `token_hash`（#268）。下一优先：**REQ-203（28）** 测试发送选择真实历史事件
+   （requirements 本轮最推荐）；**REQ-204（28）** 标题/消息一键静默相似告警；
+   **REQ-181（27）** 删除配置前的事件/投递级联数量；**REQ-182（27）** 目标测试发送前确认；
+   **REQ-194/195（27）**；**REQ-200（27）** 投递元数据标注当前配置；**REQ-205（27）**
+   跨实体搜索页（与 NEW-D 合并）。
+   **Q-50（24）** Destination/Route 仓储同族整行读改写，建议按 Q-48 方式小切口修复。
+   **FIX-4（20）** 已核实三条 delete 守卫均存在，只差 3 条回归测试（`configuration.integration.test.ts`）。
    **ARCH-28（21）** core/api DTO parity 守卫为低成本 AUTO_FIX 候选（第 52 轮复核漂移仍在）。
 1. **SEC-22（27）** endpoint userinfo 密码投影；**SEC-24（25）** 补脱敏 key 形态测试；
    **SEC-13** 精确键 + `sessionId/jwt/signature`；**SEC-25（25）** test/preview 载荷投影。

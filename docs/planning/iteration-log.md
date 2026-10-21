@@ -2,6 +2,99 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 53 轮）
+
+- 时间：2026-10-21 10:29 – 11:0x CST。
+- 基线：本轮开始时 `origin/main` @ `86c7fb5`（第 52 轮 beta.38 记录之后）。
+- 类型：非 full-audit（backlog 有大量 ≥27 分候选，且无 open PR）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` 必跑，第三名额给 `quality`（第 52 轮记录的
+  下一个非必跑车道）。
+- 车道轮转位置：`requirements` / `ui-triage` / `quality` 均已完成；下一轮非必跑车道
+  **`security-exposure`**（自更早轮次后未跑），`requirements` 仍需必跑。
+- `ui-triage`：**`defer`** —— 距第 51 轮评审仅 57 分钟（未满 2 小时门槛）；自 09:34 起
+  非测试 UI 合并 2 个（#261 是上轮评审修复产物、#264 已有浏览器实测），未达 3 个阈值；
+  UI-22/UI-23 未修复；14 条 candidate 级 UI 发现属稳定基线。下次自然触发：≥11:34 后
+  仍有 ≥1 个 UI 合并。建议下次评审首查 Delays/Events 表格 sticky 列遮挡与 UI-22/23 复验。
+- `last_ui_review_at`：2026-10-21 09:34 CST（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
+  `nostalgic-babbage-1d61a5`。
+
+### 本轮交付
+
+- PR #267 `feat(console): order event deliveries by operational priority`（REQ-199，
+  rebase 合并 `217acfe`）。
+  - 新增 `features/events/model/delivery-priority.ts`：共享「失败→运行中→待处理→成功→
+    已抑制」优先级与稳定排序；事件详情投递表按此排序，同状态保持服务端 `created_at`
+    升序，输入数组不被修改；摘要健康徽标改用同一常量。
+  - 新增 PRD `docs/prd/event-delivery-priority-sort.md`；模型 3 条 + 组件 1 条测试。
+  - 验证：`vp check` 0 errors（12 条既有 warning）、`vp run -r test` 143 files /
+    768 tests、`vp run -r build` 通过、PR CI success。
+- PR #268 `fix(console): stop source updates from rolling back token rotation`（Q-48）。
+  - `SqliteSourceRepository.update` 改为只写调用方显式提供的列（`UpdateObject` 类型），
+    不再用 `get` 快照整行写回；404 语义与返回 DTO 不变。
+  - 新增 `source.repository.test.ts`：用子类在 `get` 返回后暂停制造「读-并发轮换-写」交错；
+    已实测该测试在旧实现上失败（`expected 'old-hash' to be 'rotated-hash'`），修复后通过。
+  - 验证：`vp check` 0 errors、`vp run -r test` 4/4 包通过、`vp run -r build` 通过。
+
+### 专家发现
+
+- `requirements`：
+  - **REQ-203（28）** 测试发送固定使用合成事件（`destination.service.ts:153-194` →
+    `createTestNormalizedEvent`），无法验证真实模板字段/消息格式；可复用 preview 的
+    `resolvePreviewSample`（`:341-374`）与 `recentEventsQueryOptions()`；MVP 故事 24。
+  - **REQ-204（28）** matcher 已支持 `titleContains`/`messageContains`
+    （`suppression.ts:47-48,207-208`），完整表单也可编辑（`suppression-forms.tsx:414-425`），
+    但事件详情一键静默只预填 fingerprint/标签（`suppression-from-event-dialog.tsx:24-40`）。
+  - **REQ-205（27）** `operations.list` 同一 `q` 已同时返回事件与投递
+    （`operations.service.ts:33-60`），但顶栏无搜索入口；建议与 NEW-D 合并为 `/search`。
+- `quality`：
+  - Q-48 已核实并交付（见上）；同族 **Q-50（24）**：destination/route 仓储整行读改写
+    （`destination.repository.ts:77-99`、`route.repository.ts:82-105`）。
+  - Q-49 已核实：`invalid_token` 日志只有 sourceId/reason/provider
+    （`intake.service.ts:74-76,342-352`），建议只记录请求方 token 哈希前缀与
+    「是否携带 token/provider secret header」布尔值，绝不记录 stored hash。
+  - FIX-4 已核实：三条 delete 均有 `requireX` 守卫并抛 `RecordNotFoundError`
+    （`source.repository.ts:112-116`、`destination.repository.ts:101-105`、
+    `route.repository.ts:166-170`），只差 3 条回归测试（`configuration.integration.test.ts`）。
+  - 新发现 **MEDIUM**：intake 在事务外读 Source/Route，并发删除会在 `recordEvent` 触发
+    FK 约束 500（`intake.service.ts:62,91-104,108`；`connection.ts:27`），并可能接受已停用
+    源的请求；修复成本 M。**LOW**：Feishu 配置解析失败时静默跳过紧急呼叫
+    （`oncall.service.ts:139-145`），建议补 warn 日志（不含配置值）。
+- `ui-triage`：`defer`，理由见上。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项：REQ-199 为纯前端只读排序，Q-48 为仓储层列级更新，
+  均不触碰 schema、投递/路由/auth 语义或 secret 处理。
+
+### 发布评估与镜像
+
+- 三方专家一致 `APPROVE`（#268 合入后）：
+  - 发布经理：自 `v0.1.0-beta.38` 以来用户可见变更为 #267（REQ-199）与 #268（Q-48）；
+    建议预发布递增 `0.1.0-beta.39`。
+  - 阻断审计：main CI success、仅本轮自有 PR、migration 零 diff、无阻塞回归、
+    `v0.1.0-beta.39` 未占用；REL-13（LICENSE）为长期法务项，不随本版新增风险。
+  - 运维回滚：Dockerfile/compose/env/依赖/迁移全部零 diff；回滚只需换回
+    `0.1.0-beta.38` 镜像，数据卷双向兼容。
+- 版本：`0.1.0-beta.39`；PR #269 `chore(release): v0.1.0-beta.39`（rebase 合并
+  `7f5eea1`）。
+- Tag：`v0.1.0-beta.39`（annotated，指向 `7f5eea1`）；GitHub Release：
+  `https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.39`（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.39`
+  - index digest `sha256:ca2cab500813da0f35f36e9aa3a9ae1906cfd54addb0576884fd539e6cdb77c9`
+  - `linux/amd64` @ `sha256:e358b279…`，`linux/arm64` @ `sha256:60cc4a5a…`
+  - 构建参数：`--provenance=false --sbom=false`；未推 `latest`。
+
+### 下一轮优先项
+
+1. **REQ-203（28）** 测试发送选择真实历史事件；**REQ-204（28）** 标题/消息一键静默。
+2. **Q-50（24）** destination/route 仓储同族整行读改写；**FIX-4（20）** 三条 delete
+   回归测试（AUTO_FIX）。
+3. **REQ-181（27）** 级联删除数量、**REQ-182（27）** 测试发送确认、**REQ-200（27）**
+   投递元数据标注、**REQ-205（27）** 跨实体搜索。
+4. 车道轮转：下一轮非必跑车道 `security-exposure`；`requirements` 必跑。
+
 ## 2026-10-21（第 52 轮）
 
 - 时间：2026-10-21 09:54 – 10:45 CST。
