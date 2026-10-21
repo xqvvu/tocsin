@@ -2,6 +2,70 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 50 轮）
+
+- 时间：2026-10-21 07:48 – 08:4x CST。
+- 基线：本轮开始时 `origin/main` @ `bf61ba9`（第 49 轮 beta.35 发布后）；需求合入后 @ `751a2d6`。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，且无 open PR）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 `defer`，第三名额给轮转的
+  `release-infra`。
+- 车道轮转位置：`requirements` / `ui-triage` / `release-infra` 已完成；下一轮非必跑车道为
+  **`quality`**（architecture 与 quality 自第 38–39 轮后未跑，quality 更久未覆盖）。
+- `ui-triage`：**`defer`** —— 距第 47 轮真实浏览器评审（03:47）仅 4h04m；自 03:47 起 UI 路径
+  2 个合并（#251、#254），均有浏览器实测；14 条存量 UI 发现均为已编目项；代码快览无新增不一致。
+  复查时机：满 48h（2026-10-23 03:47）或 UI 合并累计 ≥3。
+- `last_ui_review_at`：2026-10-21 03:47 CST（第 47 轮），本轮未做 UI 评审，不更新。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
+  `recursing-clarke-8bb8c5`。
+
+### 本轮交付
+
+- PR #257 `feat(console): disclose queued delivery impact on config edits` —— **REQ-196（28）**。
+  - `QueuedDeliveriesNotice` 增加 `description` 与 `hideWhenEmpty`；目标编辑对话框与路由
+    内联编辑面板在排队投递 >0 时显示数量与影响说明；加载/失败/0 条不渲染，不阻断保存。
+  - 新增 PRD `docs/prd/queued-delivery-config-impact.md`；中英文案各 2 条；新增 4 条通知测试、
+    1 条路由测试、1 条对话框测试（共 756 tests）。
+  - 验证：`vp check` 0 errors（12 条既有 warning）、`vp run -r test` 140 files / 756 tests、
+    `vp run -r build` 通过、CI success、rebase 合并。
+  - 浏览器实测（隔离实例 `http://localhost:6199` + 全新 SQLite，中文界面）：创建通知目标/
+    路由/告警源并发送 `severity=critical` Webhook，产生 1 条待投递；目标编辑对话框显示
+    「已排队的投递会在发送时读取这里保存的最新配置…」+「排队中的投递：1 条」；路由编辑面板
+    显示「已排队的投递不会重新匹配路由…」+「排队中的投递：1 条」。截图
+    `/tmp/tocsin-r50-queued-impact-route.png`；dev server 与临时库已清理。
+  - 自查（code-review）：收紧两处「0 条时静默」测试，先等待计数查询实际执行再断言，
+    避免查询未完成时断言提前通过（#257 第二个提交）。
+
+### 专家发现
+
+- `requirements`：复核 REQ-181/182/186/194/195/196/198 七项均仍成立（行号已更新）；新增
+  2 条候选：REQ-199（28，事件详情投递表按操作优先级排序）、REQ-200（27，投递详情元数据
+  标注为当前目标配置）。确认 REQ-4 已由 #184（= UI-2）交付但 backlog 仍标 candidate，
+  本轮已改为 shipped；下一轮优先项列表里已交付的 REQ-193/UI-14 也已清理。
+- `release-infra`：E2E 仍未接入 CI（远端只有 `ci.yml`）；REL-21/25/26/27/28、REL-19 均仍成立；
+  RC checklist 4 条未勾 gate 均为真缺（dedupe 无界 DELETE、fixtures 目录缺失）。建议的
+  `e2e.yml` 最小方案：PR + push main、`playwright install --with-deps chromium`、临时 SQLite、
+  失败上传 trace、零 secrets；提交前必须本地跑通（本机缓存 chromium-1234，1.64.1 期望 1248）。
+  本轮未实施，留给下一轮 release-infra 或独立小 PR。
+- `ui-triage`：`defer`（理由见上）。
+
+### 其他观察
+
+- **FIX-9 再次复现并加强证据**：隔离实例通过 oRPC `sources.rotateToken` 取得新 Token，DB
+  `token_hash` 与 `sha256(新Token)` 完全一致；重启 dev server 后 Webhook 仍返回 401
+  `invalid_token`；改用 `sqlite3` 把 `token_hash` 直接改为 `sha256("test-token")` 后同一请求
+  立即 202。读路径在直接改写后可工作，轮换写入为何未被接收仍需日志/测试定位。已更新 backlog。
+- 浏览器验证期间发现：本地 `node_modules` 首次加载缺少 `@vitejs/plugin-react` 等符号链接，
+  `vp install --frozen-lockfile --force` 后恢复；不影响仓库。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项；#257 为纯前端只读投影，不触碰 schema/投递/auth 语义。
+
+### 发布评估与镜像
+
+- 待补。
+
 ## 2026-10-21（第 49 轮）
 
 - 时间：2026-10-21 06:36 – 08:05 CST。
