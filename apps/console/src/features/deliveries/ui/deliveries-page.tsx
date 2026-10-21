@@ -67,6 +67,7 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
       severity: "",
       status: "",
       destinationId: "",
+      destinationKind: "",
       routeId: "",
       deliveryState: "",
       range: "",

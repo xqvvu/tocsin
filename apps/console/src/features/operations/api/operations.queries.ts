@@ -122,6 +122,7 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.severity ? { severity: filters.severity } : {}),
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.destinationId ? { destinationId: filters.destinationId } : {}),
+    ...(filters.destinationKind ? { destinationKind: filters.destinationKind } : {}),
     ...(filters.routeId ? { routeId: filters.routeId } : {}),
     ...(filters.deliveryState ? { deliveryState: filters.deliveryState } : {}),
     ...(filters.range ? { range: filters.range } : {}),

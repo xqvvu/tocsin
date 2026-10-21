@@ -80,6 +80,112 @@ async function repositoryWith(seed: {
   return createSqliteRepositories(new SqliteRepositoryContext({ db })).history;
 }
 
+async function repositoryWithTwoKinds(): Promise<
+  ReturnType<typeof createSqliteRepositories>["history"]
+> {
+  const db = createSqliteDatabase({ databasePath: ":memory:" });
+  await migrateSqliteDatabase(db);
+
+  await db
+    .insertInto("sources")
+    .values({
+      id: "src-1",
+      name: "Prometheus",
+      provider: "generic",
+      token_hash: "hash",
+      created_at: NOW,
+      updated_at: NOW,
+    })
+    .execute();
+
+  await db
+    .insertInto("destinations")
+    .values([
+      {
+        id: "dest-feishu",
+        name: "Feishu group",
+        kind: "feishu",
+        created_at: NOW,
+        updated_at: NOW,
+      },
+      {
+        id: "dest-slack",
+        name: "Slack channel",
+        kind: "slack",
+        created_at: NOW,
+        updated_at: NOW,
+      },
+    ])
+    .execute();
+
+  await db
+    .insertInto("events")
+    .values({
+      id: "evt-1",
+      source_id: "src-1",
+      fingerprint: "fp-1",
+      severity: "critical",
+      status: "firing",
+      title: "Disk full",
+      message: "disk full",
+      labels_json: "{}",
+      normalized_json: "{}",
+      provider_metadata_json: "{}",
+      raw_payload_json: "{}",
+      raw_headers_json: "{}",
+      received_at: NOW,
+      occurred_at: NOW,
+      created_at: NOW,
+    })
+    .execute();
+
+  await db
+    .insertInto("deliveries")
+    .values([
+      {
+        id: "del-feishu",
+        event_id: "evt-1",
+        destination_id: "dest-feishu",
+        state: "pending",
+        created_at: NOW,
+        updated_at: NOW,
+      },
+      {
+        id: "del-slack",
+        event_id: "evt-1",
+        destination_id: "dest-slack",
+        state: "pending",
+        created_at: NOW,
+        updated_at: NOW,
+      },
+    ])
+    .execute();
+
+  return createSqliteRepositories(new SqliteRepositoryContext({ db })).history;
+}
+
+describe("delivery list destination kind filter", () => {
+  it("narrows both the page and its total to one adapter kind", async () => {
+    const repository = await repositoryWithTwoKinds();
+
+    const page = await repository.listDeliveries({ destinationKind: "slack" });
+
+    // The total comes from a separate count query; a filter applied to only
+    // one of them would page through rows the counter does not know about.
+    expect(page.items.map((item) => item.id)).toEqual(["del-slack"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("returns an empty page when no destination uses the kind", async () => {
+    const repository = await repositoryWithTwoKinds();
+
+    const page = await repository.listDeliveries({ destinationKind: "email" });
+
+    expect(page.items).toHaveLength(0);
+    expect(page.total).toBe(0);
+  });
+});
+
 describe("delivery list destination kind", () => {
   it("carries the destination kind through to the list item", async () => {
     const repository = await repositoryWith({ destinationKind: "feishu", withDelivery: true });

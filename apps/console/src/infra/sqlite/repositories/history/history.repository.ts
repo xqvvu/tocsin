@@ -1,6 +1,12 @@
 import { sql } from "kysely";
 
-import type { DeliveryListItem, EventDetail, EventListItem, NumberedPage } from "@tocsin/core";
+import type {
+  DeliveryListItem,
+  DestinationKind,
+  EventDetail,
+  EventListItem,
+  NumberedPage,
+} from "@tocsin/core";
 import {
   decodeSchemaJson,
   evaluateRouteMatch,
@@ -271,6 +277,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("deliveries.destination_id", "=", query.destinationId);
     }
 
+    if (query.destinationKind) {
+      builder = builder.where(deliveryDestinationKindPredicate(query.destinationKind));
+    }
+
     if (query.routeId) {
       builder = builder.where("deliveries.route_id", "=", query.routeId);
     }
@@ -377,6 +387,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("deliveries.destination_id", "=", query.destinationId);
     }
 
+    if (query.destinationKind) {
+      builder = builder.where(deliveryDestinationKindPredicate(query.destinationKind));
+    }
+
     if (query.routeId) {
       builder = builder.where("deliveries.route_id", "=", query.routeId);
     }
@@ -479,6 +493,22 @@ function deliverySearchPredicate(term: string) {
       WHERE searched_routes.id = deliveries.route_id
         AND searched_routes.name LIKE ${pattern} ESCAPE '\\'
     )
+  )`;
+}
+
+/**
+ * Restricts deliveries to destinations of one adapter kind.
+ *
+ * The predicate is an `EXISTS` subquery rather than a join so the list and
+ * count queries apply exactly the same filter; the count query does not need
+ * the destinations join, and the shared predicate keeps the page and its
+ * `total` from drifting apart.
+ */
+function deliveryDestinationKindPredicate(kind: DestinationKind) {
+  return sql<boolean>`EXISTS (
+    SELECT 1 FROM destinations AS filtered_destinations
+    WHERE filtered_destinations.id = deliveries.destination_id
+      AND filtered_destinations.kind = ${kind}
   )`;
 }
 

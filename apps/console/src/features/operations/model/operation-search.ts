@@ -1,11 +1,18 @@
 import { pickBy } from "es-toolkit/object";
 import { z } from "zod";
 
-import type { AlertSeverity, AlertStatus, DeliveryState, OperationTimeRange } from "@tocsin/core";
+import type {
+  AlertSeverity,
+  AlertStatus,
+  DeliveryState,
+  DestinationKind,
+  OperationTimeRange,
+} from "@tocsin/core";
 import {
   AlertSeveritySchema,
   AlertStatusSchema,
   DeliveryStateSchema,
+  DestinationKindSchema,
   OperationTimeRangeSchema,
   OPERATION_SEARCH_MAX_LENGTH,
 } from "@tocsin/core";
@@ -21,6 +28,10 @@ export const DashboardOperationSearchSchema = z.object({
     .catch("")
     .optional(),
   destinationId: z.string().catch("").optional(),
+  destinationKind: z
+    .union([DestinationKindSchema, z.literal("")])
+    .catch("")
+    .optional(),
   routeId: z.string().catch("").optional(),
   deliveryState: z
     .union([DeliveryStateSchema, z.literal("")])
@@ -40,6 +51,7 @@ export interface DashboardOperationSearch {
   severity?: AlertSeverity | "";
   status?: AlertStatus | "";
   destinationId?: string;
+  destinationKind?: DestinationKind | "";
   routeId?: string;
   deliveryState?: DeliveryState | "";
   range?: OperationTimeRange | "";
@@ -53,6 +65,7 @@ export type OperationFilterData = {
   severity?: AlertSeverity;
   status?: AlertStatus;
   destinationId?: string;
+  destinationKind?: DestinationKind;
   routeId?: string;
   deliveryState?: DeliveryState;
   range?: OperationTimeRange;
@@ -72,6 +85,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.severity ||
     search.status ||
     search.destinationId ||
+    search.destinationKind ||
     search.routeId ||
     search.deliveryState ||
     search.range ||
@@ -118,6 +132,7 @@ export function mergeOperationSearch(
     "severity",
     "status",
     "destinationId",
+    "destinationKind",
     "routeId",
     "deliveryState",
     "range",

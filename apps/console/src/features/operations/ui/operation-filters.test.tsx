@@ -50,6 +50,7 @@ describe("operation filters by page scope", () => {
     expect(screen.getByText("Status")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
     expect(screen.queryByText("Destination")).toBeNull();
+    expect(screen.queryByText("Destination kind")).toBeNull();
     expect(screen.queryByText("Route")).toBeNull();
     expect(screen.queryByText("Delivery state")).toBeNull();
   });
@@ -59,9 +60,19 @@ describe("operation filters by page scope", () => {
 
     expect(screen.getByText("Source")).toBeTruthy();
     expect(screen.getByText("Destination")).toBeTruthy();
+    expect(screen.getByText("Destination kind")).toBeTruthy();
     expect(screen.getByText("Route")).toBeTruthy();
     expect(screen.getByText("Delivery state")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
+  });
+
+  it("names the destination kind chip and keeps it off the events page", () => {
+    renderFilters("deliveries", { destinationKind: "feishu" }, "toolbar");
+    expect(screen.getByTitle("Clear Destination kind")).toBeTruthy();
+
+    cleanup();
+    renderFilters("events", { destinationKind: "feishu" }, "toolbar");
+    expect(screen.queryByTitle("Clear Destination kind")).toBeNull();
   });
 
   it("does not surface delivery-only chips on the events page", () => {

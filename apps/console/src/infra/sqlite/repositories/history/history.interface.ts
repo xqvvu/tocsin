@@ -1,6 +1,7 @@
 import type {
   DeliveryListItem,
   DeliveryState,
+  DestinationKind,
   EventDetail,
   EventListItem,
   NumberedPage,
@@ -37,6 +38,8 @@ export interface DeliveryListQuery {
   severity?: NormalizedEvent["severity"];
   status?: NormalizedEvent["status"];
   destinationId?: string;
+  /** Only deliveries routed to destinations of one adapter kind. */
+  destinationKind?: DestinationKind;
   /** Only the deliveries created by one route; manual deliveries have none. */
   routeId?: string;
   /** Only the deliveries silenced by one rule ("what did this rule hit?"). */
