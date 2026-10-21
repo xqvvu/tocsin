@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
@@ -7,6 +8,18 @@ import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin
 
 import { EditRouteForm } from "#/features/routes/ui/route-forms";
 import { AppIntlProvider } from "#/i18n/provider";
+
+const testState = vi.hoisted(() => ({
+  queued: 2,
+}));
+
+vi.mock("#/features/operations/api/operations.queries", () => ({
+  pendingDeliveriesQueryOptions: (scope: unknown) => ({
+    queryKey: ["test", "pending-deliveries", scope],
+    queryFn: async () => ({ deliveries: { total: testState.queued } }),
+    staleTime: Infinity,
+  }),
+}));
 
 interface EditRouteInput {
   id: string;
@@ -62,23 +75,29 @@ function emptyRuleRoute(): RouteDefinition {
   };
 }
 
-function renderEditForm(route: RouteDefinition): { onSubmit: ReturnType<typeof vi.fn> } {
+function renderEditForm(route: RouteDefinition): {
+  onSubmit: ReturnType<typeof vi.fn>;
+  queryClient: QueryClient;
+} {
   const onSubmit = vi.fn<(input: EditRouteInput) => void>();
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   render(
-    <AppIntlProvider locale="en-US">
-      <EditRouteForm
-        route={route}
-        sources={sources}
-        destinations={destinations}
-        pending={false}
-        onCancel={vi.fn<() => void>()}
-        onSubmit={onSubmit}
-      />
-    </AppIntlProvider>,
+    <QueryClientProvider client={queryClient}>
+      <AppIntlProvider locale="en-US">
+        <EditRouteForm
+          route={route}
+          sources={sources}
+          destinations={destinations}
+          pending={false}
+          onCancel={vi.fn<() => void>()}
+          onSubmit={onSubmit}
+        />
+      </AppIntlProvider>
+    </QueryClientProvider>,
   );
 
-  return { onSubmit };
+  return { onSubmit, queryClient };
 }
 
 function saveRoute(): void {
@@ -276,5 +295,20 @@ describe("edit route form", () => {
       expect(screen.getByText("Fill both the label key and the label value")).toBeTruthy();
     });
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("discloses that queued deliveries are not re-matched by this edit", async () => {
+    testState.queued = 2;
+
+    const { queryClient } = renderEditForm(multiConditionRoute());
+
+    expect(
+      await screen.findByText(
+        "Queued deliveries are not re-matched against the route — removing a destination here does not recall deliveries already queued for it",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("2 queued deliveries")).toBeTruthy();
+
+    queryClient.clear();
   });
 });
