@@ -2,6 +2,85 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 61 轮）
+
+- 时间：2026-10-22 00:26 – 01:1x CST。
+- 基线：本轮开始时 `origin/main` @ `3b9793a`；main CI success；无 open PR。
+- 类型：**需求切片 + 文档修复**（非 full-audit）。最近全量审计仍为第 1 轮（2026-10-18 13:30 CST）；
+  backlog 有多个 ≥27 候选，按第 1.5 步继续，不重跑全量审计。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  **`docs-drift`**（已连续两轮未跑）。三条车道均返回。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审仅 32 分钟（2026-10-21 23:55 CST），
+  自上次评审以来 UI 路径净新增未评审面 ≈ 0（2 个提交均为第 60 轮交付及其纯结构拆分），
+  未解决 UI 候选 18 条属稳定基线；当前瓶颈是「修」而非「找」。重新评估触发条件：
+  实质 UI 提交合入、满 48 小时、UI 候选突破 20 条，或出现无浏览器复验的 UI 修复。
+- `last_ui_review_at`：**2026-10-21 23:55 CST**（未变；本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证在会话工作树
+  `lucid-noether-019a3d`。会话工作树 `node_modules` 再次残缺（`@rolldown/plugin-babel` 缺失），
+  删除根与各 workspace 的 `node_modules` 后 `vp install --frozen-lockfile` 恢复（2.5s）。
+
+### 本轮交付
+
+- PR #298 `feat(settings): project runtime and effective limits`（rebase 合并），REQ-84 + REQ-216。
+  - 新增只读 `settings.getRuntime` 白名单 DTO：版本、运行环境、Node、平台/架构、SQLite 驱动与版本、
+    出站超时、Webhook 上限、worker 间隔/批量/超时回收、日志格式/级别。
+  - 新增 `RuntimeInformationService`：显式依赖 store 的 `sqliteVersion`、生效限制与日志配置；
+    每次调用从活动连接读取 SQLite 版本；逐字段组装，环境变量原文不进入返回值。
+  - Settings 页 `UI` 标签新增「运行时与生效参数」只读网格；路由 loader 预取，配置刷新一并失效。
+  - 新增中文 mini-PRD `docs/prd/settings-runtime-projection.md`；中英文各 14 个 i18n key。
+  - 验证：`vp check` 0 errors（16 条存量 warning）；`vp run -r test` 149 files / 801 tests；
+    `vp run -r build` 通过。
+  - 浏览器实测（隔离实例 6199 + 临时 SQLite，`admin@example.test`，1280×900）：12 个字段全部渲染；
+    `document` 1280/1280、`main` 1024/1024、面板 982/982，无横向溢出；时长显示 `10 s` / `5 s` / `5 min`。
+    截图 `/tmp/tocsin-settings-runtime-1280-v2.png`。
+- PR #299 `docs: correct stale release and PRD status claims`（本轮文档修复）。
+  - 发布 checklist 的版本/tag 清单改为从仓库派生；RC checklist 的 E2E / Docker smoke gate 改为与
+    同文一致（E2E 待接 CI、Docker smoke 本地人工）。
+  - 七个已交付 mini-PRD 补状态头；post-MVP 剩余项、ADR 0003/0008、history-retention 行号同步。
+
+### 专家发现
+
+- `requirements`（4 条新候选，均已写入 backlog）：
+  - **NEW-R（28）** 告警源断流预警：`SourceSummary` 无最近接收时间
+    （`packages/core/src/source/source.ts:13-18`），`sources` 表无阈值（`schema.ts:39-50`），
+    顶栏只有静默指示器（`dashboard-header.tsx:30-31`）；需 forward-only 迁移，迁移部分交 EXPERT_PANEL。
+  - **NEW-S（27）** 加急呼叫全局审计页：pings 只能从单条投递详情查看
+    （`oncall.repository.ts:228-238`、`delivery-pings-table.tsx:16-18`），无全局只读入口；数据字段已齐。
+  - **NEW-T（27）** 运维关系选择器可搜索：筛选与表单全量平铺
+    （`operation-filters.tsx:220-273`、`suppression-forms.tsx:523-565`、`route-forms.tsx:838-1029`）；
+    复用 `combobox.tsx`，纯前端。
+  - **NEW-U（26）** 投递尝试时间线与退避间隔：低于 27 门槛，作为低风险 follow-up
+    （`delivery-attempts-table.tsx:37-45`、`delivery-diagnostics.ts:8-18`）。
+- `docs-drift`（8 条，全部纯文档 AUTO_FIX）：
+  - 高优先：`release-checklist.md:4,20,67-75,88` 版本/tag 冻结在 beta.35；`mvp-rc-checklist.md:199,205`
+    与同文 `:21,107,130` 对 Docker smoke gate 自相矛盾；七个 mini-PRD 缺状态头
+    （`suppression-scope-disclosure.md:10-14`、`evidence-bundle-download.md:9-10`、
+    `queued-deliveries-before-disable.md:8` 等）。
+  - 其余：`application-container.md:57` 的 `features/auth/router.ts` 应为 `session` 且工厂清单缺
+    suppressions/replay/operations；`frontend-architecture.md:17-19,83,101-108,242,315-316` 目录树与
+    procedure 写法过期；`post-mvp-planning.md:232-234` 剩余项与同文 `:97-99,143-144` 矛盾；
+    `adr/0008:19-20`、`adr/0003:9`、`history-retention-and-snapshots.md:43,56,74` 版本/路径/行号漂移。
+  - 本轮已修：release-checklist、RC checklist、七个 mini-PRD、post-mvp 剩余项、ADR 0008/0003、
+    history-retention 行号。剩余 architecture 文档刷新（DOC-51/DOC-60/DOC-23）与
+    `console-server-restructure-plan.md`（DOC-50 余项）仍留 backlog。
+- 安全与发布基线复核：`xqvvu/vane` 仅作为真实 ACR 镜像坐标存在，无失效 GitHub 链接；
+  `mvp-rc-checklist` 的 dedupe cleanup、provider fixture gate 仍准确；E2E 未接入 CI 属实。
+
+### EXPERT_PANEL / 发布决策
+
+- 本轮需求切片为只读新增过程与展示，无迁移、无 schema、无投递/路由/auth 语义变化，按 AUTO_SHIP 交付。
+- NEW-R 的 `sources.silence_threshold_minutes` 迁移在后续实现前需 EXPERT_PANEL。
+- 发布评估：见本轮末尾记录（版本 `0.1.0-beta.46`）。
+
+### 下一轮优先项
+
+1. **NEW-R（28）** 告警源断流预警；先交 EXPERT_PANEL 评估 forward-only 迁移。
+2. **NEW-S（27）** 加急呼叫全局审计页；**NEW-T（27）** 可搜索关系选择器。
+3. **Q-14（27）** 事件详情 `destinationKind` 补齐；**NEW-I（27）** 出站 `redirect: "manual"`。
+4. 轮转车道 **`security-exposure`**；architecture 文档刷新（DOC-51/DOC-60/DOC-23）。
+5. `last_ui_review_at` 未刷新；UI 评审下次由 `ui-triage` 按触发条件重新判断。
+
 ## 2026-10-21（第 60 轮）
 
 - 时间：2026-10-21 23:26 – 2026-10-22 00:3x CST。
