@@ -10,8 +10,12 @@ import { DeliveryPingsTable } from "#/features/deliveries/ui/delivery-pings-tabl
 import { AppIntlProvider } from "#/i18n/provider";
 
 vi.mock("#/features/operations/ui/operation-timestamp", () => ({
-  OperationTimestamp: ({ value }: { value: string }) => <span>{value}</span>,
+  OperationTimestamp: ({ format, value }: { format: string; value: string }) => (
+    <span data-format={format}>{value}</span>
+  ),
 }));
+
+const now = new Date("2026-10-21T09:00:00.000Z");
 
 describe("delivery pings table", () => {
   afterEach(() => {
@@ -37,6 +41,20 @@ describe("delivery pings table", () => {
     expect(screen.getByText("Initiated by user-1")).toBeTruthy();
     expect(screen.getByText("2026-10-19T01:02:00.000Z")).toBeTruthy();
     expect(screen.getByText("2026-10-19T01:07:00.000Z")).toBeTruthy();
+  });
+
+  it("keeps the date on a retry that lands on another day", () => {
+    renderTable(detailFixture([pingFixture({ nextAttemptAt: "2026-10-24T01:07:00.000Z" })]));
+
+    expect(screen.getByText("2026-10-24T01:07:00.000Z").getAttribute("data-format")).toBe(
+      "dateTime",
+    );
+  });
+
+  it("shows only the clock time for a retry later the same day", () => {
+    renderTable(detailFixture([pingFixture({ nextAttemptAt: "2026-10-21T14:07:00.000Z" })]));
+
+    expect(screen.getByText("2026-10-21T14:07:00.000Z").getAttribute("data-format")).toBe("time");
   });
 
   it("leaves the timeline empty for an automatic page that has not fired", () => {
@@ -84,7 +102,7 @@ describe("delivery pings table", () => {
 
 function renderTable(detail: DeliveryDetailData): void {
   render(
-    <AppIntlProvider locale="en-US">
+    <AppIntlProvider locale="en-US" now={now} timeZone="UTC">
       <DeliveryPingsTable detail={detail} />
     </AppIntlProvider>,
   );

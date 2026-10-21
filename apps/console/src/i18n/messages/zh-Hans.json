@@ -281,7 +281,7 @@
   "deliveries.table.headers.attempts": "尝试",
   "deliveries.table.headers.event": "事件",
   "deliveries.table.headers.lastError": "最近错误",
-  "deliveries.table.headers.next": "下次",
+  "deliveries.table.headers.next": "下次重试",
   "deliveries.table.headers.state": "状态",
   "deliveries.table.headers.target": "通知目标",
   "deliveries.table.headers.updated": "更新时间",

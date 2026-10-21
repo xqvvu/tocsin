@@ -11,10 +11,8 @@ import { DeliveryStateBadge } from "#/features/deliveries/ui/delivery-state-badg
 import { sortDeliveriesByOperationalPriority } from "#/features/events/model/delivery-priority";
 import { EventDetailSectionHeader } from "#/features/events/ui/event-detail-section-header";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
-import { retryTimestampFormat } from "#/features/operations/model/operation-format";
-import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
-import { fallbackTimeZone } from "#/i18n/time-zone";
-import { useNow, useTimeZone, useTranslations } from "#/i18n/use-i18n";
+import { RetryTimestamp } from "#/features/operations/ui/retry-timestamp";
+import { useTranslations } from "#/i18n/use-i18n";
 
 export function EventDetailDeliveriesTable({
   deliveries,
@@ -22,8 +20,6 @@ export function EventDetailDeliveriesTable({
   deliveries: EventDetailData["deliveries"];
 }) {
   const t = useTranslations();
-  const timeZone = useTimeZone() ?? fallbackTimeZone;
-  const now = useNow();
   const orderedDeliveries = sortDeliveriesByOperationalPriority(deliveries);
 
   return (
@@ -77,10 +73,7 @@ export function EventDetailDeliveriesTable({
                   </TableCell>
                   <TableCell className="truncate">
                     {delivery.nextAttemptAt ? (
-                      <OperationTimestamp
-                        format={retryTimestampFormat(delivery.nextAttemptAt, now, timeZone)}
-                        value={delivery.nextAttemptAt}
-                      />
+                      <RetryTimestamp value={delivery.nextAttemptAt} />
                     ) : (
                       "-"
                     )}

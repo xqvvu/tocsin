@@ -19,6 +19,7 @@ import {
 } from "#/features/deliveries/ui/delivery-target-cell";
 import type { Operations } from "#/features/operations/model/operation-types";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
+import { RetryTimestamp } from "#/features/operations/ui/retry-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function DeliveriesTable({
@@ -97,11 +98,7 @@ export function DeliveriesTable({
         id: "next",
         header: t("deliveries.table.headers.next"),
         cell: ({ row }) =>
-          row.original.nextAttemptAt ? (
-            <OperationTimestamp format="time" value={row.original.nextAttemptAt} />
-          ) : (
-            "—"
-          ),
+          row.original.nextAttemptAt ? <RetryTimestamp value={row.original.nextAttemptAt} /> : "—",
       },
       {
         id: "lastError",

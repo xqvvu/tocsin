@@ -11,6 +11,7 @@ import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detai
 import { DeliveryPingStateBadge } from "#/features/deliveries/ui/delivery-state-badge";
 import { DeliveryUrgentPingExplanation } from "#/features/deliveries/ui/delivery-urgent-ping-explanation";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
+import { RetryTimestamp } from "#/features/operations/ui/retry-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function DeliveryPingsTable({ detail }: { detail: DeliveryDetailData }) {
@@ -92,11 +93,7 @@ export function DeliveryPingsTable({ detail }: { detail: DeliveryDetailData }) {
                   </TableCell>
                   <TableCell className="text-xs">
                     {ping.nextAttemptAt ? (
-                      <OperationTimestamp
-                        format="time"
-                        titleFormat="dateTime"
-                        value={ping.nextAttemptAt}
-                      />
+                      <RetryTimestamp value={ping.nextAttemptAt} />
                     ) : (
                       <span className="text-muted-foreground">{t("common.placeholder.empty")}</span>
                     )}
