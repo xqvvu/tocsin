@@ -20,7 +20,7 @@
 | REQ-2 | Suppression 列表按派生状态筛选与搜索 | 运维摩擦 | 27 | candidate | — | 纯客户端过滤，复用 `suppressionStateAt` |
 | REQ-3 | Route 样例 Event 干跑预览 | post-MVP 方向 2 | 27 | candidate | — | 必须复用 core matcher；不写 events/deliveries |
 | REQ-6 | Fingerprint 聚合排障视图 | post-MVP 方向 4 | 27 | candidate | — | 只读聚合 + 精确下钻；注意 GROUP BY 成本 |
-| REQ-4 | 过滤态空状态与一键重置 | 运维摩擦 | 26 | candidate | — | 区分「无数据」与「筛选无匹配」 |
+| REQ-4 | 过滤态空状态与一键重置 | 运维摩擦 | 26 | shipped | #184 | = UI-2；`events-empty-state.tsx:15-40`、`deliveries-empty-state.tsx:15-42` 已区分筛选无匹配并提供内联重置 |
 | REQ-20 | 配置导入预检与变更摘要 | requirements lane | 27 | candidate | — | 只读 preview procedure + 导入前 create/update/unchanged 摘要；`config-portability.service.ts:140-245` |
 | REQ-21 | Events 按投递结果筛选（无投递/失败/被抑制） | requirements lane | 27 | candidate | — | URL `deliveryOutcome`；EXISTS/NOT EXISTS；`history.repository.ts:47-77` 已有统计。建议扩为 `deliveryOutcome + routeMatch=none\|any`，否则「未命中任何路由」的静默丢失仍无法发现 |
 | REQ-22 | 补投预览目标级明细与执行范围一致 | requirements lane | 28 | candidate | — | Event 预览已有 `targets` 未渲染；Route 预览只显示前 10 条却执行全部（`route-replay-prompt.tsx:161-162`） |
@@ -324,7 +324,7 @@
 | DOC-60 | frontend-architecture 服务目录与 procedure 写法过期 | docs-drift lane（第 49 轮） | 24 | candidate | — | `frontend-architecture.md:242-245` 称 `server/configuration` 含 source/destination/route service，实际各自独立目录；`:314-315` 称 private procedure 用裸 `requireDashboard()`，10 个 router 已用 `withDashboardService`（`sources/router.ts:5`） |
 | DOC-61 | 七个已交付 mini-PRD 缺状态头 | docs-drift lane（第 49 轮） | 21 | candidate | — | `delivery-detail-edit-destination.md:8`、`evidence-bundle-download.md:9`、`source-destination-delete-cascade-impact.md:5-12`、`queued-deliveries-before-disable.md:8`、`event-delivery-health-badges.md:6`、`suppression-scope-disclosure.md:7-12`、`suppression-toggle-confirmation.md:9` 仍写实现前状态 |
 | DOC-62 | sqlite-store 文件名与 RC checklist provider gate 不一致 | docs-drift lane（第 49 轮） | 20 | candidate | — | `sqlite-store.md:369,483` 写 `better-auth-schema.ts`，实际 `better-auth.schema.ts`；`mvp-rc-checklist.md:19-21,120-121,173-182` 把 provider guide 列为剩余 gate，但 E 节无对应条目 |
-| FIX-9 | 轮换 Token 后新 Token 立即调用 Webhook 返回 invalid_token（待复现） | 第 49 轮浏览器验证观察 | — | candidate | — | 隔离实例：创建告警源→轮换 Token→复制新 Token，DB `token_hash` 与 `sha256(新Token)` 一致，但 `POST /api/sources/:id/webhook` 两次均 401 `invalid_token`；直接改写 `token_hash=sha256("test-token")` 后立即成功。疑似读连接快照或轮换写入不一致，需用测试/日志复现确认 |
+| FIX-9 | 轮换 Token 后新 Token 立即调用 Webhook 返回 invalid_token | 第 49 轮浏览器验证观察 | — | candidate | — | **第 50 轮再次复现并加强证据**：隔离实例通过 oRPC `sources.rotateToken` 拿到新 Token，DB `token_hash` 与 `sha256(新Token)` 完全一致；重启 dev server 后 Webhook 仍 401；改用 `sqlite3` 直接把 `token_hash` 改为 `sha256("test-token")` 后同一请求立即 202。说明读路径在直接改写后可工作；轮换写入的值为何未被接收仍需定位（可能是运行中进程的读快照/缓存，或接口响应的 Token 与实际持久化值不一致），需加日志/测试确认；**高优**，影响 Token 轮换后立即恢复接入这一核心运维流程 |
 | NEW-D | 顶栏全局 ID 快速查找 | requirements lane（第 27 轮） | 27 | candidate | — | 顶栏只有栏目名与静默指示器（`dashboard-header.tsx:30`）；粘贴事件/投递 ID 直达详情，复用 `operations.queries.ts:56`；纯 console shell + feature API |
 | NEW-E | 通知目标只读配置详情 | requirements lane（第 27 轮） | 27 | candidate | — | DTO 已有 `urgentReceivers/headerNames/replyTo/appRef`（`destination.ts:26`），列表只显示数量（`destination-operational-config-cell.tsx:61`）；行内只读弹层，不碰 secret |
 | NEW-F | 飞书应用删除/换密前影响面预检 | requirements lane（第 27 轮） | 27 | candidate | — | 删除确认只显示应用名（`feishu-app-actions.tsx:89`），引用目标已在 DTO；服务端删除时才拒绝（`feishu-app.service.ts:84`）；纯 feature UI |
@@ -458,7 +458,9 @@
 | REQ-193 | 投递详情展示静默判定逐项证据 | requirements lane（第 48 轮） | 28 | shipped | #254 | 第 49 轮交付：`DeliverySuppressionChecks` 按当前规则重算 `evaluateSuppressionMatch`，复用 `RouteMatchCheckBadges`；规则删除不查询、失败不渲染；4 条组件测试；PRD `docs/prd/delivery-suppression-check-evidence.md` |
 | REQ-194 | Raw payload 保留天数 0 的语义与确认 | requirements lane（第 48 轮） | 27 | candidate | — | 0 合法（`packages/core/src/config.ts:48`）但表示「下一次 Webhook 后清理所有更早 raw payload/headers」（`intake.service.ts:428-430`、`intake.repository.ts:105-134`），UI 只写「0 到 3650 天」（`settings-preferences-panel.tsx:160-201`）；改为明确语义并在从非 0 改为 0 时 destructive 确认；纯前端 |
 | REQ-195 | 新建通知目标后引导真实测试发送 | requirements lane（第 48 轮） | 27 | candidate | — | 创建成功即关闭对话框，无成功面板也无测试入口（`destination-add-dialog.tsx:79-93`）；测试只在列表行图标（`destination-actions.tsx:70-80`）；新增持久成功面板 + 显式「测试发送」复用 `testDestination`；不自动发送；纯前端 |
-| REQ-196 | 配置编辑对已排队投递的实际影响披露 | requirements lane（第 49 轮） | 28 | candidate | — | worker 认领时重读目标配置（`delivery.repository.ts:323-325`），发送用当前配置（`delivery-execution.ts:82-100`）；从路由移除目标不会阻止已排队投递继续发送（认领只校验 enabled，`:236-247`）。目标编辑对话框与路由内联编辑均无排队提示（`destination-edit-dialog.tsx:112`、`routes-section.tsx:141-145`）；复用 `pendingDeliveriesQueryOptions`，文案区分「按新配置发送」与「仍会发往已移除目标」；纯前端只读 |
+| REQ-196 | 配置编辑对已排队投递的实际影响披露 | requirements lane（第 49 轮） | 28 | shipped | #257 | 第 50 轮交付：`QueuedDeliveriesNotice` 增加 `description`/`hideWhenEmpty`，目标编辑对话框与路由编辑面板在排队数 >0 时显示影响说明；0/加载/失败不渲染、不阻断保存；PRD `docs/prd/queued-delivery-config-impact.md`；中英文案各 2 条；浏览器实测两处均显示 1 条排队投递 |
+| REQ-199 | 事件详情投递表按操作优先级排序 | requirements lane（第 50 轮） | 28 | candidate | — | 摘要已按失败→运行中→待处理→成功→已抑制展示健康徽标（`event-detail-summary.tsx:18-26,78`），投递表仍按 `created_at` 升序（`history.repository.ts:172`、`event-detail-deliveries-table.tsx:49-83`）；仅在客户端稳定排序，同状态保持输入顺序；不改服务端/DTO/迁移；纯前端只读 |
+| REQ-200 | 投递详情「元数据」标注为当前目标配置 | requirements lane（第 50 轮） | 27 | candidate | — | 元数据由读取详情时的当前目标运行时配置生成（`delivery.repository.ts:460`、`destination.helpers.ts:155-235`），UI 只写「通知目标元数据」（`delivery-detail-view.tsx:57-61`、`zh-Hans.json:160`）；补一行「依据当前配置，历史投递可能不同」并保留 JSON/复制；纯前端只读 |
 | REQ-197 | 静默规则创建/编辑披露对已排队投递的再判定 | requirements lane（第 49 轮） | 27 | candidate | — | 静默在入队与认领时各判定一次（`docs/prd/alert-suppression.md:106`），`claimNext` 会加载 active 规则抑制 pending（`delivery.repository.ts:248-291`）；创建/编辑表单只展示加急影响（`suppression-forms.tsx:427`、`urgent-impact-preview.tsx:24-70`）；有 sourceId/destinationId 时用既有 scope 查询，否则显示全局 pending；仅提示不阻断；纯前端 |
 | REQ-198 | 投递列表直接展示静默原因与规则 | requirements lane（第 49 轮） | 26 | candidate | — | `DeliveryListItem` 无抑制字段（`packages/core/src/operations.ts:94-118`、`packages/api/src/schemas/operations.ts:78-97`），仓储列表投影未选 `suppression_id/suppress_reason`（`history.repository.ts:238-254`）；筛选 suppressed 后需逐条打开详情；列表 DTO 增两字段 + 状态单元格原因摘要与规则链接；无迁移 |
 
@@ -495,10 +497,11 @@
 
 ## 下一轮优先项
 
-0. **REQ-193（28）** 投递详情静默判定逐项证据（第 48 轮 requirements 首推，复用 core
-   matcher，纯前端只读）；**REQ-181（27）** 删除配置前的事件/投递级联数量（Source/
-   Destination 已有路由数，Route 仍缺）；**REQ-182（27）** 目标测试发送前确认；
-   **REQ-186（28）** 设置页从文件导入 TOML/JSON；**REQ-194/195（27）**。
+0. **REQ-186（28）** 设置页从文件导入 TOML/JSON（第 50 轮 requirements 复核仍成立，纯前端
+   只读草稿填充）；**REQ-199（28）** 事件详情投递表按操作优先级排序；**REQ-181（27）**
+   删除配置前的事件/投递级联数量；**REQ-182（27）** 目标测试发送前确认；
+   **REQ-194/195（27）**；**REQ-200（27）** 投递元数据标注当前配置。
+   **FIX-9（高优）** Token 轮换后 Webhook 401 应优先用测试/日志定位。
 1. **SEC-22（27）** endpoint userinfo 密码投影；**SEC-24（25）** 补脱敏 key 形态测试；
    **SEC-13** 精确键 + `sessionId/jwt/signature`；**SEC-25（25）** test/preview 载荷投影。
 2. **UI-22（24）** 静默编辑面板与分页条重叠（约 30 分钟）；**UI-23（24）** 390px
@@ -526,9 +529,9 @@
 10. **docs-drift 批次**：第一批 DOC-23/24/37/43/46/47/50/51（README、抑制 PRD 五状态、
     post-MVP 过期范围；DOC-49 已交付 #226）；第二批 DOC-36/48/53/54/55/56/57/58（状态头、
     ADR 版本、无 importer 的 accessor）。建议拆两个 `docs:` PR；DOC-52 可关闭。
-11. **车道轮转（第 48 轮）**：`requirements` + `ui-triage` 必跑；本轮非必跑车道为
-    **`security-exposure`**（已完成：无新问题，SEC-22/24/13/25 仍为 candidate）。
-    下一轮非必跑车道为 **`docs-drift`**（自第 46 轮起两轮未跑）。`last_ui_review_at` =
+11. **车道轮转（第 50 轮）**：`requirements` + `ui-triage` 必跑；本轮非必跑车道为
+    **`release-infra`**（已完成：REL-21/25/26/27/28、REL-19 仍成立，`e2e.yml` 方案已成文）。
+    下一轮非必跑车道为 **`quality`**（自第 38 轮后未跑）。`last_ui_review_at` =
     2026-10-21 03:47，下次由 `ui-triage` 按强信号（≥48h / ≥3 UI 合并 / ≥2 未解决 UI 发现）决定。
 11. **REQ-88/89/90（27）**：事件接入延迟、重试确认、指标端点。
 12. **REQ-81/67/54/55（27）**：告警源一键静默、事件列表三分支计数、源覆盖区分停用路由、
