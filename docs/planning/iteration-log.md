@@ -80,7 +80,14 @@
     `v0.1.0-beta.40` 未占用。
   - 运维回滚：Dockerfile/compose/env/依赖/迁移全部零 diff；回滚只需换回
     `0.1.0-beta.39` 镜像，数据卷双向兼容。
-- 版本：`0.1.0-beta.40`（发布 PR 与 tag 见下文/发布记录）。
+- 版本：`0.1.0-beta.40`；PR #274 `chore(release): v0.1.0-beta.40`（rebase 合并 `e8c2c6f`）。
+- Tag：`v0.1.0-beta.40`（annotated，指向 `e8c2c6f`）；GitHub Release：
+  `https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.40`（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.40`
+  - index digest `sha256:6087bd63a158a30cd95f0201b081c6bc4d04c03de8b21a5b193c644ab9d5b5c7`
+  - `linux/amd64` @ `sha256:a01a00a5…`，`linux/arm64` @ `sha256:d30c8f50…`
+  - 构建参数：`--provenance=false --sbom=false`；未推 `latest`。
+- 日志/backlog 的发布信息由后续 `docs(planning)` 小 PR 补充记录。
 
 ### 下一轮优先项
 

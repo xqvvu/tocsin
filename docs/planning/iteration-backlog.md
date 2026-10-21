@@ -485,6 +485,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.40` | `e8c2c6f` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.40`（linux/amd64 + linux/arm64，index digest `sha256:6087bd63…`） | 事件详情投递表错误与重试时间可读性（#272，UI-19）；无迁移/配置变化；回滚镜像 `0.1.0-beta.39` |
 | `0.1.0-beta.39` | `7f5eea1` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.39`（linux/amd64 + linux/arm64，index digest `sha256:ca2cab50…`） | 事件详情投递表按操作优先级排序（#267，REQ-199）+ 告警源更新不再回滚并发 Token 轮换（#268，Q-48）；无迁移/配置变化；回滚镜像 `0.1.0-beta.38` |
 | `0.1.0-beta.38` | `894dc16` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.38`（linux/amd64 + linux/arm64，index digest `sha256:7b1a0f36…`） | 设置页从文件载入可移植配置（#264，REQ-186）；无迁移/配置变化；回滚镜像 `0.1.0-beta.37` |
 | `0.1.0-beta.37` | `4a5cbd4` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.37`（linux/amd64 + linux/arm64，index digest `sha256:6192ca60…`） | 目标编辑对话框页脚可见性（#261，UI-24）；无迁移/配置变化；回滚镜像 `0.1.0-beta.36` |
