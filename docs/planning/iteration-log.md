@@ -81,6 +81,13 @@
   - `linux/amd64` @ `sha256:d9c42922…`，`linux/arm64` @ `sha256:d34ecdd8…`
   - 构建参数：`--provenance=false --sbom=false`；未推 `latest`。
 
+### 文档同步
+
+- `obsidian-vault` skill 在本会话不可用；按 AGENTS.md 从 Obsidian 配置发现 vault
+  （`~/Library/Mobile Documents/iCloud~md~obsidian/Documents`），沿用既有 `Vane` 笔记风格
+  手工同步：更新 `Vane Iteration Log`、`Vane Iteration Backlog`，新增
+  `Vane Queued Delivery Config Impact` 并加入 `Vane Index`。
+
 ## 2026-10-21（第 49 轮）
 
 - 时间：2026-10-21 06:36 – 08:05 CST。
