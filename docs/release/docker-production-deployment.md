@@ -69,7 +69,7 @@ docker compose logs --tail=50 console
 | 变量                              | 默认值（容器内）      | 作用与约束                                                                 |
 | --------------------------------- | --------------------- | -------------------------------------------------------------------------- |
 | `HOST` / `PORT`                   | `0.0.0.0` / `3000`    | Nitro node-server 监听地址与端口（镜像里已设）                             |
-| `BETTER_AUTH_SECRET`              | 无（compose 只回落到已拒绝的占位值） | 生产**必需**：≥32 字符，且不能是占位值或历史公开值；缺失/占位时进程在 bootstrap 阶段退出 |
+| `BETTER_AUTH_SECRET`              | 无（compose 只回落到已拒绝的占位值） | 生产**必需**：≥32 字符，且不能是占位值或历史公开值；缺失/占位时所有请求（含 `/api/ready`）返回 500，容器被判 unhealthy |
 | `BETTER_AUTH_URL`                 | 无                    | 生产**必需**（或提供 `SERVER_URL`）：Better Auth 的对外 base URL，必须是合法 URL |
 | `SERVER_URL`                      | 无                    | 对外访问 URL；`BETTER_AUTH_URL` 缺省时作为回落值                            |
 | `BETTER_AUTH_ALLOWED_HOSTS`       | 无                    | 可选，逗号/换行分隔的 Host 白名单（走 PVC、反代、临时域名时使用）           |
@@ -129,8 +129,9 @@ docker compose logs --tail=50 console
 ## 7. Secrets
 
 - **必须显式提供 `BETTER_AUTH_SECRET`。** compose 不再内置可用的默认值：未设置时回落到公开占位值，
-  应用会在 bootstrap 阶段以 `BETTER_AUTH_SECRET must be replaced with a deployment-specific secret`
-  退出，`/api/ready` 不会假绿。生成一次并持久化复用，不要每次部署都重新生成：
+  应用加载入口时以 `BETTER_AUTH_SECRET must be replaced with a deployment-specific secret` 拒绝服务，
+  所有请求（包括 `/api/ready`）返回 500、healthcheck 判 unhealthy，不会出现「健康但登录 500」的假绿。
+  生成一次并持久化复用，不要每次部署都重新生成：
   ```bash
   openssl rand -hex 32   # 写入受保护的 .env（已 gitignore）或编排平台的 secret
   ```
