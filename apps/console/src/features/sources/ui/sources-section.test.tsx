@@ -138,7 +138,7 @@ describe("sources section table", () => {
     );
 
     // The blocked share stays visible in the badge instead of only in the hover title.
-    const badge = screen.getByText("1/2 deliverable");
+    const badge = screen.getByText("1/2 can send");
     expect(badge.getAttribute("title")).toContain("1 have no enabled destination");
     expect(badge.getAttribute("title")).toContain("Blocked route");
   });
