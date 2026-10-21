@@ -18,6 +18,9 @@ complexity in a monorepo workspace.
   configs are disabled.
 - CI uses `voidzero-dev/setup-vp@v1.21.1` instead of `actions/setup-node` + `pnpm/action-setup`.
 - Docker builds use `ghcr.io/voidzero-dev/vite-plus:1.0.0` as the toolchain image.
+
+> 2026-10-22 更新：当前 `.github/workflows/ci.yml` 使用 `voidzero-dev/setup-vp@v1.21.2`，
+> `Dockerfile` 使用 `ghcr.io/voidzero-dev/vite-plus:1.1.0`。上文保留的是决策时的版本。
 - Server builds use Nitro v2 through `@tanstack/nitro-v2-vite-plugin`. The Nitro v3 beta Vite
   plugin activates for every `serve` command, which is what Vitest reports, so a test run would load
   Nitro's environments and dev middleware it never uses and log a spurious `ReferenceError: module
