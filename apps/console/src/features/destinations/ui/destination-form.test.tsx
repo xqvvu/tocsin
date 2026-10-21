@@ -48,6 +48,26 @@ describe("destination form", () => {
     expect(screen.getByRole("button", { name: "How to configure Feishu card JSON" })).toBeTruthy();
   });
 
+  // The edit dialog can insert a queued-delivery notice between its header and
+  // this form. A fixed max-height on the form ignored that notice and pushed
+  // the footer outside the dialog's overflow-hidden shell, so Save and Preview
+  // became unreachable. The form must be the flex consumer and the footer must
+  // stay outside the scroll area.
+  it("keeps the dialog footer outside the scrolling body", () => {
+    const { container } = renderDestinationForm({}, { layout: "dialog" });
+
+    const form = container.querySelector("form");
+    const body = form?.firstElementChild;
+    const footer = form?.lastElementChild;
+
+    expect(form?.className).toContain("flex-1");
+    expect(form?.className).toContain("min-h-0");
+    expect(form?.className).not.toContain("max-h-");
+    expect(body?.className).toContain("overflow-y-auto");
+    expect(body?.contains(footer ?? null)).toBe(false);
+    expect(footer?.className).toContain("shrink-0");
+  });
+
   it("hides Feishu card JSON configuration help when disabled by manifest", () => {
     renderDestinationForm(
       { kind: "feishu" },
@@ -242,14 +262,16 @@ function renderDestinationForm(
   options: {
     destinationCatalog?: DestinationCatalog;
     onPreview?: (input: DestinationFormPreviewInput) => DestinationSubmitResult;
+    layout?: "panel" | "dialog";
   } = {},
 ) {
-  render(
+  return render(
     <AppIntlProvider locale="en-US">
       <DestinationForm
         mode="create"
         pending={false}
         feishuApps={[]}
+        layout={options.layout}
         destinationCatalog={options.destinationCatalog ?? defaultDestinationCatalog}
         defaultValues={{
           ...createDestinationDefaults(),

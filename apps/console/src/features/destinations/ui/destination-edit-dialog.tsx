@@ -66,7 +66,14 @@ export function DestinationEditDialog({
         }
       }}
     >
-      <ConfigurationDialogContent>
+      {/*
+        The edit form is taller than the viewport. A max-height alone leaves the
+        dialog's height content-based, so a `flex-1` form cannot shrink and its
+        footer is clipped by the shell's overflow-hidden box. Give this dialog a
+        definite height so the form consumes the remaining space and scrolls
+        internally; the create dialog keeps its auto height.
+      */}
+      <ConfigurationDialogContent className="h-[min(760px,calc(100dvh-2rem))]">
         <DialogHeader className="shrink-0 pr-8">
           <DialogTitle>{t("destinations.form.edit.title")}</DialogTitle>
           <DialogDescription>{t("destinations.form.edit.description")}</DialogDescription>
@@ -96,11 +103,13 @@ export function DestinationEditDialog({
           </Alert>
         ) : destination && templateDraftQuery.data ? (
           <>
-            <QueuedDeliveriesNotice
-              scope={{ destinationId: destination.id }}
-              description={t("destinations.form.edit.queuedDeliveriesImpact")}
-              hideWhenEmpty
-            />
+            <div className="shrink-0">
+              <QueuedDeliveriesNotice
+                scope={{ destinationId: destination.id }}
+                description={t("destinations.form.edit.queuedDeliveriesImpact")}
+                hideWhenEmpty
+              />
+            </div>
             <EditDestinationForm
               destinationCatalog={destinationCatalog}
               feishuApps={feishuApps}
