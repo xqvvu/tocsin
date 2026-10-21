@@ -95,6 +95,19 @@ describe("operations service", () => {
     expect(unmatchedRoute.deliveries.total).toBe(0);
     expect(unmatchedRoute.events.total).toBe(1);
 
+    // Destination kind narrows deliveries only, like the other delivery-only
+    // filters, and it agrees with the row it keeps.
+    const byKind = await service.listOperations({
+      limit: 10,
+      destinationKind: "generic_webhook",
+    });
+    expect(byKind.deliveries.items.map((item) => item.id)).toEqual([delivery.id]);
+    expect(byKind.deliveries.total).toBe(1);
+    expect(byKind.events.total).toBe(1);
+    const otherKind = await service.listOperations({ limit: 10, destinationKind: "email" });
+    expect(otherKind.deliveries.total).toBe(0);
+    expect(otherKind.events.total).toBe(1);
+
     await expect(service.getEventDetail(event.id)).resolves.toMatchObject({
       event: { id: event.id },
     });

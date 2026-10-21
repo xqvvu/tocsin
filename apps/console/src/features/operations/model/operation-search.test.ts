@@ -97,6 +97,36 @@ describe("route filter in the operation search", () => {
   });
 });
 
+describe("destination kind filter in the operation search", () => {
+  it("keeps the kind in the URL and resets both lists to the first page", () => {
+    const merged = mergeOperationSearch(
+      { eventPage: 4, deliveryPage: 3 },
+      { destinationKind: "feishu" },
+    );
+
+    expect(merged.destinationKind).toBe("feishu");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+
+  it("falls back to all kinds instead of throwing on an unknown value", () => {
+    // The URL is user-editable; an adapter kind removed from the registry must
+    // not leave the deliveries page stuck on an invalid filter.
+    expect(DashboardOperationSearchSchema.parse({ destinationKind: "pager" }).destinationKind).toBe(
+      "",
+    );
+    expect(DashboardOperationSearchSchema.parse({ destinationKind: "email" }).destinationKind).toBe(
+      "email",
+    );
+  });
+
+  it("drops an empty kind from the URL and the server filter", () => {
+    expect(pruneSearch({ destinationKind: "" }).destinationKind).toBeUndefined();
+    expect(operationFiltersFromSearch({ destinationKind: "" }).destinationKind).toBeUndefined();
+    expect(operationFiltersFromSearch({ destinationKind: "slack" }).destinationKind).toBe("slack");
+  });
+});
+
 describe("time range in the operation search", () => {
   it("accepts every supported window and rejects an unknown one", () => {
     // The URL is user-editable; an unknown window must fall back to "all time"

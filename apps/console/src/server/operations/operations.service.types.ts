@@ -1,6 +1,7 @@
 import type {
   DeliveryListItem,
   DeliveryState,
+  DestinationKind,
   EventListItem,
   NormalizedEvent,
   NumberedPage,
@@ -31,6 +32,8 @@ export interface ListOperationsInput {
   severity?: NormalizedEvent["severity"];
   status?: NormalizedEvent["status"];
   destinationId?: string;
+  /** Delivery-only: one destination adapter kind. */
+  destinationKind?: DestinationKind;
   routeId?: string;
   deliveryState?: DeliveryState;
   range?: OperationTimeRange;

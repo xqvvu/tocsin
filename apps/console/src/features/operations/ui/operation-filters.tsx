@@ -3,6 +3,7 @@ import * as React from "react";
 
 import {
   type DestinationSummary,
+  DestinationKindSchema,
   OPERATION_SEARCH_MAX_LENGTH,
   type RouteDefinition,
   type SourceSummary,
@@ -226,6 +227,13 @@ function OperationFiltersPanel({
       label: destination.name,
     })),
   ];
+  const destinationKindItems = [
+    { value: null, label: t("operations.filters.anyDestinationKind") },
+    ...DestinationKindSchema.options.map((kind) => ({
+      value: kind,
+      label: t(`destinations.kinds.${kind}`),
+    })),
+  ];
   const routeItems = [
     { value: null, label: t("operations.filters.anyRoute") },
     ...(configuration.routes ?? []).map((route) => ({ value: route.id, label: route.name })),
@@ -347,6 +355,36 @@ function OperationFiltersPanel({
                   {configuration.destinations.map((destination) => (
                     <SelectItem key={destination.id} value={destination.id}>
                       {destination.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </UiField>
+          <UiField>
+            <FieldLabel htmlFor="operation-destination-kind">
+              {t("operations.filters.destinationKind")}
+            </FieldLabel>
+            <Select
+              id="operation-destination-kind"
+              items={destinationKindItems}
+              value={search.destinationKind || null}
+              disabled={pending}
+              onValueChange={(value) =>
+                onChange({
+                  destinationKind: (value ?? "") as DashboardOperationSearch["destinationKind"],
+                })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t("operations.filters.anyDestinationKind")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value={null}>{t("operations.filters.anyDestinationKind")}</SelectItem>
+                  {DestinationKindSchema.options.map((kind) => (
+                    <SelectItem key={kind} value={kind}>
+                      {t(`destinations.kinds.${kind}`)}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -516,6 +554,15 @@ function activeFilterChips(
       label: t("operations.filters.destination"),
       valueLabel: destination?.name ?? search.destinationId,
       clear: { destinationId: "" },
+    });
+  }
+
+  if (scope === "deliveries" && search.destinationKind) {
+    chips.push({
+      key: "destinationKind",
+      label: t("operations.filters.destinationKind"),
+      valueLabel: t(`destinations.kinds.${search.destinationKind}`),
+      clear: { destinationKind: "" },
     });
   }
 
