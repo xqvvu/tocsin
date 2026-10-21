@@ -2,6 +2,53 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 60 轮）
+
+- 时间：2026-10-21 23:26 – 2026-10-22 00:3x CST。
+- 基线：本轮开始时 `origin/main` @ `5ccbae7`；main CI success；无 open PR。
+- 类型：**非 full-audit**（backlog 有多个 ≥27 候选；最近全量审计仍为第 1 轮，backlog 未清空）。
+- 全量审计时间戳：第 1 轮（未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`review_now（限缩）`**，第三名额给 `ui-review`。轮转车道 `docs-drift` 未跑。
+- 车道轮转位置：**`docs-drift`**（下一轮非必跑车道；已连续两轮未跑）。
+- `ui-triage`：**`review_now（限缩）`** —— 距上次真实浏览器评审 6h39m（未满 48h），但自 16:50 起命中 5 个 UI 提交 / 4 个 PR（≥3），backlog 未解决 UI 候选 16 条（≥2），且 #293 明确缺浏览器复验；限缩到 `/deliveries` 与 `/events` @1280×900。
+- `ui-review`：**已完成**（隔离实例 6200 + 临时 SQLite，`admin@example.test`）。
+  - **UI-25 确认修复**：`/deliveries` 容器 982 / scrollWidth 982，「更新时间」右缘 1171 = 操作列左缘 1171（遮挡 0px）；`/events` 982 / 982，接收时间右缘 1161 = 操作列左缘 1161（0px）。
+  - **Q-15 浏览器复现**：`/events?destinationKind=feishu` 返回全部 3 行、无 chip、筛选按钮无徽标。
+  - 新发现 **UI-30**（操作列 `min-w-24` 在 `table-fixed` 下失效，实际 88.4px）与 **UI-31**（三个同名「重置筛选」），均已写入 backlog。
+- `last_ui_review_at`：**2026-10-21 23:55 CST**（本轮真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证在会话工作树 `epic-tharp-f554df`。会话工作树 `node_modules` 缺 `@rolldown/plugin-babel`，删除根与各 workspace 的 `node_modules` 后 `vp install --frozen-lockfile` 恢复。
+
+### 本轮交付
+
+- PR #295 `feat(suppressions): silence one notification target from its row`（rebase 合并 `3231470` + `4107e32`），REQ-220。
+  - 目标行新增「临时静默」动作（`IconTooltip` 包裹的盾牌图标），打开复用 `CreateSuppressionForm` 的对话框，预填 `matcher.destinationIds=[id]`、2 小时窗口与规则名；弹窗体只在打开时挂载（列表渲染不需要 query 上下文），`resetOnSubmit=false` 保证保存失败保留输入。
+  - 新增中文 mini-PRD `docs/prd/destination-row-silence.md`；中英文各 10 个 i18n key。
+  - 验证：`vp check` 0 errors；`vp run -r test` 148 files / 798 tests；`vp run -r build` 通过；浏览器实测创建成功（`/suppressions` 显示「通知目标: UI review webhook」、生效中），1280×900 下 6 个行操作未挤占其它列。
+- 发布 `v0.1.0-beta.45`（PR #296，tag → `2cbc6cd`，GitHub Release 已创建）：发布经理 / 阻断审计 / 回滚专家一致通过；无迁移与配置变化，回滚镜像 `0.1.0-beta.44`。
+  - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.45`（linux/amd64 + linux/arm64，index digest `sha256:0603bcc6…`）。
+
+### 专家发现
+
+- `requirements`（复核三组仍成立 + 4 条新候选）：
+  - **REQ-220（28）** 目标行临时静默 —— 本轮已交付。
+  - **REQ-84 + REQ-216（合并 28）** Settings 只读运行时投影：`server/runtime/system-information.ts:10-32` 已采集版本/Node/SQLite，`apps/console/src/env.ts:23-40` 的运行参数未进入 Settings，契约只有 get/update（`packages/api/src/contract/settings.ts:10-17`）；白名单 DTO，绝不返回 env 原文。
+  - **NEW-I（27）** 出站禁止自动跟随重定向：`packages/destinations/src/transport.ts:72-77` 未设 `redirect`，307 会重放签名 body；统一 `redirect: "manual"`。
+  - **NEW-Q（26）** 静默命中时间口径（`suppression-hits-table.tsx:67-72` 用 `updatedAt`）；**NEW-N（25）** Token 轮换宽限期（`source.service.ts:66-71`，需迁移 + 鉴权，交 EXPERT_PANEL）；**NEW-P（24）** 投递耗时列；**NEW-O（23）** 最近测试持久化。
+- `ui-review`：见上；UI-25 已验，Q-15 复现，UI-30/31 入 backlog。
+- `docs-drift` 未跑（第三名额被 ui-review 占用），下一轮补。
+
+### EXPERT_PANEL / 发布决策
+
+- 发布小组三人一致：发布 `0.1.0-beta.45`（发布经理建议版本、阻断审计五项门槛全通过、回滚专家判定低风险）。无 schema/迁移/投递/auth 语义改动，本轮无需其他 EXPERT_PANEL。
+
+### 下一轮优先项
+
+1. **REQ-84 + REQ-216（28）** Settings 只读运行时投影（缺口最大、无迁移）。
+2. **Q-14（27）** 事件详情 `destinationKind` 补齐；**Q-15（25）** `hasOperationFilters` 按 scope 过滤；**UI-30（22）** 操作列固定宽。
+3. **NEW-I（27）** 出站 `redirect: "manual"`（安全增强，需四类适配器测试）。
+4. 轮转车道 **`docs-drift`**（连续两轮未跑）。
+5. `last_ui_review_at` 已刷新；UI 评审下次由 `ui-triage` 重新判断。
+
 ## 2026-10-21（第 59 轮）
 
 - 时间：2026-10-21 21:38 – 23:2x CST。
