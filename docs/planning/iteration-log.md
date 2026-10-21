@@ -71,7 +71,11 @@
 
 - 本轮需求切片为只读新增过程与展示，无迁移、无 schema、无投递/路由/auth 语义变化，按 AUTO_SHIP 交付。
 - NEW-R 的 `sources.silence_threshold_minutes` 迁移在后续实现前需 EXPERT_PANEL。
-- 发布评估：见本轮末尾记录（版本 `0.1.0-beta.46`）。
+- 发布评估：发布经理 / 阻断审计 / 回滚专家三人一致通过，发布 `v0.1.0-beta.46`
+  （tag → `0d3c78d`，GitHub Release 已创建）：自 beta.45 以来唯一用户可见变更为 Settings 运行时投影
+  （#298）；无迁移、无环境变量/启动参数变化；回滚镜像 `0.1.0-beta.45`。
+  - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.46`
+    （linux/amd64 + linux/arm64，index digest `sha256:9dbf9b17…`）。
 
 ### 下一轮优先项
 

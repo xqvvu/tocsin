@@ -525,6 +525,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.46` | `0d3c78d` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.46`（linux/amd64 + linux/arm64，index digest `sha256:9dbf9b17…`） | Settings 运行时与生效参数只读投影（#298，REQ-84 + REQ-216）；无迁移/配置变化；回滚镜像 `0.1.0-beta.45` |
 | `0.1.0-beta.45` | `2cbc6cd` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.45`（linux/amd64 + linux/arm64，index digest `sha256:0603bcc6…`） | 通知目标行内临时静默（#295，REQ-220）+ Operations 表格 1280px 适配（#293，UI-25）+ 筛选内联重置补清 `destinationKind`（#292，FIX-15）；无迁移/配置变化；回滚镜像 `0.1.0-beta.44` |
 | `0.1.0-beta.44` | `788a5b4` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.44`（linux/amd64 + linux/arm64，index digest `sha256:4dce90b0…`） | 投递列表按通知目标类型筛选（#289，REQ-206）；无迁移/配置变化；回滚镜像 `0.1.0-beta.43` |
 | `0.1.0-beta.43` | `f82814b` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.43`（linux/amd64 + linux/arm64，index digest `sha256:986db180…`） | 告警源部分受阻覆盖率可见（#284，UI-13）+ 脱敏精确键与 server-only 标记（#285，SEC-13/14/24）；无迁移/配置变化；回滚镜像 `0.1.0-beta.42` |
