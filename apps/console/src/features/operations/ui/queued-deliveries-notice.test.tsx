@@ -46,11 +46,14 @@ describe("queued deliveries notice", () => {
     queryClient.clear();
   });
 
-  function renderNotice(scope: { sourceId?: string; routeId?: string; destinationId?: string }) {
+  function renderNotice(
+    scope: { sourceId?: string; routeId?: string; destinationId?: string },
+    options: { description?: string; hideWhenEmpty?: boolean } = {},
+  ) {
     return render(
       <QueryClientProvider client={queryClient}>
         <AppIntlProvider locale="en-US">
-          <QueuedDeliveriesNotice scope={scope} />
+          <QueuedDeliveriesNotice scope={scope} {...options} />
         </AppIntlProvider>
       </QueryClientProvider>,
     );
@@ -83,6 +86,31 @@ describe("queued deliveries notice", () => {
     testState.fail = true;
 
     const { container } = renderNotice({ sourceId: "source-1" });
+
+    await waitFor(() => {
+      expect(container.textContent).toBe("");
+    });
+  });
+
+  it("pairs the edit impact with the count when jobs are queued", async () => {
+    testState.total = 2;
+
+    renderNotice(
+      { destinationId: "destination-1" },
+      { description: "Queued deliveries use the configuration saved here.", hideWhenEmpty: true },
+    );
+
+    expect(
+      await screen.findByText("Queued deliveries use the configuration saved here."),
+    ).toBeTruthy();
+    expect(screen.getByText("2 queued deliveries")).toBeTruthy();
+  });
+
+  it("stays silent on an edit surface when nothing is queued", async () => {
+    const { container } = renderNotice(
+      { routeId: "route-1" },
+      { description: "Queued deliveries are not re-matched.", hideWhenEmpty: true },
+    );
 
     await waitFor(() => {
       expect(container.textContent).toBe("");

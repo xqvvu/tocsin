@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "#/components/ui/select";
+import { QueuedDeliveriesNotice } from "#/features/operations/ui/queued-deliveries-notice";
 import {
   createEmptyLabelCondition,
   isIncompleteLabelCondition,
@@ -156,6 +157,13 @@ export function EditRouteForm({
         {t("routing.form.edit.description")}
       </p>
       <RouteEditRestrictedNotice rule={route.rule} sources={sources} />
+      <div className="mb-3">
+        <QueuedDeliveriesNotice
+          scope={{ routeId: route.id }}
+          description={t("routing.form.edit.queuedDeliveriesImpact")}
+          hideWhenEmpty
+        />
+      </div>
       <RouteForm
         sources={sources}
         destinations={destinations}

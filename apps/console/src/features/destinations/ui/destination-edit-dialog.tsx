@@ -18,6 +18,7 @@ import type {
   PreviewEditDestinationFormInput,
 } from "#/features/destinations/ui/destination-ui-types";
 import { EditDestinationForm } from "#/features/destinations/ui/edit-destination-form";
+import { QueuedDeliveriesNotice } from "#/features/operations/ui/queued-deliveries-notice";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function DestinationEditDialog({
@@ -94,40 +95,47 @@ export function DestinationEditDialog({
             </AlertDescription>
           </Alert>
         ) : destination && templateDraftQuery.data ? (
-          <EditDestinationForm
-            destinationCatalog={destinationCatalog}
-            feishuApps={feishuApps}
-            key={destination.id}
-            showHeader={false}
-            framed={false}
-            layout="dialog"
-            destination={destination}
-            editorDraft={templateDraftQuery.data}
-            pending={disabled || pending}
-            onCancel={() => onOpenChange(false)}
-            onPreview={onPreview}
-            onSubmit={async (input) => {
-              setPending(true);
-              try {
-                await updateDestination(input);
-                await invalidateDestinations();
-                onOpenChange(false);
+          <>
+            <QueuedDeliveriesNotice
+              scope={{ destinationId: destination.id }}
+              description={t("destinations.form.edit.queuedDeliveriesImpact")}
+              hideWhenEmpty
+            />
+            <EditDestinationForm
+              destinationCatalog={destinationCatalog}
+              feishuApps={feishuApps}
+              key={destination.id}
+              showHeader={false}
+              framed={false}
+              layout="dialog"
+              destination={destination}
+              editorDraft={templateDraftQuery.data}
+              pending={disabled || pending}
+              onCancel={() => onOpenChange(false)}
+              onPreview={onPreview}
+              onSubmit={async (input) => {
+                setPending(true);
                 try {
-                  await onSaved?.();
-                } catch {
-                  // The configuration is already persisted; a failed refresh of a
-                  // caller-owned query only delays the next read.
+                  await updateDestination(input);
+                  await invalidateDestinations();
+                  onOpenChange(false);
+                  try {
+                    await onSaved?.();
+                  } catch {
+                    // The configuration is already persisted; a failed refresh of a
+                    // caller-owned query only delays the next read.
+                  }
+                } catch (error) {
+                  toast.error(t("destinations.page.operationFailed"), {
+                    description: error instanceof Error ? error.message : String(error),
+                  });
+                  return false;
+                } finally {
+                  setPending(false);
                 }
-              } catch (error) {
-                toast.error(t("destinations.page.operationFailed"), {
-                  description: error instanceof Error ? error.message : String(error),
-                });
-                return false;
-              } finally {
-                setPending(false);
-              }
-            }}
-          />
+              }}
+            />
+          </>
         ) : destination && templateDraftQuery.isError ? (
           <Alert variant="destructive">
             <AlertTitle>{t("destinations.form.templateDraftLoadError")}</AlertTitle>
