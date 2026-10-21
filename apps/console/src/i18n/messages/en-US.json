@@ -281,7 +281,7 @@
   "deliveries.table.headers.attempts": "Attempts",
   "deliveries.table.headers.event": "Event",
   "deliveries.table.headers.lastError": "Last error",
-  "deliveries.table.headers.next": "Next",
+  "deliveries.table.headers.next": "Next retry",
   "deliveries.table.headers.state": "State",
   "deliveries.table.headers.target": "Target",
   "deliveries.table.headers.updated": "Updated",
