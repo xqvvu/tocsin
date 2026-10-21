@@ -2,6 +2,93 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 52 轮）
+
+- 时间：2026-10-21 09:54 – 10:45 CST。
+- 基线：本轮开始时 `origin/main` @ `e3b6dcf`（第 51 轮 beta.37 发布后）。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选，且无 open PR）；最近全量审计仍为
+  第 1 轮（2026-10-18 13:30 CST）。
+- 车道：`requirements` + `ui-triage` 必跑，第三名额给 `architecture`（第 51 轮记录的
+  下一个非必跑车道）。`requirements` 运行 33 分钟仍停在读取基线，按 30 分钟上限终止，
+  本轮未产生新需求候选，留待下一轮。
+- 车道轮转位置：`ui-triage` / `architecture` 已完成，`requirements` 未完成；下一轮非必跑
+  车道为 `quality`，`requirements` 需重跑。
+- `ui-triage`：**`defer`** —— 距第 51 轮评审仅 22 分钟，期间 UI 路径 0 个合并；14 条未解决
+  UI 发现属稳定基线，重复评审不会产生新信息。下次触发：≥1 个非测试 UI 合并且距 09:34
+  满 2 小时，或累计 ≥3 个 UI 合并，或 UI-22/UI-23 修复合并，或 48 小时兜底。
+- `last_ui_review_at`：2026-10-21 09:34 CST（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
+  `trusting-torvalds-9d8a18`。
+
+### 本轮交付
+
+- PR #264 `feat(console): load portable config from a file`（REQ-186，rebase 合并
+  `5b5019a`）。
+  - 设置页可移植配置页脚新增「从文件载入」，选择 `.toml`/`.json` 后读入当前草稿；
+    不自动导入，仍需「应用导入」确认。
+  - 超过 1 MiB 或空白文件拒绝且不改草稿；`readTextFile` 放入 `#/lib/browser`
+    （`createClientOnlyFn`）。
+  - 新增中英文案 4 条、PRD `docs/prd/settings-file-import.md`、hook 3 条 + 组件 1 条测试。
+  - 浏览器实测（隔离实例 `localhost:6200` + 临时 SQLite）：TOML 页上传文件后编辑器内容
+    更新；切回 UI 页保留期仍为 30（未应用文件中的 45）；1280x800 与窄屏布局正常。
+  - 验证：`vp check` 0 errors（12 条既有 warning）、`vp run -r test` 142 files / 764 tests、
+    `vp run -r build` 通过、PR CI success。
+- 自查：`code-review` 低强度逐 hunk 复核，未发现缺陷。
+
+### 专家发现
+
+- `architecture`：
+  - 复核 ARCH-5/6/27/28/30 全部仍成立（行号已更新）；ARCH-28 core/api DTO 漂移仍在
+    （core `operations.ts:89-92` 无 `destinationKind`，API schema `schemas/operations.ts:51-57`
+    有），成本 S。
+  - ARCH-23 部分修复：`request-context.ts:91` 已尊重注入 container，默认 session 解析
+    `:99-103` 仍固定 `getApplicationContainer()` 且无测试。
+  - ARCH-33 部分修复：`destination-kind-badge.tsx` 已删除，`form-text-field.tsx` 仍零 importer。
+  - 新增 **ARCH-41（20）**：Event/Delivery 详情 Tab 未进 URL（`event-detail-view.tsx:25-26`、
+    `delivery-detail-view.tsx:24-25`，两个详情路由无 `validateSearch`）。
+  - 未发现服务纯度、模块级单例、entrypoint 厚度、import 边界的新偏离。
+- `requirements`：超时终止，无输出（留待下一轮）。
+- `ui-triage`：`defer`，理由见上。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项；REQ-186 为纯前端布局/交互切片，不触碰 schema、投递、路由或
+  auth 语义。
+
+### 发布评估与镜像
+
+- 三方专家一致 `APPROVE`：
+  - 发布经理：自 `v0.1.0-beta.37` 以来唯一用户可见变更为 #264（REQ-186），其余为规划文档；
+    建议预发布递增 `0.1.0-beta.38`。
+  - 阻断审计：5/5 PASS —— `647d21e` main CI success、0 open PR、migration 零 diff、
+    无阻塞回归、`v0.1.0-beta.38` 未占用。
+  - 运维回滚：Dockerfile/compose/env/依赖/迁移均零 diff；回滚只需换回 `0.1.0-beta.37` 镜像，
+    数据卷双向兼容。
+- 版本：`0.1.0-beta.38`；PR #265 `chore(release): v0.1.0-beta.38`（rebase 合并
+  `894dc16`），合并后 main CI success。
+- Tag：`v0.1.0-beta.38`（annotated，指向 `894dc16`）；GitHub Release：
+  `https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.38`（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.38`
+  - index digest `sha256:7b1a0f3601a65b63a0500ca1d79ef0b23271da4c9fe180f2b9b52099702fb8f1`
+  - `linux/amd64` @ `sha256:b39158f2…`，`linux/arm64` @ `sha256:041c2638…`
+  - 构建参数：`--provenance=false --sbom=false`；未推 `latest`。
+
+### 文档同步
+
+- `obsidian-vault` skill 未通过 Skill 工具暴露；按 AGENTS.md 从 Obsidian 配置发现 vault 后
+  手工同步（见本轮末尾）。
+
+### 下一轮优先项
+
+1. **REQ-199（28）** 事件详情投递表按操作优先级排序；**REQ-181（27）** 删除配置前
+   事件/投递级联数；**REQ-182（27）** 目标测试发送前确认；**REQ-200（27）** 投递元数据
+   标注当前配置。
+2. **Q-48（27）** 告警源更新整行读-改-写并发回滚 `token_hash`（建议小切口 + 交错测试）。
+3. **requirements 车道下一轮重跑**（本轮超时，未产生新候选）。
+4. **ARCH-41（20）** 详情 Tab 进 URL；**ARCH-28（21）** core/api DTO parity 守卫
+   （低成本 AUTO_FIX）。
+5. 车道轮转：下一轮非必跑车道 `quality`；`requirements` 必跑。
+
 ## 2026-10-21（第 51 轮）
 
 - 时间：2026-10-21 08:54 – 09:45 CST。
