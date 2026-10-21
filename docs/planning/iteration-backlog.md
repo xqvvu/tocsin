@@ -440,7 +440,7 @@
 | REQ-203 | 通知目标测试发送支持选择真实历史事件 | requirements lane（第 53 轮） | 28 | shipped | #278 | 第 55 轮交付：`TestDestinationCommand` 增可选 `sampleEventId`，服务复用 `resolvePreviewSample` 并传入控制台 locale/timeZone；测试动作改为确认对话框（内置样例 / 最近历史事件）；PRD `docs/prd/destination-test-historical-event.md`；不写 events/deliveries |
 | REQ-204 | 事件详情按标题/消息一键静默相似告警 | requirements lane（第 53 轮） | 28 | shipped | #281 | 第 56 轮交付：`suppressionDefaultsFromText` + `SuppressionFromEventDialog` 的 `text` 形态；标题/消息旁图标入口，空/脱敏禁用；PRD `docs/prd/event-text-silence.md`；原证据：matcher 已支持 `titleContains`/`messageContains`（`suppression.ts:47-48,207-208`）、完整表单已支持（`suppression-forms.tsx:414-425`），但一键入口只预填 fingerprint 或标签（`suppression-from-event-dialog.tsx:24-40`、`suppression-form.ts:147-201`）；复用 `CreateSuppressionForm`，预填 `sourceIds` + 单个 contains；不改判定语义 |
 | REQ-205 | 跨实体排障搜索页（事件 + 投递分组） | requirements lane（第 53 轮） | 27 | candidate | — | `operations.list` 同一 `q` 已同时返回两类（`operations.service.ts:33-60`），但顶栏无搜索入口、两页各自搜索（`dashboard-header.tsx:13-39`）；新增 `/search?q=` 分组结果页并复用现有 procedure；建议吸收 NEW-D（顶栏 ID 直达），不要并行做两个入口；纯前端只读 |
-| REQ-206 | 投递列表按渠道类型筛选 | requirements lane（第 54 轮） | 28 | candidate | — | Deliveries URL 新增 `destinationKind` 并贯穿 oRPC/仓储列表与 total；`destinationKind` 已在 DTO（`packages/core/src/operations.ts:106-111`、`history.repository.ts:244,305`）但只用于图标（`delivery-target-cell.tsx:31-41`）；`operation-search.ts:13-36`、`history.repository.ts:258-292,358-403`、`operation-filters.tsx:330-355`；无迁移 |
+| REQ-206 | 投递列表按渠道类型筛选 | requirements lane（第 54 轮） | 28 | shipped | #289 | 第 58 轮交付：URL `destinationKind` 贯穿 oRPC/service/仓储，列表与 total 共用 `EXISTS` 谓词；筛选面板仅 Deliveries 作用域，含 chip 与重置；PRD `docs/prd/delivery-kind-filter.md`；无迁移 |
 | REQ-207 | 事件邻域绝对时间窗与「前后 15 分钟」一键跳转 | requirements lane（第 54 轮） | 27 | candidate | — | 吸收 REQ-33；URL `from`/`to` 与 `range` 互斥，仓储补 `until`（`history.interface.ts:23-33`、`history.repository.ts:104-106`），事件详情工具栏加锚点动作（`event-detail-page.tsx:58-71`、`event-detail-summary.tsx:83-90`）；无迁移 |
 | REQ-208 | 待重试队列视图（按 worker 领取顺序） | requirements lane（第 54 轮） | 27 | candidate | — | `sort=nextAttempt` 复用与 `claimNext` 相同的 `coalesce(next_attempt_at, created_at)` 升序（`delivery.repository.ts:238-240` vs `history.repository.ts:253-254`）；DTO 补 `maxAttempts`/`destinationEnabled`/`routeEnabled`；吸收 REQ-58/169/60 的展示部分；无迁移 |
 | REQ-209 | 投递失败分类可见（errorKind 落库与展示） | requirements lane（第 54 轮） | 26 | candidate | — | forward-only `0004` 加可空 `last_error_kind`；适配器已返回 `errorKind`/`retryHint`（`packages/destinations/src/types.ts:61-87`），`delivery-execution.ts:149-157,181-224` 已传给 `markFailed`，但仓储只写文本（`delivery.repository.ts:377-414`）；UI 显示类别徽标 + 原文，历史行降级；升级 Q-6 |
@@ -496,6 +496,12 @@
 | UI-29 | 文本静默图标按钮仅靠原生 title | ui-review（第 57 轮，浏览器实测） | 21 | candidate | — | 两个同形盾牌图标只有 `title`，禁用原因在界面不可见；改用既有 `IconTooltip`（`components/common/icon-tooltip.tsx`）包裹触发器，与目标行操作一致（`event-detail-summary.tsx:56,62`、`suppression-from-event-dialog.tsx:149-163`） |
 | NEW-I | 出站投递禁止自动跟随重定向 | requirements lane（第 57 轮） | 27 | candidate | — | `transport.ts:56-95` 未设 `redirect`，fetch 默认 follow；307 会重放签名 body，同源重定向会带自定义认证头；统一 `redirect: "manual"`，3xx 落 `http_error`/不可重试；四类适配器覆盖；无迁移 |
 | NEW-J | 429/503 遵守 Retry-After | requirements lane（第 57 轮） | 24 | candidate | — | `types.ts:20-26` 不暴露响应头，`utils.ts:46-52` 只标 retryable，`delivery-execution.ts:228-242` 只用内部退避；transport 暴露安全 `retry-after` 并取较大值；暂缓（评分低于门槛） |
+| NEW-K | Settings 语言/时区变更对排队投递的渲染影响披露 | requirements lane（第 58 轮） | 26 | candidate | — | worker 领取时才读取当前 `presentation`（`delivery-worker.service.ts:63-64`），改 locale/timeZone 会追溯改变 pending/重试投递的渲染；保存仅 hard reload（`settings-preferences-panel.tsx:51-64`）；复用 `operations.list` 的 pending total，0/加载/失败不渲染、不阻断保存；纯前端无迁移 |
+| NEW-L | 控制台会话过期后的统一再登录与回跳 | requirements lane（第 58 轮） | 25 | candidate | — | 长开页面命中 `UNAUTHORIZED` 无全局拦截（`lib/orpc.ts:19-27`、`router.tsx:11`），只弹原始错误并丢失筛选；客户端拦截后去重提示一次并跳 `/login?redirect=<当前 href>`，保留 `FORBIDDEN` 现有语义；纯客户端 |
+| NEW-M | 路由/静默标签条件从现有事件补全键值 | requirements lane（第 58 轮） | 24 | candidate | — | 标签键/值均为自由文本（`route-forms.tsx:514-545`、`suppression-forms.tsx:635-704`）；新增只读 facet 查询 `labels_json`（窗口 + top-N 上限）供 combobox 建议；不改变匹配语义、无迁移 |
+| ARCH-42 | oRPC `runDeliveryWorker` 在 handler 内建 worker 并汇总健康 | architecture lane（第 58 轮） | 23 | candidate | — | `server/orpc/features/operations/router.ts:64-78` 直接穿透 container 编排 worker，入口过厚；建议容器增加 worker control service；与 ARCH-15 合并处理 |
+| ARCH-43 | feature model 测试直连 infra helper | architecture lane（第 58 轮） | 22 | candidate | — | `features/deliveries/model/urgent-ping-explanation.test.ts:7` import `#/infra/.../destination.helpers`；改本地 fixture；AUTO_FIX（同 ARCH-40） |
+| ARCH-44 | Sources 页在浏览器用全量 routes/destinations 计算覆盖率 | architecture lane（第 58 轮） | 20 | candidate | — | `sources-page.tsx:27-30`、`sources-section.tsx:58,74`；若 routes 改服务端分页会静默少算；需要服务端 coverage 投影或显式上限 |
 
 ## 发布记录
 
@@ -538,6 +544,12 @@
 
 ## 下一轮优先项
 
+0. **第 58 轮交付**：REQ-206（28）投递按渠道类型筛选（#289）。
+   下一优先：**REQ-220（28）** 目标行临时静默；**REQ-84 + REQ-216（28）** Settings 只读运行参数；
+   **NEW-I（27）** 出站禁止自动跟随重定向；**NEW-K（26）** 语言/时区变更对排队投递的影响披露；
+   **NEW-L（25）** 会话过期统一回跳；**NEW-M（24）** 标签 facet 补全。
+   **UI-25（27）** 1280 sticky 列遮挡；**UI-22（24）** 内联编辑重叠；**UI-26/27/28/29（21-22）**。
+   **SEC-26 + SEC-11** 仍待 EXPERT_PANEL。`architecture` 车道本轮已跑，下一轮轮转车道为 **`quality`**。
 0. **第 57 轮交付**：UI-13（26）部分受阻覆盖率可见（#284，UI 评审主切片）+
    SEC-13/SEC-14/SEC-24（#285，脱敏与 import 边界加固）。
    下一优先：**REQ-206（28）** 投递按渠道类型筛选；**REQ-220（28）** 目标行临时静默；
