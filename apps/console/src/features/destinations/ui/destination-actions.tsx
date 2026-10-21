@@ -27,6 +27,7 @@ import { Button } from "#/components/ui/button";
 import type { DestinationListItem } from "#/features/destinations/ui/destination-ui-types";
 import { QueuedDeliveriesNotice } from "#/features/operations/ui/queued-deliveries-notice";
 import type { RouteReferenceImpact } from "#/features/routes/model/route-reference-impact";
+import { SuppressionFromDestinationDialog } from "#/features/suppressions/ui/suppression-from-destination-dialog";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function DestinationActions({
@@ -103,6 +104,7 @@ export function DestinationActions({
           <RiEditLine data-icon="inline-start" aria-hidden />
         </Button>
       </IconTooltip>
+      <SuppressionFromDestinationDialog destination={destination} disabled={pending} />
       {destination.enabled ? (
         <AlertDialog
           open={disableDialogOpen}

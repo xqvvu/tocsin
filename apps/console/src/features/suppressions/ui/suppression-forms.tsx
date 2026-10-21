@@ -72,6 +72,7 @@ export function CreateSuppressionForm({
   layout = "panel",
   pending,
   defaultValues,
+  resetOnSubmit = true,
   onSubmit,
 }: {
   showHeader?: boolean;
@@ -81,6 +82,12 @@ export function CreateSuppressionForm({
   pending: boolean;
   /** Overrides parts of the blank create defaults, e.g. when silencing an event. */
   defaultValues?: Partial<SuppressionFormValues>;
+  /**
+   * Clears the form as soon as submit fires. Callers that keep the dialog open
+   * on failure (row-level silence actions) pass `false` so a rejected save
+   * leaves the operator's edits in place.
+   */
+  resetOnSubmit?: boolean;
   onSubmit: (input: SuppressionFormSubmission) => void;
 }) {
   const t = useTranslations();
@@ -105,7 +112,7 @@ export function CreateSuppressionForm({
       }}
       submitLabel={t("suppressions.form.create.submit")}
       submitIcon={<RiAddLine data-icon="inline-start" aria-hidden />}
-      resetOnSubmit
+      resetOnSubmit={resetOnSubmit}
       onSubmit={onSubmit}
     />
   );
