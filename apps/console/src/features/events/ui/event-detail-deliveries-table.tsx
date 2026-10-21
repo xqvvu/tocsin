@@ -8,6 +8,7 @@ import {
 } from "#/components/ui/table";
 import { DeliveryRetryButton } from "#/features/deliveries/ui/delivery-retry-button";
 import { DeliveryStateBadge } from "#/features/deliveries/ui/delivery-state-badge";
+import { sortDeliveriesByOperationalPriority } from "#/features/events/model/delivery-priority";
 import { EventDetailSectionHeader } from "#/features/events/ui/event-detail-section-header";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
@@ -19,6 +20,7 @@ export function EventDetailDeliveriesTable({
   deliveries: EventDetailData["deliveries"];
 }) {
   const t = useTranslations();
+  const orderedDeliveries = sortDeliveriesByOperationalPriority(deliveries);
 
   return (
     <section className="flex h-full min-h-0 flex-col gap-2">
@@ -53,7 +55,7 @@ export function EventDetailDeliveriesTable({
                 </TableCell>
               </TableRow>
             ) : (
-              deliveries.map((delivery) => (
+              orderedDeliveries.map((delivery) => (
                 <TableRow key={delivery.id} className="align-top">
                   <TableCell className="truncate font-medium" title={delivery.destinationName}>
                     {delivery.destinationName}

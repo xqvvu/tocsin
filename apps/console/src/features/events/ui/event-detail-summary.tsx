@@ -3,25 +3,13 @@ import type { ReactNode } from "react";
 import type { DeliveryState } from "@tocsin/core";
 
 import { Badge } from "#/components/ui/badge";
+import { DELIVERY_STATE_PRIORITY } from "#/features/events/model/delivery-priority";
 import type { getEventDeliveryStats } from "#/features/events/ui/event-detail-stats";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { SeverityBadge } from "#/features/events/ui/severity-badge";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
-
-/**
- * Operational priority: a failed delivery needs attention first, an in-flight
- * one explains why the event looks quiet, and a suppressed one explains why
- * nothing was sent at all. Successful deliveries are the least urgent context.
- */
-const DELIVERY_HEALTH_ORDER: DeliveryState[] = [
-  "failed",
-  "running",
-  "pending",
-  "succeeded",
-  "suppressed",
-];
 
 const DELIVERY_HEALTH_MESSAGE_KEYS: Record<DeliveryState, string> = {
   failed: "events.detail.summary.deliveryHealthFailed",
@@ -75,7 +63,7 @@ export function EventDetailSummary({
           {deliveryTotal === 0 ? (
             <Badge variant="outline">{t("events.detail.summary.deliveryHealthNone")}</Badge>
           ) : (
-            DELIVERY_HEALTH_ORDER.filter((state) => deliveryStats[state] > 0).map((state) => (
+            DELIVERY_STATE_PRIORITY.filter((state) => deliveryStats[state] > 0).map((state) => (
               <Badge key={state} variant={DELIVERY_HEALTH_VARIANTS[state]}>
                 {t(DELIVERY_HEALTH_MESSAGE_KEYS[state], {
                   count: deliveryStats[state],
