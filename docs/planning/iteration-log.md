@@ -24,7 +24,7 @@
 - PR #260 `test(console): cover token rotation at the webhook boundary`（rebase 合并
   `2cab822`）：轮换 Token 后必须能通过真实 `WebhookIntakeService.acceptWebhook`，旧 Token
   必须 `invalid_token`；`vp check` 0 errors，60/60 用例通过，CI success。
-- 本轮 PR（UI-24）`fix(console): keep destination dialog footer reachable`。
+- PR #261 `fix(console): keep destination dialog footer reachable`（UI-24）。
   - 根因有两层：目标编辑表单用扣除固定标题高度的 `max-h`，无法容纳 #257 插入的排队投递
     提示；仅改为 `flex-1` 后，弹窗外壳仍是自动高度，且 `EditDestinationForm` 的 `<section>`
     是块级包裹，`flex-1` 无法收缩。
