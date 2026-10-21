@@ -528,7 +528,7 @@
   "events.detail.deliveryHeaders.attempts": "尝试",
   "events.detail.deliveryHeaders.destination": "通知目标",
   "events.detail.deliveryHeaders.lastError": "最近错误",
-  "events.detail.deliveryHeaders.next": "下次",
+  "events.detail.deliveryHeaders.next": "下次重试",
   "events.detail.deliveryHeaders.route": "路由",
   "events.detail.deliveryHeaders.state": "投递状态",
   "events.detail.description": "检查标准化字段、接入时路由匹配、投递和已脱敏 raw 数据",

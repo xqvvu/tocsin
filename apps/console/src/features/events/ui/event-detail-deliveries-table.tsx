@@ -11,8 +11,10 @@ import { DeliveryStateBadge } from "#/features/deliveries/ui/delivery-state-badg
 import { sortDeliveriesByOperationalPriority } from "#/features/events/model/delivery-priority";
 import { EventDetailSectionHeader } from "#/features/events/ui/event-detail-section-header";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
+import { retryTimestampFormat } from "#/features/operations/model/operation-format";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
-import { useTranslations } from "#/i18n/use-i18n";
+import { fallbackTimeZone } from "#/i18n/time-zone";
+import { useNow, useTimeZone, useTranslations } from "#/i18n/use-i18n";
 
 export function EventDetailDeliveriesTable({
   deliveries,
@@ -20,6 +22,8 @@ export function EventDetailDeliveriesTable({
   deliveries: EventDetailData["deliveries"];
 }) {
   const t = useTranslations();
+  const timeZone = useTimeZone() ?? fallbackTimeZone;
+  const now = useNow();
   const orderedDeliveries = sortDeliveriesByOperationalPriority(deliveries);
 
   return (
@@ -32,16 +36,18 @@ export function EventDetailDeliveriesTable({
         <Table className="min-w-190 table-fixed">
           <TableHeader className="bg-muted/50 text-muted-foreground sticky top-0 z-10">
             <TableRow>
-              <TableHead className="w-[22%]">
+              <TableHead className="w-[17%]">
                 {t("events.detail.deliveryHeaders.destination")}
               </TableHead>
-              <TableHead className="w-[18%]">{t("events.detail.deliveryHeaders.route")}</TableHead>
-              <TableHead className="w-[14%]">{t("events.detail.deliveryHeaders.state")}</TableHead>
-              <TableHead className="w-[12%]">
+              <TableHead className="w-[14%]">{t("events.detail.deliveryHeaders.route")}</TableHead>
+              <TableHead className="w-[12%]">{t("events.detail.deliveryHeaders.state")}</TableHead>
+              <TableHead className="w-[8%]">
                 {t("events.detail.deliveryHeaders.attempts")}
               </TableHead>
-              <TableHead className="w-[14%]">{t("events.detail.deliveryHeaders.next")}</TableHead>
-              <TableHead>{t("events.detail.deliveryHeaders.lastError")}</TableHead>
+              <TableHead className="w-[16%]">{t("events.detail.deliveryHeaders.next")}</TableHead>
+              <TableHead className="w-[23%]">
+                {t("events.detail.deliveryHeaders.lastError")}
+              </TableHead>
               <TableHead className="w-[10%]">
                 {t("events.detail.deliveryHeaders.actions")}
               </TableHead>
@@ -71,13 +77,20 @@ export function EventDetailDeliveriesTable({
                   </TableCell>
                   <TableCell className="truncate">
                     {delivery.nextAttemptAt ? (
-                      <OperationTimestamp format="time" value={delivery.nextAttemptAt} />
+                      <OperationTimestamp
+                        format={retryTimestampFormat(delivery.nextAttemptAt, now, timeZone)}
+                        value={delivery.nextAttemptAt}
+                      />
                     ) : (
                       "-"
                     )}
                   </TableCell>
-                  <TableCell className="truncate" title={delivery.lastError ?? undefined}>
-                    {delivery.lastError ?? "-"}
+                  <TableCell title={delivery.lastError ?? undefined}>
+                    {delivery.lastError ? (
+                      <span className="line-clamp-2">{delivery.lastError}</span>
+                    ) : (
+                      "-"
+                    )}
                   </TableCell>
                   <TableCell>
                     <DeliveryRetryButton id={delivery.id} state={delivery.state} />

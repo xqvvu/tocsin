@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   formatDurationBetween,
   formatDurationMs,
+  retryTimestampFormat,
 } from "#/features/operations/model/operation-format";
 
 describe("duration formatting", () => {
@@ -44,5 +45,29 @@ describe("duration formatting", () => {
     expect(formatDurationBetween("2026-10-12T10:00:00.000Z", "2026-10-12T10:00:07.500Z")).toBe(
       "7.5s",
     );
+  });
+});
+
+describe("retry timestamp formatting", () => {
+  const now = new Date("2026-10-21T10:00:00.000Z");
+
+  it("keeps time-only for a retry later the same day", () => {
+    expect(retryTimestampFormat("2026-10-21T10:15:00.000Z", now, "UTC")).toBe("time");
+  });
+
+  it("shows the date once the retry falls on another calendar day", () => {
+    expect(retryTimestampFormat("2026-10-22T00:05:00.000Z", now, "UTC")).toBe("dateTime");
+    expect(retryTimestampFormat("2030-01-01T00:00:00.000Z", now, "UTC")).toBe("dateTime");
+  });
+
+  it("compares calendar days in the configured time zone, not UTC", () => {
+    // 2026-10-21T23:30Z is already 2026-10-22 in Shanghai.
+    expect(retryTimestampFormat("2026-10-21T23:30:00.000Z", now, "Asia/Shanghai")).toBe("dateTime");
+    // 2026-10-20T17:00Z is already 2026-10-21 in Shanghai.
+    expect(retryTimestampFormat("2026-10-20T17:00:00.000Z", now, "Asia/Shanghai")).toBe("time");
+  });
+
+  it("falls back to the dated format for an unusable timestamp", () => {
+    expect(retryTimestampFormat("not-a-date", now, "UTC")).toBe("dateTime");
   });
 });

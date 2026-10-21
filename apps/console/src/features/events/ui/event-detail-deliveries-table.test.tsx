@@ -75,15 +75,40 @@ describe("event detail deliveries table", () => {
         destinationName: "Silenced sink",
       }),
       delivery({ id: "delivery-failed", state: "failed", destinationName: "Failed sink" }),
+      delivery({ id: "delivery-running", state: "running", destinationName: "Running sink" }),
       delivery({ id: "delivery-pending", state: "pending", destinationName: "Pending sink" }),
     ]);
 
     expect(listedDestinations()).toEqual([
       "Failed sink",
+      "Running sink",
       "Pending sink",
       "Succeeded sink",
       "Silenced sink",
     ]);
+  });
+
+  it("shows the error text in full and keeps it in the title for the rest", () => {
+    const lastError = "connect ECONNREFUSED 10.0.0.12:443 while sending the card";
+
+    renderTable([delivery({ id: "delivery-failed", state: "failed", lastError })]);
+
+    expect(screen.getByText(lastError)).toBeTruthy();
+    expect(screen.getByTitle(lastError)).toBeTruthy();
+  });
+
+  it("shows the date for a retry that falls on a later day", () => {
+    renderTable([
+      delivery({
+        id: "delivery-pending",
+        state: "pending",
+        nextAttemptAt: "2030-01-01T00:00:00.000Z",
+      }),
+    ]);
+
+    const retryCell = screen.getAllByRole("cell")[4];
+
+    expect(retryCell?.textContent).toContain("2030");
   });
 });
 
