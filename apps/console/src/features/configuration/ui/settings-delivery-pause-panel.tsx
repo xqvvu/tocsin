@@ -1,9 +1,11 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { Checkbox } from "#/components/ui/checkbox";
 import { appSettingsQueryOptions } from "#/features/configuration/api/configuration.queries";
 import { useAppSettingsMutation } from "#/features/configuration/api/use-app-settings-mutation";
+import { DeliveryResumeDialog } from "#/features/configuration/ui/delivery-resume-dialog";
 import { formatDateTime } from "#/features/operations/model/operation-format";
 import { fallbackTimeZone } from "#/i18n/time-zone";
 import { useLocale, useTranslations, useTimeZone } from "#/i18n/use-i18n";
@@ -22,12 +24,13 @@ export function SettingsDeliveryPausePanel() {
   const timeZone = useTimeZone() ?? fallbackTimeZone;
   const { data: settings } = useSuspenseQuery(appSettingsQueryOptions());
   const mutation = useAppSettingsMutation();
+  const [resumeOpen, setResumeOpen] = useState(false);
 
-  async function setPaused(paused: boolean) {
+  async function pause() {
     try {
       await mutation.mutateAsync({
         rawPayloadRetentionDays: settings.rawPayloadRetentionDays,
-        deliveryPaused: paused,
+        deliveryPaused: true,
       });
     } catch (error) {
       toast.error(t("configuration.deliveryPause.operationFailed"), {
@@ -44,7 +47,15 @@ export function SettingsDeliveryPausePanel() {
           checked={settings.deliveryPaused}
           disabled={mutation.isPending}
           className="mt-0.5"
-          onCheckedChange={(checked: boolean) => void setPaused(checked)}
+          onCheckedChange={(checked: boolean) => {
+            if (checked) {
+              void pause();
+              return;
+            }
+
+            // Resuming can page receivers again; the dialog owns the consent.
+            setResumeOpen(true);
+          }}
         />
         <span className="min-w-0">
           <span className="block">{t("configuration.deliveryPause.toggleLabel")}</span>
@@ -62,6 +73,11 @@ export function SettingsDeliveryPausePanel() {
             : t("configuration.deliveryPause.paused")}
         </p>
       ) : null}
+      <DeliveryResumeDialog
+        open={resumeOpen}
+        onOpenChange={setResumeOpen}
+        rawPayloadRetentionDays={settings.rawPayloadRetentionDays}
+      />
     </section>
   );
 }
