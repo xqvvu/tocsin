@@ -2,6 +2,97 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 57 轮）
+
+- 时间：2026-10-21 16:25 – 17:2x CST。
+- 基线：本轮开始时 `origin/main` @ `9cadbf5`（beta.42 记录之后）；main CI success；无 open PR。
+- 并发说明：`agent-iteration/.agent-run.lock` 是 15:17 的残留（本轮开始时 69 分钟），但所有会话
+  `isRunning=false`，其持有会话 `zealous-golick-714ec2` 自 15:54 起空闲且未提交改动在独立
+  `agent/ui-inline-edit-layout` 分支。按「无活跃轮次」判定继续，避开其 UI-22 文件，并在收尾清理锁。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选；最近全量审计仍为第 1 轮，但 backlog 未清空）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`review_now`**，第三名额给
+  `ui-review`（UI 评审成为主交付）；`security-exposure` 作为轮转车道补位（requirements 早于
+  ui-review 返回，实际并发峰值 3）。
+- 车道轮转位置：`requirements` / `ui-triage` / `ui-review` / `security-exposure` 均已完成；
+  下一轮非必跑车道为 **`architecture`**（security-exposure 本轮已跑）。
+- `ui-triage`：**`review_now`** —— 距上次评审 5h09m（未满 48h），但 #278（目标测试确认对话框）与
+  #281（标题/消息一键静默）两个非测试 UI 合并都只有组件测试、无浏览器验证，且上一轮写明
+  「再有 1 个非测试 UI 合并」即触发；14 条存量 UI 发现。首查：目标测试弹窗、事件文本静默弹窗。
+- `last_ui_review_at`：**2026-10-21 16:50 CST**（本轮真实浏览器评审，隔离实例 6200 + 临时 SQLite）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、浏览器复验均在会话工作树
+  `quizzical-ramanujan-19fe45`。收尾删除 `node_modules`、`agent-iteration` 与已合入本地分支。
+
+### 本轮交付
+
+- PR #284 `fix(sources): surface partially blocked route coverage`（rebase 合并 `7fa9603` +
+  `8035661`），UI-13。
+  - 部分受阻时徽标显示「1/2 条可投递」/「1/2 can send」，不再只在 hover title 里可见。
+  - 首版英文 `1/2 deliverable` 在 1280×900 实测溢出 9px（徽标 102px），已改短并复验无裁切。
+  - 新增 PRD `docs/prd/source-partial-coverage-visibility.md`；2 条单元格测试 + 更新 1 条列表断言。
+  - 浏览器实测：1280×900 中英文均无裁切；截图 `/tmp/tocsin-ui-r57/r57-after-partial-coverage-1280.png`、
+    `/tmp/tocsin-ui-r57/r57-after-partial-coverage-zh-1280.png`。
+- PR #285 `fix(core): widen redaction key coverage and mark request context server-only`
+  （rebase 合并 `3338409`），SEC-13 + SEC-14 + SEC-24。
+  - 精确键新增 `secretAccessKey`/`sessionKey`/`sessionId`/`pwd`/`pass`/`dsn`/`connectionString`/
+    `accountKey`/`sharedKey`/`subscriptionKey`/`encryptionKey`/`masterKey`/`jwt`/`signature`/
+    `X-Signature`；`dbPass`/`bypass`/`dsnName`/`signatureAlgorithm`/`privateKeyId` 保持可见。
+  - `read-projection-redaction` 测试覆盖 `appSecret`/`clientSecret`/`apiSecret`/`privateKey`/
+    `secretAccessKey`/`X-Auth-Token`。
+  - `request-context.ts` 增加 `server-only` 标记，`vp run -r build` 验证 import protection 无客户端链路。
+
+### 专家发现
+
+- `requirements`（五项复核，均未实现）：
+  - **REQ-206（28）** 投递按渠道类型筛选：证据仍成立（`packages/api/src/schemas/operations.ts:205-221`、
+    `operation-search.ts:13-36`、`history.repository.ts:244` 只投影 kind、`operation-filters.tsx:330-355`）。
+  - **REQ-220（28）** 目标行临时静默：`destination-actions.tsx:68-265` 无静默入口，matcher 已支持
+    `destinationIds`（`suppression.ts:24-42,186-213`），纯前端可一轮。
+  - **REQ-216（28）** Settings 生效运行参数：有效，建议**并入 REQ-84**，避免两个只读投影。
+  - **REQ-217（27）** 队列积压年龄与 worker 停顿：有效，建议**并入 REQ-11**（吸收 REQ-169 展示部分）。
+  - **REQ-211（27→25）** 历史载荷重解析预览：前提受脱敏限制（`intake.service.ts:81` 入库即脱敏），
+    差异可能失真，降为 25。
+  - 新增候选：**NEW-I（27）** 出站禁止自动跟随重定向（`transport.ts:56-95` 未设 `redirect`，
+    307 会重放签名 body 与自定义头）；**NEW-J（24）** 429/503 遵守 Retry-After（暂缓）。
+- `ui-triage`：review_now，理由与首查范围见上。
+- `ui-review`（浏览器实测，6200 隔离实例）：
+  - **UI-13（中）** 部分受阻只在 hover title 可见——本轮已修复（#284）。
+  - **UI-25（高）** 1280px sticky 操作列遮挡最后一列：`/events` 容器 982/1100，接收时间列 118px 被压住；
+    `/deliveries` 更新时间整列在视口外。
+  - **UI-26（中，新）** 静默术语不一致：「按消息静默」vs 表单「内容包含」
+    （`event-detail-summary.tsx:136`、`suppression-from-event-dialog.tsx:179` vs `zh-Hans.json:1054,1131`）。
+  - **UI-27（低，新）** 目标测试弹窗历史事件加载中无提示（`destination-test-dialog.tsx:106,124-132`）。
+  - **UI-28（低，新）** 测试弹窗样例只有「标题 · 告警源」，无时间上下文（`destination-test-dialog.tsx:55-64`）。
+  - **UI-21 复现** 中文界面对话框关闭按钮可访问名仍为英文 `Close`（`dialog.tsx:63`）。
+  - **UI-29（低，新）** 标题/消息静默图标按钮仅靠原生 `title`，与目标行 `IconTooltip` 不一致
+    （`event-detail-summary.tsx:56,62`）。
+  - 已验证正常：目标测试弹窗（默认样例、历史事件、发送中禁用、成功关闭、失败保留、390px 纵向堆叠）、
+    文本静默弹窗（预填、脱敏禁用、Escape 焦点归还、390px 无横向溢出）。
+- `security-exposure`：SEC-13 / SEC-20 / SEC-21 / SEC-22 / SEC-24 / SEC-25 / SEC-9 / SEC-14 / SEC-11
+  均 VALID（含 file:line）；本轮取 SEC-13 + SEC-14 + SEC-24 交付（#285）。
+  **SEC-26（MEDIUM）** webhook URL/endpoint 凭据进入浏览器 DTO 与 SSR，且被失败投递详情编辑入口放大；
+  **SEC-11（MEDIUM）** 任意认证头名不脱敏；均需 EXPERT_PANEL。
+  SEC-20（PEM 线性扫描）与 SEC-25（test/preview 载荷投影）留待下一轮小 PR。
+
+### EXPERT_PANEL
+
+- 本轮功能切片（UI-13）不触碰 schema/迁移/投递/路由/auth 语义，无需 panel。
+- 登记下一轮 panel 议题：**SEC-26**（endpoint/webhook URL 掩码模型与「留空=保留」编辑语义）、
+  **SEC-11**（任意认证头名 vs parser 需要）。
+
+### 发布
+
+- 见本节下方「发布记录」；本轮两个用户可见变更合入 main（UI-13 展示改进、脱敏范围扩大）。
+
+### 下一轮优先项
+
+1. **REQ-206（28）** 投递按渠道类型筛选；**REQ-220（28）** 目标行临时静默；
+   **REQ-216（28，并入 REQ-84）** Settings 运行参数；**REQ-217（27，并入 REQ-11）** 队列积压年龄。
+2. **UI-25（27）** 1280px sticky 列遮挡（本轮复测证据更具体）；**UI-26（新）** 静默术语统一；
+   **UI-27/28/29（新，低）** 测试弹窗加载提示、样例时间上下文、图标按钮 tooltip；**UI-21** Close 本地化。
+3. **SEC-26 / SEC-11** 交 EXPERT_PANEL；**SEC-20 / SEC-21 / SEC-22 / SEC-25** 下一轮小 PR。
+4. **NEW-I（27）** 出站禁止自动跟随重定向（安全补丁候选，S）。
+5. `architecture` 车道下一轮补跑（ARCH-1/2/5/6/27/28/29/30 待续）。
+
 ## 2026-10-21（第 56 轮）
 
 - 时间：2026-10-21 14:20 – 15:2x CST。
