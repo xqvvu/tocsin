@@ -16,9 +16,14 @@ export function deliveriesColumnClassName(columnId: string): string | null {
     case "attempts":
       return "w-[7%]";
     case "next":
-      return "w-[8%]";
+      // A cross-day retry renders a full date and time (~112px at 11px). The
+      // column cannot be that wide at 1280, so clip it with an ellipsis: the
+      // date stays readable at the start of the value, and the full timestamp
+      // remains in the cell's `title`. Without the clip the text paints over
+      // the adjacent "last error" column.
+      return "w-[11%] truncate";
     case "lastError":
-      return "w-[22%]";
+      return "w-[19%]";
     case "updated":
       return "w-[11%]";
     case "actions":

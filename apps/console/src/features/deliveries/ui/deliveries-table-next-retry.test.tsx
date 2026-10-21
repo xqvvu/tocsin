@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { DeliveriesTable } from "#/features/deliveries/ui/deliveries-table";
+import { deliveriesColumnClassName } from "#/features/deliveries/ui/deliveries-table-layout";
 import type { Operations } from "#/features/operations/model/operation-types";
 import { AppIntlProvider } from "#/i18n/provider";
 
@@ -38,6 +39,17 @@ describe("deliveries table next retry", () => {
 
     expect(screen.queryByText("Next retry")).toBeTruthy();
     expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("clips a cross-day timestamp inside its fixed-width column", () => {
+    renderTable([deliveryRow({ nextAttemptAt: "2026-10-24T02:00:00.000Z" })]);
+
+    const cell = screen.getByText("2026-10-24T02:00:00.000Z").closest("td");
+
+    // The column is narrower than a full date-time at the 1280x900 laptop
+    // viewport, so the cell must clip instead of painting over "last error".
+    expect(cell?.className).toContain("truncate");
+    expect(deliveriesColumnClassName("next")).toContain("truncate");
   });
 });
 
