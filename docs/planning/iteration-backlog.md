@@ -473,6 +473,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.37` | `4a5cbd4` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.37`（linux/amd64 + linux/arm64，index digest `sha256:6192ca60…`） | 目标编辑对话框页脚可见性（#261，UI-24）；无迁移/配置变化；回滚镜像 `0.1.0-beta.36` |
 | `0.1.0-beta.36` | `12559e4` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.36`（linux/amd64 + linux/arm64，index digest `sha256:19f48114…`） | 配置编辑披露排队投递影响（#257，REQ-196）；无迁移/配置变化；回滚镜像 `0.1.0-beta.35` |
 | `0.1.0-beta.35` | `e86b49d` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.35`（linux/amd64 + linux/arm64，index digest `sha256:1899a398…`） | 投递详情静默判定逐项证据（#254，REQ-193）；无迁移/配置变化；回滚镜像 `0.1.0-beta.34` |
 | `0.1.0-beta.34` | `fc36f48` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.34`（linux/amd64 + linux/arm64，index digest `sha256:69b479ab…`） | 静默规则启停确认披露投递后果（#251，UI-14 + REQ-190）；无迁移/配置变化；回滚镜像 `0.1.0-beta.33` |

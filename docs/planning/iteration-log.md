@@ -75,7 +75,22 @@
 
 ### 发布评估与镜像
 
-- 待补。
+- 三方专家一致 `APPROVE`：
+  - 发布经理：自 `v0.1.0-beta.36` 以来唯一用户可见变更为 #261（UI-24）；其余为测试与
+    规划文档；建议预发布递增 `0.1.0-beta.37`。
+  - 阻断审计：5/5 PASS —— `13c04f5` main CI success、0 open PR、无阻塞回归
+    （FIX-12 已结案为非产品缺陷，Q-48 为既有风险）、migration 零 diff、
+    `v0.1.0-beta.37` 未占用。
+  - 运维回滚：Dockerfile/compose/env/依赖/迁移均零 diff；回滚只需换回 beta.36 镜像，
+    `tocsin-data` 卷保持兼容。
+- 版本：`0.1.0-beta.37`；PR #262 `chore(release): v0.1.0-beta.37`（rebase 合并
+  `4a5cbd4`），合并后 main CI success。
+- Tag：`v0.1.0-beta.37`（annotated，指向 `4a5cbd4`）；GitHub Release：
+  `https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.37`（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.37`
+  - index digest `sha256:6192ca60ba4ff3636987238f7bba8a14aa5ec7e8dc50a790b664d811972cbc6d`
+  - `linux/amd64` @ `sha256:facb870a…`，`linux/arm64` @ `sha256:9e3c96f7…`
+  - 构建参数：`--provenance=false --sbom=false`；未推 `latest`。
 
 ### 文档同步
 
