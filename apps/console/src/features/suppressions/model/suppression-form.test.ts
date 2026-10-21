@@ -7,6 +7,7 @@ import {
   isoFromDatetimeLocal,
   suppressionDefaultsFromEvent,
   suppressionDefaultsFromLabel,
+  suppressionDefaultsFromText,
   suppressionFormDefaultsFromRule,
   suppressionMatcherFromValues,
   suppressionMatcherIsEmpty,
@@ -112,6 +113,40 @@ describe("suppression form model", () => {
     expect(defaults.matcher.sourceIds).toEqual(["source-1"]);
     expect(defaults.matcher.labels).toEqual([{ key: "env", operator: "equals", value: "prod" }]);
     // Clicking one label must not silently widen the rule to the whole alert.
+    expect(defaults.matcher.fingerprints).toEqual([]);
+  });
+
+  it("prefills the event's source and title fragment when silencing similar alerts", () => {
+    const defaults = suppressionDefaultsFromText({
+      name: "Silence: Disk full",
+      sourceId: "source-1",
+      field: "title",
+      value: "  DiskFull  ",
+      timeZone: "UTC",
+      now: new Date("2026-10-18T09:00:00.000Z"),
+    });
+
+    expect(defaults.kind).toBe("silence");
+    expect(defaults.matcher.sourceIds).toEqual(["source-1"]);
+    expect(defaults.matcher.titleContains).toEqual(["DiskFull"]);
+    expect(defaults.matcher.messageContains).toEqual([]);
+    // A text match must not quietly become a fingerprint or whole-alert rule.
+    expect(defaults.matcher.fingerprints).toEqual([]);
+    expect(suppressionMatcherIsEmpty(defaults.matcher)).toBe(false);
+  });
+
+  it("prefills a message fragment without touching the title matcher", () => {
+    const defaults = suppressionDefaultsFromText({
+      name: "Silence: Disk full",
+      sourceId: "source-1",
+      field: "message",
+      value: "connection timeout",
+      timeZone: "UTC",
+      now: new Date("2026-10-18T09:00:00.000Z"),
+    });
+
+    expect(defaults.matcher.messageContains).toEqual(["connection timeout"]);
+    expect(defaults.matcher.titleContains).toEqual([]);
     expect(defaults.matcher.fingerprints).toEqual([]);
   });
 

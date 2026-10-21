@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { DeliveryState } from "@tocsin/core";
+import { REDACTED_VALUE, type DeliveryState } from "@tocsin/core";
 
 import { Badge } from "#/components/ui/badge";
 import { DELIVERY_STATE_PRIORITY } from "#/features/events/model/delivery-priority";
@@ -8,6 +8,7 @@ import type { getEventDeliveryStats } from "#/features/events/ui/event-detail-st
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { SeverityBadge } from "#/features/events/ui/severity-badge";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
+import { SuppressionFromEventDialog } from "#/features/suppressions/ui/suppression-from-event-dialog";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
 
@@ -39,6 +40,10 @@ export function EventDetailSummary({
   const t = useTranslations();
   const normalized = detail.event.normalized;
   const deliveryTotal = Object.values(deliveryStats).reduce((total, count) => total + count, 0);
+  const titleSilence = textSilenceState(normalized.title);
+  const messageSilence = textSilenceState(normalized.message);
+  const titleField = t("suppressions.fromText.fieldTitle");
+  const messageField = t("suppressions.fromText.fieldMessage");
 
   return (
     <section className="border-border bg-card shrink-0 border">
@@ -48,10 +53,42 @@ export function EventDetailSummary({
             <SeverityBadge severity={normalized.severity} />
             <AlertStatusBadge status={normalized.status} />
           </div>
-          <h2 className="text-sm leading-5 font-semibold wrap-break-word">{normalized.title}</h2>
-          <p className="text-muted-foreground mt-1 max-w-4xl text-xs leading-5 wrap-break-word">
-            {normalized.message}
-          </p>
+          <div className="flex min-w-0 items-start gap-1.5">
+            <h2 className="min-w-0 flex-1 text-sm leading-5 font-semibold wrap-break-word">
+              {normalized.title}
+            </h2>
+            <SuppressionFromEventDialog
+              event={detail.event}
+              source={detail.source}
+              text={{ field: "title", value: normalized.title }}
+              disabled={titleSilence !== "ok"}
+              disabledReason={
+                titleSilence === "empty"
+                  ? t("suppressions.fromText.disabled.empty", { field: titleField })
+                  : titleSilence === "redacted"
+                    ? t("suppressions.fromText.disabled.redacted", { field: titleField })
+                    : undefined
+              }
+            />
+          </div>
+          <div className="mt-1 flex min-w-0 items-start gap-1.5">
+            <p className="text-muted-foreground max-w-4xl min-w-0 flex-1 text-xs leading-5 wrap-break-word">
+              {normalized.message}
+            </p>
+            <SuppressionFromEventDialog
+              event={detail.event}
+              source={detail.source}
+              text={{ field: "message", value: normalized.message }}
+              disabled={messageSilence !== "ok"}
+              disabledReason={
+                messageSilence === "empty"
+                  ? t("suppressions.fromText.disabled.empty", { field: messageField })
+                  : messageSilence === "redacted"
+                    ? t("suppressions.fromText.disabled.redacted", { field: messageField })
+                    : undefined
+              }
+            />
+          </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-1">
           <Badge variant="outline">
@@ -95,6 +132,21 @@ export function EventDetailSummary({
       </div>
     </section>
   );
+}
+
+/**
+ * Whether the displayed text can be used as a suppression needle.
+ *
+ * An empty fragment is dropped by `suppressionMatcherFromValues`, turning the
+ * rule into "silence everything from this source"; redacted text no longer
+ * equals the stored value, so the rule would never fire.
+ */
+function textSilenceState(value: string): "ok" | "empty" | "redacted" {
+  if (value.trim().length === 0) {
+    return "empty";
+  }
+
+  return value.includes(REDACTED_VALUE) ? "redacted" : "ok";
 }
 
 function AlertStatusBadge({

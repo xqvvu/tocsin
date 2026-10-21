@@ -21,6 +21,7 @@ import { useSuppressionMutations } from "#/features/suppressions/api/suppression
 import {
   suppressionDefaultsFromEvent,
   suppressionDefaultsFromLabel,
+  suppressionDefaultsFromText,
 } from "#/features/suppressions/model/suppression-form";
 import {
   CreateSuppressionForm,
@@ -33,18 +34,19 @@ import { useTimeZone, useTranslations } from "#/i18n/use-i18n";
 const MAX_NAME_TITLE_LENGTH = 80;
 
 /**
- * Silences one event's fingerprint, or one of its label values, without
- * leaving the event detail page.
+ * Silences one event's fingerprint, one of its label values, or a title/message
+ * fragment, without leaving the event detail page.
  *
- * The form is prefilled with the event's source plus either the fingerprint or
- * the clicked label; the operator still confirms the window and can widen or
- * narrow the conditions, because a suppression outlives the event that
- * prompted it.
+ * The form is prefilled with the event's source plus either the fingerprint,
+ * the clicked label, or the text fragment; the operator still confirms the
+ * window and can widen or narrow the conditions, because a suppression
+ * outlives the event that prompted it.
  */
 export function SuppressionFromEventDialog({
   event,
   source,
   label,
+  text,
   disabled = false,
   disabledReason,
 }: {
@@ -52,6 +54,11 @@ export function SuppressionFromEventDialog({
   source: SourceSummary;
   /** When set, the form silences this label value instead of the fingerprint. */
   label?: { key: string; value: string };
+  /**
+   * When set, the form silences the event title or message by a contains match
+   * instead of the fingerprint.
+   */
+  text?: { field: "title" | "message"; value: string };
   disabled?: boolean;
   /** Replaces the action title when disabled, to explain why it is unavailable. */
   disabledReason?: string;
@@ -74,18 +81,35 @@ export function SuppressionFromEventDialog({
   });
   const defaults = label
     ? suppressionDefaultsFromLabel({ name, sourceId: source.id, label, timeZone })
-    : suppressionDefaultsFromEvent({
-        name,
-        sourceId: source.id,
-        fingerprint: event.normalized.fingerprint,
-        timeZone,
-      });
+    : text
+      ? suppressionDefaultsFromText({
+          name,
+          sourceId: source.id,
+          field: text.field,
+          value: text.value,
+          timeZone,
+        })
+      : suppressionDefaultsFromEvent({
+          name,
+          sourceId: source.id,
+          fingerprint: event.normalized.fingerprint,
+          timeZone,
+        });
+  const fieldLabel = text
+    ? t(
+        text.field === "title"
+          ? "suppressions.fromText.fieldTitle"
+          : "suppressions.fromText.fieldMessage",
+      )
+    : "";
   const actionLabel = label
     ? t("suppressions.fromLabel.actionFor", {
         labelKey: label.key,
         labelValue: label.value,
       })
-    : t("suppressions.fromEvent.action");
+    : text
+      ? t("suppressions.fromText.actionFor", { field: fieldLabel })
+      : t("suppressions.fromEvent.action");
   const actionTitle = disabled && disabledReason ? disabledReason : actionLabel;
 
   // The event's source may be missing from the fetched list if it was deleted
@@ -127,27 +151,33 @@ export function SuppressionFromEventDialog({
           <Button
             type="button"
             variant="outline"
-            size={label ? "icon-xs" : "sm"}
+            size={label || text ? "icon-xs" : "sm"}
             disabled={disabled || pending}
             title={actionTitle}
-            aria-label={label ? actionTitle : undefined}
-            className={label ? "shrink-0" : "w-fit"}
+            aria-label={label || text ? actionTitle : undefined}
+            className={label || text ? "shrink-0" : "w-fit"}
           />
         }
       >
         <RiShieldCheckLine data-icon="inline-start" aria-hidden />
-        {label ? null : actionLabel}
+        {label || text ? null : actionLabel}
       </DialogTrigger>
 
       <ConfigurationDialogContent>
         <DialogHeader className="shrink-0 pr-8">
           <DialogTitle>
-            {label ? t("suppressions.fromLabel.title") : t("suppressions.fromEvent.title")}
+            {label
+              ? t("suppressions.fromLabel.title")
+              : text
+                ? t("suppressions.fromText.title")
+                : t("suppressions.fromEvent.title")}
           </DialogTitle>
           <DialogDescription>
             {label
               ? t("suppressions.fromLabel.description")
-              : t("suppressions.fromEvent.description")}
+              : text
+                ? t("suppressions.fromText.description", { field: fieldLabel })
+                : t("suppressions.fromEvent.description")}
           </DialogDescription>
         </DialogHeader>
         <p className="text-muted-foreground shrink-0 font-mono text-[11px] wrap-break-word">
@@ -157,10 +187,16 @@ export function SuppressionFromEventDialog({
                 labelKey: label.key,
                 labelValue: label.value,
               })
-            : t("suppressions.fromEvent.context", {
-                sourceName: source.name,
-                fingerprint: event.normalized.fingerprint,
-              })}
+            : text
+              ? t("suppressions.fromText.context", {
+                  sourceName: source.name,
+                  field: fieldLabel,
+                  value: clipText(text.value),
+                })
+              : t("suppressions.fromEvent.context", {
+                  sourceName: source.name,
+                  fingerprint: event.normalized.fingerprint,
+                })}
         </p>
 
         {loadError ? (
@@ -189,7 +225,12 @@ export function SuppressionFromEventDialog({
 }
 
 function clipTitle(title: string): string {
-  const trimmed = title.trim();
+  return clipText(title);
+}
+
+/** Keeps long titles and messages from dominating the dialog context line. */
+function clipText(value: string): string {
+  const trimmed = value.trim();
 
   return trimmed.length > MAX_NAME_TITLE_LENGTH
     ? `${trimmed.slice(0, MAX_NAME_TITLE_LENGTH - 1)}…`

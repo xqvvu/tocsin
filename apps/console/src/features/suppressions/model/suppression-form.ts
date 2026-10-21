@@ -201,6 +201,46 @@ export function suppressionDefaultsFromLabel(input: {
 }
 
 /**
+ * Prefills the create form when the operator silences by a text fragment.
+ *
+ * The matcher compares a case-insensitive substring
+ * (`packages/core/src/route/route.ts:314-334`), so the clicked text is stored
+ * verbatim. The source is pinned for the same reason as the fingerprint and
+ * label variants: the same title can arrive from several upstream systems.
+ *
+ * Callers must pass a non-empty value. An empty needle is dropped by
+ * `suppressionMatcherFromValues`, which would silently turn the rule into
+ * "silence everything from this source"; the event detail UI disables the
+ * action instead.
+ */
+export function suppressionDefaultsFromText(input: {
+  name: string;
+  sourceId: string;
+  field: "title" | "message";
+  value: string;
+  timeZone: string;
+  now?: Date;
+}): SuppressionFormValues {
+  const window = defaultSuppressionWindow(input.timeZone, input.now);
+  const needle = input.value.trim();
+
+  return {
+    name: input.name,
+    kind: "silence",
+    reason: "",
+    enabled: true,
+    startsAt: window.startsAt,
+    endsAt: window.endsAt,
+    matcher: {
+      ...emptySuppressionMatcher(),
+      sourceIds: [input.sourceId],
+      titleContains: input.field === "title" ? [needle] : [],
+      messageContains: input.field === "message" ? [needle] : [],
+    },
+  };
+}
+
+/**
  * ISO instant → the `datetime-local` wall clock shown in `timeZone`.
  *
  * `new Date(iso)` + `getHours()` would use the browser zone, which is not
