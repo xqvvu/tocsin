@@ -5,6 +5,7 @@ import { dashboardAuth } from "../errors/dashboard-auth";
 import { resourceErrors } from "../errors/resources";
 import {
   BuzzDeliveryOutputSchema,
+  DeliveryBacklogSummarySchema,
   DeliveryDetailSchema,
   EventReplayPreviewSchema,
   EventReplayResultSchema,
@@ -45,6 +46,12 @@ export const operations = {
     .input(OperationDetailInputSchema)
     .errors(dashboardErrors)
     .output(DeliveryDetailSchema.nullable()),
+
+  /**
+   * Read-only queue projection for the paused banner: how many deliveries the
+   * worker would claim next and when the oldest of them was created.
+   */
+  getDeliveryBacklog: oc.errors(dashboardErrors).output(DeliveryBacklogSummarySchema),
 
   retryDelivery: oc
     .input(OperationDetailInputSchema)

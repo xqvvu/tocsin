@@ -24,6 +24,7 @@ export const operationsQueryKeys = {
     "detail",
     deliveryId,
   ],
+  deliveryBacklog: () => [...operationsQueryKeys.all, "deliveries", "backlog"] as const,
 };
 
 /** The configuration row a queued-delivery count is scoped to. */
@@ -113,6 +114,20 @@ export function deliveryDetailQueryOptions(deliveryId: string) {
   return orpc.operations.getDeliveryDetail.queryOptions({
     input: { id: deliveryId },
     queryKey: operationsQueryKeys.deliveryDetail(deliveryId),
+  });
+}
+
+/**
+ * What the worker would claim next, used by the paused banner.
+ *
+ * Callers enable it only while delivery is paused; a short stale time keeps a
+ * remount from refetching while the banner itself refetches on a timer so the
+ * count tracks events that arrive during the pause.
+ */
+export function deliveryBacklogQueryOptions() {
+  return orpc.operations.getDeliveryBacklog.queryOptions({
+    queryKey: operationsQueryKeys.deliveryBacklog(),
+    staleTime: 15_000,
   });
 }
 

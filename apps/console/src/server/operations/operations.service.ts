@@ -1,4 +1,5 @@
 import type {
+  DeliveryBacklogSummary,
   DeliveryDetail,
   DeliveryJob,
   DeliveryPingsResult,
@@ -67,6 +68,16 @@ export class OperationsService {
 
   async getDeliveryDetail(deliveryId: string): Promise<DeliveryDetail | null> {
     return this.store.deliveries.get(deliveryId);
+  }
+
+  /**
+   * Queue projection for the paused banner. The clock is resolved once so the
+   * count and the oldest waiting timestamp describe the same instant.
+   */
+  async getDeliveryBacklog(): Promise<DeliveryBacklogSummary> {
+    return this.store.deliveries.summarizeClaimable({
+      now: this.now().toISOString(),
+    });
   }
 
   async retryDelivery(deliveryId: string): Promise<DeliveryJob> {

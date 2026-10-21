@@ -11,6 +11,11 @@ import { AppIntlProvider } from "#/i18n/provider";
 const testState = vi.hoisted(() => ({
   paused: true,
   queries: 0,
+  backlogQueries: 0,
+  backlog: {
+    claimable: 3,
+    oldestCreatedAt: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
+  } as { claimable: number; oldestCreatedAt: string | null },
   mutateAsync: vi.fn<(input: unknown) => Promise<unknown>>(),
   toast: {
     success: vi.fn<(title: string) => void>(),
@@ -34,6 +39,18 @@ vi.mock("#/features/configuration/api/configuration.queries", () => ({
   }),
 }));
 
+vi.mock("#/features/operations/api/operations.queries", () => ({
+  deliveryBacklogQueryOptions: () => ({
+    queryKey: ["test", "delivery-backlog"],
+    queryFn: async () => {
+      testState.backlogQueries += 1;
+
+      return testState.backlog;
+    },
+    staleTime: Infinity,
+  }),
+}));
+
 vi.mock("#/features/configuration/api/use-app-settings-mutation", () => ({
   useAppSettingsMutation: () => ({
     mutateAsync: testState.mutateAsync,
@@ -48,6 +65,11 @@ describe("deliveries paused notice", () => {
     cleanup();
     testState.paused = true;
     testState.queries = 0;
+    testState.backlogQueries = 0;
+    testState.backlog = {
+      claimable: 3,
+      oldestCreatedAt: new Date(Date.now() - 2 * 60 * 60_000).toISOString(),
+    };
     testState.mutateAsync.mockReset();
     testState.toast.success.mockClear();
     testState.toast.error.mockClear();
@@ -62,6 +84,27 @@ describe("deliveries paused notice", () => {
       expect(testState.queries).toBeGreaterThan(0);
     });
     expect(screen.queryByText("Outbound delivery is paused")).toBeNull();
+    // The backlog projection is paused-only: a running queue must not fetch it.
+    expect(testState.backlogQueries).toBe(0);
+  });
+
+  it("shows how much the worker will claim when resuming", async () => {
+    renderNotice();
+
+    expect(
+      await screen.findByText(/3 queued deliveries will be claimed immediately after resuming/),
+    ).toBeTruthy();
+    expect(screen.getByText(/oldest waiting/)).toBeTruthy();
+    expect(testState.backlogQueries).toBeGreaterThan(0);
+  });
+
+  it("says when nothing is claimable", async () => {
+    testState.backlog = { claimable: 0, oldestCreatedAt: null };
+
+    renderNotice();
+
+    expect(await screen.findByText("No queued deliveries are ready to be claimed")).toBeTruthy();
+    expect(screen.queryByText(/will be claimed immediately/)).toBeNull();
   });
 
   it("discloses resumed urgent paging before resuming", async () => {

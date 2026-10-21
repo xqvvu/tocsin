@@ -117,6 +117,7 @@ const expectedProcedures: Record<
       "list",
       "getEventDetail",
       "getDeliveryDetail",
+      "getDeliveryBacklog",
       "retryDelivery",
       "buzzDelivery",
       "previewEventReplay",

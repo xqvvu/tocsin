@@ -64,6 +64,9 @@ export interface DeliveryRepository {
     input: ReclaimStaleRunningDeliveriesInput,
   ): Promise<ReclaimStaleRunningDeliveriesResult>;
   claimNext(input: ClaimDeliveriesInput): Promise<ClaimedDelivery[]>;
+  summarizeClaimable(
+    input?: SummarizeClaimableDeliveriesInput,
+  ): Promise<SummarizeClaimableDeliveriesResult>;
   markSucceeded(input: MarkDeliverySucceededInput): Promise<DeliveryJob>;
   markFailed(input: MarkDeliveryFailedInput): Promise<DeliveryJob>;
   retryNow(input: RetryDeliveryInput): Promise<DeliveryJob>;
@@ -108,6 +111,16 @@ export interface ExistingDeliveryTarget {
 export interface ClaimDeliveriesInput {
   now?: IsoDateTimeString;
   limit: number;
+}
+
+export interface SummarizeClaimableDeliveriesInput {
+  now?: IsoDateTimeString;
+}
+
+export interface SummarizeClaimableDeliveriesResult {
+  claimable: number;
+  /** Earliest `created_at` among claimable rows; null when none are claimable. */
+  oldestCreatedAt: IsoDateTimeString | null;
 }
 
 export interface ReclaimStaleRunningDeliveriesInput {

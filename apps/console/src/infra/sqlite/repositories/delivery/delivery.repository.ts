@@ -41,6 +41,8 @@ import type {
   ReclaimStaleRunningDeliveriesInput,
   ReclaimStaleRunningDeliveriesResult,
   RetryDeliveryInput,
+  SummarizeClaimableDeliveriesInput,
+  SummarizeClaimableDeliveriesResult,
 } from "#/infra/sqlite/repositories/delivery/delivery.interface";
 import { InvalidDeliveryStateError } from "#/infra/sqlite/repositories/delivery/delivery.interface";
 import {
@@ -331,6 +333,44 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
 
       return claimed;
     });
+  }
+
+  /**
+   * Counts the rows `claimNext` would select, without touching them.
+   *
+   * The predicate is deliberately identical to `claimNext`; the repository
+   * test asserts both agree on the same fixture so the paused banner cannot
+   * drift into counting rows the worker will not claim. Claim-time suppression
+   * is decided per row after this query, so the count is an upper bound.
+   */
+  async summarizeClaimable(
+    input: SummarizeClaimableDeliveriesInput = {},
+  ): Promise<SummarizeClaimableDeliveriesResult> {
+    const now = input.now ?? this.context.now();
+    const row = await this.context.db
+      .selectFrom("deliveries")
+      .innerJoin("destinations", "destinations.id", "deliveries.destination_id")
+      .leftJoin("routes", "routes.id", "deliveries.route_id")
+      .select((eb) => [
+        eb.fn.count<number>("deliveries.id").as("claimable"),
+        eb.fn.min("deliveries.created_at").as("oldest_created_at"),
+      ])
+      .where("deliveries.state", "=", "pending")
+      .where("destinations.enabled", "=", 1)
+      .where((eb) => eb.or([eb("deliveries.route_id", "is", null), eb("routes.enabled", "=", 1)]))
+      .where((eb) =>
+        eb.or([
+          eb("deliveries.next_attempt_at", "is", null),
+          eb("deliveries.next_attempt_at", "<=", now),
+        ]),
+      )
+      .whereRef("deliveries.attempt_count", "<", "deliveries.max_attempts")
+      .executeTakeFirst();
+
+    return {
+      claimable: Number(row?.claimable ?? 0),
+      oldestCreatedAt: row?.oldest_created_at ?? null,
+    };
   }
 
   markSucceeded(input: MarkDeliverySucceededInput): Promise<DeliveryJob> {

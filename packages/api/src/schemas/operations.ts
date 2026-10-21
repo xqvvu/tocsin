@@ -202,6 +202,17 @@ export const OperationsOutputSchema = z.object({
   deliveries: NumberedPageSchema(DeliveryListItemSchema),
 });
 
+/**
+ * Read-only projection of the queue the worker would claim next.
+ *
+ * `oldestCreatedAt` is null exactly when `claimable` is 0; the pair lets the
+ * paused banner say how much is waiting and for how long.
+ */
+export const DeliveryBacklogSummarySchema = z.object({
+  claimable: z.number().int().min(0),
+  oldestCreatedAt: IsoDateTimeSchema.nullable(),
+});
+
 export const ListOperationsInputSchema = z
   .object({
     limit: z.number().int().min(1).max(100).default(20),
