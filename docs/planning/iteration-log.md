@@ -2,6 +2,88 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 64 轮）
+
+- 时间：2026-10-22 04:32 – 05:1x CST。
+- 基线：本轮开始时 `origin/main` @ `4f420a3`；main CI success；无 open PR。
+- 类型：**需求切片 + 小修复 + EXPERT_PANEL 安全加固**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；第三名额给轮转车道 **`quality`**（第 63 轮记录的下一车道）。
+- 车道轮转位置：**`architecture`**（下一轮非必跑车道）。
+- `ui-triage`：**`review_now（限缩）`** —— 距上次真实评审（03:10）仅 83 分钟、2 个 UI 提交、18 条稳定 UI 候选；但 #307
+  的跨天重试是评审后唯一无浏览器验证的行为变更，且 `next` 列 8% 宽、无裁剪。本轮按限缩范围只复核该列，
+  未重访 Settings/Destinations 与既有候选。
+- `last_ui_review_at`：**2026-10-22 03:10 CST**（未变；本轮为限缩浏览器复核，不计全量 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证在会话工作树 `gallant-nobel-766e93`。工作树已清理。
+
+### 本轮交付
+
+- PR #313 `feat(console): pause outbound delivery from settings`（NEW-AA，rebase 合并 `8464445`）。
+  - `AppSettings` 增加 `deliveryPaused`/`deliveryPausedAt`（settings 键值，无迁移）；重复暂停保留首次时间，恢复清空；
+    `runOnce` 在 reclaim/claim 前读设置，暂停时返回 `paused: true` 零结果且不动队列（同时收窄 Q-10 的失效面）；
+    Settings 即时开关 + Deliveries 横幅/恢复 + 手动运行禁用；PRD `docs/prd/delivery-pause.md`。
+  - 验证：`vp check` 0 errors；`vp run -r test` 152 files / 815 tests；`vp run -r build` 通过；浏览器实测
+    （隔离实例 6203 + 临时 SQLite，1280 与 390 两种宽度）暂停/恢复/刷新持久化/按钮禁用与 Toast，无 console error。
+- PR #314 `fix(deliveries): clip cross-day retry timestamps inside their column`（UI-33，rebase 合并 `491f3e5`）。
+  - 1280×900 实测跨天值文本结束 `x=892`、单元格右界 `x=847`，直接覆盖「最近错误」列；`next` 列 8%→11%、
+    加 `truncate`（`lastError` 22%→19%），补回归测试；修复后相邻列从 `x=876` 干净开始。
+  - 验证：`vp check` 0 errors；`vp run -r test` 152 files / 816 tests；`vp run -r build` 通过。
+- PR #315 `fix(auth): refuse published secrets in production`（SEC-27，EXPERT_PANEL）。
+  - compose fallback 从公开 64 位 hex 改为已被拒绝的占位值；`bootstrap()` 在任何请求前调用
+    `requireBetterAuthSecret`；黑名单保留两个历史公开值并做 trim/lowercase 归一化；`.env.example` 改占位值；
+    根 `.env` 加入 `.gitignore`；新增 `deployment-secrets.contract.test.ts`；README/部署/升级/RC 文档同步。
+  - 验证：`docker compose config` 解析为占位值且 exit 0；构建产物在 production + 占位 secret 下首个请求
+    `/api/ready` 返回 500，日志含可操作错误且不回显 secret；`vp check` 0 errors；`vp run -r test` 全绿；
+    `vp run -r build` 通过。
+
+### 专家发现
+
+- `requirements`（1 条新候选，已写入 backlog）：
+  - **NEW-AE（27）** 事件详情展示该事件的加急呼叫结果：PRD 承诺事件详情可见「谁被叫了、成没成」
+    （`docs/prd/oncall-feishu-urgent.md:21`），实际只有投递详情挂 `DeliveryPingsTable`
+    （`delivery-detail-view.tsx:54`）；仓储只有 `listForDelivery`（`oncall.repository.ts:228-238`）。
+    方案：`listForEvent` + `EventDetail.pings` + 事件详情区块，现有索引可查、无迁移。
+  - 其余方向（去重窗口可配置、schema 版本面板、配置健康体检、日志级别热调等）均低于门槛或与既有候选重复，未凑数。
+- `quality`（4 条新发现，已写入 backlog）：
+  - **Q-51（27，HIGH 价值）** `useNow()` 不推进时间：use-intl 4.14.9 未传 `updateInterval` 时只取挂载时刻，
+    生产 `AppIntlProvider` 未传 `now`；抑制状态/排序/停用确认文案与 `RetryTimestamp` 全部冻结，
+    而 header 指示器每 30s 自 tick，出现自相矛盾；`suppression-detail-page.tsx:31-33` 注释与实现不符。
+  - **Q-52（26）** 加急执行「凭据/引用/渠道无效」终止分支无测试（`oncall-execution.ts:71-84`），
+    若被误删会落入 retryable catch-all 反复重试。
+  - **Q-53（24）** 已删除抑制规则的详情链接落到通用错误页，与 Event/Delivery 的就地 not-found 不一致。
+  - **Q-54（23）** 补投服务 nullable 与停用路由分支无测试。
+- `ui-triage`：见上；发现并促成 UI-33。
+- `security-exposure` 车道本轮未跑（第三名额给 `quality`），SEC-22/25/26 仍待裁决。
+
+### EXPERT_PANEL：SEC-27
+
+- 三位专家（安全与可靠性 / 产品与运维 / 独立评估者）一致同意实施，分歧只在 compose 是否用 `${VAR:?}`。
+- 最终选择（最保守且可逆）：compose 回落到**已被应用拒绝的占位值**（保留 `ps/logs/down` 可用），
+  由 `bootstrap()` 做启动期校验，黑名单保留历史公开值并归一化。
+- 决策记录：`docs/planning/decisions/sec-27-better-auth-secret.md`，含三位专家意见、回滚方式与实测行为
+  （Nitro 懒加载入口 → 所有请求 500 + 容器 unhealthy，而不是进程启动即退出）。
+- 附带更正：backlog 原文写 `.env.example:2`，实际路径是 `apps/console/.env.example`。
+
+### 发布决策
+
+- 发布经理 / 阻断审计 / 运维回滚三位专家一致通过 `v0.1.0-beta.49`：自 beta.48 以来 3 个用户可见变更
+  （#313 全局暂停投递、#314 跨天重试列溢出、#315 生产拒绝公开 secret），`origin/main` @ `a201d6f`
+  main CI success、无 open PR、零迁移、tag 未占用；回滚风险 LOW。
+- 版本 PR #316 `chore(release): v0.1.0-beta.49`（rebase 合并 `9ceebb4`），根 `package.json` 为唯一版本来源，
+  `release-checklist.md` 的当前版本与 tag 计数同步。
+- tag：`v0.1.0-beta.49` → `9ceebb4`（main CI success 后创建）；GitHub Release 已创建（prerelease，正文非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.49`
+  （linux/amd64 + linux/arm64，index digest `sha256:55eb3de37c59f4bd4cdb5b35c5d035e877abc4c79740d05e8f5cb5b4d17fb5cc`）。
+- 发布说明显著提示：`BETTER_AUTH_SECRET` 生产语义收紧（缺 secret/占位值拒绝服务、轮换后 session 全部失效）；
+  回滚只需换回 `0.1.0-beta.48` 镜像，无迁移；回滚后暂停状态会被旧版忽略、投递立即恢复。
+
+### 下一轮优先项
+
+1. **Q-51（27）** 共享 `useOperationalNow(30s)` 修复时间冻结（抑制状态/排序/确认文案/跨天重试）。
+2. **NEW-AE（27）** 事件详情加急呼叫结果；**NEW-W（27）** 中文输入法组合期间不提交搜索；**NEW-AB（27）** 主题切换。
+3. 轮转车道 **`architecture`**；SEC-22/25/26 交 EXPERT_PANEL。
+4. Q-52/Q-53/Q-54 低成本测试补齐。
+
 ## 2026-10-22（第 63 轮）
 
 - 时间：2026-10-22 03:42 – 04:3x CST。
