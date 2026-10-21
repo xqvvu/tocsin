@@ -17,6 +17,8 @@ export const hardReloadPage = createClientOnlyFn(() => {
   window.location.reload();
 });
 
+export const readTextFile = createClientOnlyFn((file: File) => file.text());
+
 export const downloadTextFile = createClientOnlyFn(
   ({ filename, text, type }: { filename: string; text: string; type: string }) => {
     const blob = new Blob([text], { type });

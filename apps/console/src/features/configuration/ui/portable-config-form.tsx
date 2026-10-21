@@ -1,4 +1,4 @@
-import { RiDownloadLine, RiFileCodeLine, RiUploadLine } from "@remixicon/react";
+import { RiDownloadLine, RiFileCodeLine, RiFolderOpenLine, RiUploadLine } from "@remixicon/react";
 import { ClientOnly } from "@tanstack/react-router";
 import * as React from "react";
 
@@ -23,13 +23,15 @@ interface PortableConfigFormProps {
   value: string;
   pending: boolean;
   onChange: (value: string) => void;
+  onLoadFile: (file: File) => void;
   onExport: () => Promise<unknown>;
   onImport: (config: string) => Promise<unknown>;
 }
 
 export function PortableConfigForm(props: PortableConfigFormProps) {
-  const { format, value, pending, onChange, onExport, onImport } = props;
+  const { format, value, pending, onChange, onLoadFile, onExport, onImport } = props;
   const t = useTranslations();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [confirmImportOpen, setConfirmImportOpen] = React.useState(false);
   const canImport = !pending && value.trim().length > 0;
   const formatLabel =
@@ -57,6 +59,16 @@ export function PortableConfigForm(props: PortableConfigFormProps) {
     setConfirmImportOpen(false);
 
     void onImport(value);
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+
+    event.currentTarget.value = "";
+
+    if (file) {
+      onLoadFile(file);
+    }
   }
 
   return (
@@ -120,56 +132,80 @@ export function PortableConfigForm(props: PortableConfigFormProps) {
           </ClientOnly>
         )}
       </div>
-      <div className="border-border bg-muted/30 flex flex-col-reverse gap-2 border-t p-3 sm:flex-row sm:justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={onExport}
-          className="sm:w-fit"
-        >
-          <RiDownloadLine data-icon="inline-start" aria-hidden />
-          {t("configuration.portableConfig.exportCurrent")}
-        </Button>
-        <Popover
-          open={confirmImportOpen}
-          onOpenChange={(open) => {
-            if (!pending) {
-              setConfirmImportOpen(open);
-            }
-          }}
-        >
-          <PopoverTrigger
-            render={
-              <Button
-                type="button"
-                size="sm"
-                disabled={!canImport}
-                className="sm:w-fit"
-                aria-label={t("configuration.portableConfig.applyImport")}
-              />
-            }
+      <div className="border-border bg-muted/30 flex flex-col gap-2 border-t p-3">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={onExport}
+            className="sm:w-fit"
           >
-            <RiUploadLine data-icon="inline-start" aria-hidden />
-            {t("configuration.portableConfig.applyImport")}
-          </PopoverTrigger>
-          <PopoverContent align="end" side="top" sideOffset={6} className="w-80">
-            <PopoverHeader>
-              <PopoverTitle>{confirmImportTitle}</PopoverTitle>
-              <PopoverDescription>{confirmImportDescription}</PopoverDescription>
-            </PopoverHeader>
-            <div className="flex justify-end gap-2">
-              <PopoverClose render={<Button type="button" variant="outline" size="sm" />}>
-                {t("configuration.portableConfig.cancelImport")}
-              </PopoverClose>
-              <Button type="button" size="sm" disabled={!canImport} onClick={confirmImport}>
-                <RiUploadLine data-icon="inline-start" aria-hidden />
-                {t("configuration.portableConfig.confirmImport")}
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
+            <RiDownloadLine data-icon="inline-start" aria-hidden />
+            {t("configuration.portableConfig.exportCurrent")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={() => fileInputRef.current?.click()}
+            className="sm:w-fit"
+          >
+            <RiFolderOpenLine data-icon="inline-start" aria-hidden />
+            {t("configuration.portableConfig.loadFile")}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".toml,.json,application/json,application/toml,text/plain"
+            aria-label={t("configuration.portableConfig.loadFile")}
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <Popover
+            open={confirmImportOpen}
+            onOpenChange={(open) => {
+              if (!pending) {
+                setConfirmImportOpen(open);
+              }
+            }}
+          >
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!canImport}
+                  className="sm:w-fit"
+                  aria-label={t("configuration.portableConfig.applyImport")}
+                />
+              }
+            >
+              <RiUploadLine data-icon="inline-start" aria-hidden />
+              {t("configuration.portableConfig.applyImport")}
+            </PopoverTrigger>
+            <PopoverContent align="end" side="top" sideOffset={6} className="w-80">
+              <PopoverHeader>
+                <PopoverTitle>{confirmImportTitle}</PopoverTitle>
+                <PopoverDescription>{confirmImportDescription}</PopoverDescription>
+              </PopoverHeader>
+              <div className="flex justify-end gap-2">
+                <PopoverClose render={<Button type="button" variant="outline" size="sm" />}>
+                  {t("configuration.portableConfig.cancelImport")}
+                </PopoverClose>
+                <Button type="button" size="sm" disabled={!canImport} onClick={confirmImport}>
+                  <RiUploadLine data-icon="inline-start" aria-hidden />
+                  {t("configuration.portableConfig.confirmImport")}
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <p className="text-muted-foreground text-xs">
+          {t("configuration.portableConfig.loadFileHint")}
+        </p>
       </div>
     </section>
   );
