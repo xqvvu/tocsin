@@ -2,6 +2,19 @@ import "@tanstack/react-start/server-only";
 
 const BETTER_AUTH_DEFAULT_SECRET = "better-auth-secret-12345678901234567890";
 const DOCUMENTED_PLACEHOLDER_SECRET = "change-me-to-at-least-32-characters";
+// Values that were published in this repository. They are long enough to pass
+// the length check, so a deployment that copied them signs sessions with a key
+// everyone can read. Kept here permanently: removing the literal from
+// `docker-compose.yml` or `.env.example` does not rotate the secret of an
+// install that already copied it.
+const COMPOSE_DEFAULT_SECRET = "70c18d50d2b212c625494ffb8e5963878cb72447c2ff3a0f97fcfb793f90d444";
+const EXAMPLE_ENV_SECRET = "47b719bff0508af756de6afba54ccd2deae022d1a6cb9d2c89f4f558dcd79ce2";
+const PUBLISHED_SECRETS = new Set([
+  BETTER_AUTH_DEFAULT_SECRET.toLowerCase(),
+  DOCUMENTED_PLACEHOLDER_SECRET.toLowerCase(),
+  COMPOSE_DEFAULT_SECRET.toLowerCase(),
+  EXAMPLE_ENV_SECRET.toLowerCase(),
+]);
 
 export interface AuthRuntimeEnvironment {
   NODE_ENV?: string;
@@ -76,5 +89,6 @@ function isProduction(environment: AuthRuntimeEnvironment): boolean {
 }
 
 function isPlaceholderSecret(secret: string): boolean {
-  return secret === BETTER_AUTH_DEFAULT_SECRET || secret === DOCUMENTED_PLACEHOLDER_SECRET;
+  // Normalize so a case variant of a published value cannot slip through.
+  return PUBLISHED_SECRETS.has(secret.trim().toLowerCase());
 }
