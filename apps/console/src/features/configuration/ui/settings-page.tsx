@@ -2,6 +2,7 @@ import { Tabs, TabsContent } from "#/components/ui/tabs";
 import { settingsUiPanelClassName } from "#/features/configuration/model/settings-layout";
 import { ImportNoticePanel } from "#/features/configuration/ui/import-notice-panel";
 import { PortableConfigForm } from "#/features/configuration/ui/portable-config-form";
+import { SettingsDeliveryPausePanel } from "#/features/configuration/ui/settings-delivery-pause-panel";
 import { SettingsOperationalOverview } from "#/features/configuration/ui/settings-operational-overview";
 import { SettingsPageToolbar } from "#/features/configuration/ui/settings-page-toolbar";
 import { SettingsPreferencesPanel } from "#/features/configuration/ui/settings-preferences-panel";
@@ -31,6 +32,7 @@ export function SettingsPage() {
           ) : null}
           <TabsContent value="ui" className={settingsUiPanelClassName}>
             <SettingsOperationalOverview />
+            <SettingsDeliveryPausePanel />
             <SettingsRuntimePanel />
             <SettingsPreferencesPanel />
           </TabsContent>

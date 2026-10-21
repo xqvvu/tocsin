@@ -26,6 +26,7 @@ export class AppSettingsService {
     return this.store.settings.update({
       ...(input.locale === undefined ? {} : { locale: input.locale }),
       ...(input.timeZone === undefined ? {} : { timeZone: input.timeZone }),
+      ...(input.deliveryPaused === undefined ? {} : { deliveryPaused: input.deliveryPaused }),
       rawPayloadRetentionDays: input.rawPayloadRetentionDays,
     });
   }

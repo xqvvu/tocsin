@@ -3,7 +3,9 @@ import { useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { appSettingsQueryOptions } from "#/features/configuration/api/configuration.queries";
 import { DeliveriesPageToolbar } from "#/features/deliveries/ui/deliveries-page-toolbar";
+import { DeliveriesPausedNotice } from "#/features/deliveries/ui/deliveries-paused-notice";
 import { DeliveriesTable } from "#/features/deliveries/ui/deliveries-table";
 import {
   destinationCatalogQueryOptions,
@@ -51,6 +53,7 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
     [destinationCatalog],
   );
   const { data: operations } = useSuspenseQuery(operationsQueryOptions(filters));
+  const { data: settings } = useSuspenseQuery(appSettingsQueryOptions());
   const operationConfiguration = { sources, destinations, routes };
   const hasActiveFilters = hasOperationFilters(search);
   const { invalidateOperations, retryDelivery, runDeliveryWorker } = useOperationMutations();
@@ -96,8 +99,10 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
     <DashboardContentLayout
       main={
         <>
+          <DeliveriesPausedNotice />
           <DeliveriesPageToolbar
             pending={pending}
+            paused={settings.deliveryPaused}
             onRunWorker={() =>
               void submitAction("run-worker", async () => {
                 const result = await runDeliveryWorker({

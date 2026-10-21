@@ -130,6 +130,11 @@ export const UpdateAppSettingsCommandSchema = z.object({
   locale: LocaleSchema.optional(),
   timeZone: IanaTimeZoneSchema.optional(),
   rawPayloadRetentionDays: z.number().int().min(0).max(3650),
+  /**
+   * Emergency stop for outbound delivery. Omitted keeps the current state so
+   * unrelated settings edits cannot accidentally resume a paused instance.
+   */
+  deliveryPaused: z.boolean().optional(),
 });
 
 export const CreateRouteCommandSchema = z.object({

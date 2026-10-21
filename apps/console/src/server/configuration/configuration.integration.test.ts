@@ -1587,6 +1587,8 @@ describe("configuration capabilities", () => {
       locale: "zh-Hans",
       timeZone: "Asia/Shanghai",
       rawPayloadRetentionDays: 7,
+      deliveryPaused: false,
+      deliveryPausedAt: null,
     });
     expect(await second.store.sources.get(source.source.id)).toMatchObject({
       name: "Grafana prod",
@@ -1752,6 +1754,8 @@ describe("configuration capabilities", () => {
       locale: "zh-Hans",
       timeZone: "Asia/Shanghai",
       rawPayloadRetentionDays: 7,
+      deliveryPaused: false,
+      deliveryPausedAt: null,
     });
     expect(await second.store.sources.get(source.source.id)).toMatchObject({
       name: "Grafana prod",

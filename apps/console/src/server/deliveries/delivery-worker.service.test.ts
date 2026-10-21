@@ -95,6 +95,7 @@ describe("delivery worker", () => {
       succeeded: 1,
       failed: 0,
       retrying: 0,
+      paused: false,
       startedAt: now,
       finishedAt: now,
     });
@@ -186,6 +187,7 @@ describe("delivery worker", () => {
       succeeded: 1,
       failed: 0,
       retrying: 0,
+      paused: false,
       startedAt: now,
       finishedAt: now,
     });
@@ -280,6 +282,7 @@ describe("delivery worker", () => {
       succeeded: 1,
       failed: 0,
       retrying: 0,
+      paused: false,
       startedAt: now,
       finishedAt: now,
     });
@@ -362,6 +365,7 @@ describe("delivery worker", () => {
       succeeded: 1,
       failed: 0,
       retrying: 0,
+      paused: false,
       startedAt: now,
       finishedAt: now,
     });
@@ -413,6 +417,7 @@ describe("delivery worker", () => {
       succeeded: 0,
       failed: 0,
       retrying: 1,
+      paused: false,
       startedAt: now,
       finishedAt: now,
     });
@@ -431,6 +436,7 @@ describe("delivery worker", () => {
       succeeded: 0,
       failed: 1,
       retrying: 0,
+      paused: false,
       startedAt: "2026-06-09T08:01:00.000Z",
       finishedAt: "2026-06-09T08:01:00.000Z",
     });
@@ -480,6 +486,7 @@ describe("delivery worker", () => {
       succeeded: 0,
       failed: 0,
       retrying: 1,
+      paused: false,
       startedAt: now,
       finishedAt: now,
     });
@@ -525,6 +532,7 @@ describe("delivery worker", () => {
       succeeded: 0,
       failed: 0,
       retrying: 1,
+      paused: false,
       startedAt: now,
       finishedAt: now,
     });
@@ -599,6 +607,7 @@ describe("delivery worker", () => {
       succeeded: 1,
       failed: 0,
       retrying: 0,
+      paused: false,
       startedAt: "2026-06-09T08:06:00.000Z",
       finishedAt: "2026-06-09T08:06:00.000Z",
     });
@@ -662,6 +671,7 @@ describe("delivery worker", () => {
       succeeded: 0,
       failed: 0,
       retrying: 0,
+      paused: false,
       startedAt: "2026-06-09T08:06:00.000Z",
       finishedAt: "2026-06-09T08:06:00.000Z",
     });
@@ -784,6 +794,7 @@ describe("delivery worker", () => {
       succeeded: 1,
       failed: 0,
       retrying: 0,
+      paused: false,
       startedAt: claimInsideWindow,
       finishedAt: claimInsideWindow,
     });
@@ -852,6 +863,54 @@ describe("delivery worker", () => {
       lastFinishedAt: now,
     });
     expect(failingWorker.getHealth().lastError).not.toContain("token=");
+  });
+
+  it("leaves the queue untouched while outbound delivery is paused", async () => {
+    const store = await createStore();
+    const delivery = await seedDelivery(store);
+    await store.settings.update({ deliveryPaused: true });
+    const calls: string[] = [];
+    const worker = new DeliveryWorker({
+      store,
+      destinations: createDefaultDestinationRegistry(),
+      now: () => now,
+      sendContext: {
+        fetch: async (url) => {
+          calls.push(String(url));
+
+          return { ok: true, status: 202, text: async () => "accepted" };
+        },
+      },
+    });
+
+    const paused = await worker.runOnce();
+
+    expect(paused).toEqual({
+      claimed: 0,
+      reclaimed: 0,
+      succeeded: 0,
+      failed: 0,
+      retrying: 0,
+      startedAt: now,
+      finishedAt: now,
+      paused: true,
+    });
+    expect(calls).toEqual([]);
+    expect((await store.deliveries.get(delivery.id))?.job.state).toBe("pending");
+    expect(worker.getHealth()).toMatchObject({
+      state: "idle",
+      lastRun: paused,
+    });
+
+    await store.settings.update({ deliveryPaused: false });
+
+    const resumed = await worker.runOnce();
+
+    expect(resumed).toMatchObject({ claimed: 1, succeeded: 1, paused: false });
+    expect(calls).toEqual(["https://example.test/webhook"]);
+    expect((await store.deliveries.get(delivery.id))?.job.state).toBe("succeeded");
+
+    await store.close();
   });
 });
 

@@ -164,6 +164,11 @@ export interface WorkerRunNotice {
   retrying: number;
   startedAt: IsoDateTimeString;
   finishedAt: IsoDateTimeString;
+  /**
+   * True when the run was skipped because outbound delivery is paused. Only
+   * the delivery worker reports this; the on-call worker leaves it unset.
+   */
+  paused?: boolean;
   health?: WorkerHealthSnapshot;
   runnerHealth?: WorkerHealthSnapshot;
 }

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { appSettingsQueryOptions } from "#/features/configuration/api/configuration.queries";
 import { DeliveriesPage } from "#/features/deliveries/ui/deliveries-page";
 import {
   destinationCatalogQueryOptions,
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/_dashboard/deliveries")({
     const filters = operationFiltersFromSearch(search);
 
     await Promise.all([
+      context.queryClient.ensureQueryData(appSettingsQueryOptions()),
       context.queryClient.ensureQueryData(sourcesQueryOptions()),
       context.queryClient.ensureQueryData(destinationsQueryOptions()),
       context.queryClient.ensureQueryData(destinationCatalogQueryOptions()),

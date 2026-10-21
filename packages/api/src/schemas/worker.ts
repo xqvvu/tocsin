@@ -10,6 +10,8 @@ export const DeliveryWorkerRunResultSchema = z.object({
   retrying: z.number().int().min(0),
   startedAt: IsoDateTimeSchema,
   finishedAt: IsoDateTimeSchema,
+  /** Present on delivery runs; true when outbound delivery is paused. */
+  paused: z.boolean().optional(),
 });
 
 /**

@@ -192,6 +192,7 @@ describe("source webhook API route", () => {
       retrying: 0,
       startedAt: now,
       finishedAt: now,
+      paused: false,
     });
 
     const eventDetail = await store.history.getEventDetail("event-1");
