@@ -229,7 +229,7 @@
 | REL-18 | 发布手册 readiness 无重试 | release-infra lane | 23 | candidate | — | 第 36 轮证据迁移：`docker-production-deployment.md:56` 仍是一次性 `curl`；`release-checklist.md` 已改为 `just docker-smoke`，脚本已有轮询 |
 | REL-19 | 本地 E2E 失败无 trace | release-infra lane | 23 | candidate | — | 本地 `retries=0` + `trace: on-first-retry`；`playwright.config.ts:23,28` |
 | REL-20 | `just docker-buildx` 对 ACR 缺 `--provenance=false` | release-infra lane（第 22 轮） | 26 | shipped | #162 | ACR 拒绝 BuildKit OCI attestation manifest；Justfile 已加 `--provenance=false --sbom=false`，发布文档同步 ACR registry/tag 约定 |
-| DOC-33 | RC 未勾选 gate 实为 4 条而非 3 条 | release-infra lane | 21 | candidate | — | 漏算 provider 多版本 payload；`mvp-rc-checklist.md:123,165,171,172` |
+| DOC-33 | RC 未勾选 gate 实为 4 条而非 3 条 | release-infra lane | 21 | shipped | — | 第 56 轮复核：`mvp-rc-checklist.md:19-21` 已改为四类剩余 gate，未勾选项确为 4 条，原矛盾消除；原证据：漏算 provider 多版本 payload |
 | Q-30 | 加急呼叫持久化失败会被当作可重试，导致重复呼叫 | quality lane | 26 | shipped | #168 | `markFired` 在外层 try 内（`oncall-execution.ts:97`），抛错后落可重试分支（`:115-131`）；电话已拨出。第 24 轮 EXPERT_PANEL 三方一致：受理后持久化失败不得重排、不得抛错；`markFired` 幂等重试一次后落终态 `retryAt:null`，错误文案写明「已呼叫」；不新增状态/迁移；Q-8 单独处理。决策 `docs/planning/decisions/oncall-fired-persistence-failure.md`；测试 `oncall-execution.test.ts` |
 | Q-31 | `buzzDelivery` 部分入队失败仍会呼叫已入队 ping | quality lane | 23 | candidate | — | 逐条 `enqueueForDelivery` 无事务（`oncall.service.ts:91-109`）；操作员看到错误但已有 ping 落库并会被呼叫 |
 | Q-32 | `toLocaleLowerCase()` 受宿主 locale 影响 | quality lane | 22 | candidate | — | severity/status 归一化（`normalization.ts:5,23`）、contains 匹配（`route.ts:325,330`）、header 查找（`intake.service.ts:406,409`）；土耳其语环境 `INFO`→`ınfo` 会漏投 |
@@ -300,16 +300,16 @@
 | DOC-34 | `route-authoring-current-state.md` 结论段仍称能力不存在 | docs-drift lane | 24 | candidate | — | 文首校正已存在，但 `:17,:105,:115` 仍称无本地化/无解释通道/无 route×destination；代码已反证 |
 | DOC-35 | README/发布文档仍把 Docker smoke 未进 CI 当缺口 | docs-drift lane | 25 | shipped | #162 | README、release checklist、backup/upgrade 文档统一为「E2E 未接入 CI；Docker smoke 保留为本地人工 gate」 |
 | DOC-36 | `next-round.md` 仍把已交付的 D2/D5 列为待做 | docs-drift lane | 23 | candidate | — | 变量面板分组/搜索/折叠与光标插入已落地；UX 评审缺状态头；`next-round.md:258-265` |
-| DOC-37 | 抑制 PRD 两处「当前四个状态」过期 | docs-drift lane | 22 | candidate | — | 已五状态（含 `suppressed`）；`alert-suppression.md:43,338`；与 DOC-24 合并 |
+| DOC-37 | 抑制 PRD 两处「当前四个状态」过期 | docs-drift lane | 22 | shipped | — | 第 56 轮复核：`alert-suppression.md:43,338` 已无「四状态」表述，`:45` 已明确五状态；原证据：已五状态（含 `suppressed`） |
 | DOC-38 | `delivery-route-match-evidence.md` 已实现但无状态头 | docs-drift lane | 22 | candidate | — | 与 DOC-26 合并；`delivery-route-evidence.tsx` 已落地 |
-| DOC-39 | RC 清单漏记 suppressed 与抑制/集成页面 | docs-drift lane | 22 | candidate | — | `mvp-rc-checklist.md:40,44-45` |
+| DOC-39 | RC 清单漏记 suppressed 与抑制/集成页面 | docs-drift lane | 22 | shipped | — | 第 56 轮复核：`mvp-rc-checklist.md:28-29` 已列 Suppressions/Integrations，`:42` 已列 suppressed worker 状态；原证据已过期 |
 | DOC-40 | `destination-template-engine-issues.md` 未勾选项已交付 | docs-drift lane | 20 | candidate | — | Slack/Email/JSON 模式均已实现；`:138` |
 | DOC-41 | post-MVP adapter 问题陈述覆盖已交付的 destination 侧 | docs-drift lane | 20 | candidate | — | 剩余缺口在 provider fixture/指南；`post-mvp-planning.md:178` |
 | DOC-42 | 发布文档仍称没有 tag / 回滚镜像未发布 | release-infra + docs-drift lane（第 22 轮） | 25 | shipped | #162/#163 | tag、registry 约定、回滚镜像与当前版本已在发布文档中对齐 |
 | DOC-43 | README 能力/结构清单过期 | docs-drift lane（第 22 轮） | 23 | candidate | — | 页面清单缺 Suppressions/Integrations（`README.md:34`）；仓储缺 feishu-app/oncall/suppression（`:36`）；仍写 server functions（`:55`） |
 | DOC-44 | 投递搜索占位文案文档落后 | docs-drift lane（第 22 轮） | 20 | candidate | — | `delivery-search-fields.md:48-49` 未提外部消息引用；`zh-Hans.json:674` 已更新（REQ-66） |
 | DOC-45 | README Roadmap 状态过期 | docs-drift lane（第 22 轮） | 24 | candidate | — | `README.md:197-204,228-230` 仍把已交付能力列为待完善；需逐条加状态而非整段删除 |
-| DOC-46 | post-MVP 方向 5 仍整段列为候选 | docs-drift lane（第 27 轮） | 24 | candidate | — | `post-mvp-planning.md:156-174`；CI、Docker smoke、release 文档、脱敏日志均已落地，仅 E2E 未接 CI |
+| DOC-46 | post-MVP 方向 5 仍整段列为候选 | docs-drift lane（第 27 轮） | 24 | shipped | — | 第 56 轮复核：`post-mvp-planning.md:167` 已有「大部分已交付（2026-10-21 复核）」校正，仅剩 E2E 未接 CI；原证据已过期 |
 | DOC-47 | post-MVP 方向 2 缺口描述过期 | docs-drift lane（第 27 轮） | 23 | candidate | — | `post-mvp-planning.md:211-215` 称缺投递缺口解释，实际 `route-match-gaps.ts:57` 与 `history.repository.ts:194` 已实现；仅剩样例 Event 干跑预览 |
 | DOC-48 | 四个已交付 mini-PRD 缺状态头 | docs-drift lane（第 27 轮） | 22 | candidate | — | `active-suppression-indicator.md`、`event-label-silence.md`、`delivery-payload-comparison.md`、`oncall-feishu-urgent.md` 仍用现在时称能力不存在 |
 | DOC-49 | RC 清单概览漏列三类剩余 gate | docs-drift lane（第 27 轮） | 23 | shipped | #226 | 概览改为列出四类剩余 gate（E2E CI、dedupe cleanup、provider fixtures/多版本 payload、provider guide）并指向 A/D/E 节 |
@@ -438,7 +438,7 @@
 | REQ-173 | 去重缺口中的首发事件可直达 | requirements lane（第 42 轮） | 29 | shipped | #233 | 第 43 轮交付：`duplicate_within_window` 且 `firstEventId` 非空时渲染 `/events/$eventId` 类型化链接；文案改 `<event>` 富文本标签；新增 4 条组件测试；PRD `docs/prd/delivery-gap-first-event-link.md` |
 | REQ-174 | 失败投递重试前的可执行性预检 | requirements lane（第 42 轮） | 25 | candidate | — | `retryNow` 仅校验 failed 并把投递置 pending（`delivery.repository.ts:417-440`），但 `claimNext` 要求目标/路由启用（`:229-230`）；目标或路由停用时重试仍提示「已重新入队」但永不投递（`delivery-retry-button.tsx:27-37`）；建议 EXPERT_PANEL 判断是否并入 REQ-60/REQ-89 |
 | REQ-203 | 通知目标测试发送支持选择真实历史事件 | requirements lane（第 53 轮） | 28 | shipped | #278 | 第 55 轮交付：`TestDestinationCommand` 增可选 `sampleEventId`，服务复用 `resolvePreviewSample` 并传入控制台 locale/timeZone；测试动作改为确认对话框（内置样例 / 最近历史事件）；PRD `docs/prd/destination-test-historical-event.md`；不写 events/deliveries |
-| REQ-204 | 事件详情按标题/消息一键静默相似告警 | requirements lane（第 53 轮） | 28 | candidate | — | matcher 已支持 `titleContains`/`messageContains`（`suppression.ts:47-48,207-208`）、完整表单已支持（`suppression-forms.tsx:414-425`），但一键入口只预填 fingerprint 或标签（`suppression-from-event-dialog.tsx:24-40`、`suppression-form.ts:147-201`）；复用 `CreateSuppressionForm`，预填 `sourceIds` + 单个 contains；不改判定语义 |
+| REQ-204 | 事件详情按标题/消息一键静默相似告警 | requirements lane（第 53 轮） | 28 | shipped | #281 | 第 56 轮交付：`suppressionDefaultsFromText` + `SuppressionFromEventDialog` 的 `text` 形态；标题/消息旁图标入口，空/脱敏禁用；PRD `docs/prd/event-text-silence.md`；原证据：matcher 已支持 `titleContains`/`messageContains`（`suppression.ts:47-48,207-208`）、完整表单已支持（`suppression-forms.tsx:414-425`），但一键入口只预填 fingerprint 或标签（`suppression-from-event-dialog.tsx:24-40`、`suppression-form.ts:147-201`）；复用 `CreateSuppressionForm`，预填 `sourceIds` + 单个 contains；不改判定语义 |
 | REQ-205 | 跨实体排障搜索页（事件 + 投递分组） | requirements lane（第 53 轮） | 27 | candidate | — | `operations.list` 同一 `q` 已同时返回两类（`operations.service.ts:33-60`），但顶栏无搜索入口、两页各自搜索（`dashboard-header.tsx:13-39`）；新增 `/search?q=` 分组结果页并复用现有 procedure；建议吸收 NEW-D（顶栏 ID 直达），不要并行做两个入口；纯前端只读 |
 | REQ-206 | 投递列表按渠道类型筛选 | requirements lane（第 54 轮） | 28 | candidate | — | Deliveries URL 新增 `destinationKind` 并贯穿 oRPC/仓储列表与 total；`destinationKind` 已在 DTO（`packages/core/src/operations.ts:106-111`、`history.repository.ts:244,305`）但只用于图标（`delivery-target-cell.tsx:31-41`）；`operation-search.ts:13-36`、`history.repository.ts:258-292,358-403`、`operation-filters.tsx:330-355`；无迁移 |
 | REQ-207 | 事件邻域绝对时间窗与「前后 15 分钟」一键跳转 | requirements lane（第 54 轮） | 27 | candidate | — | 吸收 REQ-33；URL `from`/`to` 与 `range` 互斥，仓储补 `until`（`history.interface.ts:23-33`、`history.repository.ts:104-106`），事件详情工具栏加锚点动作（`event-detail-page.tsx:58-71`、`event-detail-summary.tsx:83-90`）；无迁移 |
@@ -450,6 +450,11 @@
 | REQ-213 | 多告警载荷的告警组逐条可见 | requirements lane（第 55 轮） | 26 | candidate | — | provider 固定取 `alerts[0]` 只记 `alertCount`（`grafana/parse.ts:36-37,63`、`alertmanager-compatible.ts:35-36,63`）；详情无逐条视图；只读投影 `alertGroup`（index/fingerprint/status/severity/summary/labels + usedForNormalization），不 fan-out、不改投递语义 |
 | REQ-214 | 事件按上游发生时间筛选（时间基准） | requirements lane（第 55 轮） | 26 | candidate | — | `events.occurred_at` 已存在（`schema.ts:73-74`），筛选只用 `received_at`（`history.repository.ts:104-106`）；URL `timeBasis=received\|occurred`（默认 received），list 与 total 共用；可选 `idx_events_occurred_at`；无投递/auth 变化 |
 | REQ-215 | 可移植配置按对象导出（含依赖闭包） | requirements lane（第 55 轮） | 25 | candidate | — | 导出固定全量（`config-portability.service.ts:70-91`），导入按 ID 触碰无关对象（`:140-240`）；新增可选 `selection` 并自动补齐 route → source/destination/feishuApp 依赖闭包；凭据仍为 env ref；不做按对象导入（REQ-20） |
+| REQ-216 | Settings 生效运行参数只读视图 | requirements lane（第 56 轮） | 28 | candidate | — | `env.ts:23-40` 的目标超时/webhook 上限/worker 参数与 `system-information.ts:22-31` 均未进入 Settings；`packages/api/src/contract/settings.ts:10-17` 只有 get/update；新增只读 DTO 白名单（不含 secret/env 原文）；无迁移；扩展 REQ-84 |
+| REQ-217 | 投递队列积压年龄与 worker 停顿投影 | requirements lane（第 56 轮） | 27 | candidate | — | runner 快照只在内存（`delivery-worker.service.ts:20-45`、`delivery-worker-runner.ts:41-45,113-117`），仅手动响应返回（`operations/router.ts:64-78`）；`/api/ready` 不判断停摆（`ready.ts:12-28`）；复用 `claimNext` 可领取谓词（`delivery.repository.ts:228-240`）做只读聚合；无迁移 |
+| REQ-218 | 加急接收人预检与呼叫链路演练 | requirements lane（第 56 轮） | 26 | candidate | — | 接收人 ID 仅 schema 非空/唯一（`feishu/schema.ts:123-144`），test 不触发加急也不返回 provider reference（`destination.ts:156-163`）；第一步只读预检（通讯录查询、逐项可解析/无权限），第二步演练需 EXPERT_PANEL；secret 仅服务端 |
+| REQ-219 | 路由草稿变更影响预览 | requirements lane（第 56 轮） | 26 | candidate | — | 路由保存前无影响预览（`route-add-dialog.tsx:75-78`、`route-forms.tsx:103-109`）；`operations.previewRouteReplay` 只针对已保存路由（`packages/api/src/contract/operations.ts:74-78`）；复用 core matcher 做只读 diff（新增/不再命中），不写 events/deliveries；扩展 REQ-3 |
+| REQ-220 | 通知目标行临时静默 | requirements lane（第 56 轮） | 27 | candidate | — | 目标行只有测试/预览/编辑/启停/删除（`destination-actions.tsx:68-105`）；matcher 已支持 `destinationIds`（`suppression.ts:29-34`）且表单支持目标多选（`suppression-forms.tsx:368-377`）；纯前端复用创建静默，30m/1h/4h/24h 快捷时长；扩展 REQ-81/61 |
 | Q-50 | Destination/Route 仓储同样整行读-改-写 | quality lane（第 53 轮） | 24 | candidate | — | `destination.repository.ts:77-99` 并发编辑互相覆盖 `config_json`/`secret_refs_json`；`route.repository.ts:82-105` 覆盖 `rule_json`/`destination_ids_json`；修复方式同 Q-48（只写调用方提供的列）；`SourceService` 的 config 合并仍在事务外（`source.service.ts:54-63`），需乐观并发，成本 M |
 | UI-20 | 事件详情投递健康徽标忽略 pending/suppressed | ui-review（第 40 轮，浏览器实测） | 26 | shipped | #230 | 第 42 轮交付：按操作优先级展示全部非零状态（失败→运行中→待处理→成功→已抑制），无投递显示「无投递」；新增 4 条组件测试；PRD `docs/prd/event-delivery-health-badges.md` |
 | UI-21 | 共享 Dialog 关闭按钮英文 `Close` 且错误态透出 `Failed to fetch` | ui-review（第 40 轮，浏览器实测） | 22 | candidate | — | `components/ui/dialog.tsx:63` 硬编码 sr-only `Close`；`destination-edit-dialog-loader.tsx:132-134` 直接渲染 `error.message`；读屏用户听到英文、错误不可本地化；纯前端文案；第 44、47 轮浏览器再次确认中文界面 DOM 仍为 `Close`（`Failed to fetch` 分支第 47 轮未复现，仅代码核实）；第 54 轮浏览器快照仍为 `Close`（`dialog.tsx:63`、`sheet.tsx:68`），建议新增 `common.actions.close` |
@@ -490,6 +495,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.42` | `e7d2b53` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.42`（linux/amd64 + linux/arm64，index digest `sha256:9a94158e…`） | 事件详情按标题/消息一键静默相似告警（#281）；无迁移/配置变化；回滚镜像 `0.1.0-beta.41` |
 | `0.1.0-beta.41` | `3831a06` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.41`（linux/amd64 + linux/arm64，index digest `sha256:750b38f3…`） | 测试发送选择真实历史事件（#278）+ 服务端构建切换 Nitro v2 stable（#276）；无迁移/配置变化；Docker smoke 通过；回滚镜像 `0.1.0-beta.40` |
 | `0.1.0-beta.40` | `e8c2c6f` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.40`（linux/amd64 + linux/arm64，index digest `sha256:6087bd63…`） | 事件详情投递表错误与重试时间可读性（#272，UI-19）；无迁移/配置变化；回滚镜像 `0.1.0-beta.39` |
 | `0.1.0-beta.39` | `7f5eea1` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.39`（linux/amd64 + linux/arm64，index digest `sha256:ca2cab50…`） | 事件详情投递表按操作优先级排序（#267，REQ-199）+ 告警源更新不再回滚并发 Token 轮换（#268，Q-48）；无迁移/配置变化；回滚镜像 `0.1.0-beta.38` |
@@ -525,6 +531,13 @@
 
 ## 下一轮优先项
 
+0. **第 56 轮交付**：REQ-204（28）标题/消息一键静默（#281，主切片）；
+   发版 `0.1.0-beta.42`（#282）并推送双平台镜像。
+   下一优先：**REQ-216（28，新）** Settings 生效运行参数只读视图；**REQ-206（28）**
+   投递按渠道类型筛选；**REQ-211（27）** 历史载荷按当前解析器重解析预览；
+   **REQ-217（27，新）** 队列积压年龄；**REQ-220（27，新）** 目标行临时静默。
+   **UI-25（27）**、**UI-22（24）**、**UI-18（24）**；DOC 批次见第 56 轮日志；
+   `docs-drift` 本轮已完成，DOC-33/37/39/46 关闭。
 0. **第 55 轮交付**：REQ-203（28）测试发送选择真实历史事件（#278，主切片）；
    发版 `0.1.0-beta.41`（#279）并推送双平台镜像。
    下一优先：**REQ-204（28）** 标题/消息一键静默（连续三轮推荐未做）；**REQ-206（28）**

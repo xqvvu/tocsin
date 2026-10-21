@@ -2,6 +2,87 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 56 轮）
+
+- 时间：2026-10-21 14:20 – 15:2x CST。
+- 基线：本轮开始时 `origin/main` @ `0e45bef`（第 55 轮 beta.41 记录之后）；main CI success。
+- 触发说明：本轮为 13:25 计划的延迟触发（第 55 轮运行期间排队），与上一轮间隔约 5 分钟。
+  为控制重复消耗，只跑必跑车道 + 轮转车道，未做全量审计。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选、无 open PR）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST），但 backlog 未清空，按闸门继续消化候选。
+- 车道：`requirements` + `ui-triage` 必跑；第三名额按第 55 轮记录给 `docs-drift`（补跑）。
+- 车道轮转位置：`requirements` / `ui-triage` / `docs-drift` 均已完成；下一轮非必跑车道为
+  **`security-exposure`**。
+- `ui-triage`：**`defer`** —— 距上次评审约 3h（未满 48h）；自 11:54 起非测试 UI 合并 1 个
+  （#278，有组件测试但无浏览器实测）；14 条存量 UI 发现零状态变化。下次自然触发：
+  再有 1 个非测试 UI 合并、或 UI-18/22/25 任一修复合并、或 2026-10-23 11:54 CST。
+  首查：目标「测试」确认对话框、UI-22、UI-18。
+- `last_ui_review_at`：**2026-10-21 11:54 CST**（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
+  `optimistic-napier-a12541`。本轮结束已清理 `agent-iteration` 工作树与会话工作树的
+  `node_modules`。
+
+### 本轮交付
+
+- PR #281 `feat(events): silence similar alerts by title or message`（rebase 合并 `5cdc68a`），
+  REQ-204（28）。
+  - 新增 `suppressionDefaultsFromText`：预填 `sourceIds` + 单个 `titleContains` /
+    `messageContains`，不触碰指纹。
+  - `SuppressionFromEventDialog` 新增 `text` 形态；事件详情摘要标题/消息旁各加图标按钮。
+  - 空文本或含 `[REDACTED]` 时禁用并说明原因，避免空匹配器被放大成「静默该告警源全部告警」。
+  - 新增 PRD `docs/prd/event-text-silence.md`；新增 2 条模型测试 + 2 条摘要组件测试。
+  - 验证：`vp check` 0 errors（12 条既有 warning）；`vp run -r test` 145 files / 784 tests；
+    `vp run -r build` 通过；PR CI success。
+  - 浏览器验证：未做（本机无 console dev server）；留待下次 UI 评审复验。
+
+### 专家发现
+
+- `requirements`（5 条新候选，已写入 backlog）：
+  - **REQ-216（28）** Settings 生效运行参数只读视图（扩展 REQ-84）。
+  - **REQ-217（27）** 投递队列积压年龄与 worker 停顿投影（扩展 REQ-11/169）。
+  - **REQ-218（26）** 加急接收人预检与呼叫链路演练（演练步骤需 EXPERT_PANEL）。
+  - **REQ-219（26）** 路由草稿变更影响预览（扩展 REQ-3）。
+  - **REQ-220（27）** 通知目标行临时静默（扩展 REQ-81/61）。
+- `docs-drift`（12 条，4 条 STALE-BACKLOG）：
+  - 仍有效：DOC-6/23（application-container 与 frontend 树/工厂清单）、DOC-51（页面/
+    feature 清单）、DOC-60（server 目录与 procedure 写法）、DOC-27/50（版本与旧路径）、
+    DOC-43/45（README 能力与 Roadmap）、DOC-62（`better-auth.schema.ts` 文件名）、
+    DOC-56（ADR 0003 的 `server/functions/`）、DOC-24（抑制 PRD 四→五状态与 AC）、
+    DOC-40（模板引擎 AC）、DOC-47/59（post-MVP 投递缺口解释）、DOC-48/53/61（PRD 状态头）。
+  - STALE-BACKLOG：DOC-33、DOC-37、DOC-39、DOC-46（原断言已被后续提交消除，建议关闭）。
+  - `xqvvu/vane` 仅作为 ACR 镜像坐标保留，不是失效 GitHub 链接。
+- 已核实 clean：main CI、无 open PR、无迁移改动、无 env/compose/Dockerfile 变化。
+
+### EXPERT_PANEL
+
+- 本轮功能切片无 EXPERT_PANEL 事项：REQ-204 为纯 UI + 预填模型复用，不触碰
+  schema/迁移、投递/路由/auth 语义，不扩大 secret 暴露；空文本/脱敏禁用已覆盖。
+- 发布评估三方专家：发布经理 APPROVE；阻断审计首次 REJECT（`5cdc68a` 的 main CI 尚在
+  in_progress），待该 run success 后条件解除；运维/回滚 APPROVE（无迁移/配置变化）。
+  最终三方一致通过。
+
+### 发布
+
+- 版本：`0.1.0-beta.42`；PR #282 `chore(release): v0.1.0-beta.42`（rebase 合并 `e7d2b53`）。
+- Tag：`v0.1.0-beta.42`（annotated，指向 `e7d2b53`）；GitHub Release：
+  `https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.42`（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.42`
+  - index digest `sha256:9a94158e74e47249c390cd6b985ab59814d1d86b7923a2b7624b3afe2fb7dca4`
+  - `linux/amd64` @ `sha256:4a6c3883…`，`linux/arm64` @ `sha256:ddbbf220…`
+  - 构建参数：`--provenance=false --sbom=false`；未推 `latest`；回滚镜像 `0.1.0-beta.41`。
+
+### 下一轮优先项
+
+1. **REQ-216（28）** Settings 生效运行参数只读视图；**REQ-206（28）** 投递按渠道类型筛选；
+   **REQ-211（27，未做）** 历史载荷按当前解析器重解析预览；**REQ-217（27，新）** 队列积压年龄。
+2. **REQ-220（27，新）** 目标行临时静默；**UI-25（27）** 1280 sticky 列遮挡；
+   **UI-22（24）** 两页内联编辑重叠；**UI-18（24）** 390px 事件详情 Tabs 塌陷。
+3. **DOC 批次**：DOC-6/23/51/60（架构树与 procedure 写法）、DOC-43/45（README）、
+   DOC-24/27/40/47/48/50/53/56/59/61/62 可拆 2 个 `docs:` PR；DOC-33/37/39/46 关闭。
+4. **FIX-4（20）** 三条 delete 回归测试；**SEC-13/SEC-20/SEC-21/SEC-25** 合并为一个小
+   AUTO_FIX PR。
+5. 车道轮转：下一轮非必跑车道 **`security-exposure`**；`requirements` / `ui-triage` 必跑。
+
 ## 2026-10-21（第 55 轮）
 
 - 时间：2026-10-21 13:17 – 14:4x CST。
