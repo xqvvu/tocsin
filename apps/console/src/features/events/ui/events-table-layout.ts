@@ -1,7 +1,10 @@
 import { stickyActionsColumnClassName } from "#/components/common/operations-table-layout";
 
 export const eventsPageSize = 20;
-export const eventsTableMinWidthClassName = "min-w-275";
+// Keep the six columns inside the 982px table viewport measured at 1280x900
+// with the sidebar expanded. A wider floor pushes the received column under
+// the sticky actions column, which the operator cannot scroll back into view.
+export const eventsTableMinWidthClassName = "min-w-230";
 
 export function eventsColumnClassName(columnId: string): string | null {
   switch (columnId) {

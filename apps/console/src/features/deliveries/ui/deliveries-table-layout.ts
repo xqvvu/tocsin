@@ -1,7 +1,9 @@
 import { stickyActionsColumnClassName } from "#/components/common/operations-table-layout";
 
 export const deliveriesPageSize = 20;
-export const deliveriesTableMinWidthClassName = "min-w-320";
+// The eight columns have to fit the same 982px viewport as Events at 1280x900;
+// at min-w-320 the updated column sat entirely outside the viewport.
+export const deliveriesTableMinWidthClassName = "min-w-240";
 
 export function deliveriesColumnClassName(columnId: string): string | null {
   switch (columnId) {
