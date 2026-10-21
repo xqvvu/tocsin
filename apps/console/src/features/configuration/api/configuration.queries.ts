@@ -10,3 +10,14 @@ export function appSettingsQueryOptions() {
     queryKey: appSettingsQueryKeys.detail(),
   });
 }
+
+export const runtimeInformationQueryKeys = {
+  all: ["runtime-information"] as const,
+  detail: () => [...runtimeInformationQueryKeys.all, "detail"] as const,
+};
+
+export function runtimeInformationQueryOptions() {
+  return orpc.settings.getRuntime.queryOptions({
+    queryKey: runtimeInformationQueryKeys.detail(),
+  });
+}

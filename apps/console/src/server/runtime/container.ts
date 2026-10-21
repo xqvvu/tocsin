@@ -49,6 +49,8 @@ import {
   type DeliveryWorkerRunnerOptions,
 } from "#/server/runtime/delivery-worker-runner";
 import { safeErrorProperties } from "#/server/runtime/log-safety";
+import { RuntimeInformationService } from "#/server/runtime/runtime-information.service";
+import type { RuntimeInformationServiceOptions } from "#/server/runtime/runtime-information.service.types";
 import { SourceService } from "#/server/sources/source.service";
 import type { SourceServiceOptions } from "#/server/sources/source.service.types";
 import { SuppressionService } from "#/server/suppressions/suppression.service";
@@ -89,6 +91,9 @@ export interface ApplicationContainer {
     options?: Partial<Omit<FeishuAppServiceOptions, "store">>,
   ): Promise<FeishuAppService>;
   createAppSettingsService(): Promise<AppSettingsService>;
+  createRuntimeInformationService(
+    options?: Partial<Omit<RuntimeInformationServiceOptions, "store">>,
+  ): Promise<RuntimeInformationService>;
   createConfigPortabilityService(
     options?: Partial<Omit<ConfigPortabilityServiceOptions, "store" | "destinations">>,
   ): Promise<ConfigPortabilityService>;
@@ -258,6 +263,24 @@ export function createApplicationContainer(
 
     async createAppSettingsService() {
       return new AppSettingsService({ store: await container.getSqliteStore() });
+    },
+
+    async createRuntimeInformationService(serviceOptions = {}) {
+      return new RuntimeInformationService({
+        store: await container.getSqliteStore(),
+        limits: {
+          destinationTimeoutMs,
+          maxWebhookBytes: env.TOCSIN_MAX_WEBHOOK_BYTES,
+          workerBatchSize,
+          workerIntervalMs,
+          workerStaleRunningMs,
+        },
+        logging: {
+          format: env.TOCSIN_LOG_FORMAT,
+          level: env.TOCSIN_LOG_LEVEL,
+        },
+        ...serviceOptions,
+      });
     },
 
     async createConfigPortabilityService(serviceOptions = {}) {

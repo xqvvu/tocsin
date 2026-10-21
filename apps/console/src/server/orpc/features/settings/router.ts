@@ -5,11 +5,18 @@ import { os } from "#/server/orpc/os";
 const withAppSettingsService = withDashboardService((container) =>
   container.createAppSettingsService(),
 );
+const withRuntimeInformationService = withDashboardService((container) =>
+  container.createRuntimeInformationService(),
+);
 
 export const settingsRouter = os.settings.router({
   get: os.settings.get
     .use(withAppSettingsService)
     .handler(({ context }) => context.service.getAppSettings()),
+
+  getRuntime: os.settings.getRuntime
+    .use(withRuntimeInformationService)
+    .handler(({ context }) => context.service.getRuntimeInformation()),
 
   update: os.settings.update
     .use(withAppSettingsService)
