@@ -2,6 +2,96 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 54 轮）
+
+- 时间：2026-10-21 11:25 – 12:1x CST。
+- 基线：本轮开始时 `origin/main` @ `56fef64`（第 53 轮清理记录之后）；main CI success。
+- 类型：非 full-audit（backlog 有大量 ≥27 分候选、无 open PR）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST），已超过 6 小时，但 backlog 未清空，继续消化候选。
+- 车道：`requirements` + `ui-triage` 必跑，第三名额按第 53 轮记录给 `security-exposure`；
+  `ui-triage` 判定 `review_now` 后追加 `ui-review`（全程并发 ≤3）。
+- 车道轮转位置：`requirements` / `ui-triage` / `security-exposure` / `ui-review` 均已完成；
+  下一轮非必跑车道 **`docs-drift`**，`requirements` 仍需必跑。
+- `ui-triage`：**`review_now`** —— 距上次评审 1h51m（未满 48h），但自 09:34 起非测试 UI
+  合并达到 **3 个**（#261、#264、#267），其中 #267（投递排序）没有浏览器验证；第 51 轮
+  留下的「sticky 列遮挡」待确认项已连续两轮顺延。强信号「≥3 UI 合并」成立，评审有增量价值。
+- `last_ui_review_at`：**2026-10-21 11:54 CST**（已更新）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
+  `pensive-feynman-70c8a7`。
+
+### 本轮交付
+
+- PR #272 `feat(console): make event delivery errors and retry times readable`（UI-19，
+  rebase 合并 `66062d4`）。
+  - 事件详情投递表重新分配列宽：「最近错误」23%（1280 下实测 268px），错误最多两行，
+    完整文本保留 `title`；新增纯函数 `retryTimestampFormat`（同日只显示时分、跨天显示日期，
+    按配置时区判断）；表头改为「下次重试」/「Next retry」。
+  - 新增 PRD `docs/prd/event-detail-delivery-readability.md`；新增同日/跨天/时区/非法值
+    与错误文本断言。
+  - 验证：`vp check` 0 errors（12 条既有 warning）、`vp run -r test` 144 files / 776 tests、
+    `vp run -r build` 通过、PR CI success。
+  - 浏览器实测（隔离实例 `localhost:6201` + 临时 SQLite，1280×900）：错误列 268px，
+    502 错误全文可见；同日重试 `04:05`，2030 重试 `2030/01/01 00:00:00`；排序不变；
+    窄视口横向滚动正常（`scrollWidth 776 / clientWidth 432`）。
+
+### 专家发现
+
+- `requirements`（5 条新候选，已写入 backlog）：
+  - **REQ-206（28）** 投递按渠道类型筛选：`destinationKind` 已在 DTO 但只用于图标
+    （`packages/core/src/operations.ts:106-111`、`delivery-target-cell.tsx:31-41`）；
+    URL/仓储/计数均无该维度（`operation-search.ts:13-36`、`history.repository.ts:258-292,358-403`）。
+  - **REQ-207（27）** 事件邻域绝对时间窗 + 「前后 15 分钟」入口，吸收 REQ-33；
+    仓储只有 `since` 没有上界（`history.repository.ts:104-106`）。
+  - **REQ-208（27）** 待重试队列视图：列表按 `created_at desc`，worker 按
+    `coalesce(next_attempt_at, created_at)` 升序领取（`history.repository.ts:253-254` vs
+    `delivery.repository.ts:238-240`），顺序不一致。
+  - **REQ-209（26）** 失败分类落库与展示，升级 Q-6；适配器已返回 `errorKind`
+    （`packages/destinations/src/types.ts:61-87`），仓储只写文本（`delivery.repository.ts:377-414`）。
+  - **REQ-210（26）** 空结果时间窗诊断与一键放宽（`events-empty-state.tsx:29-43`）。
+- `security-exposure`（8 条，均已合并进 backlog 既有 SEC 行或新增 SEC-26）：
+  - MEDIUM **SEC-26（新）** 目标 webhook URL/endpoint 作为 bearer 凭据进入浏览器 DTO 与
+    SSR loader data，与 `docs/architecture/frontend-architecture.md:350,431` 冲突。
+  - MEDIUM **SEC-13 扩充**：`connectionString`/`accountKey`/`sharedKey`/`subscriptionKey`/
+    `encryptionKey`/`masterKey`/`x-signature` 仍未命中 `isSensitiveKey`（`redaction.ts:13-37`）。
+  - MEDIUM **SEC-20/SEC-11/SEC-23/SEC-22** 均复核仍成立（PEM 正文、任意认证头、
+    provider fingerprint、endpoint userinfo）。
+  - LOW **SEC-9/SEC-14/SEC-21/SEC-25** 复核仍成立，均为 S 级 AUTO_FIX。
+  - 已核实 clean：TOML 导出主链路、日志 sink、Source token/tokenHash、Feishu appSecret、
+    旧仓库名、import protection 主链路。
+- `ui-review`（浏览器实测，1280×900 与 390×844，7 条）：
+  - HIGH **UI-18** 390px 下事件详情 Tabs 只剩约 60px，投递表完全不可见且页面不可滚动。
+  - MEDIUM **UI-22** 静默/路由内联编辑把表格压成 0 高，分页条压住表单标题（实测重叠
+    15px / 3px）；**UI-25（新）** 1280 下 sticky 操作列遮挡「更新时间/最近错误」，
+    `min-w-320`=1280px 大于带侧栏的容器宽度；**UI-23** 390px 行操作不可见；
+    **UI-13** 部分阻断只存在于 hover；**UI-21** 关闭按钮仍为英文 `Close`。
+  - 已核实正常：#267 排序（失败→运行中→待处理→成功→已抑制，同状态稳定）、空态、
+    分页/筛选、表单校验、破坏性操作确认、i18n SRE 术语。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项：UI-19 为纯前端渲染层改动，不触碰 schema、投递/路由/auth 语义。
+
+### 发布评估与镜像
+
+- 三方专家一致 `APPROVE`（#272 合入后）：
+  - 发布经理：自 `v0.1.0-beta.39` 以来唯一用户可见变更为 `66062d4`（#272）；建议
+    `0.1.0-beta.40`。
+  - 阻断审计：main CI success、无其他 open PR、migration 零 diff、无阻塞回归、
+    `v0.1.0-beta.40` 未占用。
+  - 运维回滚：Dockerfile/compose/env/依赖/迁移全部零 diff；回滚只需换回
+    `0.1.0-beta.39` 镜像，数据卷双向兼容。
+- 版本：`0.1.0-beta.40`（发布 PR 与 tag 见下文/发布记录）。
+
+### 下一轮优先项
+
+1. **REQ-203（28）** 目标测试发送选择真实历史事件（连续两轮推荐未做）；**REQ-204（28）**
+   标题/消息一键静默；**REQ-206（28）** 投递按渠道类型筛选。
+2. **UI-25（27，新）** 1280 sticky 列遮挡；**UI-22（24）** 两页内联编辑重叠（S）；
+   **UI-18（24）** 390px 事件详情 Tabs 塌陷；**UI-13（26）**、**UI-21（22）**。
+3. **SEC-13/SEC-20/SEC-21/SEC-25** 可合并为一个小 AUTO_FIX PR；
+   **Q-50（24）** Destination/Route 仓储列级更新；**FIX-4（20）** 三条 delete 回归测试。
+4. 车道轮转：下一轮非必跑车道 `docs-drift`；`requirements` 必跑。
+
 ## 2026-10-21（第 53 轮）
 
 - 时间：2026-10-21 10:29 – 11:0x CST。
