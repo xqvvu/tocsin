@@ -1,3 +1,4 @@
+import "@tanstack/react-start/server-only";
 import type { betterAuth } from "better-auth";
 
 import type { createBaseBetterAuthOptions } from "#/lib/auth-options";
