@@ -71,6 +71,12 @@ export const UpdateDestinationCommandSchema = z.object({
 
 export const TestDestinationCommandSchema = z.object({
   id: z.string().min(1),
+  /**
+   * Render and send the test with a stored Event instead of the built-in
+   * sample. Omitted keeps the synthetic event so existing callers are
+   * unchanged.
+   */
+  sampleEventId: z.string().min(1).optional(),
 });
 
 export const GetDestinationTemplateDraftCommandSchema = z.object({

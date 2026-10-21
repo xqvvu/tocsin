@@ -158,14 +158,21 @@ export class DestinationService {
       throw new RecordNotFoundError("Destination", input.id);
     }
 
-    const source: SourceSummary = {
+    // A historical Event makes the test exercise the same template fields and
+    // message shape as a real delivery; the built-in sample stays the default
+    // so credentials can be verified without any stored history.
+    const sample = input.sampleEventId
+      ? await this.resolvePreviewSample(input.sampleEventId)
+      : null;
+    const source: SourceSummary = sample?.metadata.source ?? {
       id: "test-source",
       name: "Tocsin test",
       provider: "generic",
       enabled: true,
     };
     const summary = destinationSummaryFromRuntime(destination);
-    const normalizedEvent = createTestNormalizedEvent();
+    const normalizedEvent = sample?.normalizedEvent ?? createTestNormalizedEvent();
+    const settings = await this.store.settings.get();
     const config = this.resolveDestinationConfig
       ? await this.resolveDestinationConfig({
           kind: destination.kind,
@@ -175,11 +182,13 @@ export class DestinationService {
     const result = await this.destinations.send(
       destination.kind,
       {
-        eventId: `test-${Date.now()}`,
+        eventId: sample?.metadata.eventId ?? `test-${Date.now()}`,
         source,
         destination: summary,
         normalizedEvent,
+        ...(sample ? { payload: sample.payload } : {}),
         config,
+        presentation: { locale: settings.locale, timeZone: settings.timeZone },
       },
       this.destinationSendContext,
     );
