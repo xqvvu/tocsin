@@ -40,10 +40,6 @@ export function EventDetailSummary({
   const t = useTranslations();
   const normalized = detail.event.normalized;
   const deliveryTotal = Object.values(deliveryStats).reduce((total, count) => total + count, 0);
-  const titleSilence = textSilenceState(normalized.title);
-  const messageSilence = textSilenceState(normalized.message);
-  const titleField = t("suppressions.fromText.fieldTitle");
-  const messageField = t("suppressions.fromText.fieldMessage");
 
   return (
     <section className="border-border bg-card shrink-0 border">
@@ -57,37 +53,13 @@ export function EventDetailSummary({
             <h2 className="min-w-0 flex-1 text-sm leading-5 font-semibold wrap-break-word">
               {normalized.title}
             </h2>
-            <SuppressionFromEventDialog
-              event={detail.event}
-              source={detail.source}
-              text={{ field: "title", value: normalized.title }}
-              disabled={titleSilence !== "ok"}
-              disabledReason={
-                titleSilence === "empty"
-                  ? t("suppressions.fromText.disabled.empty", { field: titleField })
-                  : titleSilence === "redacted"
-                    ? t("suppressions.fromText.disabled.redacted", { field: titleField })
-                    : undefined
-              }
-            />
+            <TextSilenceAction detail={detail} field="title" value={normalized.title} />
           </div>
           <div className="mt-1 flex min-w-0 items-start gap-1.5">
             <p className="text-muted-foreground max-w-4xl min-w-0 flex-1 text-xs leading-5 wrap-break-word">
               {normalized.message}
             </p>
-            <SuppressionFromEventDialog
-              event={detail.event}
-              source={detail.source}
-              text={{ field: "message", value: normalized.message }}
-              disabled={messageSilence !== "ok"}
-              disabledReason={
-                messageSilence === "empty"
-                  ? t("suppressions.fromText.disabled.empty", { field: messageField })
-                  : messageSilence === "redacted"
-                    ? t("suppressions.fromText.disabled.redacted", { field: messageField })
-                    : undefined
-              }
-            />
+            <TextSilenceAction detail={detail} field="message" value={normalized.message} />
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-1">
@@ -147,6 +119,38 @@ function textSilenceState(value: string): "ok" | "empty" | "redacted" {
   }
 
   return value.includes(REDACTED_VALUE) ? "redacted" : "ok";
+}
+
+function TextSilenceAction({
+  detail,
+  field,
+  value,
+}: {
+  detail: EventDetailData;
+  field: "title" | "message";
+  value: string;
+}) {
+  const t = useTranslations();
+  const state = textSilenceState(value);
+  const fieldLabel = t(
+    field === "title" ? "suppressions.fromText.fieldTitle" : "suppressions.fromText.fieldMessage",
+  );
+
+  return (
+    <SuppressionFromEventDialog
+      event={detail.event}
+      source={detail.source}
+      text={{ field, value }}
+      disabled={state !== "ok"}
+      disabledReason={
+        state === "empty"
+          ? t("suppressions.fromText.disabled.empty", { field: fieldLabel })
+          : state === "redacted"
+            ? t("suppressions.fromText.disabled.redacted", { field: fieldLabel })
+            : undefined
+      }
+    />
+  );
 }
 
 function AlertStatusBadge({
