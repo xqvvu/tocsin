@@ -46,6 +46,34 @@ export function formatDateTime(value: string, options: DateFormatOptions = {}): 
   }).format(new Date(value));
 }
 
+/**
+ * Compact display format for a retry timestamp. Time alone is what an operator
+ * scanning a near-term retry wants, but it becomes ambiguous once the target
+ * falls on another calendar day (a blocked retry can sit days in the future),
+ * so cross-day values keep the date. The comparison runs in the configured
+ * display time zone, the same one the timestamp itself is formatted in.
+ */
+export function retryTimestampFormat(
+  value: string,
+  now: Date,
+  timeZone: string,
+): "dateTime" | "time" {
+  const target = Date.parse(value);
+
+  if (!Number.isFinite(target)) {
+    return "dateTime";
+  }
+
+  const calendarDay = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone,
+    year: "numeric",
+  });
+
+  return calendarDay.format(new Date(target)) === calendarDay.format(now) ? "time" : "dateTime";
+}
+
 export function summarizeResponseBody(value: string | null): string {
   if (!value?.trim()) {
     return "—";

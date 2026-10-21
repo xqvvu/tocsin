@@ -528,7 +528,7 @@
   "events.detail.deliveryHeaders.attempts": "Attempts",
   "events.detail.deliveryHeaders.destination": "Destination",
   "events.detail.deliveryHeaders.lastError": "Last error",
-  "events.detail.deliveryHeaders.next": "Next",
+  "events.detail.deliveryHeaders.next": "Next retry",
   "events.detail.deliveryHeaders.route": "Route",
   "events.detail.deliveryHeaders.state": "Delivery state",
   "events.detail.description": "Inspect normalized fields, intake-time route matches, deliveries, and redacted raw data",
