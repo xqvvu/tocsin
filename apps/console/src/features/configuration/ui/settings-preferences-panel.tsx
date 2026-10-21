@@ -30,6 +30,7 @@ import {
 } from "#/components/ui/select";
 import { appSettingsQueryOptions } from "#/features/configuration/api/configuration.queries";
 import { useAppSettingsMutation } from "#/features/configuration/api/use-app-settings-mutation";
+import { settingsPreferencesPanelClassName } from "#/features/configuration/model/settings-layout";
 import { SettingsTimeZoneCombobox } from "#/features/configuration/ui/settings-time-zone-combobox";
 import { writeLocaleCookie } from "#/i18n/locale-cookie";
 import { localeDisplayName, supportedLocales, type AppLocale } from "#/i18n/locales";
@@ -71,7 +72,7 @@ export function SettingsPreferencesPanel() {
   return (
     <form
       key={`${settings.locale}:${settings.timeZone}:${settings.rawPayloadRetentionDays}`}
-      className="border-border flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border py-3"
+      className={settingsPreferencesPanelClassName}
       onSubmit={(event) => {
         event.preventDefault();
         event.stopPropagation();

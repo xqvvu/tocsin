@@ -1,4 +1,5 @@
 import { Tabs, TabsContent } from "#/components/ui/tabs";
+import { settingsUiPanelClassName } from "#/features/configuration/model/settings-layout";
 import { ImportNoticePanel } from "#/features/configuration/ui/import-notice-panel";
 import { PortableConfigForm } from "#/features/configuration/ui/portable-config-form";
 import { SettingsOperationalOverview } from "#/features/configuration/ui/settings-operational-overview";
@@ -28,7 +29,7 @@ export function SettingsPage() {
               <ImportNoticePanel notice={workspace.importNotice} />
             </div>
           ) : null}
-          <TabsContent value="ui" className="flex min-h-0 flex-col gap-4 overflow-hidden">
+          <TabsContent value="ui" className={settingsUiPanelClassName}>
             <SettingsOperationalOverview />
             <SettingsRuntimePanel />
             <SettingsPreferencesPanel />
