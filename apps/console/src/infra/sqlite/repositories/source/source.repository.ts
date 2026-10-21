@@ -1,3 +1,5 @@
+import type { UpdateObject } from "kysely";
+
 import { encodeJsonObject } from "@tocsin/core";
 import type { SourceSummary } from "@tocsin/core";
 
@@ -15,6 +17,7 @@ import type {
   SourceRuntimeConfig,
   UpdateSourceInput,
 } from "#/infra/sqlite/repositories/source/source.interface";
+import type { SqliteDatabaseSchema } from "#/infra/sqlite/schema";
 
 export class SqliteSourceRepository implements SourceRepository {
   constructor(private readonly context: SqliteRepositoryContext) {}
@@ -86,21 +89,23 @@ export class SqliteSourceRepository implements SourceRepository {
   }
 
   async update(id: string, input: UpdateSourceInput): Promise<SourceSummary> {
-    const current = requireSource(await this.get(id));
-    const updatedAt = input.updatedAt ?? this.context.now();
+    requireSource(await this.get(id));
 
-    await this.context.db
-      .updateTable("sources")
-      .set({
-        name: input.name ?? current.name,
-        provider: input.provider ?? current.provider,
-        token_hash: input.tokenHash ?? current.tokenHash,
-        enabled: toSqliteBoolean(input.enabled ?? current.enabled),
-        config_json: encodeJsonObject(input.config ?? current.config),
-        updated_at: updatedAt,
-      })
-      .where("id", "=", id)
-      .execute();
+    // Write only the columns this call actually changed. Writing the whole row
+    // back from the snapshot above would let a concurrent token rotation be
+    // overwritten by the stale `token_hash`, silently reviving the rotated-out
+    // token.
+    const changes: UpdateObject<SqliteDatabaseSchema, "sources"> = {
+      updated_at: input.updatedAt ?? this.context.now(),
+    };
+
+    if (input.name !== undefined) changes.name = input.name;
+    if (input.provider !== undefined) changes.provider = input.provider;
+    if (input.tokenHash !== undefined) changes.token_hash = input.tokenHash;
+    if (input.enabled !== undefined) changes.enabled = toSqliteBoolean(input.enabled);
+    if (input.config !== undefined) changes.config_json = encodeJsonObject(input.config);
+
+    await this.context.db.updateTable("sources").set(changes).where("id", "=", id).execute();
 
     return sourceSummaryFromRuntime(requireSource(await this.get(id)));
   }
