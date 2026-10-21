@@ -173,7 +173,11 @@ export class SqliteHistoryRepository implements HistoryRepository {
         .innerJoin("destinations", "destinations.id", "deliveries.destination_id")
         .leftJoin("routes", "routes.id", "deliveries.route_id")
         .selectAll("deliveries")
-        .select(["destinations.name as destination_name", "routes.name as route_name"])
+        .select([
+          "destinations.name as destination_name",
+          "destinations.kind as destination_kind",
+          "routes.name as route_name",
+        ])
         .where("deliveries.event_id", "=", eventId)
         .orderBy("deliveries.created_at")
         .execute()

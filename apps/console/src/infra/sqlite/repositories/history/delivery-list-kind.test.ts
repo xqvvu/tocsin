@@ -205,6 +205,18 @@ describe("delivery list destination kind", () => {
   });
 });
 
+describe("event detail destination kind", () => {
+  it("carries the destination kind through to event detail deliveries", async () => {
+    const repository = await repositoryWith({ destinationKind: "feishu", withDelivery: true });
+    const detail = await repository.getEventDetail("evt-1");
+
+    // Without this the event detail table can only render the destination name,
+    // while the deliveries list shows the adapter icon for the same target.
+    expect(detail?.deliveries).toHaveLength(1);
+    expect(detail?.deliveries[0]!.destinationKind).toBe("feishu");
+  });
+});
+
 describe("delivery schemas expose destinationKind", () => {
   const listItem = {
     id: "del-1",

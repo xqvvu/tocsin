@@ -88,6 +88,12 @@ export interface EventDetail {
 
 export interface EventDetailDelivery extends DeliveryJob {
   destinationName: string;
+  /**
+   * Discriminates the destination's icon, like `DeliveryListItem.destinationKind`.
+   * Optional so a detail projection written before this field existed still
+   * parses; the UI falls back to a generic glyph.
+   */
+  destinationKind?: DestinationKind;
   routeName: string | null;
 }
 

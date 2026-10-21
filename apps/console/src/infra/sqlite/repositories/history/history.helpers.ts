@@ -1,10 +1,11 @@
-import type { EventDetailDelivery } from "@tocsin/core";
+import type { DestinationKind, EventDetailDelivery } from "@tocsin/core";
 
 import { deliveryFromRow } from "#/infra/sqlite/repositories/delivery/delivery.helpers";
 import type { DeliveryRow } from "#/infra/sqlite/repositories/delivery/delivery.interface";
 
 export interface EventDetailDeliveryRow extends DeliveryRow {
   destination_name: string;
+  destination_kind: DestinationKind | null;
   route_name: string | null;
 }
 
@@ -12,6 +13,7 @@ export function eventDetailDeliveryFromRow(row: EventDetailDeliveryRow): EventDe
   return {
     ...deliveryFromRow(row),
     destinationName: row.destination_name,
+    destinationKind: row.destination_kind ?? undefined,
     routeName: row.route_name,
   };
 }
