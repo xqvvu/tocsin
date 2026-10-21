@@ -241,6 +241,35 @@ export function suppressionDefaultsFromText(input: {
 }
 
 /**
+ * Prefills the create form when the operator silences one notification target.
+ *
+ * Only `destinationIds` is pinned: the point of the row action is to mute this
+ * target for everything it receives, while every other target keeps delivering.
+ * Narrowing further (a source, a fingerprint) is left to the operator.
+ */
+export function suppressionDefaultsFromDestination(input: {
+  name: string;
+  destinationId: string;
+  timeZone: string;
+  now?: Date;
+}): SuppressionFormValues {
+  const window = defaultSuppressionWindow(input.timeZone, input.now);
+
+  return {
+    name: input.name,
+    kind: "silence",
+    reason: "",
+    enabled: true,
+    startsAt: window.startsAt,
+    endsAt: window.endsAt,
+    matcher: {
+      ...emptySuppressionMatcher(),
+      destinationIds: [input.destinationId],
+    },
+  };
+}
+
+/**
  * ISO instant → the `datetime-local` wall clock shown in `timeZone`.
  *
  * `new Date(iso)` + `getHours()` would use the browser zone, which is not

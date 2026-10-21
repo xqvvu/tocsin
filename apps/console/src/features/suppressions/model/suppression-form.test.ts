@@ -5,6 +5,7 @@ import {
   defaultSuppressionWindow,
   emptySuppressionMatcher,
   isoFromDatetimeLocal,
+  suppressionDefaultsFromDestination,
   suppressionDefaultsFromEvent,
   suppressionDefaultsFromLabel,
   suppressionDefaultsFromText,
@@ -77,6 +78,28 @@ describe("suppression form model", () => {
     const window = defaultSuppressionWindow("Asia/Shanghai", new Date("2026-10-18T09:00:00.000Z"));
 
     expect(window).toEqual({ startsAt: "2026-10-18T17:00", endsAt: "2026-10-18T19:00" });
+  });
+
+  it("prefills only the destination when silencing one notification target", () => {
+    const defaults = suppressionDefaultsFromDestination({
+      name: "Silence: Ops group",
+      destinationId: "destination-ops",
+      timeZone: "UTC",
+      now: new Date("2026-10-18T09:00:00.000Z"),
+    });
+
+    expect(defaults.name).toBe("Silence: Ops group");
+    expect(defaults.kind).toBe("silence");
+    expect(defaults.enabled).toBe(true);
+    expect(defaults.matcher.destinationIds).toEqual(["destination-ops"]);
+    // Every other dimension stays open: the row action mutes this target for
+    // all of its alerts, not one source or fingerprint.
+    expect(defaults.matcher.sourceIds).toEqual([]);
+    expect(defaults.matcher.fingerprints).toEqual([]);
+    expect(defaults.matcher.labels).toEqual([]);
+    expect(suppressionMatcherIsEmpty(defaults.matcher)).toBe(false);
+    expect(defaults.startsAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    expect(Date.parse(defaults.endsAt)).toBeGreaterThan(Date.parse(defaults.startsAt));
   });
 
   it("prefills the event's source and fingerprint when silencing one alert", () => {
