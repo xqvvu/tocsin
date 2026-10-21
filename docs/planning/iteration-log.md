@@ -2,6 +2,83 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 66 轮）
+
+- 时间：2026-10-22 06:26 – 06:45 CST。
+- 基线：本轮开始时 `origin/main` @ `f47a726`；main CI success；无 open PR。
+- 类型：**需求切片 + 发版**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  **`security-exposure`**。并发始终 ≤3。
+- 车道轮转位置：**`quality`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审仅 39 分钟（< 48h）、自上次评审以来仅 1 个 UI 合并
+  （#319，且已同轮浏览器验证）、18 条未解决 UI 候选属稳定存量。下次触发条件：满 2 小时且出现
+  未评审 UI 提交，或 UI 合并累计 ≥3，或新增 candidate ≥2。
+- `last_ui_review_at`：不变（2026-10-22 05:47 CST）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `jolly-hawking-20efa1`。工作树已清理。
+
+### 本轮交付
+
+- PR #322 `feat(console): disclose urgent paging before resuming delivery`（NEW-AG，rebase 合并 `0f3262e`）。
+  - 新增 `DeliveryResumeDialog`：Deliveries 暂停横幅与 Settings 取消勾选都先确认；披露排队投递会
+    立即领取并发送、飞书应用模式 + 自动加急会对排队期间仍处于触发中的告警重新呼叫接收人；
+    暂停操作仍单击生效，成功后 toast，失败保留对话框。
+  - 暂停态文案补充「加急呼叫不受暂停影响」（横幅与 Settings 说明），新增中英
+    `deliveries.resumeDialog.*` 5 条。
+  - 新增两个组件测试：确认前不提交 / 确认后提交 / 失败保留对话框；Settings 暂停无需确认、
+    恢复需确认、确认后提交。
+  - PRD `docs/prd/delivery-resume-disclosure.md`。
+  - 验证：`vp check` 0 errors；`vp run -r test` 156 文件 / 830 项；`vp run -r build` 通过。
+  - 浏览器实测（隔离实例 `localhost:6196` + 临时 SQLite）：暂停 → 两处恢复均弹确认框 →
+    「暂不恢复」保持暂停 → 「恢复并发送」后横幅与顶栏徽标消失、Worker 恢复可用、toast 出现；
+    无 console/网络错误。
+
+### 专家发现
+
+- `requirements`（2 条新候选，已写入 backlog）：
+  - **NEW-AH（28）** 暂停期间「可领取积压规模 + 最老等待」只读投影：横幅与恢复对话框只显示
+    暂停时间，操作员无法在恢复前判断会立即发出多少条（`delivery-worker.service.ts:60-76`、
+    `delivery-worker-runner.ts:50`）。
+  - **NEW-AI（27）** 暂停期间补投/重试/目标测试的时机标注：这些入口不读暂停状态
+    （`event-replay-action.tsx:1-40`、`route-replay-prompt.tsx:34-59`、
+    `delivery-retry-button.tsx:17-56`），目标测试更会绕过 worker 立即真实发送
+    （`destination.service.ts:175-198`）。
+- `security-exposure`（复核，无新增暴露面）：
+  - SEC-25 仍成立（LOW/AUTO_FIX）：`destination.service.ts:202,314,326,340` 的
+    `renderedPayload` 未过 `redactJsonText`，与投递详情读边界不对称；当前无实际泄漏。
+  - SEC-22 仍成立（MEDIUM）：只读投影 `destination.helpers.ts:63,84,289-303` 原样返回
+    endpoint userinfo；但 editor draft 不能脱敏，否则编辑保存会用无密码 URL 覆盖存储值。
+  - SEC-26 影响面扩大：`destinationsQueryOptions()` 被 7 个 route loader 预取
+    （events/deliveries/routes/settings/sources/suppressions/destinations），投递证据包也会
+    带走 endpoint；维持 EXPERT_PANEL。
+  - 最近 20 个提交未新增 secret → DTO/SSR/日志路径；脱敏键表无需变更。
+- `ui-triage`：defer（理由见上）。
+
+### EXPERT_PANEL
+
+- 本轮无新增裁决事项；SEC-26 仍待后续轮次专家小组。
+
+### 发布决策
+
+- 发布经理 / 阻断审计 / 运维回滚三位专家一致 **APPROVE** `v0.1.0-beta.51`：
+  自 beta.50 以来 1 个用户可见变更（#322）；`origin/main` @ `0f3262e` 与版本提交 `35f5a14`
+  的 main CI 均 success；零 open PR、零迁移、零配置/环境变量/启动参数变化；
+  `v0.1.0-beta.51` 未被占用；回滚风险 LOW（换回 beta.50 镜像即可，暂停/投递状态不受影响）。
+- 版本 PR #323 `chore(release): v0.1.0-beta.51`（rebase 合并 `35f5a14`）；根 `package.json`
+  为唯一版本来源，`release-checklist.md` 版本与 tag 计数（43）同步。
+- tag：`v0.1.0-beta.51` → `35f5a14`（main CI success 后创建）；GitHub Release 已创建
+  （prerelease，正文非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.51`
+  （linux/amd64 + linux/arm64，index digest `sha256:83f28f0418…`）。
+
+### 下一轮优先项
+
+1. **NEW-AH（28）** 暂停积压摘要；**NEW-AI（27）** 补投/重试/测试发送的时机标注。
+2. 轮转车道 **`quality`**；SEC-25/SEC-22 作为 AUTO_FIX，SEC-26 交 EXPERT_PANEL。
+3. Q-52/Q-53/Q-54 低成本测试补齐；ARCH-45/46 两个 S 级分层修正。
+4. UI 评审遗留：暂停开关即时生效说明/成功 toast、Deliveries 横幅视觉强化、
+   `Run worker` 禁用原因可见化。
+
 ## 2026-10-22（第 65 轮）
 
 - 时间：2026-10-22 05:38 – 06:12 CST。
