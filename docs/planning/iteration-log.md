@@ -4,7 +4,7 @@
 
 ## 2026-10-21（第 50 轮）
 
-- 时间：2026-10-21 07:48 – 08:4x CST。
+- 时间：2026-10-21 07:48 – 08:46 CST。
 - 基线：本轮开始时 `origin/main` @ `bf61ba9`（第 49 轮 beta.35 发布后）；需求合入后 @ `751a2d6`。
 - 类型：非 full-audit（backlog 有多个 ≥27 分候选，且无 open PR）；最近全量审计仍为第 1 轮
   （2026-10-18 13:30 CST）。
@@ -64,7 +64,22 @@
 
 ### 发布评估与镜像
 
-- 待补。
+- 三方专家一致 `APPROVE`：
+  - 发布经理：自 `v0.1.0-beta.35` 以来唯一用户可见变更为 #257（REQ-196），其余为测试稳定性
+    与规划文档；建议预发布递增 `0.1.0-beta.36`。
+  - 阻断审计：6/6 PASS —— `751a2d6` main CI success、0 open PR、无阻塞回归（FIX-9 非本次
+    引入且 beta.35 已带同样代码发布）、migration 零 diff、`v0.1.0-beta.36` 未占用、
+    唯一 `blocked-autonomous`（REL-13 LICENSE）按惯例不阻断预发布。
+  - 运维回滚：Dockerfile/compose/env/依赖/迁移均零 diff；回滚只需换回 beta.35 镜像，
+    `tocsin-data` 卷保持兼容。
+- 版本：`0.1.0-beta.36`；PR #258 `chore(release): v0.1.0-beta.36`（rebase 合并 `12559e4`），
+  合并后 main CI success。
+- Tag：`v0.1.0-beta.36`（annotated，指向 `12559e4`）；GitHub Release：
+  `https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.36`（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.36`
+  - index digest `sha256:19f4811413b797e0b92aec62734d89d13cf357dddf3d6b11ea3813633543f35d`
+  - `linux/amd64` @ `sha256:d9c42922…`，`linux/arm64` @ `sha256:d34ecdd8…`
+  - 构建参数：`--provenance=false --sbom=false`；未推 `latest`。
 
 ## 2026-10-21（第 49 轮）
 
