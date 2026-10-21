@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { EventDetailDeliveriesTable } from "#/features/events/ui/event-detail-deliveries-table";
@@ -65,7 +65,34 @@ describe("event detail deliveries table", () => {
 
     expect(screen.getByText("No deliveries created")).toBeTruthy();
   });
+
+  it("lists deliveries in operational priority order", () => {
+    renderTable([
+      delivery({ id: "delivery-succeeded", state: "succeeded", destinationName: "Succeeded sink" }),
+      delivery({
+        id: "delivery-suppressed",
+        state: "suppressed",
+        destinationName: "Silenced sink",
+      }),
+      delivery({ id: "delivery-failed", state: "failed", destinationName: "Failed sink" }),
+      delivery({ id: "delivery-pending", state: "pending", destinationName: "Pending sink" }),
+    ]);
+
+    expect(listedDestinations()).toEqual([
+      "Failed sink",
+      "Pending sink",
+      "Succeeded sink",
+      "Silenced sink",
+    ]);
+  });
 });
+
+function listedDestinations() {
+  return screen
+    .getAllByRole("row")
+    .slice(1)
+    .map((row) => within(row).getAllByRole("cell")[0]?.textContent);
+}
 
 function renderTable(deliveries: EventDetailData["deliveries"]) {
   return render(
