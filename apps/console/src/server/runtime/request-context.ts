@@ -1,3 +1,4 @@
+import "@tanstack/react-start/server-only";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 
 import { getApplicationContainer, type ApplicationContainer } from "#/server/runtime/container";

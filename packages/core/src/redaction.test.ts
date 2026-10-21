@@ -110,6 +110,21 @@ describe("redaction", () => {
     "tokenHash",
     "token_hash",
     "token-hash",
+    "secretAccessKey",
+    "sessionKey",
+    "sessionId",
+    "pwd",
+    "pass",
+    "dsn",
+    "connectionString",
+    "accountKey",
+    "sharedKey",
+    "subscriptionKey",
+    "encryptionKey",
+    "masterKey",
+    "jwt",
+    "signature",
+    "X-Signature",
   ])("treats %s as a sensitive key", (key) => {
     expect(isSensitiveKey(key)).toBe(true);
   });
@@ -127,6 +142,10 @@ describe("redaction", () => {
     "Content-Type",
     "payloadHash",
     "hash",
+    "dbPass",
+    "bypass",
+    "dsnName",
+    "signatureAlgorithm",
   ])("keeps %s visible", (key) => {
     expect(isSensitiveKey(key)).toBe(false);
   });

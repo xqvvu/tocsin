@@ -61,8 +61,20 @@ describe("read projection redaction", () => {
         receiver: "ops-webhook",
         token: "plain-token",
       },
-      rawPayload: { token: "upstream-secret", monitor: "checkout" },
-      rawHeaders: { Authorization: "Bearer abcdefgh1234", "X-Request-Id": "req-1" },
+      rawPayload: {
+        token: "upstream-secret",
+        monitor: "checkout",
+        appSecret: "app-secret-value",
+        clientSecret: "client-secret-value",
+        apiSecret: "api-secret-value",
+        privateKey: "private-key-value",
+        secretAccessKey: "access-key-value",
+      },
+      rawHeaders: {
+        Authorization: "Bearer abcdefgh1234",
+        "X-Request-Id": "req-1",
+        "X-Auth-Token": "header-secret-value",
+      },
       routeMatches: [
         {
           routeId: "route-1",
@@ -104,10 +116,19 @@ describe("read projection redaction", () => {
       receiver: "ops-webhook",
       token: "[REDACTED]",
     });
-    expect(detail?.event.rawPayload).toEqual({ token: "[REDACTED]", monitor: "checkout" });
+    expect(detail?.event.rawPayload).toEqual({
+      token: "[REDACTED]",
+      monitor: "checkout",
+      appSecret: "[REDACTED]",
+      clientSecret: "[REDACTED]",
+      apiSecret: "[REDACTED]",
+      privateKey: "[REDACTED]",
+      secretAccessKey: "[REDACTED]",
+    });
     expect(detail?.event.rawHeaders).toEqual({
       Authorization: "[REDACTED]",
       "X-Request-Id": "req-1",
+      "X-Auth-Token": "[REDACTED]",
     });
     expect(detail?.routeMatches[0].checks[0].actual).toBe(
       "Checkout failed Authorization: [REDACTED]",
@@ -118,6 +139,12 @@ describe("read projection redaction", () => {
     expect(JSON.stringify(detail)).not.toContain("supersecret");
     expect(JSON.stringify(detail)).not.toContain("upstream-secret");
     expect(JSON.stringify(detail)).not.toContain("plain-token");
+    expect(JSON.stringify(detail)).not.toContain("app-secret-value");
+    expect(JSON.stringify(detail)).not.toContain("client-secret-value");
+    expect(JSON.stringify(detail)).not.toContain("api-secret-value");
+    expect(JSON.stringify(detail)).not.toContain("private-key-value");
+    expect(JSON.stringify(detail)).not.toContain("access-key-value");
+    expect(JSON.stringify(detail)).not.toContain("header-secret-value");
 
     const enqueued = await store.deliveries.enqueueForEvent({
       event,

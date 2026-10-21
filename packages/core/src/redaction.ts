@@ -34,6 +34,24 @@ const SENSITIVE_EXACT_KEYS = new Set([
   "signingsecret",
   "signsecret",
   "webhookurl",
+  // Credential names that end in a noun the suffix rule does not cover, or
+  // whose suffix is ambiguous. Kept exact so `dbPass`, `bypass`,
+  // `signatureAlgorithm`, and `privateKeyId` stay readable.
+  "secretaccesskey",
+  "sessionkey",
+  "sessionid",
+  "pwd",
+  "pass",
+  "dsn",
+  "connectionstring",
+  "accountkey",
+  "sharedkey",
+  "subscriptionkey",
+  "encryptionkey",
+  "masterkey",
+  "jwt",
+  "signature",
+  "xsignature",
 ]);
 
 /**
