@@ -10,6 +10,7 @@ import { AppIntlProvider } from "#/i18n/provider";
 const testState = vi.hoisted(() => ({
   total: 0,
   fail: false,
+  calls: 0,
   scopes: [] as unknown[],
 }));
 
@@ -20,6 +21,8 @@ vi.mock("#/features/operations/api/operations.queries", () => ({
     return {
       queryKey: ["test", "pending-deliveries", scope],
       queryFn: async () => {
+        testState.calls += 1;
+
         if (testState.fail) {
           throw new Error("operations unavailable");
         }
@@ -37,6 +40,7 @@ describe("queued deliveries notice", () => {
   beforeEach(() => {
     testState.total = 0;
     testState.fail = false;
+    testState.calls = 0;
     testState.scopes = [];
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   });
@@ -88,6 +92,7 @@ describe("queued deliveries notice", () => {
     const { container } = renderNotice({ sourceId: "source-1" });
 
     await waitFor(() => {
+      expect(testState.calls).toBe(1);
       expect(container.textContent).toBe("");
     });
   });
@@ -113,6 +118,7 @@ describe("queued deliveries notice", () => {
     );
 
     await waitFor(() => {
+      expect(testState.calls).toBe(1);
       expect(container.textContent).toBe("");
     });
   });

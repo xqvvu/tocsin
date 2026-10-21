@@ -11,6 +11,7 @@ import { AppIntlProvider } from "#/i18n/provider";
 
 const testState = vi.hoisted(() => ({
   queued: 2,
+  countQueries: 0,
 }));
 
 vi.mock("#/features/destinations/api/destination.queries", () => ({
@@ -42,7 +43,10 @@ vi.mock("#/features/destinations/ui/edit-destination-form", () => {
 vi.mock("#/features/operations/api/operations.queries", () => ({
   pendingDeliveriesQueryOptions: (scope: unknown) => ({
     queryKey: ["test", "pending-deliveries", scope],
-    queryFn: async () => ({ deliveries: { total: testState.queued } }),
+    queryFn: async () => {
+      testState.countQueries += 1;
+      return { deliveries: { total: testState.queued } };
+    },
     staleTime: Infinity,
   }),
 }));
@@ -79,6 +83,7 @@ describe("destination edit dialog queued delivery impact", () => {
 
   beforeEach(() => {
     testState.queued = 2;
+    testState.countQueries = 0;
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   });
 
@@ -121,6 +126,7 @@ describe("destination edit dialog queued delivery impact", () => {
     const { container } = renderDialog();
 
     await waitFor(() => {
+      expect(testState.countQueries).toBe(1);
       expect(screen.getByText("destination form")).toBeTruthy();
     });
     expect(container.textContent).not.toContain("queued deliver");
