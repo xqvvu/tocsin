@@ -2,6 +2,93 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 58 轮）
+
+- 时间：2026-10-21 17:25 – 18:2x CST。
+- 基线：本轮开始时 `origin/main` @ `0e3b006`（beta.43 记录之后）；main CI success；无 open PR。
+- 类型：**非 full-audit**（backlog 有多个 ≥27 分候选；最近全量审计仍为第 1 轮，但 backlog 未清空）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道 **`architecture`**。
+- 车道轮转位置：`requirements` / `ui-triage` / `architecture` 均已完成；下一轮非必跑车道为 **`quality`**。
+- `ui-triage`：**`defer`** —— 上次真实浏览器评审 16:50（仅 35 分钟前），此后 6 个合并中唯一触及 UI 的是
+  UI-13 且已在 1280 实测；#278/#281 也已逐项验证；按「不定时」原则不重复消耗预算。
+  下一轮最值得做的 UI 切片：UI-25（27）1280px sticky 操作列遮挡。
+- `last_ui_review_at`：2026-10-21 16:50 CST（未变；本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证在会话工作树
+  `quizzical-thompson-b3c539`，镜像在 `/tmp/tocsin-build-beta44` 的 tag 干净检出中构建。
+  本轮开始时会话工作树 `node_modules` 残缺（`vp check` 报 3592 errors、`@types/node` 缺失），
+  按既有经验删除各 workspace 的 `node_modules` 后 `vp install --frozen-lockfile` 恢复。
+
+### 本轮交付
+
+- PR #289 `feat(operations): filter deliveries by destination kind`（rebase 合并 `d4b6d05`），REQ-206。
+  - Deliveries URL 新增 `destinationKind`（`generic_webhook`/`feishu`/`slack`/`email`），非法值回退为全部类型。
+  - 契约、service 透传；仓储列表与 `total` 共用 `EXISTS` 谓词，避免分页与总数漂移；
+    筛选面板仅 Deliveries 作用域，含 chip 与重置。
+  - 新增 PRD `docs/prd/delivery-kind-filter.md`；仓储 2 条、service 1 条、URL 模型 3 条、
+    筛选面板 2 条断言。
+  - 验证：`vp check` 0 errors（12 存量 warning）、`vp run -r test` 全绿（console 792 tests）、
+    `vp run -r build` 通过。
+  - **未做浏览器人工验证**：控件复用既有 Select 模式，组件测试覆盖作用域与 chip；
+    未启动独立实例（既有 6190 dev server 属其他会话代码，不能验证本分支）。
+
+### 专家发现
+
+- `requirements`（代码已核实）：
+  - REQ-206 证据成立且本轮已实现；REQ-220（表内 27 / 轮次注记 28 不一致）、NEW-I（27）、
+    REQ-84 + REQ-216（28）证据仍成立（`destination-actions.tsx:68-105`、
+    `suppression.ts:34,209,343-346`、`transport.ts:47-95`、`system-information.ts:10-32`、
+    `routes/api/health.ts:5-11`）。
+  - 新增 **NEW-K（26）** Settings 语言/时区变更对排队投递渲染的影响披露：worker 领取时才读取
+    `presentation`（`delivery-worker.service.ts:63-64`），保存只 hard reload
+    （`settings-preferences-panel.tsx:51-64`）。
+  - 新增 **NEW-L（25）** 会话过期统一再登录与回跳：客户端 RPCLink 无 interceptor
+    （`lib/orpc.ts:19-27`），长开页面只弹原始错误并丢失筛选。
+  - 新增 **NEW-M（24）** 路由/静默标签 facet 补全：标签键值仍为自由文本
+    （`route-forms.tsx:514-545`、`suppression-forms.tsx:635-704`）。
+- `ui-triage`：`defer`，理由见上。
+- `architecture`：
+  - 第 57 轮改动无漂移：coverage 派生在 `features/sources/model/source-route-coverage.ts`，
+    `redaction.ts` 保持中性，`request-context.ts:1-2` server-only 标记正确。
+  - 存量证据复核仍成立：ARCH-5（`destination.service.ts:35,138,158,211,259,383`、
+    `oncall.service.ts:7,59,73`）、ARCH-6（`routes/api/ready.ts:10,19,22,26`）、
+    ARCH-30（`components/common/operations-table.tsx:56-79`）、
+    ARCH-28（core `operations.ts:89-92` 缺 `destinationKind`，API schema 有）。
+  - 新增 **ARCH-42（23）** `operations/router.ts:64-78` handler 内建 worker 并汇总健康；
+    **ARCH-43（22）** `urgent-ping-explanation.test.ts:7` 直连 infra；
+    **ARCH-44（20）** Sources 页用全量 routes/destinations 在浏览器算覆盖率
+    （`sources-page.tsx:27-30`）。
+
+### EXPERT_PANEL
+
+- 本轮切片不触碰 schema/迁移/投递/路由/auth 语义，无需 panel。
+- 仍登记下一轮：**SEC-26**（endpoint/webhook URL 掩码模型与「留空=保留」编辑语义）、
+  **SEC-11**（任意认证头名脱敏 vs parser 需要）。
+
+### 发布
+
+- 三方评估一致 APPROVE（发布经理 / 阻断审计 / 运维回滚）：自 beta.43 有 1 个用户可见变更（#289），
+  `d4b6d05` 与发版 commit `788a5b4` 的 main CI 均 success，无 open PR、无迁移/schema/锁文件变化，
+  `v0.1.0-beta.44` 未被占用。
+- 版本：`0.1.0-beta.44`；PR #290 `chore(release): v0.1.0-beta.44`（rebase 合并 `788a5b4`）；
+  该 commit CI success。
+- Tag：`v0.1.0-beta.44`（annotated，指向 `788a5b4`）；GitHub Release：
+  `https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.44`（prerelease）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.44`
+  - index digest `sha256:4dce90b03611c112630385b4a817f09c685a8d244a5dd45745d3f50304625022`
+  - `linux/amd64` @ `sha256:58942c5d…`，`linux/arm64` @ `sha256:657d5f67…`
+  - 构建参数：`--provenance=false --sbom=false`；未推 `latest`；回滚镜像 `0.1.0-beta.43`。
+- 运维提示：本次仅新增只读筛选，无配置/数据变化；升级与回滚只需换镜像。
+
+### 下一轮优先项
+
+1. **REQ-220（28）** 目标行临时静默；**REQ-84 + REQ-216（28）** Settings 只读运行参数；
+   **NEW-I（27）** 出站禁止自动跟随重定向。
+2. **NEW-K（26）**、**NEW-L（25）**、**NEW-M（24）**。
+3. **UI-25（27）** 1280px sticky 列遮挡；**UI-22（24）** 内联编辑重叠；
+   **UI-26/27/28/29（21-22）**。
+4. **SEC-26 + SEC-11** 交 EXPERT_PANEL；**SEC-20/21/22/25** 下一轮小 PR。
+5. 下一轮轮转车道 **`quality`**；`architecture` 本轮已跑（ARCH-5/6/30/28 证据仍成立）。
+
 ## 2026-10-21（第 57 轮）
 
 - 时间：2026-10-21 16:25 – 17:2x CST。
