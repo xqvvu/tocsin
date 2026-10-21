@@ -17,6 +17,14 @@ export function showWorkerRunToast(notice: WorkerRunNotice, t: TranslationFn) {
     }),
   ];
 
+  if (notice.paused) {
+    details.push(
+      <span className="text-destructive" key="paused">
+        {t("operations.workerNotice.paused")}
+      </span>,
+    );
+  }
+
   if (notice.health) {
     details.push(
       <span className="text-muted-foreground" key="health">

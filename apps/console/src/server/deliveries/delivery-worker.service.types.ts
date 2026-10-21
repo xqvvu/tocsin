@@ -32,6 +32,8 @@ export interface DeliveryWorkerRunResult {
   retrying: number;
   startedAt: string;
   finishedAt: string;
+  /** True when outbound delivery is paused and this run touched nothing. */
+  paused?: boolean;
 }
 
 export interface DeliveryWorkerHealthSnapshot {

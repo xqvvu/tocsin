@@ -6,10 +6,12 @@ import { useTranslations } from "#/i18n/use-i18n";
 
 export function DeliveriesPageToolbar({
   pending,
+  paused,
   onRunWorker,
   onResetFilters,
 }: {
   pending: boolean;
+  paused: boolean;
   onRunWorker: () => void;
   onResetFilters: () => void;
 }) {
@@ -35,9 +37,13 @@ export function DeliveriesPageToolbar({
             type="button"
             variant="default"
             size="sm"
-            disabled={pending}
+            disabled={pending || paused}
             onClick={onRunWorker}
-            title={t("deliveries.page.runWorkerTitle")}
+            title={
+              paused
+                ? t("deliveries.page.runWorkerPausedTitle")
+                : t("deliveries.page.runWorkerTitle")
+            }
           >
             <RiPlayLine data-icon="inline-start" aria-hidden />
             {t("common.actions.runWorker")}

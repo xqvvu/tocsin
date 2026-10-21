@@ -3,7 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import type { AppSettings } from "@tocsin/core";
+import type { UpdateAppSettingsCommand } from "@tocsin/core";
 
 import { Button } from "#/components/ui/button";
 import {
@@ -57,7 +57,7 @@ export function SettingsPreferencesPanel() {
     },
   });
 
-  async function onSubmit(input: AppSettings) {
+  async function onSubmit(input: UpdateAppSettingsCommand) {
     try {
       const updated = await mutation.mutateAsync(input);
       writeLocaleCookie(updated.locale);

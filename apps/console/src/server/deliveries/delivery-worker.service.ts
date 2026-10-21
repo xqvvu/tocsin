@@ -52,6 +52,30 @@ export class DeliveryWorker {
     this.health.lastError = null;
 
     try {
+      // Read settings before touching the queue: an operator pause must leave
+      // every queued job exactly as it was, and a settings read failure must
+      // not strand freshly claimed deliveries in `running`.
+      const settings = await this.store.settings.get();
+
+      if (settings.deliveryPaused) {
+        const pausedResult: DeliveryWorkerRunResult = {
+          claimed: 0,
+          reclaimed: 0,
+          succeeded: 0,
+          failed: 0,
+          retrying: 0,
+          startedAt: now,
+          finishedAt: now,
+          paused: true,
+        };
+
+        this.health.state = "idle";
+        this.health.lastFinishedAt = pausedResult.finishedAt;
+        this.health.lastRun = pausedResult;
+
+        return pausedResult;
+      }
+
       const reclaimed = await this.store.deliveries.reclaimStaleRunning({
         staleBefore: staleRunningCutoff(now, this.staleRunningTimeoutMs),
         now,
@@ -60,7 +84,6 @@ export class DeliveryWorker {
         now,
         limit: options.limit ?? this.batchSize,
       });
-      const settings = await this.store.settings.get();
       const presentation = { locale: settings.locale, timeZone: settings.timeZone };
       const result: DeliveryWorkerRunResult = {
         claimed: claimed.length,
@@ -70,6 +93,7 @@ export class DeliveryWorker {
         retrying: 0,
         startedAt: now,
         finishedAt: now,
+        paused: false,
       };
 
       for (const delivery of claimed) {

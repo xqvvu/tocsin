@@ -21,6 +21,8 @@ describe("sqlite store", () => {
       locale: "en-US",
       timeZone: "UTC",
       rawPayloadRetentionDays: 30,
+      deliveryPaused: false,
+      deliveryPausedAt: null,
     });
 
     await store.settings.update({ locale: "zh-Hans", timeZone: "Asia/Shanghai" });
@@ -29,10 +31,40 @@ describe("sqlite store", () => {
       locale: "zh-Hans",
       timeZone: "Asia/Shanghai",
       rawPayloadRetentionDays: 30,
+      deliveryPaused: false,
+      deliveryPausedAt: null,
     });
     await expect(store.settings.update({ timeZone: "Mars/Olympus" })).rejects.toThrow(
       "valid IANA time zone",
     );
+
+    await store.close();
+  });
+
+  it("pauses outbound delivery and keeps the original pause start time", async () => {
+    let clock = now;
+    const store = await openSqliteStore({ databasePath: ":memory:", now: () => clock });
+
+    expect((await store.settings.get()).deliveryPaused).toBe(false);
+    expect((await store.settings.get()).deliveryPausedAt).toBeNull();
+
+    expect(await store.settings.update({ deliveryPaused: true })).toMatchObject({
+      deliveryPaused: true,
+      deliveryPausedAt: now,
+    });
+
+    clock = "2026-06-07T00:05:00.000Z";
+
+    // Re-issuing the pause must not rewrite when the incident began.
+    expect(await store.settings.update({ deliveryPaused: true })).toMatchObject({
+      deliveryPaused: true,
+      deliveryPausedAt: now,
+    });
+
+    expect(await store.settings.update({ deliveryPaused: false })).toMatchObject({
+      deliveryPaused: false,
+      deliveryPausedAt: null,
+    });
 
     await store.close();
   });
