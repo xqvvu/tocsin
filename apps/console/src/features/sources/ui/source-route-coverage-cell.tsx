@@ -19,9 +19,16 @@ export function SourceRouteCoverageCell({ coverage }: { coverage: SourceRouteCov
       <Badge variant={variant} className="max-w-full font-mono text-[11px]" title={title}>
         <RiRouteLine data-icon="inline-start" aria-hidden />
         {coverage.deliverableRouteCount > 0
-          ? t("sources.table.routes.deliverable", {
-              count: coverage.deliverableRouteCount,
-            })
+          ? coverage.blockedRouteCount > 0
+            ? // Partial coverage used to look identical to full coverage unless
+              // the operator hovered the badge; keep the blocked routes visible.
+              t("sources.table.routes.partialDeliverable", {
+                deliverable: coverage.deliverableRouteCount,
+                total: coverage.enabledRouteCount,
+              })
+            : t("sources.table.routes.deliverable", {
+                count: coverage.deliverableRouteCount,
+              })
           : coverage.enabledRouteCount > 0
             ? t("sources.table.routes.blocked")
             : t("sources.table.routes.none")}

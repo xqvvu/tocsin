@@ -1005,6 +1005,7 @@
   "sources.table.routes.none": "未匹配路由",
   "sources.table.routes.noneTitle": "当前没有已启用的路由规则会匹配这个告警源",
   "sources.table.routes.partialBlockedTitle": "{count} 条已启用的路由规则会匹配这个告警源，其中 {blocked} 条路由的目标全部停用且不会发出通知：{blockedNames}",
+  "sources.table.routes.partialDeliverable": "{deliverable}/{total} 条可投递",
   "suppressions.delete.cancel": "取消",
   "suppressions.delete.confirm": "删除静默规则",
   "suppressions.delete.confirmDescription": "删除「{suppressionName}」后，后续通知不再按这条规则暂停，已经暂停的通知记录仍会保留原因，但不再关联这条规则",
