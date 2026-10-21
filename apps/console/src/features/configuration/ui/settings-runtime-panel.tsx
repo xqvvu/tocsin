@@ -2,7 +2,6 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { runtimeInformationQueryOptions } from "#/features/configuration/api/configuration.queries";
 import { useTranslations } from "#/i18n/use-i18n";
-import { cn } from "#/lib/utils";
 
 export function SettingsRuntimePanel() {
   const t = useTranslations();
@@ -58,22 +57,11 @@ export function SettingsRuntimePanel() {
   );
 }
 
-function RuntimeFact({
-  label,
-  value,
-  mono = true,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
+function RuntimeFact({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-card min-w-0 px-3 py-2">
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd
-        className={cn("mt-0.5 truncate text-xs", mono ? "font-mono tabular-nums" : null)}
-        title={value}
-      >
+      <dd className="mt-0.5 truncate font-mono text-xs tabular-nums" title={value}>
         {value}
       </dd>
     </div>
