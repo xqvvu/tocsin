@@ -2,6 +2,92 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-21（第 55 轮）
+
+- 时间：2026-10-21 13:17 – 14:4x CST。
+- 基线：本轮开始时 `origin/main` @ `c6afe17`（第 54 轮清理记录之后）；main CI success。
+- 类型：非 full-audit（backlog 有多个 ≥27 分候选、无 open PR）；最近全量审计仍为第 1 轮
+  （2026-10-18 13:30 CST），但 backlog 未清空，按闸门继续消化候选。
+- 车道：`requirements` + `ui-triage` 必跑；第三名额按第 54 轮记录给 `docs-drift`。
+  `docs-drift` 运行 30+ 分钟未返回，按预算终止，留待下一轮补跑。
+- 车道轮转位置：`requirements` / `ui-triage` 已完成；`docs-drift` **未完成**，
+  下一轮非必跑车道仍为 **`docs-drift`**。
+- `ui-triage`：**`defer`** —— 距上次评审 1h24m（未满 48h）；自 11:54 起非测试 UI 合并
+  仅 1 个（#272，且已有浏览器实测）；14 条存量 UI 发现均来自刚过去的评审，状态未变化。
+  强信号均不成立。下次自然触发：再有 2 个非测试 UI 合并、或 UI-18/22/25 修复合并、
+  或 2026-10-23 11:54 CST。首查顺序 UI-18 → UI-25 → UI-22。
+- `last_ui_review_at`：**2026-10-21 11:54 CST**（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
+  `exciting-swirles-9be772`。本轮结束已清理 `agent-iteration` 工作树与会话工作树的
+  `node_modules`。
+
+### 本轮交付
+
+- PR #278 `feat(destinations): test sends with a historical event sample`（rebase 合并
+  `a7c1386`），REQ-203（28）。
+  - `TestDestinationCommand` 新增可选 `sampleEventId`；服务复用 `resolvePreviewSample`，
+    历史事件模式下使用真实归一化字段、告警源、事件 ID 与已脱敏 raw payload，并传入
+    控制台 locale/timeZone；不传时保持内置样例行为。
+  - 「测试」动作改为确认对话框（样例选择器：内置样例 / 最近历史事件）；成功后沿用
+    toast 并关闭，失败保持打开以便重试。
+  - 新增 PRD `docs/prd/destination-test-historical-event.md`；新增 1 条服务集成测试
+    （历史载荷、脱敏、presentation、事件不存在不发送）与 3 条对话框测试。
+  - 验证：`vp check` 0 errors（12 条既有 warning，新增的 setState-in-effect warning
+    已通过 `key` 重挂载消除）；`vp run -r test` 145 files / 780 tests；`vp run -r build`
+    通过；PR CI success。
+  - 浏览器验证：本机无可用 console dev server（仅 9244 端口无关进程），未做浏览器实测；
+    对话框行为由组件测试覆盖，留待下次 UI 评审复验。
+
+### 专家发现
+
+- `requirements`（5 条新候选，已写入 backlog）：
+  - **REQ-211（27）** 历史载荷按「当前解析器」重解析预览：只读 `previewEventReparse`，
+    对照 stored/reparsed 差异；raw 已清理返回 unavailable（`event-replay.service.ts:129-132,171,208`、
+    `history.repository.ts:214`）。
+  - **REQ-212（25）** 上游 annotations 保留、展示与模板可引用；需 EXPERT_PANEL 评审
+    normalized event 契约与脱敏边界（`normalized-event.ts:22-30`、`grafana/parse.ts:39-50`、
+    `template.ts:23,107-140`）。
+  - **REQ-213（26）** 多告警载荷的告警组逐条可见，标记用于规范化的那条；不 fan-out
+    （`grafana/parse.ts:36-37,63`、`alertmanager-compatible.ts:35-36,63`）。
+  - **REQ-214（26）** 事件按上游发生时间筛选（`timeBasis=received|occurred`）；
+    `occurred_at` 已有列但未用于筛选（`schema.ts:73-74`、`history.repository.ts:104-106`）。
+  - **REQ-215（25）** 可移植配置按对象导出并补齐依赖闭包
+    （`config-portability.service.ts:70-91,140-240`）。
+- `docs-drift`：超时未返回，无发现，留待下一轮。
+- 已核实 clean：main CI、无 open PR、无迁移改动、Dockerfile 仅注释变化。
+
+### EXPERT_PANEL
+
+- 本轮功能切片无 EXPERT_PANEL 事项：REQ-203 为加法式契约字段 + 服务复用，不触碰
+  schema/迁移、投递/路由/auth 语义，也不扩大 secret 暴露（历史载荷发送前已脱敏）。
+- 发布评估三方专家一致 **APPROVE**：发布经理（用户可见变更 #278 + Nitro v2）、
+  阻断审计（main CI success、无 open PR、零迁移、beta.41 未占用）、运维/回滚
+  （Dockerfile 注释级变化、无 env/compose 变化、回滚仅换镜像）。专家要求发版前做
+  Docker smoke；已在 Nitro v2 产物上实跑 `just docker-smoke` 通过（`/api/ready` 全绿，
+  arm64 本机；amd64 仅构建未运行，见镜像验证）。
+
+### 发布
+
+- 版本：`0.1.0-beta.41`；PR #279 `chore(release): v0.1.0-beta.41`（rebase 合并 `3831a06`）。
+- Tag：`v0.1.0-beta.41`（annotated，指向 `3831a06`）；GitHub Release：
+  `https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.41`（prerelease）。
+  Nitro 切换的 PR 号已在 Release note 中更正为 #276。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.41`
+  - index digest `sha256:750b38f3a48a6012b6f9f48ca5130319a53e2b1ec081d51f796ee502ad9aa813`
+  - `linux/amd64` @ `sha256:6a766a29…`，`linux/arm64` @ `sha256:2c4dc836…`
+  - 构建参数：`--provenance=false --sbom=false`；未推 `latest`；回滚镜像 `0.1.0-beta.40`。
+
+### 下一轮优先项
+
+1. **REQ-204（28）** 标题/消息一键静默（连续三轮推荐未做）；**REQ-206（28）** 投递按渠道
+   类型筛选；**REQ-211（27，新）** 历史载荷重解析预览；**REQ-213/214（26，新）**。
+2. **UI-25（27）** 1280 sticky 列遮挡；**UI-22（24）** 两页内联编辑重叠；
+   **UI-18（24）** 390px 事件详情 Tabs 塌陷；**UI-13（26）**、**UI-21（22）**。
+3. **FIX-4（20）** 三条 delete 回归测试；**SEC-13/SEC-20/SEC-21/SEC-25** 合并为一个小
+   AUTO_FIX PR；**Q-50（24）** Destination/Route 仓储列级更新。
+4. 车道轮转：下一轮非必跑车道 **`docs-drift`**（本轮超时未跑，优先补跑）；
+   `requirements` 必跑。
+
 ## 2026-10-21（第 54 轮）
 
 - 时间：2026-10-21 11:25 – 12:1x CST。
