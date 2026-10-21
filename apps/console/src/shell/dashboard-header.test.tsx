@@ -25,6 +25,10 @@ vi.mock("#/features/suppressions/ui/active-suppression-indicator", () => ({
   ActiveSuppressionIndicator: () => <span data-testid="active-suppression-indicator" />,
 }));
 
+vi.mock("#/features/configuration/ui/delivery-pause-indicator", () => ({
+  DeliveryPauseIndicator: () => <span data-testid="delivery-pause-indicator" />,
+}));
+
 describe("dashboard header", () => {
   afterEach(() => {
     cleanup();
@@ -42,6 +46,7 @@ describe("dashboard header", () => {
 
     expect(screen.getByRole("button", { name: "Toggle sidebar" })).toBeTruthy();
     expect(screen.getByText("Sources")).toBeTruthy();
+    expect(screen.getByTestId("delivery-pause-indicator")).toBeTruthy();
     expect(screen.getByTestId("active-suppression-indicator")).toBeTruthy();
   });
 
