@@ -1,7 +1,8 @@
 import { retryTimestampFormat } from "#/features/operations/model/operation-format";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
 import { fallbackTimeZone } from "#/i18n/time-zone";
-import { useNow, useTimeZone } from "#/i18n/use-i18n";
+import { useTimeZone } from "#/i18n/use-i18n";
+import { useOperationalNow } from "#/i18n/use-operational-now";
 
 /**
  * A retry timestamp that keeps the date once the backoff crosses into another
@@ -10,7 +11,7 @@ import { useNow, useTimeZone } from "#/i18n/use-i18n";
  * `nextAttemptAt` has to make that distinction in the operator's time zone.
  */
 export function RetryTimestamp({ className, value }: { className?: string; value: string }) {
-  const now = useNow();
+  const now = useOperationalNow();
   const timeZone = useTimeZone() ?? fallbackTimeZone;
 
   return (
