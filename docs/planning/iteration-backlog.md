@@ -218,7 +218,7 @@
 | ARCH-20 | Destination 密钥路径策略三处重复 | architecture lane | 25 | candidate | — | manifest `secretFields` 未被消费；`feishu/manifest.ts:126`、`generic-webhook/manifest.ts:57`、`destination.helpers.ts:233`、`config-portability.ts:428` |
 | ARCH-21 | 编辑器草稿映射放在 SQLite repository helper | architecture lane | 21 | candidate | — | `destination.helpers.ts:108,390`、`destination.service.ts:149`；UI DTO 形状落在 infra |
 | ARCH-22 | 纯领域逻辑 `route-match-gaps.ts` 落在 repository 目录 | architecture lane | 21 | candidate | — | 只依赖 core 类型、无持久化；`route-match-gaps.ts:1-60`、`history.repository.ts:22` |
-| ARCH-23 | 注入的 container 在 dashboard 会话解析中被绕过 | architecture lane | 20 | candidate | — | `request-context.ts:46-57,86-88` 固定调用 `getApplicationContainer()` |
+| ARCH-23 | 注入的 container 在 dashboard 会话解析中被绕过 | architecture lane | 20 | candidate | — | **第 52 轮复核：部分修复**——`request-context.ts:91` 已尊重 `options.container`，但默认 session 解析 `:99-103` 仍固定调用 `getApplicationContainer()`，且该路径无测试（现有测试都注入 `getSession`） |
 | ARCH-24 | core 模块契约文件位置与 AGENTS 不一致 | architecture lane | 17 | candidate | — | `operations.ts`、`config.ts` 在包根且已有 `configuration/`；AGENTS.md:69 |
 | ARCH-25 | 空条件确认对话框重复实现 | architecture lane | 18 | candidate | — | `route-forms.tsx:714-745` 与 `suppression-forms.tsx:467-497` 同构 |
 | ARCH-26 | feature `model/` 混入 React hook 与 i18n 上下文 | architecture lane | 18 | candidate | — | `operation-format.ts:1,12-22` 被 `delivery-diagnostics.ts:6` 跨 feature 导入 |
@@ -247,13 +247,14 @@
 | REL-26 | Docker smoke 未检查镜像 HEALTHCHECK 状态 | release-infra lane（第 47 轮） | 22 | candidate | — | smoke 从宿主机 curl，但容器内探针损坏仍会通过（`Dockerfile:73`、`scripts/docker-smoke.sh`）；建议轮询 `docker inspect -f '{{.State.Health.Status}}'` 至 healthy |
 | REL-27 | Docker smoke 固定宿主机端口 3100 | release-infra lane（第 47 轮） | 20 | candidate | — | 并发 worktree 会冲突（`scripts/docker-smoke.sh:21`）；与 REL-7 同类，改为按端口/临时目录隔离 |
 | REL-28 | E2E 双入口可能漂移 | release-infra lane（第 47 轮） | 17 | candidate | — | `apps/console/package.json` 声明 `e2e` 脚本，`Justfile:79` 用 `vp exec` 绕过；建议保留单一路径 |
-| ARCH-27 | Provider catalog/`iconName` 无消费者，Source UI 硬编码 | architecture lane | 24 | candidate | — | `registry.ts:73-85` 已投影，但 `source-provider-icon.tsx:1-40` 按 provider 穷尽 switch、`source-form.tsx:57-67,149-158` 重复列表；缺 provider catalog procedure |
-| ARCH-28 | Operations DTO 在 core 与 api 双份定义，无 parity 守卫 | architecture lane | 21 | candidate | — | 手写 interface（`packages/core/src/operations.ts:120,132`）与 zod schema（`packages/api/src/schemas/operations.ts:37,59,78,99,111`）各维护一份；无 `satisfies` 断言。第 21 轮实测已漂移：core `EventDetailDelivery`（`operations.ts:89-92`）无 `destinationKind`，API schema（`schemas/operations.ts:51-57`）有 |
+| ARCH-27 | Provider catalog/`iconName` 无消费者，Source UI 硬编码 | architecture lane | 24 | candidate | — | `registry.ts:73-85` 已投影，但 `source-provider-icon.tsx:1-40` 按 provider 穷尽 switch、`source-form.tsx:57-67,149-158` 重复列表；缺 provider catalog procedure。第 52 轮补充第 4 处硬编码：`feishu-dynamic-properties-field.tsx:28-61` 手写 provider/kind 枚举；可先切「catalog procedure + icon provider」一半 |
+| ARCH-28 | Operations DTO 在 core 与 api 双份定义，无 parity 守卫 | architecture lane | 21 | candidate | — | 手写 interface（`packages/core/src/operations.ts:120,132`）与 zod schema（`packages/api/src/schemas/operations.ts:37,59,78,99,111`）各维护一份；无 `satisfies` 断言。第 21 轮实测已漂移：core `EventDetailDelivery`（`operations.ts:89-92`）无 `destinationKind`，API schema（`schemas/operations.ts:51-57`）有。第 52 轮复核：漂移仍在，`DeliveryListItem` 两边一致（core `:94-118` / api `:78-97`），无 parity 守卫；成本 S |
 | ARCH-29 | `configuration-support.ts` 成为跨能力 helper 集散地 | architecture lane | 21 | candidate | — | 同时导出 token 生成、测试事件、脱敏、配置解析与引用校验（`configuration-support.ts:11-125`），被 7 个能力服务导入 |
-| ARCH-30 | `OperationsTable` 分页固定在本地 state | architecture lane | 21 | candidate | — | `operations-table.tsx:58-62` 不受控；配置列表刷新/后退回第 1 页（`sources-section.tsx:81` 等 5 处）；AGENTS 要求分页进 URL。第 18 轮 requirements lane 独立确认（评分 25），与 REQ-30 的前置关系成立 |
+| ARCH-30 | `OperationsTable` 分页固定在本地 state | architecture lane | 21 | candidate | — | `operations-table.tsx:56-59` 本地 `useState`（第 52 轮行号），`:61-79` clamp effect；5 个配置列表均未传分页控制（`sources-section.tsx:94-105`、`destinations-section.tsx:114-127`、`routes-section.tsx:128-139`、`suppressions-section.tsx:147-160`、`feishu-apps-section.tsx:89-102`）；AGENTS 要求分页进 URL |
 | ARCH-31 | 契约与 runtime 的 auth 错误文案双份维护 | architecture lane | 20 | candidate | — | `dashboard-auth.ts:5-15` 注释要求同步，`dashboard-session.ts` 另写一份；无 parity 测试 |
 | ARCH-32 | Events/Deliveries 无自有 api/model 边界 | architecture lane | 19 | candidate | — | 两个 feature 只有 ui/ 或 model/，数据能力集中在 `features/operations`；20+ 跨 feature 引用（`OperationTimestamp`） |
-| ARCH-33 | 两个新增死组件 | architecture lane | 19 | candidate | — | `form-text-field.tsx`、`destination-kind-badge.tsx` 全仓零 import；与 FIX-5/9/10 合并清理 |
+| ARCH-33 | 两个新增死组件 | architecture lane | 19 | candidate | — | 第 52 轮复核：`destination-kind-badge.tsx` 已删除；`form-text-field.tsx` 仍在且零 importer，与 FIX-5/9/10 合并清理 |
+| ARCH-41 | Event/Delivery 详情页 Tab 未进 URL | architecture lane（第 52 轮） | 20 | candidate | — | 两个详情用不受控 `defaultValue`（`event-detail-view.tsx:25-26`、`delivery-detail-view.tsx:24-25`），路由无 `validateSearch`（`_dashboard.events_.$eventId.tsx:7-14`、`_dashboard.deliveries_.$deliveryId.tsx:7-14`）；刷新/后退/分享都回默认 Tab；与 ARCH-36 同原则，建议分 PR |
 | ARCH-34 | Scaffold 模板与 generic-webhook 能力分叉 | architecture lane | 19 | candidate | — | `scaffold/schema.ts:8-13` 仅 text 模板，`generic-webhook/schema.ts` 已支持 JSON 模板；README 声称不会漂移 |
 | REQ-86 | 事件详情展示上游告警回链与接入元数据 | requirements lane | 28 | shipped | #149 | 「标准化」页新增「上游告警」区块；http(s) 白名单 + 去凭据 + `noopener noreferrer`；其余标量元数据带产品文案；PRD `docs/prd/event-upstream-source.md` |
 | REQ-87 | 投递详情原始事件载荷与渲染载荷对照 | requirements lane | 28 | shipped | #153 | `DeliveryDetail.rawPayloadPruned` + 载荷页左右对照；复用 `isPrunedRawPayload`；PRD `docs/prd/delivery-payload-comparison.md` |
@@ -372,7 +373,7 @@
 | Q-41 | 配置名 UNIQUE 冲突返回不透明 500 | requirements lane（第 28 轮） | 22 | candidate | — | `schema.ts:42,55,88,101` 有 UNIQUE，服务无预检、`errors.ts:24-57` 未映射 SQLite 约束错误且剥离 message（`:12`），重名创建只得到 INTERNAL_SERVER_ERROR |
 | ARCH-35 | client-only 标记过度使用 | architecture lane（第 28 轮） | 16 | candidate | — | `components/ui/dropdown-menu.tsx:1`、`routes/-login-form-impl.tsx:1`、`routes/-setup-form-impl.tsx:1`、`i18n/language-switcher-impl.tsx:1`、`shell/dashboard-user-menu-impl.tsx:1` 自身无浏览器 API；建议并入 ARCH-14 |
 | ARCH-36 | 设置页 Tab 未进 URL | architecture lane（第 39 轮） | 18 | candidate | — | `use-settings-workspace.ts:35` 用 `useState` 持有 `activeTab`，`_dashboard.settings.tsx:10-22` 无 `validateSearch`；AGENTS 把 tabs 归 URL state；增 `tab` search，草稿仍留本地 |
-| ARCH-37 | 便携配置编辑器绕过 TanStack Form | architecture lane（第 39 轮） | 16 | candidate | — | `portable-config-form.tsx:31-34` 以 `value/onChange` 受控，草稿由 `use-settings-workspace.ts:36` 的 `useState` 管理；AGENTS 把 TOML import/export 列入 TanStack Form；改由 Form 管提交/校验或就近注明例外 |
+| ARCH-37 | 便携配置编辑器绕过 TanStack Form | architecture lane（第 39 轮） | 16 | candidate | — | `portable-config-form.tsx:31-32` 以 `value/onChange` 受控，草稿由 `use-settings-workspace.ts:37` 的 `useState` 管理（第 52 轮行号）；AGENTS 把 TOML import/export 列入 TanStack Form；改由 Form 管提交/校验或就近注明例外 |
 | ARCH-38 | 目标预览编排重复 | architecture lane（第 39 轮） | 18 | candidate | — | `destinations-page.tsx:127-155` 与 `destination-edit-dialog-loader.tsx:72-99` 各自维护 previewNotice/previewInput/onSampleChange/toast；抽 `features/destinations/model/use-destination-preview.ts` |
 | ARCH-39 | 事件路由投递结果视图模型落在 `ui/` | architecture lane（第 39 轮） | 15 | candidate | — | `event-detail-route-delivery-outcomes.ts:1-32` 只导出类型与纯函数；AGENTS 将 view model 归 `features/*/model`；移到 `features/events/model/` |
 | ARCH-40 | feature model 测试直连 infra | architecture lane（第 39 轮） | 14 | candidate | — | `urgent-ping-explanation.test.ts:7` 导入 `#/infra/sqlite/repositories/destination/destination.helpers`；虽当前环境中性，仍把持久化层带入 feature model 测试边界；改本地 fixture 或上移投影函数 |
@@ -451,7 +452,7 @@
 | REQ-183 | 飞书应用测试结果可复核 | requirements lane（第 45 轮） | 26 | candidate | — | 测试结果只走 toast（`feishu-apps-page.tsx:84-95`），`FeishuAppTestResult` 无状态/时间/复制结构（`feishu-app.ts:39-43`）；失败原因一闪而过；结果对话框 + 复制 + 重试 |
 | REQ-184 | 静默列表显示命中投递数与最近命中时间 | requirements lane（第 45 轮） | 25 | candidate | — | 列表无命中信息（`suppressions-section.tsx:92-132`），只能进详情看；列表 DTO 加 `hitCount/lastHitAt`，一次 `LEFT JOIN deliveries` 聚合；无迁移 |
 | REQ-185 | 停用配置前展示排队投递数与实际发送行为 | requirements lane（第 46 轮） | 29 | shipped | #248 | 第 47 轮交付：三个停用确认框在说明下显示「排队中的投递：N 条」，按 `sourceId`/`routeId`/`destinationId` + `deliveryState=pending` 读取 `operations.list` 的 `total`（`limit:1`、15s 缓存、仅确认框打开时查询）；失败/加载中不渲染且不阻塞；PRD `docs/prd/queued-deliveries-before-disable.md`；浏览器实测 1 条与 0 条两个作用域 |
-| REQ-186 | 设置页从文件导入 TOML/JSON | requirements lane（第 46 轮） | 28 | candidate | — | 恢复文档要求重新导入，但只能粘贴文本（`portable-config-form.tsx:123-172`、`use-settings-workspace.ts:178-210`），全仓无 `type="file"`/`FileReader`；增加文件加载只填草稿，不自动导入；纯前端 + `createClientOnlyFn` |
+| REQ-186 | 设置页从文件导入 TOML/JSON | requirements lane（第 46 轮） | 28 | shipped | #264 | 页脚「从文件载入」把 `.toml`/`.json` 读入当前草稿，不自动导入；>1 MiB 或空白文件拒绝且不改草稿；`readTextFile` 与 `downloadTextFile` 同边界；PRD `docs/prd/settings-file-import.md`；第 52 轮浏览器实测未应用文件中的 45 天保留期 |
 | REQ-187 | 通知目标签名密钥显式清除 | requirements lane（第 46 轮） | 27 | candidate | — | AGENTS 要求 preserve/replace/clear，实际只有前两者（`destination-form.ts:521-533`、`destination.service.ts:94-114`、`configuration-commands.ts:63-69`）；新增 `clearSigningSecret` 位，合并后删除 `signSecret` 与 ref；与 REQ-125/REQ-71 同一模式 |
 | REQ-188 | 可移植配置编辑器未保存草稿保护 | requirements lane（第 46 轮） | 26 | candidate | — | Settings 草稿无基线/dirty（`use-settings-workspace.ts:35-37,50-58,70-95`），路由无 blocker；加 `useBlocker` + `beforeunload`，Tab 切换不提示；与 REQ-92（对话框）、REQ-143（Token）边界不同 |
 | REQ-189 | 取消尚未发送的排队投递 | requirements lane（第 46 轮） | 24 | candidate | — | 无取消终态（`delivery.ts:5-11`），worker 每 5 秒领取 pending（`delivery-worker-runner.ts:50-53`）；需 EXPERT_PANEL 裁决新增 `cancelled` vs 复用 `suppressed`；原子条件更新，无迁移 |
@@ -504,12 +505,13 @@
 
 ## 下一轮优先项
 
-0. **REQ-186（28）** 设置页从文件导入 TOML/JSON（第 51 轮 requirements 复核仍成立，纯前端
-   只读草稿填充）；**REQ-199（28）** 事件详情投递表按操作优先级排序；**REQ-181（27）**
+0. **REQ-186（28）已由第 52 轮交付（#264）**：设置页从文件载入 TOML/JSON 草稿。
+   下一优先：**REQ-199（28）** 事件详情投递表按操作优先级排序；**REQ-181（27）**
    删除配置前的事件/投递级联数量；**REQ-182（27）** 目标测试发送前确认；
    **REQ-194/195（27）**；**REQ-200（27）** 投递元数据标注当前配置。
    **FIX-12 已结案**（复现命令 Token 拼写错误，非产品缺陷；#260 已补跨边界回归测试）。
    **Q-48（27）** 告警源更新整行读-改-写会在并发时回滚 `token_hash`，建议下一轮小切口修复。
+   **ARCH-28（21）** core/api DTO parity 守卫为低成本 AUTO_FIX 候选（第 52 轮复核漂移仍在）。
 1. **SEC-22（27）** endpoint userinfo 密码投影；**SEC-24（25）** 补脱敏 key 形态测试；
    **SEC-13** 精确键 + `sessionId/jwt/signature`；**SEC-25（25）** test/preview 载荷投影。
 2. **UI-22（24，现含路由页）** 静默/路由内联编辑面板与分页条重叠（约 30 分钟，两页同改）；
