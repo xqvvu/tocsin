@@ -59,7 +59,9 @@ RUN apt-get update \
 # The Node.js release pinned by `.node-version`, as provisioned during the build.
 COPY --from=build /tmp/node /usr/local/bin/node
 
-# Build output (includes vendored production deps — server is a single bundle)
+# Build output: the Nitro server bundle plus the production dependencies Nitro
+# vendors into `.output/server/node_modules`, so the runtime stage needs no
+# install step or package manager.
 COPY --from=build --chown=node:node /app/apps/console/.output ./.output
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
