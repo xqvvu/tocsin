@@ -55,6 +55,9 @@
 | SEC-24 | 读边界脱敏测试未覆盖凭据型 key 形态 | 安全 lane（第 45 轮） | 25 | shipped | #285 | 第 57 轮交付：raw payload/headers 覆盖 appSecret/clientSecret/apiSecret/privateKey/secretAccessKey/X-Auth-Token；原始证据：`read-projection-redaction.test.ts:52-107` 只覆盖 `token`/`Authorization`；`redactJsonText` 的 key 分支仅被 `redactJsonValue` 间接覆盖（`redaction.test.ts:62-73,132-153`）；补 `appSecret`/`clientSecret`/`apiSecret`/`privateKey`/`X-Auth-Token` 直接断言 ；第 54 轮复核：覆盖面仍只有 `token`/`Authorization`（`read-projection-redaction.test.ts:52-107`） |
 | SEC-25 | test/preview 的 renderedPayload 无最终脱敏投影 | 安全 lane（第 45 轮） | 25 | candidate | — | `destination.service.ts:193,310-336` 直接返回 adapter payload，未像投递详情那样过 `redactJsonText`（`delivery.helpers.ts:56`）；当前 adapter 未注入 config，属边界不对称；建议套投影并按 kind 参数化断言 ；第 54 轮复核：`destination.service.ts:193,317,331` 仍无 `redactJsonText` 投影；当前无实际泄漏，属边界不对称，AUTO_FIX + 按 kind 参数化断言 |
 | SEC-26 | 目标 webhook URL/endpoint 凭据进入浏览器 DTO 与 SSR 数据 | security lane（第 54 轮） | 24 | candidate | — | MEDIUM：Slack/Feishu webhook URL 本身是 bearer 凭据，generic URL 常带 token，email gateway 可能带 userinfo；`destination.helpers.ts:63,84,289-303` 原样投影，`destination-operational-config-cell.tsx:36-37` 渲染，并经 `_dashboard.destinations.tsx:14` 进入 SSR；`config-portability.ts:442-451` 自己把 `webhookUrl`/`url`/`endpointUrl` 当 secret 导出；与 `docs/architecture/frontend-architecture.md:350,431` 冲突，需 EXPERT_PANEL（userinfo 子集见 SEC-22） |
+| SEC-27 | 生产模式接受仓库内公开的 `BETTER_AUTH_SECRET` 默认值 | security-exposure（第 63 轮） | 27 | candidate | — | HIGH：`docker-compose.yml:13,17` 以 `NODE_ENV=production` + `${BETTER_AUTH_SECRET:-70c18d50…}` 启动，`.env.example:2` 另有一个可用 hex secret，而 `auth-config.ts:3-4,67-80` 黑名单不含它们。直接 `docker compose up` 的实例用公开 secret 签名 session/token。修复为 compose `${VAR:?required}` + 黑名单补两个字面量 + 单测 + README/部署文档；**改变部署契约（fail-fast），交 EXPERT_PANEL** |
+| SEC-28 | 带前缀的云凭据键名绕过 `isSensitiveKey` | security-exposure（第 63 轮） | 25 | shipped | #308 | 第 63 轮交付：`SENSITIVE_EXACT_KEYS` 增加 `awssecretaccesskey`/`storageaccountkey`/`sharedaccesskey`/`storageconnectionstring`/`databaseconnectionstring`，同时覆盖键名与自由文本赋值两条路径；`*KeyId` 标识符保持可见；新增正反例与 JSON 文本断言 |
+| SEC-29 | `dashboard-session.ts` 引用 better-auth 但缺 server-only 标记 | security-exposure（第 63 轮） | 22 | shipped | #308 | 第 63 轮交付：补 `@tanstack/react-start/server-only`；类型导入演变为值导入时构建期失败 |
 | Q-1 | 出站 HTTP 无超时，单个挂起目标会卡住单进程 worker | 质量 lane | — | shipped | #108 | EXPERT_PANEL 一致：共享层 10s deadline，`timeout`/可重试；决策 `docs/planning/decisions/outbound-http-timeout.md` |
 | Q-2 | 出站响应体无上限 | 质量 lane | 26 | candidate | — | 与 inbound 的 body limit 对齐 |
 | Q-3 | Provider `*Result` 函数对非对象 payload 直接 throw | 质量 lane | 25 | candidate | — | 边界契约不一致 |
@@ -520,11 +523,15 @@
 | NEW-N | 告警源 Token 轮换宽限期（双 Token 并存） | requirements lane（第 60 轮） | 25 | candidate | — | 轮换直接覆盖 `token_hash`（`source.service.ts:66-71`、`source.repository.ts:58-62`），旧 Token 立即失效，而上游需逐台改配置；PRD 承诺独立轮换（`docs/prd/self-hosted-alert-hub-mvp.md:67`）但未定义重叠窗口。需 forward-only 迁移 + 接入鉴权改动，交 EXPERT_PANEL |
 | NEW-P | 投递列表端到端耗时列与排序 | requirements lane（第 60 轮） | 24 | candidate | — | 耗时剖面只在投递详情（REQ-42），列表 DTO 无耗时字段（`packages/core/src/operations.ts:94-118`）；attempt 已有 `startedAt/finishedAt`（同文件 `:120-130`）。当前页聚合、空值排序位置需明确 |
 | NEW-O | 目标「最近测试」持久化与配置变更后待测提示 | requirements lane（第 60 轮） | 23 | candidate | — | 测试结果只作一次性响应（`destination.service.ts:187-199`），列表无 `lastTestedAt`；编辑 endpoint/密钥后无法判断当前配置是否验证过。需迁移 + DTO/UI，secret 边界需审查 |
-| NEW-V | 投递列表「下次重试」跨天时显示日期 | requirements lane（第 62 轮） | 28 | candidate | — | 列表固定 `format="time"` 只显示 `HH:mm`（`deliveries-table.tsx:96-105`），事件详情已用 `retryTimestampFormat` 跨天切日期（`event-detail-deliveries-table.tsx:78-87`、`operation-format.ts:56-75`）；加急记录同病（`delivery-pings-table.tsx:88-103`）；表头改「下次重试」；纯前端，补同日/跨天/非法值测试 |
+| NEW-V | 投递列表「下次重试」跨天时显示日期 | requirements lane（第 62 轮） | 28 | shipped | #307 | 第 63 轮交付：新增共享 `RetryTimestamp`（按控制台时区 + `useNow()` 选 `time`/`dateTime`），投递列表、加急记录、事件详情三处统一；表头改「下次重试」；`AppIntlProvider` 支持固定 `now` 便于确定性测试；PRD `docs/prd/retry-timestamp-cross-day.md` |
 | NEW-W | 搜索框在中文输入法组合期间不提交查询 | requirements lane（第 62 轮） | 27 | candidate | — | `useOperationSearchDraft` 每次 change 重设 300ms 定时器，`OperationSearchInput` 无 composition 处理（`operation-filters.tsx:610-688`）；拼音组合停顿会把半成品写入 URL 并发请求；组合期间取消定时器、`compositionend` 后只提交一次；补组合用例 |
 | NEW-Y | 事件级多目标投递时序视图 | requirements lane（第 62 轮） | 27 | candidate | — | 事件详情只有四个页签（`event-detail-view.tsx:25-71`），投递页签按优先级而非时间；job 级时间字段已齐（`delivery.ts:19-35`、`operations.ts:89-96`）；纯客户端派生时间线，链接到投递详情；不做 attempt/ping 级（NEW-U/REQ-42） |
 | NEW-X | 事件/投递详情按当前筛选顺序连续查看 | requirements lane（第 62 轮） | 26 | candidate | — | 详情只传 ID，路由无 `validateSearch`（`_dashboard.events_.$eventId.tsx:6-12`、`_dashboard.deliveries_.$deliveryId.tsx:6-12`）；详情工具栏只有返回（`event-detail-page.tsx:65-71`）；复用列表缓存当前页做上一条/下一条；与 REQ-40 互补，v1 不跨页 |
 | NEW-Z | 手动重试的操作者与时间可追溯 | requirements lane（第 62 轮） | 22 | candidate | — | `retryDelivery` 只收 deliveryId（`operations.service.ts:72-74`），router 未传当前用户（`operations/router.ts:37-40`），对照 `buzzDelivery` 已落 `initiatedBy`；需 forward-only `0004` 加 `last_manual_retry_at/by` 或独立 audit 表；**交 EXPERT_PANEL** |
+| NEW-AA | 全局暂停出站投递（运维急停 / 维护模式） | requirements lane（第 63 轮） | 28 | candidate | — | worker 每 tick 无条件 reclaim+claim（`delivery-worker.service.ts:47-62`），settings 只有 locale/timeZone/保留天数（`configuration-results.ts:7-11`）；下游大面积故障或配置写错时只能逐个停用目标，而全局静默会把排队投递**终态丢弃**（`delivery.repository.ts:252-284`）。方案：settings 加 `deliveryPaused`/`deliveryPausedAt`（key-value，无迁移），暂停时 `runOnce` 返回 paused 且不改任何 delivery 状态；Settings 开关 + Deliveries 横幅 + 手动入口禁用；**无迁移**，可单轮交付 |
+| NEW-AB | 控制台主题（浅色 / 深色 / 跟随系统） | requirements lane（第 63 轮） | 27 | candidate | — | 深色 token 已在 `styles.css:8,55` 定义但从未启用：`__root.tsx:44` 无主题 class，全仓无主题 provider；Toast 跟随系统（`sonner.tsx:13-14`）而主界面恒浅色；Settings 偏好无主题项（`settings-preferences-panel.tsx:45-58`）。三态 + cookie 持久化 + pre-paint 应用；纯前端，无迁移 |
+| NEW-AC | 按通知目标配置请求超时 | requirements lane（第 63 轮） | 26 | candidate | — | 只有全局 `TOCSIN_DESTINATION_TIMEOUT_MS`（`env.ts:23-28`，默认 10s/上限 30s），container 把同一值传给所有发送路径（`container.ts:193,240,259,272,314,341`），目标 schema 无超时字段（`generic-webhook/schema.ts:12-19`）；慢速 SMTP/跨地域 webhook 无法单独调优，抬高全局值会拖慢所有目标；配置存 `config_json`，无迁移 |
+| NEW-AD | Owner 管理本地运维成员账号 | requirements lane（第 63 轮） | 21 | candidate | — | 角色模型已声明 owner/admin/member（`auth-options.ts:27-33`），但首用户后拒绝创建（`auth-owner-bootstrap.ts:21-29`），无 members 契约/router/Settings 页签；团队共用 owner 账号导致操作不可归因（FIX-8/REQ-85）。**L 成本，需 EXPERT_PANEL，单轮不可交付** |
 | UI-32 | 390px 下 Settings「界面」页签不可滚动，保存按钮不可达 | ui-review（第 62 轮，浏览器实测） | 27 | shipped | #303 | 面板 651/863、`overflow: hidden`，滚轮/触摸 `scrollTop` 恒 0；偏好表单被压成 26px，保存按钮在屏幕外（`settings-page.tsx:31`、`settings-preferences-panel.tsx:74`）。修复：`sm` 以下面板 `overflow-y-auto`、表单 `flex-none`；桌面保持 747/747；补布局契约测试与 mini-PRD `docs/prd/settings-mobile-scroll.md`；实测滚动 0→587、保存 y=783–811 |
 
 ## 发布记录
@@ -572,6 +579,13 @@
 
 ## 下一轮优先项
 
+0. **第 63 轮交付**：NEW-V（28）投递「下次重试」跨天显示（#307）+ SEC-28/SEC-29 脱敏与 import 边界加固（#308）。
+   下一优先：**NEW-AA（28）** 全局暂停出站投递（无迁移、单轮可交付）；**NEW-W（27）** 中文输入法组合期间不提交搜索；
+   **NEW-AB（27）** 主题切换；**NEW-AC（26）** 目标级请求超时。
+   **SEC-27（27）** compose 公开默认 secret 改 fail-fast，交 EXPERT_PANEL；SEC-22/25/26 仍待裁决。
+   **UI-21（22）** 对话框关闭按钮本地化；**UI-22（24）** 内联编辑重叠；**UI-23（24）** 390px 行操作。
+   车道轮转：第 63 轮 `security-exposure` 已跑，下一轮非必跑车道为 **`quality`**；
+   `ui-triage` 本轮 `defer`（距上次真实评审 32 分钟）。
 0. **第 58 轮交付**：REQ-206（28）投递按渠道类型筛选（#289）。
    下一优先：**REQ-220（28）** 目标行临时静默；**REQ-84 + REQ-216（28）** Settings 只读运行参数；
    **NEW-I（27）** 出站禁止自动跟随重定向；**NEW-K（26）** 语言/时区变更对排队投递的影响披露；
