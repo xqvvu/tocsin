@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import type { DeliveryState } from "@tocsin/core";
+import { REDACTED_VALUE, type DeliveryState } from "@tocsin/core";
 
 import { getEventDeliveryStats } from "#/features/events/ui/event-detail-stats";
 import { EventDetailSummary } from "#/features/events/ui/event-detail-summary";
@@ -48,9 +49,35 @@ describe("event detail summary delivery health", () => {
     expect(screen.getByText("1 suppressed")).toBeTruthy();
     expect(screen.queryByText(/succeeded/)).toBeNull();
   });
+
+  it("offers one-click silence for the event title and message", () => {
+    renderSummary("zh-Hans", []);
+
+    expect(screen.getByRole("button", { name: "按标题静默相似告警" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "按消息静默相似告警" })).toBeTruthy();
+  });
+
+  it("disables text silence when the displayed text cannot match", () => {
+    renderSummary("zh-Hans", [], {
+      title: `磁盘 ${REDACTED_VALUE}`,
+      message: "   ",
+    });
+
+    // Redacted text differs from the stored value, and an empty fragment would
+    // be dropped into a silence-everything rule; both entries must stay closed.
+    const titleButton = screen.getByRole("button", { name: /标题包含已脱敏内容/ });
+    const messageButton = screen.getByRole("button", { name: /当前消息为空/ });
+
+    expect((titleButton as HTMLButtonElement).disabled).toBe(true);
+    expect((messageButton as HTMLButtonElement).disabled).toBe(true);
+  });
 });
 
-function renderSummary(locale: "zh-Hans" | "en-US", states: DeliveryState[]) {
+function renderSummary(
+  locale: "zh-Hans" | "en-US",
+  states: DeliveryState[],
+  overrides: { title?: string; message?: string } = {},
+) {
   const deliveries = states.map((state, index): EventDetailData["deliveries"][number] => ({
     id: `dlv_${index}`,
     eventId: "evt_1",
@@ -77,8 +104,8 @@ function renderSummary(locale: "zh-Hans" | "en-US", states: DeliveryState[]) {
       sourceId: "src_1",
       idempotencyKey: null,
       normalized: {
-        title: "磁盘将满",
-        message: "磁盘使用率超过 95%",
+        title: overrides.title ?? "磁盘将满",
+        message: overrides.message ?? "磁盘使用率超过 95%",
         severity: "critical",
         status: "firing",
         fingerprint: "disk-full",
@@ -104,13 +131,21 @@ function renderSummary(locale: "zh-Hans" | "en-US", states: DeliveryState[]) {
     deliveries,
   };
 
+  // The silence dialogs read query options only when opened, but their hooks
+  // still need a client; a fresh one per render keeps cases isolated.
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
   return render(
-    <AppIntlProvider locale={locale}>
-      <EventDetailSummary
-        detail={detail}
-        matchedRouteCount={0}
-        deliveryStats={getEventDeliveryStats(deliveries)}
-      />
-    </AppIntlProvider>,
+    <QueryClientProvider client={queryClient}>
+      <AppIntlProvider locale={locale}>
+        <EventDetailSummary
+          detail={detail}
+          matchedRouteCount={0}
+          deliveryStats={getEventDeliveryStats(deliveries)}
+        />
+      </AppIntlProvider>
+    </QueryClientProvider>,
   );
 }
