@@ -597,6 +597,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.58` | `9c82f01` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.58`（linux/amd64 + linux/arm64，index digest `sha256:9fb887cd…`） | 全局投递暂停记录操作者与最近一次暂停区间（#352，NEW-BK）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.57` |
 | `0.1.0-beta.57` | `f979f61` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.57`（linux/amd64 + linux/arm64，index digest `sha256:b1717048…`） | 补投预览目标级明细与执行范围一致（#349，REQ-22）+ 折叠侧边栏不可见标签不再拦截点击（`777147e`）+ 投递导航 history 图标（`a5d8b51`）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.56` |
 | `0.1.0-beta.56` | `7df71dc` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.56`（linux/amd64 + linux/arm64，index digest `sha256:1432f782…`） | 电话加急完整错误对话框（#343，REQ-168）+ 目标读取投影剥离 URL 密码（#344，SEC-22）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.55` |
 | `0.1.0-beta.55` | `03bec20` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.55`（linux/amd64 + linux/arm64，index digest `sha256:8702bda7…`） | 事件详情投递表显示静默证据（#340，REQ-176）；无迁移/配置/依赖变化；回滚镜像 `0.1.0-beta.54` |

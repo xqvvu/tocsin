@@ -4,7 +4,7 @@
 
 ## 2026-10-22（第 75 轮）
 
-- 时间：2026-10-22 15:50 – 16:25 CST。
+- 时间：2026-10-22 15:50 – 16:55 CST。
 - 基线：本轮开始时 `origin/main` @ `be9a6b5`；main CI 最新一次（docs 提交）为 in_progress，
   上一个 release 提交为 success；无 open PR；最近 10 个 tag 与 Release 一一对应，无待补建项。
 - 类型：**需求切片 + 两车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
@@ -64,7 +64,19 @@
 
 ### 发布决策
 
-- 见本轮发布评估：本轮变更为用户可见功能（暂停操作者与最近区间），满足发版门槛时按第 9.5 步执行。
+- **已发布 `v0.1.0-beta.58`**：三位发布专家一致 APPROVE。
+  - 发布经理：`v0.1.0-beta.57..origin/main` 的用户可见变更为 #352
+    （暂停操作者与最近一次暂停区间），其余为 docs；建议预发布递增。
+  - 发布阻断审计员：合入前按流程 REJECT（PR #352 尚未合入），翻转条件为
+    rebase 合并 → 目标 commit CI success → migration 零 diff；三项随后均满足。
+  - 运维/回滚专家：Dockerfile/compose/env/启动参数零改动；`migrate/` 零 diff；
+    旧镜像会忽略新 settings 键；回滚只需换回 `0.1.0-beta.57` 镜像。
+- 版本变更走 PR #353 `chore(release): v0.1.0-beta.58`（rebase 合并 `9c82f01`），
+  该 commit main CI success。
+- tag：`v0.1.0-beta.58`（annotated，指向 `9c82f01`）；
+  Release：<https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.58>（body 已校验非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.58`，
+  linux/amd64 + linux/arm64，index digest `sha256:9fb887cd…`；回滚镜像 `0.1.0-beta.57`。
 
 ### 下一轮优先项
 
