@@ -30,7 +30,7 @@ export function EventDetailDeliverySuppressionCell({
   return (
     <div className="space-y-0.5 text-xs">
       <div
-        className={reason ? "line-clamp-2" : "text-muted-foreground line-clamp-2"}
+        className={cn("line-clamp-2", !reason && "text-muted-foreground")}
         title={reason ?? undefined}
       >
         {reason ?? t("deliveries.suppression.unknownReason")}
