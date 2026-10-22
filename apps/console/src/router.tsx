@@ -1,14 +1,14 @@
-import { QueryClient } from "@tanstack/react-query";
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
 
+import { createQueryClient } from "#/lib/query-client";
 import { routeTree } from "#/route-tree.gen";
 import { DashboardErrorPage } from "#/shell/dashboard-error";
 import { DashboardNotFoundPage } from "#/shell/dashboard-not-found";
 
 export function getRouter() {
   const context = {
-    queryClient: new QueryClient(),
+    queryClient: createQueryClient(),
   };
 
   const router = createTanStackRouter({
