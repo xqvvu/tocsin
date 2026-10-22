@@ -8,6 +8,9 @@ const withAppSettingsService = withDashboardService((container) =>
 const withRuntimeInformationService = withDashboardService((container) =>
   container.createRuntimeInformationService(),
 );
+const withStorageHealthService = withDashboardService((container) =>
+  container.createStorageHealthService(),
+);
 
 export const settingsRouter = os.settings.router({
   get: os.settings.get
@@ -17,6 +20,10 @@ export const settingsRouter = os.settings.router({
   getRuntime: os.settings.getRuntime
     .use(withRuntimeInformationService)
     .handler(({ context }) => context.service.getRuntimeInformation()),
+
+  getStorageHealth: os.settings.getStorageHealth
+    .use(withStorageHealthService)
+    .handler(({ context }) => context.service.getStorageHealth()),
 
   update: os.settings.update
     .use(withAppSettingsService)

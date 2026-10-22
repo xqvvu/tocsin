@@ -51,6 +51,8 @@ import {
 import { safeErrorProperties } from "#/server/runtime/log-safety";
 import { RuntimeInformationService } from "#/server/runtime/runtime-information.service";
 import type { RuntimeInformationServiceOptions } from "#/server/runtime/runtime-information.service.types";
+import { StorageHealthService } from "#/server/runtime/storage-health.service";
+import type { StorageHealthServiceOptions } from "#/server/runtime/storage-health.service.types";
 import { SourceService } from "#/server/sources/source.service";
 import type { SourceServiceOptions } from "#/server/sources/source.service.types";
 import { SuppressionService } from "#/server/suppressions/suppression.service";
@@ -94,6 +96,9 @@ export interface ApplicationContainer {
   createRuntimeInformationService(
     options?: Partial<Omit<RuntimeInformationServiceOptions, "store">>,
   ): Promise<RuntimeInformationService>;
+  createStorageHealthService(
+    options?: Partial<Omit<StorageHealthServiceOptions, "store">>,
+  ): Promise<StorageHealthService>;
   createConfigPortabilityService(
     options?: Partial<Omit<ConfigPortabilityServiceOptions, "store" | "destinations">>,
   ): Promise<ConfigPortabilityService>;
@@ -263,6 +268,13 @@ export function createApplicationContainer(
 
     async createAppSettingsService() {
       return new AppSettingsService({ store: await container.getSqliteStore() });
+    },
+
+    async createStorageHealthService(serviceOptions = {}) {
+      return new StorageHealthService({
+        store: await container.getSqliteStore(),
+        ...serviceOptions,
+      });
     },
 
     async createRuntimeInformationService(serviceOptions = {}) {

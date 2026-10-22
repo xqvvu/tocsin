@@ -14,6 +14,61 @@ describe("sqlite store", () => {
     await store.close();
   });
 
+  it("reports storage size and table counts from the live database", async () => {
+    const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
+    const source = await store.sources.create({
+      name: "Grafana",
+      provider: "grafana",
+      tokenHash: "token-hash",
+    });
+
+    for (const [index, receivedAt] of ["2026-06-06T23:00:00.000Z", now].entries()) {
+      await store.intake.recordEvent({
+        sourceId: source.id,
+        idempotencyKey: null,
+        normalized: {
+          title: `Alert ${index}`,
+          message: `Message ${index}`,
+          severity: "critical",
+          status: "firing",
+          fingerprint: `alert:${index}`,
+          labels: {},
+          occurredAt: receivedAt,
+        },
+        rawPayload: {},
+        receivedAt,
+      });
+    }
+
+    const health = await store.storageHealth();
+
+    expect(health.pageCount).toBeGreaterThan(0);
+    expect(health.pageSizeBytes).toBeGreaterThan(0);
+    expect(health.freePageCount).toBeGreaterThanOrEqual(0);
+    expect(health.tableCounts).toEqual({
+      events: 2,
+      deliveries: 0,
+      deliveryAttempts: 0,
+      oncallPings: 0,
+    });
+    expect(health.oldestEventAt).toBe("2026-06-06T23:00:00.000Z");
+    expect(health.newestEventAt).toBe(now);
+
+    await store.close();
+  });
+
+  it("reports empty event bounds on a fresh database", async () => {
+    const store = await openSqliteStore({ databasePath: ":memory:" });
+
+    const health = await store.storageHealth();
+
+    expect(health.tableCounts.events).toBe(0);
+    expect(health.oldestEventAt).toBeNull();
+    expect(health.newestEventAt).toBeNull();
+
+    await store.close();
+  });
+
   it("persists instance locale and time zone settings", async () => {
     const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
 

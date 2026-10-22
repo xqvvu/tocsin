@@ -2,7 +2,11 @@ import { oc } from "@orpc/contract";
 import { UpdateAppSettingsCommandSchema } from "@tocsin/core";
 
 import { dashboardAuth } from "../errors/dashboard-auth";
-import { AppSettingsOutputSchema, RuntimeInformationOutputSchema } from "../schemas/settings";
+import {
+  AppSettingsOutputSchema,
+  RuntimeInformationOutputSchema,
+  StorageHealthOutputSchema,
+} from "../schemas/settings";
 
 const dashboardErrors = dashboardAuth.error;
 
@@ -12,6 +16,9 @@ export const settings = {
 
   /** Read-only process and effective-limit projection for operators. */
   getRuntime: oc.errors(dashboardErrors).output(RuntimeInformationOutputSchema),
+
+  /** Read-only SQLite size and row-count projection for operators. */
+  getStorageHealth: oc.errors(dashboardErrors).output(StorageHealthOutputSchema),
 
   update: oc
     .input(UpdateAppSettingsCommandSchema)

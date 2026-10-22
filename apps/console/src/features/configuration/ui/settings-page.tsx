@@ -7,6 +7,7 @@ import { SettingsOperationalOverview } from "#/features/configuration/ui/setting
 import { SettingsPageToolbar } from "#/features/configuration/ui/settings-page-toolbar";
 import { SettingsPreferencesPanel } from "#/features/configuration/ui/settings-preferences-panel";
 import { SettingsRuntimePanel } from "#/features/configuration/ui/settings-runtime-panel";
+import { SettingsStoragePanel } from "#/features/configuration/ui/settings-storage-panel";
 import { useSettingsWorkspace } from "#/features/configuration/ui/use-settings-workspace";
 import { DashboardContentLayout } from "#/shell/dashboard-layout";
 
@@ -34,6 +35,7 @@ export function SettingsPage() {
             <SettingsOperationalOverview />
             <SettingsDeliveryPausePanel />
             <SettingsRuntimePanel />
+            <SettingsStoragePanel />
             <SettingsPreferencesPanel />
           </TabsContent>
           <TabsContent value="toml" className="min-h-0">
