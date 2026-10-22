@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   appSettingsQueryKeys,
   runtimeInformationQueryKeys,
+  workerHealthQueryKeys,
 } from "#/features/configuration/api/configuration.queries";
 import { destinationQueryKeys } from "#/features/destinations/api/destination.queries";
 import { routeQueryKeys } from "#/features/routes/api/route.queries";
@@ -21,6 +22,7 @@ export function useConfigurationMutations() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: appSettingsQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: runtimeInformationQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: workerHealthQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: sourceQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: destinationQueryKeys.all }),
         queryClient.invalidateQueries({ queryKey: routeQueryKeys.all }),

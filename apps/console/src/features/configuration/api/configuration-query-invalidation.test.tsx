@@ -60,6 +60,7 @@ describe("configuration query invalidation", () => {
     expect(testState.invalidateQueries.mock.calls).toEqual([
       [{ queryKey: ["app-settings"] }],
       [{ queryKey: ["runtime-information"] }],
+      [{ queryKey: ["worker-health"] }],
       [{ queryKey: ["sources"] }],
       [{ queryKey: ["destinations"] }],
       [{ queryKey: ["routes"] }],

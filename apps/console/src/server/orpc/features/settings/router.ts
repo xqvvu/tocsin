@@ -11,6 +11,9 @@ const withRuntimeInformationService = withDashboardService((container) =>
 const withStorageHealthService = withDashboardService((container) =>
   container.createStorageHealthService(),
 );
+const withWorkerHealthService = withDashboardService((container) =>
+  container.createWorkerHealthService(),
+);
 
 export const settingsRouter = os.settings.router({
   get: os.settings.get
@@ -24,6 +27,10 @@ export const settingsRouter = os.settings.router({
   getStorageHealth: os.settings.getStorageHealth
     .use(withStorageHealthService)
     .handler(({ context }) => context.service.getStorageHealth()),
+
+  getWorkerHealth: os.settings.getWorkerHealth
+    .use(withWorkerHealthService)
+    .handler(({ context }) => context.service.getWorkerHealth()),
 
   update: os.settings.update.use(withAppSettingsService).handler(({ context, input }) =>
     // Pause/resume evidence is written server-side from the verified session;

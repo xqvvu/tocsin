@@ -98,6 +98,49 @@ describe("application container", () => {
     );
   });
 
+  it("reads worker health without assembling a runner", async () => {
+    const openStore = vi.fn<() => Promise<SqliteStore>>(async () => {
+      store = await openSqliteStore({
+        databasePath: ":memory:",
+      });
+
+      return store;
+    });
+    const createWorkerRunner: NonNullable<ApplicationContainerOptions["createWorkerRunner"]> =
+      vi.fn<NonNullable<ApplicationContainerOptions["createWorkerRunner"]>>(() => ({
+        runNow: async () => null,
+        getHealth: () => ({
+          state: "idle",
+          lastStartedAt: null,
+          lastFinishedAt: null,
+          lastError: null,
+          lastRun: null,
+        }),
+        stop: () => {},
+      }));
+    const container = createApplicationContainer({
+      openStore,
+      createWorkerRunner,
+    });
+
+    const beforeStart = await container.createWorkerHealthService();
+
+    expect(beforeStart.getWorkerHealth()).toMatchObject({
+      delivery: { started: false },
+      oncall: { started: false },
+    });
+    expect(openStore).not.toHaveBeenCalled();
+    expect(createWorkerRunner).not.toHaveBeenCalled();
+
+    await container.ensureDeliveryWorkerRunner();
+    const afterStart = await container.createWorkerHealthService();
+
+    expect(afterStart.getWorkerHealth()).toMatchObject({
+      delivery: { started: true, state: "idle" },
+      oncall: { started: false },
+    });
+  });
+
   it("disposes opened long-lived dependencies", async () => {
     let openedStoreClose: ReturnType<typeof vi.fn<() => Promise<void>>> | undefined;
     const openStore = vi.fn<() => Promise<SqliteStore>>(async () => {

@@ -6,6 +6,7 @@ import {
   AppSettingsOutputSchema,
   RuntimeInformationOutputSchema,
   StorageHealthOutputSchema,
+  WorkerHealthOutputSchema,
 } from "../schemas/settings";
 
 const dashboardErrors = dashboardAuth.error;
@@ -19,6 +20,12 @@ export const settings = {
 
   /** Read-only SQLite size and row-count projection for operators. */
   getStorageHealth: oc.errors(dashboardErrors).output(StorageHealthOutputSchema),
+
+  /**
+   * Read-only background worker health. Observes runners that are already
+   * assembled; it never starts one.
+   */
+  getWorkerHealth: oc.errors(dashboardErrors).output(WorkerHealthOutputSchema),
 
   update: oc
     .input(UpdateAppSettingsCommandSchema)
