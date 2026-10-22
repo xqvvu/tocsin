@@ -58,6 +58,10 @@
   `docs/planning/decisions/dedupe-window-and-bounded-prune.md`，状态已更新为「已实施」。
 - Q-224（老库 `idx_delivery_dedupe_created_at` 迁移）仍未评估，下一轮单独处理。
 
+### 文档同步
+
+- `obsidian-vault` skill 在本会话不可用，本轮 Obsidian 同步已跳过（仓库内文档已更新）。
+
 ### 发布决策
 
 - 三位专家（发布经理 / 阻断审计 / 运维回滚）**一致赞成发布 `0.1.0-beta.63`**。
