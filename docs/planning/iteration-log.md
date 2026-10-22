@@ -71,7 +71,20 @@
 
 ### 发布决策
 
-- 见下方「发布记录」。
+- **已发布 `v0.1.0-beta.56`**：三位发布专家一致 APPROVE。
+  - 发布经理：`v0.1.0-beta.55..origin/main` 的用户可见变更是 #343（电话加急错误对话框）与
+    #344（目标读取投影剥离 URL 密码），其余为 docs；建议预发布递增。
+  - 发布阻断审计员：目标 `ccf20b9`（后为 `7df71dc`）main CI success、无 open PR、
+    `migrate/` 零改动、`v0.1.0-beta.56` tag 不存在、beta.55 Release 存在且 body 非空；
+    `blocked-autonomous` 仅 REL-13（LICENSE），不阻断。
+  - 运维/回滚专家：无迁移、无配置/环境变量/启动参数变化；#344 仅读取投影剥离密码，
+    发送路径不变；回滚只需换回 `0.1.0-beta.55` 镜像。
+- 版本变更走 PR #346 `chore(release): v0.1.0-beta.56`（rebase 合并 `7df71dc`）。
+- 记录本轮 log/backlog 的 PR #345 `docs(planning): record round 73`（rebase 合并 `3e969b3`）。
+- tag：`v0.1.0-beta.56`（annotated，指向 `7df71dc`）；
+  Release：<https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.56>（body 已校验非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.56`，
+  linux/amd64 + linux/arm64，index digest `sha256:1432f782…`；回滚镜像 `0.1.0-beta.55`。
 
 ### 下一轮优先项
 
