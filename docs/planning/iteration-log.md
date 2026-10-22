@@ -2,6 +2,74 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 87 轮）
+
+- 时间：2026-10-23 06:20 CST 起。
+- 基线：本轮开始时 `origin/main` @ `ab8c6a4`；main CI 最近一次 success；无 open PR；
+  `v0.1.0-beta.65` 的 tag 与 GitHub Release 均已存在。
+- 类型：**`full-audit`（受时间/配额约束展开 3 条车道）** —— `requirements`、`ui-triage`、
+  轮转车道 `security-exposure`。`docs-drift`、`release-infra`、`architecture`、`quality` 顺延。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**——本轮仍未覆盖全部车道。
+- 车道轮转位置：**`docs-drift`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 10h42m（`last_ui_review_at` 2026-10-22 19:45）；
+  自评审以来 UI 路径合并 4 个，未复验 2 个（#378 时间窗锚点、#382 尝试次数筛选），< 3；
+  `UI-` candidate 21 条（< 25）；无新增 HIGH。下一次触发：满 48h（2026-10-24 19:45）、
+  未复验 UI 合并 ≥3、新增 UI 发现 ≥2、candidate ≥25，或出现新的 HIGH 可复现缺陷。
+- `last_ui_review_at`：**2026-10-22 19:45 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证在会话工作树
+  `friendly-saha-d4e548`。工作树已清理。
+
+### 本轮交付
+
+- PR #386 `feat(console): surface recent delivery failures in the header`（REQ-166，28 分）：
+  顶栏新增投递失败徽标，复用 `operations.list`（`limit: 1`、`deliveryState: failed`、
+  `range: 24h`）读取 `deliveries.total`；数量为 0、加载中或查询失败时隐藏；
+  点击进入 `/deliveries?deliveryState=failed&range=24h`；每 60 秒刷新。
+  新增 PRD `docs/prd/delivery-failure-indicator.md` 与 3 条组件测试、顶栏挂载断言。
+  验证：`vp fmt --write`；`vp check` 0 errors / 18 既有 warning；`vp run -r test`
+  4/4 包通过（console 930 tests）；`vp run -r build` 通过；PR 的 `CI` 与 `E2E` 均 success。
+  注：`code-review` 发现并修复两处：tooltip 把「按创建时间筛选」说成「按失败时间」，
+  以及测试中 hoisted mock 读取非 hoisted 常量。
+- PR #387 `docs(planning): record round 87`（本轮日志与 backlog）。
+
+### 专家发现
+
+- `requirements`：
+  - **REQ-238（29）** 路由行一键临时静默：路由行操作只有编辑/补投预览/启停/删除
+    （`routes-section.tsx:162-230`）；复用同构 matcher（`suppression.ts:26-45`、
+    `route.ts:18-25`）与目标预填弹窗（`destination-actions.tsx:107`、
+    `suppression-from-destination-dialog-content.tsx:49`）。纯 UI，无 API/DTO/迁移。
+  - **REQ-239（28）** 多关键词 AND 搜索：`q` 被整体包成单个 `%term%`
+    （`history.repository.ts:458-475,487-512,536-538`），无法表达「标题含 A 且消息含 B」。
+  - 未展开的第三条：Events 按通知目标过滤（`operations.service.ts:37-45` 只把
+    `destinationId` 传给投递查询，`history.interface.ts:24-34` 无该字段），留待下轮。
+- `security-exposure`：
+  - 新发现 3 条 LOW：转义 JSON 文本漏脱敏（**SEC-32**，`redaction.ts:501-526,627-655`；
+    `redactText('{\"token\":\"abc123\"}')` 原样返回）、`X-Goog-Signature`/Azure SAS `sig`
+    绕过结构化键脱敏（SEC-31 残余，`redaction.ts:13-66,82-83,204-208`）、PEM 正文与
+    `tls.key` 未覆盖（SEC-20 残余，`redaction.ts:99-124`）。三条均建议 AUTO_FIX。
+  - 复核：SEC-22 / SEC-23 / SEC-26 仍成立，维持 EXPERT_PANEL；SEC-25 已修复
+    （`destination.service.ts:205,317,329,343` 四处 `redactJsonText`）。
+  - 已核实 clean：oRPC DTO 无 token/secret 泄漏；import protection 无漏标；日志脱敏接线
+    完整；脱敏测试已按 `DestinationKindSchema.options` 参数化；一次性 token 只在 React state。
+- `ui-triage`：`defer`（理由见上）。
+
+### EXPERT_PANEL
+
+- 本轮无新的裁决事项；SEC-22 / SEC-23 / SEC-26 维持既有 EXPERT_PANEL 状态。
+
+### 发布决策
+
+（待补）
+
+### 下一轮优先项
+
+1. REQ-238（29）路由行一键临时静默。
+2. SEC-32 转义 JSON 漏脱敏 + SEC-31/SEC-20 残余（AUTO_FIX 安全增强）。
+3. REQ-239（28）多关键词 AND 搜索。
+4. REQ-235（27）投递暂停记录原因；REQ-24（28）抑制窗口汇总。
+5. `docs-drift`（轮转车道）。
+
 ## 2026-10-23（第 86 轮）
 
 - 时间：2026-10-23 05:42 CST 起。
