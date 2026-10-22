@@ -68,11 +68,12 @@
 - 门槛：`025ac9b`/`e87cae4` 的 main CI 与 E2E 在专家审计时为 pending，打 tag 前复核为 success；
   无 open PR；无 revert；`beta.64..e87cae4` 的 migrate 目录、`Dockerfile`、`docker-compose.yml`、
   `.env.example` 零变化。
-- 版本：`0.1.0-beta.65`；release PR `chore(release): v0.1.0-beta.65`。
-- tag 指向 release PR 合并后的 main commit（CI/E2E 全绿后创建）；
-  GitHub Release 为 prerelease 且 body 非空。
+- 版本：`0.1.0-beta.65`；release PR #385（`chore(release): v0.1.0-beta.65`）rebase 合并为
+  `cf25272`，其 `CI` 与 `E2E` 均 success。
+- tag：`v0.1.0-beta.65`（annotated，指向 `cf25272`）；GitHub Release 已创建
+  （prerelease，body 非空）。
 - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.65`
-  （linux/amd64 + linux/arm64）；回滚镜像 `0.1.0-beta.64`。
+  （linux/amd64 + linux/arm64，index digest `sha256:08bcfa7e…`）；回滚镜像 `0.1.0-beta.64`。
 - 升级/回滚：无 migration、无环境变量/配置格式/启动参数变化；回滚仅需换回旧镜像，无需数据修复。
 
 ### 下一轮优先项
