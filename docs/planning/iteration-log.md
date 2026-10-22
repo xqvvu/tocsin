@@ -2,6 +2,93 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 80 轮）
+
+- 时间：2026-10-22 20:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `32f7fcf`；main CI 最近 3 次 success；无 open PR；
+  `v0.1.0-beta.61` 的 tag 与 GitHub Release 均已存在，无待补建项。
+- 类型：**需求切片 + 三车道审计 + 发布评估**（非 full-audit）。backlog 有多个 ≥27 候选
+  （UI-36、NEW-BP、REQ-223），按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  `release-infra`；并发 ≤3。
+- `requirements` 车道运行 12 分钟仍在读取基线（只返回「开始读取」），按限时纪律终止，
+  本轮无新候选；连续第 2 轮（第 78、80 轮）出现同一停滞，下一轮需缩小扫描范围或拆分执行。
+- 车道轮转位置：**`security-exposure`**（`release-infra` 已在本轮执行；下一轮从
+  `security-exposure` 起）。
+- `ui-triage`：**`defer`** —— 距上次评审 0.7h（`last_ui_review_at` 2026-10-22 19:45）；
+  自评审以来 UI 路径提交仅 1 个（`48e0e74`）；22 条未解决 `UI-` 发现全部是上一轮评审自身
+  产出，无新增；最近的 UI 合并均有隔离实例浏览器记录；静态扫描无系统性断裂。
+  再触发条件：满 48h（2026-10-24 19:45）、≥3 个 UI 提交、新增 ≥2 条 UI 发现、存量 >22、
+  或出现新的 HIGH UI 发现。
+- `last_ui_review_at`：**2026-10-22 19:45 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、自查均在会话工作树
+  `vigorous-allen-df00eb`。工作树已清理。
+- 依赖：会话工作树缺 `@rolldown/plugin-babel` 链接，`vp install --frozen-lockfile --force`
+  （6.1s，热 store）修复。
+
+### 本轮交付
+
+- PR #367 `docs(release): refresh release checklist baselines`（rebase 合并 `ada8f2a`）。
+  - tag 数 51 → 53、最新版本 beta.59 → beta.61、核实基线 → `32f7fcf`；部署文档 Node
+    版本 `26.12.0` → `26.12.1`（实测 `.node-version`）。
+  - 验证：`vp fmt --check` 通过（824 files）。
+- PR #368 `fix(console): show the one-time source token and report copy failures`（**open**）。
+  - 成功面板渲染一次性 Token（只读、等宽、可全选），增加「我已保存」显式关闭；
+    `copyText` 改为 Clipboard API → textarea + `execCommand` → 抛错；面板失败分支改
+    `toast.error` 并给出「请手动选中内容后复制」。
+  - 新增 `browser.test.ts`（5 项）与 `source-token-notice-panel.test.tsx`（5 项）；
+    同步 E2E 断言；AGENTS.md 记录一次性展示例外。
+  - 验证：`vp check` 0 errors（18 个既有 warning）；`vp run -r test` 170 文件 / 898 项；
+    `vp run -r build` 通过；code-review（low）无发现。
+  - 浏览器实测（隔离 `localhost:6207` + 临时 SQLite）：创建告警源后 Token 可见
+    （`tocsin_src_tXwLFEyx7HKzdXA1Da_-3jE_d5xZ2nrj`）；强制 `writeText` 拒绝 +
+    `execCommand=false` 后点击「复制 Token」出现「复制失败 / 请手动选中内容后复制」，
+    无成功提示；点击「我已保存」后 Token 从 DOM 消失。
+  - **CI 卡住**：`check · test · build` 在 `Install system deps` 停留 26+ 分钟（runner
+    基础设施问题，非代码失败）。按第 8 步有界等待规则保留 open PR，下一轮继续。
+
+### 专家发现
+
+- `requirements`：无输出（超时终止）。
+- `ui-triage`：`defer`，理由与再触发条件见上。
+- `release-infra`：
+  - HIGH：仓库仍无 E2E workflow，唯一 workflow 是 `.github/workflows/ci.yml:16-50`
+    （`vp check` / `vp run -r test` / `vp run -r build`）；`docs/release/mvp-rc-checklist.md:129`
+    未勾。→ REL-21。
+  - MEDIUM：`just e2e` 不安装 Playwright 浏览器（`Justfile:77-79`），干净机器/CI 会因
+    revision 不匹配失败；`playwright.config.ts:26,33,34,41` 仍用 `127.0.0.1` 且探针等
+    `/api/health` 而非 `/api/ready`。→ REL-7（已有条目，本轮补证据）。
+  - MEDIUM：`release-checklist.md` 版本/tag 数过期两版（已由 #367 修复）。
+  - MEDIUM：dedupe 清理仍是无界 `DELETE FROM delivery_dedupe_keys`
+    （`delivery.helpers.ts:107-108`，由 `delivery.repository.ts:101` 在入队热路径调用），
+    RC gate 171 的未勾状态准确。
+  - MEDIUM：provider 无 fixture 目录，6 个 adapter 共 19 处内联 payload（如
+    `packages/providers/src/alertmanager/index.test.ts:15`）。→ REL-24（已有条目）。
+  - LOW：部署文档 Node 版本过期（已由 #367 修复）；CI 同时用 apt 与 `npm -g` 安装
+    node-gyp（`.github/workflows/ci.yml:29,40`）；Docker smoke 卷隔离与多平台构建参数
+    核实无问题。
+- `EXPERT_PANEL`（UI-36）：安全、产品、评估三位专家独立评估后**一致同意**方案
+  A+B+C+D（展示一次性 Token + 复制降级 + 错误提示 + 测试），并要求在 AGENTS.md 记录
+  一次性展示例外、同步 E2E 断言、jsdom 显式 stub。决策记录：
+  `docs/planning/decisions/source-token-once-display.md`。
+
+### 发布决策
+
+- **本轮不发布**：唯一用户可见变更（PR #368）仍在 open 状态且 CI 未完成；#367 仅为
+  docs/chore。无 tag、无镜像推送。
+
+### 下一轮优先项
+
+1. 推进 PR #368：先查 runner 卡在 `Install system deps` 的原因；必要时 rerun。合并后把
+   UI-36 / Q-38 标为 shipped。
+2. `security-exposure` 车道（轮转位置）：SEC-30/SEC-31、`.server`/`.client` 标记复核。
+3. REL-21 + REL-7：E2E workflow 与 `playwright install chromium`；提交前必须本地跑通
+   `just e2e`；同时把 `127.0.0.1` 改为 `localhost`、探针改 `/api/ready`。
+4. UI-37/38/39 三个低成本一致性项可合为一个 chore 切片。
+5. REQ-223：术语收口「已抑制 → 已静默」。
+6. `requirements` 车道连续停滞：下一轮改为先给 3 个具体文件范围、限时 10 分钟。
+
 ## 2026-10-22（第 79 轮）
 
 - 时间：2026-10-22 19:26 CST 起。
