@@ -477,7 +477,7 @@
 | REQ-181 | 删除配置前披露将级联删除的事件与投递数 | requirements lane（第 45 轮） | 27 | candidate | — | schema 级联删除 Events/Deliveries（`schema.ts:66,114-119`），三个删除确认框只有定性文案；复用 `operations.list` 的 `total`（`history.interface.ts:24,36-41`），对话框打开时惰性计数；无迁移 |
 | REQ-182 | 通知目标测试发送前确认发送去向 | requirements lane（第 45 轮） | 27 | candidate | — | 测试按钮直接真实发送（`destination-actions.tsx:57-70`、`destination.service.ts:153`），飞书/Slack 测试消息不可撤回；新增确认框展示名称/kind/脱敏去向；纯前端 |
 | REQ-183 | 飞书应用测试结果可复核 | requirements lane（第 45 轮） | 26 | candidate | — | 测试结果只走 toast（`feishu-apps-page.tsx:84-95`），`FeishuAppTestResult` 无状态/时间/复制结构（`feishu-app.ts:39-43`）；失败原因一闪而过；结果对话框 + 复制 + 重试 |
-| REQ-184 | 静默列表显示命中投递数与最近命中时间 | requirements lane（第 45 轮） | 25 | candidate | — | 列表无命中信息（`suppressions-section.tsx:92-132`），只能进详情看；列表 DTO 加 `hitCount/lastHitAt`，一次 `LEFT JOIN deliveries` 聚合；无迁移 |
+| REQ-184 | 静默列表显示命中投递数与最近命中时间 | requirements lane（第 45 轮） | 25 | candidate | — | 列表无命中信息（`suppressions-section.tsx:92-132`），只能进详情看；列表 DTO 加 `hitCount/lastHitAt`，一次 `LEFT JOIN deliveries` 聚合；无迁移。第 75 轮建议：把「从未命中」健康徽标并入本项作为派生展示（长期 0 命中通常意味着 matcher 写错或已过期），不另开编号 |
 | REQ-185 | 停用配置前展示排队投递数与实际发送行为 | requirements lane（第 46 轮） | 29 | shipped | #248 | 第 47 轮交付：三个停用确认框在说明下显示「排队中的投递：N 条」，按 `sourceId`/`routeId`/`destinationId` + `deliveryState=pending` 读取 `operations.list` 的 `total`（`limit:1`、15s 缓存、仅确认框打开时查询）；失败/加载中不渲染且不阻塞；PRD `docs/prd/queued-deliveries-before-disable.md`；浏览器实测 1 条与 0 条两个作用域 |
 | REQ-186 | 设置页从文件导入 TOML/JSON | requirements lane（第 46 轮） | 28 | shipped | #264 | 页脚「从文件载入」把 `.toml`/`.json` 读入当前草稿，不自动导入；>1 MiB 或空白文件拒绝且不改草稿；`readTextFile` 与 `downloadTextFile` 同边界；PRD `docs/prd/settings-file-import.md`；第 52 轮浏览器实测未应用文件中的 45 天保留期 |
 | REQ-187 | 通知目标签名密钥显式清除 | requirements lane（第 46 轮） | 27 | candidate | — | AGENTS 要求 preserve/replace/clear，实际只有前两者（`destination-form.ts:521-533`、`destination.service.ts:94-114`、`configuration-commands.ts:63-69`）；新增 `clearSigningSecret` 位，合并后删除 `signSecret` 与 ref；与 REQ-125/REQ-71 同一模式 |
@@ -586,10 +586,12 @@
 | ARCH-50 | `DashboardNavigationSkeleton` 未按 `Component.Skeleton` 暴露 | architecture lane（第 74 轮） | 20 | candidate | — | `shell/dashboard-navigation.tsx:186` 具名导出，`shell/dashboard-layout.tsx:15,43` 直接导入；AGENTS.md 要求骨架作为静态属性挂在对应组件上；纯重构 |
 | ARCH-51 | `getSqliteStore()` 隐式启动两个后台 worker | architecture lane（第 74 轮） | 26 | candidate | — | `server/runtime/container.ts:205-210` 在 `getSqliteStore()` 内 `void ensureDeliveryWorkerRunner()/ensureOncallWorkerRunner()`，所有 `create*Service`（`:233-367`）都会触发，只读过程也会启动循环；建议上移到 bootstrap 或显式 `ensureWorkers()`；启动时机变化 → EXPERT_PANEL |
 | UI-35 | 事件详情 SSR hydration mismatch | 浏览器实测（第 74 轮） | 24 | candidate | — | 隔离实例打开 `/events/$eventId` 时 console msgid 111 报 `Hydration failed ... server rendered text didn't match the client`，栈指向 `TabsContent value="normalized"`（`features/events/ui/event-detail-page.tsx` 一带）；随后 msgid 112-130 为其级联；未确认是否与时间格式化/时区有关，下一轮先在 `origin/main` 上复现再定责 |
-| NEW-BK | 全局投递暂停的操作者与最近一次暂停区间 | requirements lane（第 74 轮） | 28 | candidate | — | 暂停/恢复只发 `{deliveryPaused}`，不带 actor；仓储恢复时清空 `delivery_paused_at`（`settings.repository.ts:63-79`、`settings.helpers.ts:8-9`），DTO 只有两个字段（`packages/core/src/configuration/configuration-results.ts:19-21`、`packages/api/src/schemas/settings.ts:9-10`）；建议 settings KV 增加只读 `lastDeliveryPause{pausedAt,pausedBy,resumedAt,resumedBy}`，actor 只从 session 取；只保留最近一次区间，完整历史交给 REQ-85；无迁移/无投递语义变化 |
+| NEW-BK | 全局投递暂停的操作者与最近一次暂停区间 | requirements lane（第 74 轮） | 28 | shipped | #352 | 第 75 轮交付：settings KV 新增 `delivery_paused_by` 与 `delivery_pause_last`（JSON，无迁移）；暂停/恢复从已验证 session 记录操作者，恢复时持久化 `{startedAt,endedAt,pausedBy,resumedBy}`；`AppSettings`/oRPC 新增只读 `deliveryPausedBy`、`lastDeliveryPause`；设置页面板显示「自 … 起暂停 · 操作者 …」与「最近一次暂停：… – … · 操作者 …」；PRD `docs/prd/delivery-pause-attribution.md`；隔离实例 6203 浏览器实测暂停/恢复文案与 toast，无 console 错误 |
 | NEW-BL | 加急（电话）Worker 健康投影 | requirements lane（第 74 轮） | 27 | candidate | — | `OncallWorker.getHealth()` 已存在但无生产消费者（`oncall-worker.service.ts:47-49`、`oncall-worker.service.types.ts:32-37`）；`/api/ready` 只 ensure delivery runner（`routes/api/ready.ts:26`），`operations.runDeliveryWorker` 只返回 delivery health（`server/orpc/features/operations/router.ts:68-81`）；新增只读 `operations.getOncallWorkerHealth` + Settings 区块；与 REQ-11 若同时落地可合并 |
 | NEW-BM | 静默命中列表按目标/状态/关键词筛选 | requirements lane（第 74 轮） | 26 | candidate | — | `SuppressionHitsInputSchema` 只有 id/page/limit（`packages/api/src/schemas/suppressions.ts:24-27`），UI 无筛选控件（`suppression-hits-table.tsx:23-31,99-106`），而底层 `history.listDeliveries` 已支持 `destinationId/state/q/since`（`history.repository.ts:280-305`）；只读契约扩展，无需新索引/迁移 |
 | NEW-BN | 证据包记录导出操作者 | requirements lane（第 74 轮） | 25 | candidate | — | `EvidenceBundle` 只有 `schemaVersion/kind/subjectId/exportedAt`（`features/operations/model/evidence-bundle.ts:27-34`），PRD `docs/prd/evidence-bundle-download.md:26-37` 让复核者凭这四项判断来源；dashboard session 已在 loader 加载（`routes/_dashboard.tsx:14-20`），可用已缓存数据加 `exportedBy{id,name}`，不新增 oRPC/服务端 DTO；纯前端 |
+| REQ-222 | Raw payload 保留期缩短的影响预览与清理边界 | requirements lane（第 75 轮） | 24 | candidate | — | 偏好面板保存后直接 `hardReloadPage()`（`settings-preferences-panel.tsx:60-65`），存储面板只投影库大小/表计数/最早最新事件（`settings-storage-panel.tsx:10-19,44-70`），缩短保留期会静默让仍在排障的事件失去载荷；建议 `settings.getStorage` 增加 cleanup cutoff 与待清理计数，偏好面板在缩短时显示非阻塞影响提示；不改 sweep 调度与保留语义（0 天归 REQ-194）、不备份载荷、无迁移 |
+| SEC-30 | 导出 secret 路径与 adapter manifest 缺一致性断言 | security-exposure lane（第 75 轮） | 20 | candidate | — | `config-portability.ts:442-455` 手写每种 destination 的 secret 路径，`packages/destinations/src/*/manifest.ts` 已声明 `secretFields`，registry 自检（`registry.ts:100-107`）只校验注册表；当前 4 种 kind 一致但无测试断言两者相等，给已有 kind 新增 secret 字段时可能明文进入 TOML/JSON 导出；参数化测试当前只覆盖 fixture 自列路径（`configuration.integration.test.ts:1517`）。补一条按 kind 比较 manifest `secretFields` 与导出剔除路径的测试即可 |
 
 ## 发布记录
 
@@ -646,6 +648,14 @@
 
 ## 下一轮优先项
 
+0. **第 75 轮交付**：NEW-BK（28）全局投递暂停的操作者与最近一次暂停区间（#352）。
+   下一优先：**NEW-BL（27）** 加急 Worker 健康投影；**Q-23（25）** dedupe cleanup 有界批；
+   **REL-7 bundle**（playwright install + `localhost` + `/api/ready`）；**NEW-BI / NEW-BD / NEW-BE（26）**
+   纯前端切片；**UI-35（24）** 先在干净 main 复现事件详情 hydration mismatch 再定责；
+   **SEC-30（20）** manifest/导出 secret 路径一致性测试；**REQ-222（24）** 保留期缩短影响预览；
+   **ARCH-51（26）** 交 EXPERT_PANEL（worker 启动时机）；**ARCH-47（24）** 拆 `operation-filters.tsx`。
+   车道轮转：第 75 轮 `security-exposure` 已跑，下一轮非必跑车道为 **`release-infra`**。
+   `ui-triage` 第 75 轮 **`defer`**，`last_ui_review_at` = 2026-10-22 09:30 CST。
 0. **第 74 轮交付**：REQ-22（28）补投预览目标级明细与执行范围一致（#349）+ `v0.1.0-beta.57` 发布。
    下一优先：**NEW-BK（28）** 暂停操作者与最近区间；**NEW-BL（27）** 加急 Worker 健康投影；
    **Q-23（25）** dedupe cleanup 有界批；**REL-7 bundle**（playwright install +

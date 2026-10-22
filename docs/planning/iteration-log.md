@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 75 轮）
+
+- 时间：2026-10-22 15:50 – 16:25 CST。
+- 基线：本轮开始时 `origin/main` @ `be9a6b5`；main CI 最新一次（docs 提交）为 in_progress，
+  上一个 release 提交为 success；无 open PR；最近 10 个 tag 与 Release 一一对应，无待补建项。
+- 类型：**需求切片 + 两车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  `security-exposure`；并发始终 ≤3。
+- 车道轮转位置：**`release-infra`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 6h20m（< 48h）；09:30 后 10 个 UI 路径合并全部有
+  浏览器验证记录，未验证合并 0；未解决 `UI-` 候选 19 条（阈值 >20），自上次评审新增仅 UI-35
+  （阈值 ≥2）。再触发条件：2026-10-24 09:30 满 48h、未验证 UI 合并 ≥3、新增 UI 候选 ≥2
+  或存量 >20。另校正 UI-35 的定位为 `features/events/ui/event-detail-view.tsx:41`。
+- `last_ui_review_at`：**2026-10-22 09:30 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器检查均在会话工作树
+  `dazzling-turing-291a29`。工作树已清理。
+- 依赖：会话工作树 `node_modules` 缺 `@types/node` 等链接（`vp check` 报 3878 个错误），
+  `vp install --frozen-lockfile --force`（5.8s，热 store）修复。
+
+### 本轮交付
+
+- PR #352 `feat(console): record who pauses and resumes delivery`（NEW-BK，28 分）。
+  - `settings` KV 新增 `delivery_paused_by` 与 `delivery_pause_last`（JSON），无迁移；
+    `SettingsUpdateInput` 与只读投影分离，避免派生字段被写回。
+  - 暂停记录 session 邮箱，重复暂停保留首次时间与操作者；恢复持久化
+    `{startedAt,endedAt,pausedBy,resumedBy}` 并清空实时字段。
+  - `AppSettings` / oRPC 输出新增只读 `deliveryPausedBy`、`lastDeliveryPause`；设置页暂停面板
+    显示「自 … 起暂停 · 操作者 …」与「最近一次暂停：… – … · 操作者 …」，操作者缺失时退化文案。
+  - 操作者只从 `context.dashboardRequest.currentUser.email` 注入；浏览器不提交。
+  - 新增仓储/集成/组件测试 3 组；PRD `docs/prd/delivery-pause-attribution.md`。
+  - 验证：`vp check` 0 errors（18 个既有 warning）；`vp run -r test` 164 文件 / 872 项；
+    `vp run -r build` 通过。隔离实例 `localhost:6203` + 临时 SQLite（owner
+    `admin@example.test`）浏览器实测：暂停后显示「自 2026/10/22 07:57:51 起暂停 ·
+    操作者 admin@example.test」，恢复确认后显示「最近一次暂停：2026/10/22 07:57:51 –
+    07:58:03 · 操作者 admin@example.test」+「已恢复出站投递」toast，console 无错误；
+    截图 `/tmp/tocsin-pause-attr-verify.png`（未入库）。
+
+### 专家发现
+
+- `requirements`：backlog 已饱和（401 条 candidate），本轮只新增 **REQ-222（24）**
+  Raw payload 保留期缩短的影响预览与清理边界（`settings-preferences-panel.tsx:60-65`、
+  `settings-storage-panel.tsx:10-19,44-70`，代码已核实）。另建议把静默规则「从未命中」
+  健康徽标并入 **REQ-184**（`suppressions-section.tsx:92-132`，代码已核实），不另开编号。
+- `security-exposure`：
+  - **SEC-30（20，新增）** 导出 secret 路径与 adapter manifest 缺一致性断言
+    （`config-portability.ts:442-455`、`packages/destinations/src/*/manifest.ts`、
+    `registry.ts:100-107`、`configuration.integration.test.ts:1517`，代码已核实）。
+  - 无新发现的检查项：`isSensitiveKey` 已覆盖
+    `appSecret/clientSecret/apiSecret/privateKey/X-Auth-Token/Authorization/token/password`
+    （`packages/core/src/redaction.ts:13-77`）；写入/读取/传输/导出/日志/证据包路径均已脱敏；
+    参数化导出测试按 registry kinds（`configuration.integration.test.ts:24,162-168`）；
+    25 个 server-only + 9 个 client-only 标记无漏标/过度预标；oRPC 无 token hash / 签名密钥 /
+    appSecret 直取；`github.com/xqvvu/vane` 失效引用为 0（ACR 镜像坐标属正确用法）。
+- `ui-triage`：见上。
+
+### EXPERT_PANEL
+
+- 本轮无裁决事项。ARCH-51（worker 启动时机）仍未裁决，留待后续轮次。
+
+### 发布决策
+
+- 见本轮发布评估：本轮变更为用户可见功能（暂停操作者与最近区间），满足发版门槛时按第 9.5 步执行。
+
+### 下一轮优先项
+
+1. **NEW-BL（27）**：加急 Worker 健康只读投影（复用 `DeliveryWorkerHealthSnapshot`）。
+2. **Q-23（25）**：dedupe cleanup 改有界批删除。
+3. **UI-35 复现与定责**：先在干净 main 上打开事件详情确认 hydration mismatch 是否既有，
+   定位点 `features/events/ui/event-detail-view.tsx:41`。
+4. **SEC-30（20）**：manifest/导出 secret 路径一致性参数化测试（AUTO_FIX）。
+5. 下一轮非必跑车道：**`release-infra`**。
+
 ## 2026-10-22（第 74 轮）
 
 - 时间：2026-10-22 14:26 – 15:35 CST。
