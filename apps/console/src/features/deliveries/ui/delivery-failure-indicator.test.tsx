@@ -11,13 +11,12 @@ import { AppIntlProvider } from "#/i18n/provider";
 const testState = vi.hoisted(() => ({
   total: 0,
   fail: false,
+  queryKey: ["test", "failed-deliveries"],
 }));
-
-const QUERY_KEY = ["test", "failed-deliveries"];
 
 vi.mock("#/features/operations/api/operations.queries", () => ({
   failedDeliveriesQueryOptions: () => ({
-    queryKey: QUERY_KEY,
+    queryKey: testState.queryKey,
     queryFn: async () => {
       if (testState.fail) {
         throw new Error("operations unavailable");
@@ -57,7 +56,7 @@ function renderIndicator(total: number) {
   });
 
   if (!testState.fail) {
-    queryClient.setQueryData(QUERY_KEY, { deliveries: { total } });
+    queryClient.setQueryData(testState.queryKey, { deliveries: { total } });
   }
 
   return render(
@@ -82,7 +81,9 @@ describe("delivery failure indicator", () => {
     const link = await screen.findByRole("link", { name: "Failed deliveries: 3" });
 
     expect(link.getAttribute("href")).toBe("/deliveries?deliveryState=failed&range=24h");
-    expect(link.getAttribute("title")).toBe("Delivery failed in the last 24 hours: 3");
+    expect(link.getAttribute("title")).toBe(
+      "Deliveries created in the last 24 hours include 3 failed",
+    );
   });
 
   it("renders nothing when nothing failed", async () => {

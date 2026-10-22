@@ -32,7 +32,7 @@ Deliveries 列表已经套用「失败 + 最近 24 小时」筛选，不需要�
   查询失败时隐藏。
 - 徽标链接到 `/deliveries?deliveryState=failed&range=24h`。
 - 客户端每 60 秒刷新一次，`staleTime` 30 秒。
-- 徽标 tooltip 说明统计窗口为最近 24 小时。
+- 徽标 tooltip 说明统计口径：最近 24 小时内创建、当前仍是失败状态的投递。
 
 ## 4. 非目标
 
