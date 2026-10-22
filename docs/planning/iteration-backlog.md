@@ -628,6 +628,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.64` | `d6758c7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.64`（linux/amd64 + linux/arm64，index digest `sha256:01fc9cb6…`） | 相对时间窗锚定（#378，REQ-231）+ PEM/SigV4 脱敏收口（#379，SEC-30）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.63` |
 | `0.1.0-beta.63` | `4e1a3da` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.63`（linux/amd64 + linux/arm64，index digest `sha256:0830ffc0…`） | 去重窗口判定 + 冲突替换 + 有界清理（#375，Q-23/Q-37）+ 预览/测试载荷脱敏（#373，SEC-25）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.62` |
 | `0.1.0-beta.62` | `63c8931` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.62`（linux/amd64 + linux/arm64，index digest `sha256:b658c913…`） | 告警源一次性接入 Token 可见 + 复制失败真实提示（#368，UI-36/Q-38）；无迁移/配置/环境变量/依赖变化，回滚换回 beta.61 镜像即可 |
 | `0.1.0-beta.61` | `e9029d2` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.61`（linux/amd64 + linux/arm64，index digest `sha256:2b9c9712…`） | 事件详情代码块 SSR/水合首帧一致（#363，UI-35）；无迁移、无配置变化，回滚换回 beta.60 镜像即可 |
@@ -688,7 +689,9 @@
 - **第 85 轮更新（2026-10-23）**：交付 REQ-231 相对时间窗锚定（#378）与 SEC-30 脱敏键收口
   （#379）。下一优先：**REQ-232（27）** 投递按尝试次数筛选（证据已复核）、**REQ-233（27）**
   Events/Deliveries 同条件切换（纯前端、成本最低）、**Q-224** 老库索引迁移评估、
-  **REQ-227（27）** 失效筛选引用、**REL-22** E2E 覆盖。发布：本轮评估后决定（见 iteration-log）。
+  **REQ-227（27）** 失效筛选引用、**REL-22** E2E 覆盖。发布：**`0.1.0-beta.64` 已发布**
+  （tag `v0.1.0-beta.64` → `d6758c7`，镜像 index digest `sha256:01fc9cb6…`；回滚镜像
+  `0.1.0-beta.63`）。
   车道轮转：第 85 轮跑 requirements + ui-triage + security-exposure，下一轮非必跑车道为
   **`docs-drift`**。`last_ui_review_at` 未变（2026-10-22 19:45 CST）。
 - **第 84 轮更新（2026-10-23）**：Q-23 + Q-37 三步修复按第 83 轮 EXPERT_PANEL 决策落地
