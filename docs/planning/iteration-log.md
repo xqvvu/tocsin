@@ -2,6 +2,97 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 78 轮）
+
+- 时间：2026-10-22 18:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `9ef541d`；main CI 最近 3 次 success；无 open PR；
+  `v0.1.0-beta.59` 的 tag 与 GitHub Release 均已存在，无待补建项。
+- 类型：**需求切片 + 两车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  `security-exposure`；并发 ≤3。
+- `requirements` 车道运行约 15 分钟仍停在读取基线（仅返回一句「开始读取」），按限时纪律终止，
+  本轮无新候选产出，留待下一轮。
+- 车道轮转位置：**`release-infra`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 8h57m（< 48h）；09:30 后 11 个 UI 提交中 9 个有
+  隔离实例/截图验证，未验证 ≤2 个（`777147e` 侧边栏命中、`a5d8b51` 导航图标）；未解决
+  `UI-` 存量 19 条（≤20）；自上次评审新增未解决 UI 发现 1 条（UI-35 < 2）；静态浏览无系统性
+  断裂，仅 `destinations-empty-state.tsx:16` 缺 `EmptyContent` 且 padding 与
+  `sources-empty-state.tsx:25` 不一致（约 20 分，未达触发线）。
+  再触发条件：2026-10-24 09:30 CST 满 48h、未验证 UI 合并 ≥3、新增 UI 发现 ≥2、
+  存量 >20、UI-35 在干净 main 复现。
+- `last_ui_review_at`：**2026-10-22 09:30 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、自查均在会话工作树
+  `fervent-swartz-788729`。工作树已清理。
+- 依赖：会话工作树 `node_modules` 缺 `@rolldown/plugin-babel` 链接，
+  `vp install --frozen-lockfile --force`（6.1s，热 store）修复。
+
+### 本轮交付
+
+- PR #360 `feat(console): search events and deliveries by idempotency key`（NEW-BT，27 分）。
+  - 两个搜索谓词增加 `events.idempotency_key LIKE ? ESCAPE '\'`
+    （`history.repository.ts:457,489`），事件列表与投递列表都能用幂等键反查；列表与 `total`
+    继续共用同一谓词。
+  - 中英搜索占位文案加入「幂等键 / idempotency key」，并同步
+    `operation-filters.test.tsx` 的断言。
+  - `redactEventRecord` 注释改为「匹配原始值、DTO 投影仍脱敏」，与 title/message/fingerprint
+    的既有规则一致。
+  - 新增搜索测试：事件/投递列表命中、`total` 一致、`_` 按字面量匹配（带连字符诱饵）。
+  - PRD `docs/prd/idempotency-key-search.md`。
+  - 验证：`vp check` 0 errors（18 个既有 warning）；`vp run -r test` 167 文件 / 885 项；
+    `vp run -r build` 通过；PR CI `check · test · build` 通过（2m31s）。
+  - 自查（code-review，low）：无发现。
+
+### 专家发现
+
+- `requirements`：车道超时终止，无产出。
+- `ui-triage`：见上；未新增未解决 UI 发现。
+- `security-exposure`：
+  - **SEC-26（MEDIUM，仍存在）**：`destination.helpers.ts:63,289-303` 仍返回完整 webhook URL
+    （Slack/Feishu path token、generic `?token=`/`?sig=`），并随 5 个 SSR loader 预取的
+    `destinations.list` 进入 dehydrated 数据；与 `docs/architecture/frontend-architecture.md:440-442`
+    的「endpoint 可见」决策冲突 → EXPERT_PANEL。
+  - **SEC-22（MEDIUM，部分修复）**：list/detail 已剥离 userinfo 密码
+    （`destination.helpers.ts:63,346-363`）；编辑草稿 `:116,129` 仍原样返回，经
+    `destination.service.ts:144-150` 的 `getTemplateDraft` 进入编辑表单
+    （`edit-destination-form.tsx:96-100`），需 preserve/replace/clear 语义 → EXPERT_PANEL。
+  - **SEC-23（MEDIUM，仍存在）**：`redaction.ts:265-277` 保留 `fingerprint` 原值；列表
+    （`history.repository.ts:130`）、详情（`event-normalized-tab.tsx:45-47`）、补投
+    （`event-replay.service.ts:322`）与外发（`template.ts:152,383`、`delivery-execution.ts:97`）
+    均未投影 → EXPERT_PANEL。
+  - **SEC-25（LOW，仍存在）**：`destination.service.ts:202,314,326,340` 四处 renderedPayload
+    仍无 `redactJsonText` 投影，属边界不对称；AUTO_FIX 仍开放。
+  - **SEC-31（新增，LOW，22 分）**：预签名 URL 查询凭据（`X-Amz-Signature`、
+    `X-Goog-Signature`、Azure SAS `sig`）不命中 `isSensitiveKey`
+    （`packages/core/src/redaction.ts:58-76`），告警正文/raw payload/response body 中的
+    预签名 URL 会原样进入详情与证据包；AUTO_FIX。
+  - 已核验干净：server-only 标记、Source token/tokenHash 不出现在 list/detail、
+    Feishu `appSecret` 只在服务端、日志/审计无凭据回显、旧仓库名无失效引用。
+- `release-manager` / `release-blocker` / `release-ops`：三人一致**赞成发布** `0.1.0-beta.60`，
+  详见下方发布决策。
+
+### EXPERT_PANEL
+
+- 本轮无裁决事项。SEC-22 / SEC-23 / SEC-26 继续留在 backlog（candidate），
+  下一轮或专门轮次交专家小组。
+
+### 发布决策
+
+- **发布 `0.1.0-beta.60`**：三位专家一致通过。自 `v0.1.0-beta.59` 以来有两个用户可见变更：
+  查询缓存 15s 新鲜期（#358，`aba053a`）与事件/投递按幂等键搜索（#360）。
+  `origin/main` 与 #360 的 CI 均为 success；无其他 open PR；migration 目录零改动；
+  Dockerfile/环境变量/依赖均无变化。回滚镜像 `0.1.0-beta.59`。
+  版本递增、tag、Release 与镜像推送记录见本轮 release 记录。
+
+### 下一轮优先项
+
+1. **NEW-BP（27）**：控制台基线安全响应头（先 curl 核对 Nitro 默认头）。
+2. **NEW-BV（26）**：后台 Worker 失败顶栏常驻可见。
+3. **SEC-31 / SEC-25**：两个 AUTO_FIX（脱敏覆盖）。
+4. **Q-223（24）**：定位 `settings/get`、`suppressions/list` 每次加载各两次的真实原因。
+5. **UI-35（24）**：干净 main 上复现事件详情 hydration mismatch（嫌疑 `code-block.tsx` 模块级缓存）。
+6. 下一轮非必跑车道：**`release-infra`**。
+
 ## 2026-10-22（第 77 轮）
 
 - 时间：2026-10-22 17:26 – 18:45 CST。
