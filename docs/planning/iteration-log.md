@@ -79,7 +79,18 @@
 
 ### 发布决策
 
-- 本轮发布评估在 PR #340 合并后执行；结果见后续 `docs(planning)` 记录。
+- **已发布 `v0.1.0-beta.55`**：三位发布专家一致 APPROVE。
+  - 发布经理：`v0.1.0-beta.54..origin/main` 的用户可见变更是 #340（事件详情投递表静默列），
+    其余 3 个提交为 docs 与等价样式重构；建议预发布递增。
+  - 发布阻断审计员：目标 `03bec20` 的 main CI success、无 open PR、最近 10 次 main 运行全绿、
+    区间内 `migrate/` 零改动；`REL-13`（LICENSE）按惯例不阻断。
+  - 运维/回滚专家：无 schema、无配置/环境变量/启动参数、无依赖变化；回滚只需换回
+    `0.1.0-beta.54` 镜像，SQLite 向前兼容。
+- 版本变更走 PR #341 `chore(release): v0.1.0-beta.55`（rebase 合并 `03bec20`）。
+- tag：`v0.1.0-beta.55`（annotated，指向 `03bec20`）；
+  Release：<https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.55>（body 已校验非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.55`，
+  linux/amd64 + linux/arm64，index digest `sha256:8702bda7…`；回滚镜像 `0.1.0-beta.54`。
 
 ### 下一轮优先项
 
