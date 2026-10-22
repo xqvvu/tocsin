@@ -17,7 +17,7 @@
   未复验 UI 合并 ≥3、新增 UI 发现 ≥2、candidate ≥25，或出现新的 HIGH 可复现缺陷。
 - `last_ui_review_at`：**2026-10-22 19:45 CST**（未变，本轮未做 UI 评审）。
 - 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证在会话工作树
-  `friendly-saha-d4e548`。工作树已清理。
+  `friendly-saha-d4e548`。工作树将在本轮收尾阶段清理。
 
 ### 本轮交付
 
@@ -60,7 +60,23 @@
 
 ### 发布决策
 
-（待补）
+- 三位专家（发布经理 / 阻断审计 / 运维回滚）**一致赞成发布 `0.1.0-beta.66`**；
+  阻断审计在 E2E 完成前持 HOLD，`4dc081c` 的 `CI` 与 `E2E` 均 success 后条件满足。
+- 用户可见变更（自 `v0.1.0-beta.65`）：PR #386 顶栏投递失败指示器（REQ-166）；
+  PR #387 为纯文档，不单独触发发版。
+- 门槛：`4dc081c` 的 `CI` 与 `E2E` 均 success；无其他 open PR（仅本轮日志 PR #387）；
+  无 revert；`beta.65..4dc081c` 的 migrate 目录、`Dockerfile`、`docker-compose.yml`、
+  `.env.example`、锁文件零变化。
+- 版本：`0.1.0-beta.66`；release PR #388（`chore(release): v0.1.0-beta.66`）rebase 合并为
+  `4dc081c`。
+- tag：`v0.1.0-beta.66`（annotated，指向 `4dc081c`）；GitHub Release 已创建
+  （prerelease，body 非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.66`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:4671822e368483dcb7a15d28f2402d6cd645bf3ea75a2cb474ce0184b2647f35`）；
+  回滚镜像 `0.1.0-beta.65`。
+- 升级/回滚：无 migration、无环境变量/配置格式/启动参数变化；回滚仅需换回旧镜像，
+  无需数据修复。
 
 ### 下一轮优先项
 
