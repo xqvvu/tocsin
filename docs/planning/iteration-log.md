@@ -2,6 +2,85 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 76 轮）
+
+- 时间：2026-10-22 16:20 – 17:05 CST。
+- 基线：本轮开始时 `origin/main` @ `2aaf10e`；main CI 最近 3 次均为 success；无 open PR；
+  `v0.1.0-beta.58` 的 tag 与 GitHub Release 均已存在，无待补建项。
+- 类型：**需求切片 + 两车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  `release-infra`；并发始终 ≤3。
+- 车道轮转位置：**`docs-drift`**（下一轮非必跑车道；release-infra 复验出的 REL-29/REL-30 也归它）。
+- `ui-triage`：**`defer`** —— 距上次评审约 7.5h（< 48h）；09:30 后 11 个 UI 路径合并全部有
+  浏览器验证记录，未验证合并 0；自上次评审新增未解决 `UI-` 发现仅 UI-35（1 条 < 2）；
+  存量 `UI-` candidate 19 条（≤20）。再触发条件：2026-10-24 09:30 满 48h、
+  未验证 UI 合并 ≥3、新增 UI 候选 ≥2 或存量 >20。`ui-triage` 建议下轮在干净 main 上复现
+  UI-35 的 hydration mismatch（`features/events/ui/event-detail-view.tsx:41`）。
+- `last_ui_review_at`：**2026-10-22 09:30 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器检查均在会话工作树
+  `keen-meninsky-8cc682`。工作树已清理。
+- 依赖：会话工作树 `node_modules` 缺 `@rolldown/plugin-babel` 链接，`vp install
+  --frozen-lockfile --force`（5.9s，热 store）修复。
+
+### 本轮交付
+
+- PR #355 `feat(console): project background worker health in settings`（NEW-BL，27 分）。
+  - 新增只读 `settings.getWorkerHealth`，同时投影投递与加急 runner 的
+    `{started,state,lastStartedAt,lastFinishedAt,lastError,lastRun}`；
+    `started=false` 表达「进程内 runner 尚未装配」，读取过程刻意不调用
+    `ensure*WorkerRunner()`，也不碰 store。
+  - `WorkerHealthService` 注入两个 runner 读取函数；`lastError` 在服务层再次 `redactText`，
+    `lastRun` 字段逐个映射（`paused` 仅在存在时输出）。
+  - 设置页新增「后台 Worker」两列面板：状态、上次开始/完成、运行计数、上次错误；
+    手动刷新一并刷新 `worker-health` 查询键。
+  - PRD `docs/prd/worker-health-projection.md`；新增 service/容器装配/面板/鉴权清单/失效测试。
+  - 验证：`vp check` 0 errors（18 个既有 warning）；`vp run -r test` 166 文件 / 881 项；
+    `vp run -r build` 通过。隔离实例 `localhost:6204` + 临时 SQLite（owner
+    `admin@example.test`）浏览器实测：两 Worker 均显示「空闲」、上次开始/完成时间、
+    「领取 0 · 回收 0 · 成功 0 · 失败 0 · 重试 0」「无错误」，console 无 error/warning；
+    截图 `/tmp/tocsin-worker-health-verify.png`（未入库）。
+  - 自查（code-review，low）：发现未启动分支返回模块级共享常量对象，已改为每次返回副本并复跑测试。
+
+### 专家发现
+
+- `requirements`：backlog 已饱和，只新增 5 条代码可核实的新候选（NEW-BO..NEW-BS）：
+  - **NEW-BO（28）** `QueryClient` 默认 `staleTime: 0`，loader 预取后 hydration 立即重复请求
+    （`router.tsx:11`、`routes/_dashboard.events.tsx:17-23`、`operations.queries.ts:62-73`）。
+  - **NEW-BP（27）** 缺少基线安全响应头（`start.ts:4-8`，
+    `docs/release/docker-production-deployment.md:12-23`）。
+  - **NEW-BQ（26）** 投递详情顶栏把失败原因塞进不换行 Badge，长错误横向溢出
+    （`delivery-detail-summary.tsx:38-40`、`components/ui/badge.tsx:8`）。
+  - **NEW-BR（25）** 历史列表全表扫描 + TEMP B-TREE，需先分页后聚合与排序索引
+    （`history.repository.ts:92-95,263-265`、`migrate/schema.ts:243-293`；本机实测 0.18–0.26s）。
+  - **NEW-BS（24）** 详情 DTO 内嵌完整 raw payload，应按需加载
+    （`packages/core/src/operations.ts:63-87,139-157`、`env.ts:33-38`）。
+- `release-infra`：逐条复验 RC 未勾 gate，未产生新编号——全部已存在：
+  - CI 仍只有 quality job，E2E 完全未接入（`.github/workflows/ci.yml:16-50`；
+    `apps/console/playwright.config.ts:8-9` 注释声称「its own workflow」与远端不符）→ REL-21/REL-22。
+  - 构建产物启动与文件型 SQLite migration 无 CI smoke（REL-5/REL-8）。
+  - `packages/providers/src/` 仍无 fixture 目录，payload 内联（REL-2/REL-24）。
+  - Docker smoke 隔离卷已修（REL-3 shipped），仍缺重启持久化与容器 healthcheck 断言
+    （`scripts/docker-smoke.sh:67-75,115-122`）→ REL-6/REL-26；固定宿主机端口 → REL-27。
+  - 分支保护为空（`gh api branches/main/protection` 404、rulesets `[]`）→ REL-16/REL-23。
+  - `just e2e` 缺 `playwright install`（`Justfile:78-79`）→ REL-7/REL-28。
+  - `docs/release/release-checklist.md:4,20,73-74` 仍冻结在 beta.54（实际 beta.58、50 个 tag）
+    → REL-29；`mvp-rc-checklist.md:171` 的 dedupe 行号漂移 → REL-30。
+  - 未发现「文档声称已做但 CI 未做」的虚假勾选；E2E/Docker smoke 的「本地人工 gate」措辞与现状一致。
+- `ui-triage`：见上。
+
+### EXPERT_PANEL
+
+- 本轮无裁决事项。ARCH-51（worker 启动时机）仍未裁决，留待后续轮次。
+
+### 下一轮优先项
+
+1. **NEW-BO（28）**：QueryClient `staleTime` 默认值，消除 hydration 后重复查询。
+2. **NEW-BP（27）**：基线安全响应头中间件（先 curl 核对 Nitro 默认头）。
+3. **UI-35 复现与定责**：干净 main 上打开事件详情确认 hydration mismatch 是否既有。
+4. **NEW-BQ（26）**：投递详情失败原因可读化（纯前端小切片）。
+5. 下一轮非必跑车道：**`docs-drift`**（含 REL-29/REL-30、DOC-6）。
+
 ## 2026-10-22（第 75 轮）
 
 - 时间：2026-10-22 15:50 – 16:55 CST。

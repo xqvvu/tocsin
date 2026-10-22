@@ -47,7 +47,8 @@ export class WorkerHealthService {
 
 function projectEntry(snapshot: DeliveryWorkerHealthSnapshot | null): WorkerHealthEntry {
   if (snapshot === null) {
-    return NOT_STARTED;
+    // Copy so a caller mutating the DTO cannot poison later projections.
+    return { ...NOT_STARTED };
   }
 
   return {
