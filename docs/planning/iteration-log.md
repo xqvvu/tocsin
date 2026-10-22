@@ -97,6 +97,10 @@
 
 ### 下一轮优先项
 
+0. **先收尾发布**：重跑 PR #336 的 CI（`gh run rerun <id> --failed`）。绿后 `--rebase` 合并，
+   在 `origin/main` 上打 annotated tag `v0.1.0-beta.54`、创建 GitHub Release（草稿见
+   `/tmp/tocsin-release-notes-v0.1.0-beta.54.md`），再构建并推送双平台镜像
+   `0.1.0-beta.54`。若上游 `Setup Vite+` 仍失败，保持 PR open、不打 tag、不推镜像。
 1. **NEW-AT（27）** Settings 存储健康；**NEW-AP（28）** 路由规则只读展开；
    **NEW-AQ（27）** 覆盖率名单展开；**NEW-AL（28）** 恢复前积压影响。
 2. **SEC-25** AUTO_FIX（`renderedPayload` 投影）；**SEC-22** AUTO_FIX（只读 endpoint userinfo）；
