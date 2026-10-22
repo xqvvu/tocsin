@@ -637,6 +637,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.65` | `cf25272` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.65`（linux/amd64 + linux/arm64，index digest `sha256:08bcfa7e…`） | 投递按尝试次数筛选（#382，REQ-232）+ 6 处发布/架构文档更正（#383，DOC-67..72）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.64` |
 | `0.1.0-beta.64` | `d6758c7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.64`（linux/amd64 + linux/arm64，index digest `sha256:01fc9cb6…`） | 相对时间窗锚定（#378，REQ-231）+ PEM/SigV4 脱敏收口（#379，SEC-30）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.63` |
 | `0.1.0-beta.63` | `4e1a3da` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.63`（linux/amd64 + linux/arm64，index digest `sha256:0830ffc0…`） | 去重窗口判定 + 冲突替换 + 有界清理（#375，Q-23/Q-37）+ 预览/测试载荷脱敏（#373，SEC-25）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.62` |
 | `0.1.0-beta.62` | `63c8931` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.62`（linux/amd64 + linux/arm64，index digest `sha256:b658c913…`） | 告警源一次性接入 Token 可见 + 复制失败真实提示（#368，UI-36/Q-38）；无迁移/配置/环境变量/依赖变化，回滚换回 beta.61 镜像即可 |
