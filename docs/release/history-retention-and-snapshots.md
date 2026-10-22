@@ -88,5 +88,5 @@ apps/console/src/infra/sqlite/repositories/destination/destination.repository.ts
 
 ## 附：本轮未做的事
 
-- **浏览器 E2E 与 Docker/compose 冒烟自动化**：脚本已存在（`just e2e` / `just docker-smoke`），但都未接入 CI；发布前仍需人工执行。
+- **浏览器 E2E 与 Docker/compose 冒烟自动化**：浏览器 E2E 已接入 CI（`.github/workflows/e2e.yml`，本地入口 `just e2e`）；Docker/compose 冒烟脚本（`just docker-smoke`）仍未接入 CI，发布前仍需人工执行。
 - ~~**容量信号**（§1 的缓解措施）：未实现。~~ **已实现（2026-10-22）**：Settings 页「存储」面板展示数据库体积、剩余空间、各表行数与最早/最新事件时间；数据来自只读 `storageHealth` 服务（`apps/console/src/server/runtime/storage-health.service.ts:18-32`、`apps/console/src/features/configuration/ui/settings-storage-panel.tsx:20-48`、`apps/console/src/server/orpc/features/settings/router.ts:27-29`）。

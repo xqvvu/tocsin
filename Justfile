@@ -74,13 +74,17 @@ new-destination kind *args:
 # Browser end-to-end suite: first-run setup, create a source, route and deliver
 # an alert. Starts the real app against a throwaway database.
 # Slow on purpose (real browser + real server) so it stays out of the fast gate.
+# The install step is a no-op once the lockfile's Chromium build is cached; CI
+# adds `--with-deps` instead because the runner has no browser libraries.
 [group('Test')]
 e2e:
+    vp -C apps/console exec playwright install chromium
     vp -C apps/console exec playwright test
 
 # Same suite, headed, with Playwright's UI for stepping through a failure.
 [group('Test')]
 e2e-ui:
+    vp -C apps/console exec playwright install chromium
     vp -C apps/console exec playwright test --ui
 
 # Build the image, bring an isolated smoke stack up, wait for readiness, tear it down.

@@ -1,0 +1,63 @@
+name: E2E
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    name: playwright · chromium
+    runs-on: ubuntu-latest
+    # One serial browser spec against a real dev server: the suite itself is
+    # quick, the floor is installing Chromium and booting the app.
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3 python-is-python3 node-gyp
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1.21.2
+        with:
+          node-version-file: ".node-version"
+          cache: true
+          run-install: false
+
+      - name: Install dependencies
+        run: |
+          vp exec npm install -g node-gyp
+          vp install --frozen-lockfile
+
+      # The Playwright version and the browser build must come from the same
+      # lockfile entry; `--with-deps` adds the OS libraries Chromium needs.
+      - name: Install Chromium
+        run: vp -C apps/console exec playwright install --with-deps chromium
+
+      # playwright.config.ts starts `vp dev` against a throwaway SQLite file and
+      # injects BETTER_AUTH_SECRET/BETTER_AUTH_URL, so the workflow needs no
+      # environment of its own.
+      - name: Run the browser suite
+        run: vp -C apps/console exec playwright test
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results
+          path: apps/console/test-results
+          retention-days: 3
+          if-no-files-found: ignore

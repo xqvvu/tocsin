@@ -12,22 +12,23 @@
 
 | 事项                     | 现状                                                             | 证据                                                                     |
 | ------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| CI                       | 只有 `check · test · build` 一个 job                             | `.github/workflows/ci.yml`：`vp check` → `vp run -r test` → `vp run -r build` |
-| CI 触发条件              | `push` 到 `main` 与 `pull_request`                               | 同上；没有 `tags:` 过滤                                                  |
-| Release / publish workflow | 不存在                                                         | `.github/` 下只有 `ci.yml`                                               |
+| CI                       | 两个 workflow：`check · test · build` 与浏览器 E2E              | `.github/workflows/ci.yml`：`vp check` → `vp run -r test` → `vp run -r build`；`.github/workflows/e2e.yml`：Playwright + Chromium |
+| CI 触发条件              | `push` 到 `main` 与 `pull_request`                               | 两个 workflow 相同；没有 `tags:` 过滤                                     |
+| Release / publish workflow | 不存在                                                         | `.github/` 下只有 `ci.yml` 与 `e2e.yml`                                   |
 | Changelog 与版本递增工具 | 不存在                                                           | 没有 `.changeset/`、没有 `CHANGELOG.md`、根 `package.json` 没有 `release` script |
 | git tag                  | 首个 tag 为 `v0.1.0-beta.9`（2026-10-19）                        | 此前的 `0.1.0-beta.8` 没有对应 tag，版本追溯以发布记录为准                |
 | 版本号来源               | 只有根 `package.json`（2026-10-22 时为 `0.1.0-beta.62`，以下次发布时的值为准） | 启动日志的 `tocsin.runtime` 版本来自根 `package.json`（`apps/console/src/server/runtime/system-information.ts`） |
 | 容器镜像发布             | 没有自动化，只有手工 recipe                                       | 没有 CI 构建/推送步骤；`Justfile` 提供 `just docker-buildx <image> <tag>`（多平台构建并 `--push`）、`just docker-tag`、`just docker-push`，registry 与 tag 约定见第 4 节。`docker-compose.yml` 默认用本机构建的 `image: tocsin:local` |
-| E2E / Docker smoke 自动化 | 脚本已有，CI 未接入                                            | `apps/console/e2e/alert-flow.spec.ts` + `apps/console/playwright.config.ts`；`scripts/docker-smoke.sh`；`just e2e` / `just docker-smoke`；`.github/workflows/ci.yml` 仍只有 quality job |
+| E2E / Docker smoke 自动化 | E2E 已接入 CI，Docker smoke 仍为本地 gate                      | `apps/console/e2e/alert-flow.spec.ts` + `apps/console/playwright.config.ts`，由 `.github/workflows/e2e.yml` 在 push 到 main 与 PR 上运行；`scripts/docker-smoke.sh` 与 `just docker-smoke` 保留为本地人工 gate |
 
 结论：**每次 release 仍是一次全手工动作。** 不要假设打 tag 会产出镜像、Release note 或 changelog。
 
 ## 2. 打 tag 前必须核对
 
 1. **CI 绿在目标 commit 上。** 到 GitHub Actions 看 `CI` workflow 的 `check · test · build`，必须是
-   `main` 最新 commit 上的成功记录。注意 CI **不**构建 Docker 镜像、**不**跑 E2E、**不**跑 compose
-   smoke；本地可用 `just e2e` 与 `just docker-smoke` 执行，但发布前仍需人工触发。
+   `main` 最新 commit 上的成功记录；浏览器 E2E 由独立的 `E2E` workflow（`e2e.yml`）在 push 到 main
+   与 PR 上运行，也必须是成功记录。注意 CI **不**构建 Docker 镜像、**不**跑 compose smoke；本地可用
+   `just docker-smoke` 执行，发布前仍需人工触发。
 2. **本地跑完整 gate。** 在干净 worktree 上执行：
 
    ```bash
@@ -96,8 +97,8 @@ git push origin "v<version>"
   `git log` 归纳本版本的主要变化，并在 GitHub 上创建 Release（这一步是人工操作，未在本仓库中固化）。
 - **保留回滚材料。** 上一个可用镜像标签 + 发布前的数据卷备份；步骤见
   `docs/release/backup-restore-upgrade.md`。
-- **记录本次的已知空白。** 至少包括：没有 release 自动化、E2E 与 Docker smoke 脚本尚未接入 CI、没有
-  稳定 public management REST API。
+- **记录本次的已知空白。** 至少包括：没有 release 自动化、Docker smoke 脚本尚未接入 CI（E2E 已接入）、
+  没有稳定 public management REST API。
 
 ## 6. 已知空白（不要假装存在）
 
@@ -105,7 +106,7 @@ git push origin "v<version>"
 - 没有自动化版本递增与 changelog。
 - 没有镜像仓库的自动化发布：只有 `Justfile` 里三条手工 recipe，没有 CI 任务；registry 与 tag 约定
   见第 4 节，但仍需人工执行。
-- 浏览器 E2E 与 compose smoke 脚本已存在（`just e2e` / `just docker-smoke`），但都没有接入 CI，CI
-  覆盖不到浏览器路径和容器运行时。Docker smoke 按 `mvp-rc-checklist.md` 的决定保留为本地人工 gate；
-  E2E 是否接入 CI 仍待决策（REL-1）。
+- 浏览器 E2E 已由 `.github/workflows/e2e.yml` 在 push 到 main 与 PR 上自动运行（本地入口
+  `just e2e`）；compose smoke（`just docker-smoke`）按 `mvp-rc-checklist.md` 的决定保留为本地人工
+  gate，CI 仍覆盖不到容器运行时。
 - 没有发布说明模板，也没有“发布失败/撤回”的预案文档。

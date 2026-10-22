@@ -6,8 +6,9 @@ Tocsin 的目标不是做 SaaS 平台，也不是做通用工作流引擎。它�
 
 > 当前状态：**MVP baseline 已完成，但还不是稳定发布版**。核心架构、控制台、SQLite 持久化、认证、
 > 配置、投递与 UI 基础都已落地，Source → Webhook → Event → Route → Destination → Delivery → Worker →
-> History 主链路与 Docker 运行形态可用；仍缺少接入 CI 的浏览器 E2E、稳定的 migration 兼容承诺和
-> 公开管理 API（Docker smoke 保留为本地人工 gate），所以请按“可试用的自托管 MVP”而不是“生产就绪的稳定版”来评估。
+> History 主链路与 Docker 运行形态可用；浏览器 E2E 已接入 CI（`.github/workflows/e2e.yml`）；仍缺少
+> 稳定的 migration 兼容承诺和公开管理 API（Docker smoke 保留为本地人工 gate），所以请按“可试用的自托管 MVP”
+> 而不是“生产就绪的稳定版”来评估。
 > 发布硬化清单见 `docs/release/mvp-rc-checklist.md`。
 
 ## 为什么需要 Tocsin
