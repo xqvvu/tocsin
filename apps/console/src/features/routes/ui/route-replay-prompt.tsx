@@ -16,6 +16,7 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Badge } from "#/components/ui/badge";
 import { DeliveryPauseHint } from "#/features/configuration/ui/delivery-pause-hint";
+import { destinationsQueryOptions } from "#/features/destinations/api/destination.queries";
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import {
   operationsQueryKeys,
@@ -126,6 +127,17 @@ function RouteReplayPreviewBody({
   preview: RouteReplayPreview | null | undefined;
 }) {
   const t = useTranslations();
+  const destinationsQuery = useQuery({
+    ...destinationsQueryOptions(),
+    enabled: (preview?.candidates.length ?? 0) > 0,
+  });
+  const destinationNames = React.useMemo(
+    () =>
+      new Map(
+        (destinationsQuery.data ?? []).map((destination) => [destination.id, destination.name]),
+      ),
+    [destinationsQuery.data],
+  );
 
   if (pending) {
     return <p className="text-muted-foreground text-xs">{t("routing.replay.loading")}</p>;
@@ -160,26 +172,50 @@ function RouteReplayPreviewBody({
       {preview.candidates.length === 0 ? (
         <p className="text-muted-foreground text-xs leading-5">{t("routing.replay.empty")}</p>
       ) : (
-        <div className="border-border max-h-56 overflow-auto border">
-          {preview.candidates.slice(0, 10).map((candidate) => (
-            <div
-              key={candidate.event.id}
-              className="border-border flex min-w-0 flex-col gap-1 border-b p-2 last:border-b-0"
-            >
-              <div className="flex min-w-0 items-center gap-1">
-                <Badge variant="outline">{candidate.event.severity}</Badge>
-                <span className="truncate text-xs font-medium" title={candidate.event.title}>
-                  {candidate.event.title}
-                </span>
-              </div>
-              <div className="text-muted-foreground truncate text-[11px]">
-                {t("routing.replay.candidateMeta", {
-                  source: candidate.event.sourceName,
-                  deliveries: candidate.newDeliveryCount,
-                })}
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-col gap-1">
+          <div className="border-border max-h-56 overflow-auto border">
+            {preview.candidates.map((candidate) => {
+              const newTargets = candidate.targets.filter((target) => !target.alreadyExists);
+
+              return (
+                <div
+                  key={candidate.event.id}
+                  className="border-border flex min-w-0 flex-col gap-1 border-b p-2 last:border-b-0"
+                >
+                  <div className="flex min-w-0 items-center gap-1">
+                    <Badge variant="outline">{candidate.event.severity}</Badge>
+                    <span className="truncate text-xs font-medium" title={candidate.event.title}>
+                      {candidate.event.title}
+                    </span>
+                  </div>
+                  <div className="text-muted-foreground truncate text-[11px]">
+                    {t("routing.replay.candidateMeta", {
+                      source: candidate.event.sourceName,
+                      deliveries: candidate.newDeliveryCount,
+                    })}
+                  </div>
+                  {newTargets.length > 0 ? (
+                    <div className="flex min-w-0 flex-wrap items-center gap-1">
+                      <span className="text-muted-foreground text-[11px]">
+                        {t("routing.replay.candidateTargets")}
+                      </span>
+                      {newTargets.map((target) => (
+                        <Badge
+                          key={`${target.routeId}:${target.destinationId}`}
+                          variant="secondary"
+                        >
+                          {destinationNames.get(target.destinationId) ?? target.destinationId}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-muted-foreground text-[11px]">
+            {t("routing.replay.scopeNote", { count: preview.candidates.length })}
+          </p>
         </div>
       )}
     </div>
