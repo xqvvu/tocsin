@@ -78,7 +78,8 @@
 - tag：`v0.1.0-beta.64`（annotated，指向 release PR 合并后的 main commit）；
   GitHub Release 已创建（prerelease，body 非空）。
 - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.64`
-  （linux/amd64 + linux/arm64）；回滚镜像 `0.1.0-beta.63`。
+  （linux/amd64 + linux/arm64，index digest `sha256:01fc9cb6…`）；回滚镜像 `0.1.0-beta.63`。
+- tag 指向 `d6758c7`（release PR 合并后的 main commit，其 `CI` 与 `E2E` 均 success）。
 - 升级/回滚：无 migration、无环境变量/配置格式变化；回滚仅需换回旧镜像，无需数据修复。
 
 ### 下一轮优先项
