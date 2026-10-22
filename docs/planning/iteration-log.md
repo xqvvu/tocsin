@@ -85,7 +85,21 @@
 
 ### 发布决策
 
-- 待本轮 PR 合并后按第 9.5 步评估（结论见发布记录或下一轮）。
+- **已发布 `v0.1.0-beta.54`**：三位发布专家一致 APPROVE。
+  - 发布经理：`v0.1.0-beta.53..origin/main` 有 4 个用户可见变更（#338 存储健康、#337 路由规则
+    可读性/页面标题、#335 静默命中范围、#332 暂停态 worker 原因），远超「至少一个」门槛。
+  - 阻断审计：main @ `d6eb07c` CI success；唯一 open PR 是发布 PR #336（CI success、MERGEABLE）；
+    migrate/Dockerfile/compose/env/scripts 零 diff；唯一 `blocked-autonomous` 为历史 REL-13，
+    非本次增量。
+  - 运维/回滚：零迁移、零配置面变化；beta.53 可读 beta.54 数据；回滚只需换回
+    `0.1.0-beta.53` 镜像并重启。
+- 发布 PR #336 rebase 合并为 `708c404`，main CI success 后打 annotated tag
+  `v0.1.0-beta.54`（指向 `708c404`），创建 GitHub Release
+  <https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.54>。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.54`，
+  `linux/amd64` + `linux/arm64`，index digest `sha256:d9ce6443…`；回滚镜像 `0.1.0-beta.53`。
+- 备注：发布 PR #336 的原始说明只覆盖 #332/#335（merge-base 停在 `b0ecfe2`）；实际 Release
+  描述已补入 #337/#338 与依赖升级。
 
 ### 下一轮优先项
 
@@ -187,6 +201,8 @@
   判定为上游 npm 元数据/安装脚本的瞬时故障。
 - 处理：PR #336 **保持 open**，不打 tag、不推镜像（tag 必须指向 CI 已绿的 commit）；
   下一轮优先重跑 #336 的 CI，绿后 rebase 合并、再打 `v0.1.0-beta.54` 并推送双平台镜像。
+- **第 71 轮补记**：上游 `Setup Vite+` 已恢复，PR #336 于 2026-10-22 03:47Z rebase 合并为
+  `708c404`，`v0.1.0-beta.54` 已发布（内容扩展到 #337/#338 与依赖升级，详见第 71 轮记录）。
 - 已就绪待用：发布说明草稿 `/tmp/tocsin-release-notes-v0.1.0-beta.54.md`；
   发布内容将是 tag + GitHub Release + `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.54`
   （`linux/amd64` + `linux/arm64`），回滚镜像 `0.1.0-beta.53`。
