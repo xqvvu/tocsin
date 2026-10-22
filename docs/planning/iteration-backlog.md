@@ -585,6 +585,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.56` | `7df71dc` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.56`（linux/amd64 + linux/arm64，index digest `sha256:1432f782…`） | 电话加急完整错误对话框（#343，REQ-168）+ 目标读取投影剥离 URL 密码（#344，SEC-22）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.55` |
 | `0.1.0-beta.55` | `03bec20` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.55`（linux/amd64 + linux/arm64，index digest `sha256:8702bda7…`） | 事件详情投递表显示静默证据（#340，REQ-176）；无迁移/配置/依赖变化；回滚镜像 `0.1.0-beta.54` |
 | `0.1.0-beta.54` | `708c404` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.54`（linux/amd64 + linux/arm64，index digest `sha256:d9ce6443…`） | Settings 数据库存储健康面板（#338，NEW-AT）+ 路由规则列可读性与页面标题（#337，`ee00fa2`）+ 静默命中范围（#335）+ 暂停态 worker 禁用原因（#332）+ 依赖补丁升级（`5ae2e68`，better-auth 1.7.10→1.7.12、Node 26.12.1）；无迁移/配置变化；回滚镜像 `0.1.0-beta.53` |
 | `0.1.0-beta.53` | `f9e92d8` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.53`（linux/amd64 + linux/arm64，index digest `sha256:03edbbf2…`） | 暂停期间补投/目标测试时机提示（#329，NEW-AI）+ 暂停不再回写陈旧 retention（#328，Q-55）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.52` |
