@@ -140,6 +140,7 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.destinationKind ? { destinationKind: filters.destinationKind } : {}),
     ...(filters.routeId ? { routeId: filters.routeId } : {}),
     ...(filters.deliveryState ? { deliveryState: filters.deliveryState } : {}),
+    ...(filters.minAttempts && filters.minAttempts > 0 ? { minAttempts: filters.minAttempts } : {}),
     ...(filters.range ? { range: filters.range } : {}),
     // The anchor only applies to the window it was captured with, so it stays
     // out of the request (and the query key) when there is no window.

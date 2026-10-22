@@ -194,6 +194,7 @@ export function OperationFilters({
                 destinationKind: "",
                 routeId: "",
                 deliveryState: "",
+                minAttempts: 0,
                 range: "",
                 rangeAnchor: "",
                 q: "",
@@ -467,6 +468,37 @@ function OperationFiltersPanel({
         </Select>
       </UiField>
       {scope === "deliveries" ? (
+        <UiField>
+          <FieldLabel htmlFor="operation-min-attempts">
+            {t("operations.filters.minAttempts")}
+          </FieldLabel>
+          <Select
+            id="operation-min-attempts"
+            items={[
+              { value: null, label: t("operations.filters.anyAttempts") },
+              { value: "1", label: t("operations.filters.minAttemptsOptions.1") },
+              { value: "2", label: t("operations.filters.minAttemptsOptions.2") },
+              { value: "3", label: t("operations.filters.minAttemptsOptions.3") },
+            ]}
+            value={search.minAttempts ? String(search.minAttempts) : null}
+            disabled={pending}
+            onValueChange={(value) => onChange({ minAttempts: value ? Number(value) : 0 })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("operations.filters.anyAttempts")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={null}>{t("operations.filters.anyAttempts")}</SelectItem>
+                <SelectItem value="1">{t("operations.filters.minAttemptsOptions.1")}</SelectItem>
+                <SelectItem value="2">{t("operations.filters.minAttemptsOptions.2")}</SelectItem>
+                <SelectItem value="3">{t("operations.filters.minAttemptsOptions.3")}</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </UiField>
+      ) : null}
+      {scope === "deliveries" ? (
         <UiField className={compact ? "sm:col-span-2" : undefined}>
           <FieldLabel htmlFor="operation-delivery-state">
             {t("operations.filters.deliveryState")}
@@ -597,6 +629,15 @@ function activeFilterChips(
       label: t("operations.filters.deliveryState"),
       valueLabel: t(`common.deliveryState.${search.deliveryState}`),
       clear: { deliveryState: "" },
+    });
+  }
+
+  if (scope === "deliveries" && search.minAttempts) {
+    chips.push({
+      key: "minAttempts",
+      label: t("operations.filters.minAttempts"),
+      valueLabel: t("operations.filters.minAttemptsAtLeast", { count: search.minAttempts }),
+      clear: { minAttempts: 0 },
     });
   }
 

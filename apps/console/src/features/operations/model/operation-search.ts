@@ -37,6 +37,10 @@ export const DashboardOperationSearchSchema = z.object({
     .union([DeliveryStateSchema, z.literal("")])
     .catch("")
     .optional(),
+  // Delivery-only lower bound on how many times the job has been attempted.
+  // 0 means "any"; the UI offers 1/2/3 presets, but the URL is user-editable,
+  // so anything outside the range falls back to "any" instead of throwing.
+  minAttempts: z.coerce.number().int().min(1).max(100).catch(0).optional(),
   range: z
     .union([OperationTimeRangeSchema, z.literal("")])
     .catch("")
@@ -62,6 +66,7 @@ export interface DashboardOperationSearch {
   destinationKind?: DestinationKind | "";
   routeId?: string;
   deliveryState?: DeliveryState | "";
+  minAttempts?: number;
   range?: OperationTimeRange | "";
   rangeAnchor?: string;
   q?: string;
@@ -77,6 +82,7 @@ export type OperationFilterData = {
   destinationKind?: DestinationKind;
   routeId?: string;
   deliveryState?: DeliveryState;
+  minAttempts?: number;
   range?: OperationTimeRange;
   rangeAnchor?: string;
   q?: string;
@@ -98,6 +104,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.destinationKind ||
     search.routeId ||
     search.deliveryState ||
+    search.minAttempts ||
     search.range ||
     search.q?.trim(),
   );
@@ -125,6 +132,9 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
       // for; keeping it after the window is cleared would attach a stale instant
       // to the next window the operator picks.
       rangeAnchor: search.range ? search.rangeAnchor : undefined,
+      // 0 is the schema's "any" sentinel, so it stays out of the URL the same
+      // way an empty string filter does.
+      minAttempts: search.minAttempts && search.minAttempts > 0 ? search.minAttempts : undefined,
       // Both page counters follow the same rule: page 1 is the default, so it
       // stays out of the URL rather than making every link carry `=1`.
       eventPage: search.eventPage && search.eventPage > 1 ? search.eventPage : undefined,
@@ -149,6 +159,7 @@ export function mergeOperationSearch(
     "destinationKind",
     "routeId",
     "deliveryState",
+    "minAttempts",
     "range",
     "rangeAnchor",
     "q",

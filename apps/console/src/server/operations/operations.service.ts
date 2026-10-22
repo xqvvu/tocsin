@@ -53,6 +53,7 @@ export class OperationsService {
         destinationKind: input.destinationKind,
         routeId: input.routeId,
         state: input.deliveryState,
+        minAttempts: input.minAttempts,
         q: input.q,
         since,
         page: input.deliveryPage ?? 1,

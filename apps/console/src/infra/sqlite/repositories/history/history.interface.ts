@@ -45,6 +45,8 @@ export interface DeliveryListQuery {
   /** Only the deliveries silenced by one rule ("what did this rule hit?"). */
   suppressionId?: string;
   state?: DeliveryState;
+  /** Inclusive lower bound on `deliveries.attempt_count`; 0 is "any". */
+  minAttempts?: number;
   /** Inclusive lower bound on `deliveries.created_at`, as an ISO timestamp. */
   since?: string;
   /**
