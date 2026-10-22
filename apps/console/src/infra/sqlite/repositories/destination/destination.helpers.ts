@@ -60,7 +60,7 @@ export function destinationOperationalConfigFromRuntime(
   destination: DestinationRuntimeConfig,
 ): DestinationOperationalConfig {
   const config = destination.config;
-  const endpoint = configEndpoint(destination.kind, config);
+  const endpoint = withoutUrlPassword(configEndpoint(destination.kind, config));
   const template = configTemplateMeta(config);
   const method =
     destination.kind === "generic_webhook"
@@ -333,6 +333,33 @@ function configTemplateMeta(config: JsonObject): {
     mode,
     source,
   };
+}
+
+/**
+ * URLs may embed credentials (`https://user:password@host/path`), which is a
+ * supported way to authenticate a generic webhook or SMTP gateway. The read
+ * projections feed list pages, delivery metadata, and SSR data, so they carry
+ * only the host-shaped part of the URL: the password is dropped and the
+ * username stays so operators can still recognize the target. The editor draft
+ * reads the stored config directly, so saving an edit cannot erase the password.
+ */
+function withoutUrlPassword(value: string | null): string | null {
+  if (!value) {
+    return value;
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (!url.password) {
+      return value;
+    }
+
+    url.password = "";
+    return url.toString();
+  } catch {
+    return value;
+  }
 }
 
 function urlHost(value: string | null): string | null {
