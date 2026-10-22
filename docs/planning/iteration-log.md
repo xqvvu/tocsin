@@ -73,6 +73,9 @@
     （linux/amd64 + linux/arm64）。
   - 升级提醒：代码块首屏短暂无语法着色是预期修复行为；构建必须保留
     `--provenance=false --sbom=false`。
+- 已发布：`chore(release)` PR #365 合入 `e9029d2`；tag `v0.1.0-beta.61` 与 GitHub Release
+  （prerelease）均已创建，描述含镜像、升级与回滚说明。多平台镜像推送完成，
+  `imagetools inspect` 确认 `linux/amd64` + `linux/arm64`，index digest `sha256:2b9c9712…`。
 
 ### 下一轮优先项
 

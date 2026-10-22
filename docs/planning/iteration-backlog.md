@@ -617,6 +617,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.61` | `e9029d2` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.61`（linux/amd64 + linux/arm64，index digest `sha256:2b9c9712…`） | 事件详情代码块 SSR/水合首帧一致（#363，UI-35）；无迁移、无配置变化，回滚换回 beta.60 镜像即可 |
 | `0.1.0-beta.60` | `af7a4b3` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.60`（linux/amd64 + linux/arm64，index digest `sha256:96f455fc…`） | 事件/投递按幂等键搜索（#360，NEW-BT）+ 查询缓存 15s 新鲜期（#358，NEW-BO）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.59` |
 | `0.1.0-beta.59` | `a97ac34` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.59`（linux/amd64 + linux/arm64，index digest `sha256:77d2dbbb…`） | 设置页后台 Worker 健康面板与只读 `settings.getWorkerHealth`（#355，NEW-BL）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.58` |
 | `0.1.0-beta.58` | `9c82f01` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.58`（linux/amd64 + linux/arm64，index digest `sha256:9fb887cd…`） | 全局投递暂停记录操作者与最近一次暂停区间（#352，NEW-BK）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.57` |
