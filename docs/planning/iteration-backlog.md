@@ -58,6 +58,7 @@
 | SEC-27 | 生产模式接受仓库内公开的 `BETTER_AUTH_SECRET` 默认值 | security-exposure（第 63 轮） | 27 | shipped | #315 | HIGH：`docker-compose.yml:13,17` 以 `NODE_ENV=production` + `${BETTER_AUTH_SECRET:-70c18d50…}` 启动，`.env.example:2` 另有一个可用 hex secret，而 `auth-config.ts:3-4,67-80` 黑名单不含它们。直接 `docker compose up` 的实例用公开 secret 签名 session/token。第 64 轮交付：compose fallback 改为已被拒绝的占位值（保留 `ps/logs/down` 可用），`bootstrap()` 在任何请求前校验，黑名单保留历史值并 trim/lowercase 归一化，`.env.example` 改占位值，根 `.env` 入 `.gitignore`，新增 `deployment-secrets.contract.test.ts`；决策 `docs/planning/decisions/sec-27-better-auth-secret.md` |
 | SEC-28 | 带前缀的云凭据键名绕过 `isSensitiveKey` | security-exposure（第 63 轮） | 25 | shipped | #308 | 第 63 轮交付：`SENSITIVE_EXACT_KEYS` 增加 `awssecretaccesskey`/`storageaccountkey`/`sharedaccesskey`/`storageconnectionstring`/`databaseconnectionstring`，同时覆盖键名与自由文本赋值两条路径；`*KeyId` 标识符保持可见；新增正反例与 JSON 文本断言 |
 | SEC-29 | `dashboard-session.ts` 引用 better-auth 但缺 server-only 标记 | security-exposure（第 63 轮） | 22 | shipped | #308 | 第 63 轮交付：补 `@tanstack/react-start/server-only`；类型导入演变为值导入时构建期失败 |
+| SEC-30 | `privateKeyPem` / `X-Amz-Signature` 绕过 `isSensitiveKey` | security-exposure（第 85 轮） | 20 | shipped | #379 | LOW：归一化后词尾是 `pem`/`signature` 且带厂商前缀，精确集合未覆盖（`redaction.ts:13-60,76-77`）。第 85 轮交付：精确集合补 `privatekeypem`/`xamzsignature`，正反例测试；`privateKeyId`/`signatureAlgorithm` 保持可见 |
 | Q-1 | 出站 HTTP 无超时，单个挂起目标会卡住单进程 worker | 质量 lane | — | shipped | #108 | EXPERT_PANEL 一致：共享层 10s deadline，`timeout`/可重试；决策 `docs/planning/decisions/outbound-http-timeout.md` |
 | Q-2 | 出站响应体无上限 | 质量 lane | 26 | candidate | — | 与 inbound 的 body limit 对齐 |
 | Q-3 | Provider `*Result` 函数对非对象 payload 直接 throw | 质量 lane | 25 | candidate | — | 边界契约不一致 |
@@ -617,8 +618,10 @@
 | REQ-228 | 按渠道类型暂停出站投递（渠道级急停） | requirements lane（第 83 轮） | 25 | candidate | — | 渠道级故障只能全局暂停或逐目标停用；`claimNext` 的 WHERE 无 kind 条件（`delivery.repository.ts:221-242`），重试预算会在渠道恢复前耗尽；设置只有全局 `delivery_paused`（`settings.helpers.ts:8-11`、`delivery-worker.service.ts:60-76`）。切片：settings 增 `delivery_paused_kinds`，claim/backlog 共用谓词，暂停横幅按 kind 显示积压；无迁移。缺 `packages/core`/api 设置契约与仓储测试 |
 | REQ-229 | 预览/测试标明使用的是已保存配置还是未保存草稿 | requirements lane（第 83 轮） | 25 | candidate | — | 三个预览入口复用同一弹窗，只显示名称（`destinations-page.tsx:38-41,132-158,180-182,250-256`、`destination-notices.tsx:114-121`），预览 DTO 无来源字段（`packages/core/src/destination/destination.ts:144-152`）；编辑模板后预览易被误认为线上配置。纯 UI/i18n：三态徽标「已保存配置 / 未保存的修改 / 尚未创建」 |
 | REQ-230 | 告警源列表批量启停 | requirements lane（第 83 轮） | 24 | candidate | — | Sources 表格无选择列（`sources-section.tsx:41-91`），只能逐行确认（`source-actions.tsx:119-190`）；厂商级故障/风暴时收敛接入面过慢。切片：当前页多选 + 批量停用/启用 procedure（事务、逐行结果、停用前披露数量）；不改「停用后拒绝 Webhook、已入队投递继续发送」语义 |
-| REQ-231 | 相对时间窗锚定（翻页与分享链接可复现） | requirements lane（第 84 轮） | 27 | candidate | — | 每次请求都用服务端当前时刻重算 `since`（`operations.service.ts:36,107`），URL 只有 `range` 没有锚点（`operation-search.ts:40-43`），仓储按 `since` + 页码/offset 查询（`history.repository.ts:57-61,110-112,300-302`）；翻页或分享链接时窗口滑动，会重复/漏行，chip 也不显示解析后的绝对窗口（`operation-filters.tsx:589-596`）。切片：URL 增可选 `rangeAnchor`，服务端用锚点算 `since`，chip 显示绝对起止；无锚点时行为完全不变。非目标：任意绝对起止（REQ-207）、自动刷新（REQ-35）、迁移。需同步改 `docs/prd/operations-time-range.md:33,46-47` |
-| REQ-232 | 投递按尝试次数筛选（找出重试过的投递） | requirements lane（第 84 轮） | 27 | candidate | — | 投递查询无 `attempt_count` 谓词（`history.repository.ts:280-298`），但 DTO 已暴露 `attemptCount`（`packages/core/src/operations.ts:120`），表格也展示（`deliveries-table.tsx:93-95`），筛选面板没有控件（`operation-filters.tsx:337-419,456-493`）；目标恢复后无法一次筛出「重试过」的投递。切片：URL 增 `minAttempts`（1/2/3+），列表与 total 共用 `attempt_count >= n`，仅 Deliveries scope 渲染；无 DTO/迁移/语义变化。非目标：attempt 级错误搜索（已文档化排除）、失败聚合（REQ-45） |
+| REQ-231 | 相对时间窗锚定（翻页与分享链接可复现） | requirements lane（第 84 轮） | 27 | shipped | #378 | 第 85 轮交付：URL 增可选 `rangeAnchor`（选择时间范围时写入秒级时刻），`OperationsService` 用锚点算 `since`，chip 显示绝对下界（「最近 1 小时 · 自 10/23 04:00」）；无锚点行为完全不变；换窗口丢弃旧锚点、未来锚点钳制到请求时刻、不可解析锚点回退。非目标：锚定上界/绝对起止（REQ-207）、自动重新锚定（REQ-35）。PRD `docs/prd/operations-time-range.md` 同步；新增 11 条测试 |
+| REQ-232 | 投递按尝试次数筛选（找出重试过的投递） | requirements lane（第 84 轮） | 27 | candidate | — | 第 85 轮复核（origin/main @ `c4a8243`）证据仍成立：`history.repository.ts:268-306,372-416` 无 `attempt_count` 谓词，`deliveries-table.tsx:91-96` 已展示，`operation-filters.tsx:337-419,456-493` 无控件。原证据： 投递查询无 `attempt_count` 谓词（`history.repository.ts:280-298`），但 DTO 已暴露 `attemptCount`（`packages/core/src/operations.ts:120`），表格也展示（`deliveries-table.tsx:93-95`），筛选面板没有控件（`operation-filters.tsx:337-419,456-493`）；目标恢复后无法一次筛出「重试过」的投递。切片：URL 增 `minAttempts`（1/2/3+），列表与 total 共用 `attempt_count >= n`，仅 Deliveries scope 渲染；无 DTO/迁移/语义变化。非目标：attempt 级错误搜索（已文档化排除）、失败聚合（REQ-45） |
+| REQ-233 | Events/Deliveries 同条件切换 | requirements lane（第 85 轮） | 27 | candidate | — | 两页共用筛选维度，但侧栏切换丢弃全部条件（`dashboard-navigation.tsx:59,73` 的 `Link` 不带 search；两个工具栏只有刷新/重置 `events-page-toolbar.tsx:18-48`、`deliveries-page-toolbar.tsx:19-66`）。切片：工具栏「查看同条件投递/事件」，只带共有键 `sourceId/severity/status/range/rangeAnchor/q`，丢弃目标/类型/路由/投递状态，页码回 1，复用 `mergeOperationSearch`（`operation-search.ts:126-150`）。非目标：侧栏全局保留筛选、跨实体合并页（REQ-205）、自动刷新（REQ-35）。纯前端，无新端点 |
+| REQ-234 | 投递详情路由证据直达路由编辑 | requirements lane（第 85 轮） | 25 | candidate | — | 投递详情能直达目标编辑（`delivery-detail-page.tsx:60-66`，REQ-150），但路由只是文本（`delivery-summary-tab.tsx:26-29`、`delivery-route-evidence.tsx:41-46`）；Routes 编辑态只在组件本地（`routes-page.tsx:26-31`），路由文件无 `validateSearch`（`_dashboard.routes.tsx:9-21`）。切片：`/routes?editRouteId=<id>` + `validateSearch`，关闭时清理参数，无效 id 回退。非目标：事件详情编辑路由、重放、匹配语义 |
 | Q-224 | 老库缺 `idx_delivery_dedupe_created_at`，有界 prune 退化为全表扫描 | EXPERT_PANEL（第 83 轮） | 24 | candidate | — | `0001` 的 `createAppIndexes` 建了该索引（`migrate/schema.ts:274-278`），但前向修复 `ensure-complete-schema.ts:231-247` 只补 oncall 索引；已记录的迁移不会重跑（`runner.ts:32-38`）。评估者 EXPLAIN：有索引走 covering index，无索引为全表扫描 + 临时 B 树。有界批只约束删除行数、不约束扫描成本；建议 forward-only `0004` 加 `CREATE INDEX IF NOT EXISTS` + migrate 断言，需单独评估迁移风险。与 Q-23 同轮实施时一并决定 |
 
 ## 发布记录
@@ -682,6 +685,12 @@
 
 ## 下一轮优先项
 
+- **第 85 轮更新（2026-10-23）**：交付 REQ-231 相对时间窗锚定（#378）与 SEC-30 脱敏键收口
+  （#379）。下一优先：**REQ-232（27）** 投递按尝试次数筛选（证据已复核）、**REQ-233（27）**
+  Events/Deliveries 同条件切换（纯前端、成本最低）、**Q-224** 老库索引迁移评估、
+  **REQ-227（27）** 失效筛选引用、**REL-22** E2E 覆盖。发布：本轮评估后决定（见 iteration-log）。
+  车道轮转：第 85 轮跑 requirements + ui-triage + security-exposure，下一轮非必跑车道为
+  **`docs-drift`**。`last_ui_review_at` 未变（2026-10-22 19:45 CST）。
 - **第 84 轮更新（2026-10-23）**：Q-23 + Q-37 三步修复按第 83 轮 EXPERT_PANEL 决策落地
   （#375，delivery/oncall 同 PR，含反向验证）。下一优先：**REQ-231（27）** 相对时间窗锚定、
   **REQ-232（27）** 投递按尝试次数筛选、**Q-224** 老库索引迁移评估、**REQ-227（27）**

@@ -2,6 +2,93 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 85 轮）
+
+- 时间：2026-10-23 04:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `c4a8243`；main CI 最近一次 success（同 commit 的 E2E 仍在跑）；
+  无 open PR；`v0.1.0-beta.63` 的 tag 与 GitHub Release 均已存在。
+- 类型：**`full-audit`（受时间/配额约束展开 3 条车道）** —— `requirements`（窄扫描）、
+  `ui-triage`、轮转车道 `security-exposure`。`docs-drift`、`release-infra`、`architecture`、
+  `quality` 顺延。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**——本轮未覆盖全部车道。
+- 车道轮转位置：**`docs-drift`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 8h42m（`last_ui_review_at` 2026-10-22 19:45）；
+  自评审以来 UI 路径合并 2 个（`48e0e74`、`10b44f6`），均已浏览器复验；未评审 UI 合并 0；
+  `UI-` candidate 21 条（阈值 25）；无新增 HIGH。下一触发：满 48h（2026-10-24 19:45）、
+  未评审 UI 合并 ≥3、新增 UI 发现 ≥2、candidate ≥25，或出现新 HIGH。
+- `last_ui_review_at`：**2026-10-22 19:45 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证在会话工作树
+  `objective-pare-bcf899`。
+
+### 本轮交付
+
+- PR #378 `feat(console): anchor relative time windows to a URL timestamp`（REQ-231，27 分）：
+  URL 增可选 `rangeAnchor`，操作者选择时间范围时写入秒级时刻；`OperationsService` 用它代替
+  请求时刻计算 `since`（无锚点行为完全不变）；chip 显示绝对下界（「最近 1 小时 · 自 10/23 04:00」）；
+  更换窗口或清除窗口丢弃旧锚点，未来锚点钳制到请求时刻，不可解析锚点回退请求时刻。
+  新增 11 条测试（锚点解析/prune/merge 6、紧凑时间格式 2、chip 渲染 2、service 锚定与 clamp 1）。
+  PRD `docs/prd/operations-time-range.md` 同步。
+  验证：`vp fmt --write`；`vp check` 0 errors / 18 既有 warning；`vp run -r test` 4/4 包通过
+  （console 916 tests）；`vp run -r build` 通过。
+  注：本轮开始时 `vp check` 报 3938 errors（`Cannot find type definition file for 'node'`），
+  `vp install --frozen-lockfile --force` 后恢复 0 errors；属会话工作树链接残缺，非代码问题。
+- PR #379 `fix(core): redact PEM private keys and SigV4 signatures`（SEC-30）：
+  `privateKeyPem` / `X-Amz-Signature` 归一化后词尾是 `pem` / `signature` 且带厂商前缀，
+  精确集合未覆盖；补 `privatekeypem` / `xamzsignature` 与正反例测试。仅扩大脱敏覆盖。
+
+### 专家发现
+
+- `requirements`（窄扫描）：
+  - REQ-231、REQ-232 证据在 `origin/main @ c4a8243` 复核成立；REQ-231 本轮实现。
+  - **REQ-233（27）** Events/Deliveries 同条件切换：两页共用筛选维度，但侧栏 `Link` 不带
+    search（`dashboard-navigation.tsx:59,73`），两个工具栏只有刷新/重置
+    （`events-page-toolbar.tsx:18-48`、`deliveries-page-toolbar.tsx:19-66`）。
+  - **REQ-234（25）** 投递详情路由证据直达路由编辑：路由只有文本
+    （`delivery-summary-tab.tsx:26-29`、`delivery-route-evidence.tsx:41-46`），Routes 编辑态
+    只在组件本地（`routes-page.tsx:26-31`），`_dashboard.routes.tsx:9-21` 无 `validateSearch`。
+- `security-exposure`：
+  - 新发现 **SEC-30（LOW）**：`privateKeyPem` / `x-amz-signature` 绕过 `isSensitiveKey`
+    （`redaction.ts:13-60,76-77`）；本轮已修（#379）。
+  - 已核实 clean（下轮不必重复）：SEC-25 四处 `renderedPayload` 均已脱敏
+    （`destination.service.ts:202-205,314-317,326-329,341-343`）；SEC-13 精确键集合完整；
+    SEC-24 测试覆盖到位（`read-projection-redaction.test.ts:67-76,119-147`）；SEC-22 的
+    list/detail 已剥离 URL 密码（`destination.helpers.ts:63,346-363`）；import protection 无漏标；
+    旧仓库名 `xqvvu/vane` 仅剩 ACR 镜像坐标与历史日志文本。
+  - 仍开放且已被 backlog 跟踪：SEC-22 编辑草稿原值（`destination.helpers.ts:116,129`）、
+    SEC-26 webhook path/查询串凭据（`destination.helpers.ts:63,84,161-163`），均需 EXPERT_PANEL。
+- `ui-triage`：`defer`（理由见上）。
+
+### EXPERT_PANEL
+
+- 本轮无新的裁决事项；SEC-22 / SEC-26 维持既有 EXPERT_PANEL 状态。
+
+### 文档同步
+
+- `obsidian-vault` skill 在本会话不可用，本轮 Obsidian 同步已跳过（仓库内文档已更新）。
+
+### 发布决策
+
+- 三位专家（发布经理 / 阻断审计 / 运维回滚）**一致赞成发布 `0.1.0-beta.64`**。
+- 用户可见变更（自 `v0.1.0-beta.63`）：PR #378 相对时间窗锚定（REQ-231）、
+  PR #379 PEM/SigV4 脱敏收口（SEC-30）。
+- 门槛：目标 SHA `dcff721` 的 `CI` 与 `E2E` 均 success；无 open PR；无 revert；
+  `v0.1.0-beta.63..dcff721` 的 migrate 目录、`Dockerfile`、`docker-compose.yml`、
+  `.env.example` 均零变化。
+- 版本：`0.1.0-beta.64`；release PR #380（`chore(release): v0.1.0-beta.64`）。
+- tag：`v0.1.0-beta.64`（annotated，指向 release PR 合并后的 main commit）；
+  GitHub Release 已创建（prerelease，body 非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.64`
+  （linux/amd64 + linux/arm64）；回滚镜像 `0.1.0-beta.63`。
+- 升级/回滚：无 migration、无环境变量/配置格式变化；回滚仅需换回旧镜像，无需数据修复。
+
+### 下一轮优先项
+
+1. REQ-232（27）投递按尝试次数筛选（证据已复核；URL `minAttempts` + `attempt_count >= n`）。
+2. REQ-233（27）Events/Deliveries 同条件切换（纯前端、成本最低）。
+3. Q-224 老库 dedupe 索引迁移评估（forward-only `0004`）。
+4. REQ-227（27）失效筛选引用；REQ-234（25）路由证据直达编辑。
+5. REL-22 扩展 E2E spec 覆盖 Route/Delivery/retry/过滤。
+
 ## 2026-10-23（第 84 轮）
 
 - 时间：2026-10-23 00:57 CST 起。
