@@ -33,7 +33,7 @@
 | per-capability service                                           | `apps/console/src/server/<capability>/*.service.ts`             | 仅当自身直接触碰 env-specific API 时才加                                                  |
 | service option/result 类型                                       | `apps/console/src/server/<capability>/*.service.types.ts`       | 不加；必须保持 env-neutral 或只 import type                                               |
 | application container                                            | `apps/console/src/server/runtime/container.ts`                  | 加；直接 import Better Auth、env、SQLite                                                  |
-| request context                                                  | `apps/console/src/server/runtime/request-context.ts`            | 当前不加；直接使用 TanStack server headers 和 container accessor，只能从 server path 调用 |
+| request context                                                  | `apps/console/src/server/runtime/request-context.ts`            | 加；直接使用 TanStack server headers 和 container accessor，只能从 server path 调用 |
 | dashboard session/auth 错误类型                                  | `apps/console/src/server/runtime/dashboard-session.ts`          | 不加；纯后端类型/错误                                                                     |
 | LogTape 配置                                                     | `apps/console/src/server/runtime/logging.ts`                    | 加；直接使用 `node:async_hooks`、env 和进程级 sink 配置                                   |
 | 日志安全投影                                                     | `apps/console/src/server/runtime/log-safety.ts`                 | 不加；env-neutral，可由 request middleware 的 server callback 使用                        |

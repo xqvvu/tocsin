@@ -72,7 +72,7 @@ git push origin "v<version>"
 
 约定与限制，逐条说清：
 
-- tag 名采用 `v<根 package.json 的 version>`。截至 2026-10-23 已有 57 个 annotated tag
+- tag 名采用 `v<根 package.json 的 version>`。截至 2026-10-23 已有 58 个 annotated tag
   （`v0.1.0-beta.9` … `v0.1.0-beta.66`），最新数量以 `git tag --list` 为准；后续沿用同一约定；如果要换命名，
   改这里和 Release 说明即可。
 - 用 annotated tag（`-a`）以便携带一条发布说明；这是建议，仓库没有任何工具强制 tag 类型。

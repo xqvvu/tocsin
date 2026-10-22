@@ -10,7 +10,7 @@ Deliveries 列表新增 URL 持久化的「尝试次数」过滤（≥1 / ≥2 /
 
 ## 1. 问题
 
-投递表已经展示尝试次数（`apps/console/src/features/operations/ui/deliveries-table.tsx:91-96`），
+投递表已经展示尝试次数（`apps/console/src/features/deliveries/ui/deliveries-table.tsx:94-97`），
 DTO 也暴露 `attemptCount`（`packages/core/src/operations.ts:120`），但列表查询没有任何
 `attempt_count` 谓词（`apps/console/src/infra/sqlite/repositories/history/history.repository.ts:268-306,372-416`），
 筛选面板也没有对应控件（`apps/console/src/features/operations/ui/operation-filters.tsx:337-419,456-493`）。
