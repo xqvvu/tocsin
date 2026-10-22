@@ -2,6 +2,86 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 79 轮）
+
+- 时间：2026-10-22 19:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `7c356e1`；main CI 最近 3 次 success；无 open PR；
+  `v0.1.0-beta.60` 的 tag 与 GitHub Release 均已存在，无待补建项。
+- 类型：**UI 评审切片**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`review_now`**，第三名额给
+  `ui-review`；并发 ≤3。
+- 车道轮转位置：**`release-infra`**（第三名额被 UI 评审占用，未轮转；下一轮从 `release-infra` 起）。
+- `ui-triage`：**`review_now`** —— 距上次评审 9h57m（< 48h）；自 09:30 起 UI 路径提交 **13 个**
+  （≥3 强信号），含 `ee00fa2` 19 文件的结构性 header/PageToolbar 改动且尚无整体评审；
+  未解决 `UI-` 存量 19（≤20）；自评审新增未解决 UI 发现 1 条（UI-35）；未验证 UI 合并 2
+  （`777147e`、`a5d8b51`）。
+- `last_ui_review_at`：**2026-10-22 19:45 CST**（第 79 轮，隔离实例 `localhost:6206` + 临时 SQLite，
+  1280×900 与 390×844 真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、自查均在会话工作树
+  `silly-noyce-0a2c8c`。工作树已清理。
+- 依赖：会话工作树 `node_modules` 缺 `@rolldown/plugin-babel` 链接，
+  `vp install --frozen-lockfile --force`（5.5s，热 store）修复。
+
+### 本轮交付
+
+- PR #363 `fix(console): keep the code block's first frame server-safe`（UI-35，24 分）。
+  - 根因：`components/ai-elements/code-block.tsx` 在 render 期同步读模块级 Shiki 缓存；
+    服务端进程缓存已热（直接输出高亮 token），浏览器新标签页首帧缓存为空（退回
+    `createRawTokens`，`color: inherit`），两份 HTML 不一致，React 每次刷新事件详情都判定
+    hydration 失败并重建整棵树（评审记录 77 条 console 消息）。
+  - 改动：首帧一律渲染 raw token，挂载后在 effect 中应用缓存命中或异步高亮；高亮态按
+    `code` + `language` 失效，代码切换不复用旧结果；删除 render 期 setState 重置。
+  - 新增 `code-block-content.test.tsx`：预热缓存后 `renderToString` 首帧不得含 Shiki 前景色；
+    挂载后着色生效；代码切换不复用旧高亮。
+  - 验证：`vp check` 0 errors（15 个既有 warning）；`vp run -r test` 168 文件 / 888 项；
+    `vp run -r build` 通过；PR CI `check · test · build` 通过（4m27s）。
+  - 浏览器复验（隔离实例 6206）：刷新 `/events/a92ba43c-…` 控制台仅 5 条消息，无
+    `Hydration failed`。
+  - 自查（code-review，low）：无发现。
+
+### 专家发现
+
+- `requirements`（3 个新候选，均写入 backlog）：
+  - REQ-223（27）：投递状态与静默证据仍用「已抑制/抑制时」，`messages.test.ts:24-40`
+    的禁用词断言只覆盖 `suppressions.*`，三组键漏网；纯 i18n。
+  - REQ-224（26）：投递详情只在挂载时取一次数据，pending→running→终态不会反映；
+    建议仅非终态 5s 轮询 + 工具栏刷新，无新端点。
+  - REQ-225（25）：`en-US.json` 46 处 `{count}` 未用 ICU plural，count=1 出现 "1 attempts"。
+- `ui-review`（浏览器实测，6206 隔离实例）：
+  - UI-35（HIGH，仍存在）→ 本轮已修复（PR #363）。
+  - UI-36（HIGH，新增）：创建成功面板 Token 从不渲染，非安全上下文下复制失败仍提示
+    「已复制」（`source-token-notice-panel.tsx:43-68`、`lib/browser.ts:7-13`）；需
+    EXPERT_PANEL 确认与「Token 不进 client component」边界。
+  - UI-5 / UI-6 / UI-4（MEDIUM，复现）：首屏 layout shift 累计 CLS≈0.12；a11y 树两个同名
+    侧栏按钮；移动 Sheet 无关闭按钮 + 中文界面残留 "Close"/"Dashboard"。
+  - UI-37/38/39（LOW，新增）：通知目标空态缺 `EmptyContent`；设置页中文占位走 `font-mono`；
+    暂停面板绕过 `useOperationDateFormatter`。
+  - 已核验无问题：1280/390 下 shell 组合无 header/h1 重叠；UI-34 禁用原因已同时有文本与
+    `aria-describedby`；设置页三块面板列数与 header 高度对齐一致。
+
+### EXPERT_PANEL
+
+- 本轮无裁决事项。
+
+### 发布决策
+
+- 三位专家（发布经理 / 阻断审计 / 运维回滚）一致赞成发布 `0.1.0-beta.61`。
+  - 自 `v0.1.0-beta.60` 以来唯一用户可见变更即 PR #363；无迁移、无配置/依赖变化，
+    回滚只需换回 `0.1.0-beta.60` 镜像，数据库无需恢复。
+  - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.61`
+    （linux/amd64 + linux/arm64）。
+  - 升级提醒：代码块首屏短暂无语法着色是预期修复行为；构建必须保留
+    `--provenance=false --sbom=false`。
+
+### 下一轮优先项
+
+1. `release-infra` 车道（轮转位置）：E2E workflow 接入 CI、provider fixture。
+2. UI-36：创建成功面板 Token 可见性与复制失败提示（先 EXPERT_PANEL 定边界）。
+3. REQ-223：术语收口「已抑制 → 已静默」，成本低、与静默产品词一致。
+4. UI-37/38/39 三个低成本 UI 一致性项可合为一个 chore 切片。
+5. UI-5 / UI-6：侧栏 SSR cookie 与 a11y 标签，需先设计再实现。
+
 ## 2026-10-22（第 78 轮）
 
 - 时间：2026-10-22 18:26 CST 起。
