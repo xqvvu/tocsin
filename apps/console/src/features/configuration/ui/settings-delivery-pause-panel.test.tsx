@@ -64,7 +64,6 @@ describe("settings delivery pause panel", () => {
 
     await waitFor(() => {
       expect(testState.mutateAsync).toHaveBeenCalledWith({
-        rawPayloadRetentionDays: 30,
         deliveryPaused: true,
       });
     });
@@ -101,7 +100,6 @@ describe("settings delivery pause panel", () => {
 
     await waitFor(() => {
       expect(testState.mutateAsync).toHaveBeenCalledWith({
-        rawPayloadRetentionDays: 30,
         deliveryPaused: false,
       });
     });

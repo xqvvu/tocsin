@@ -27,7 +27,9 @@ export class AppSettingsService {
       ...(input.locale === undefined ? {} : { locale: input.locale }),
       ...(input.timeZone === undefined ? {} : { timeZone: input.timeZone }),
       ...(input.deliveryPaused === undefined ? {} : { deliveryPaused: input.deliveryPaused }),
-      rawPayloadRetentionDays: input.rawPayloadRetentionDays,
+      ...(input.rawPayloadRetentionDays === undefined
+        ? {}
+        : { rawPayloadRetentionDays: input.rawPayloadRetentionDays }),
     });
   }
 }

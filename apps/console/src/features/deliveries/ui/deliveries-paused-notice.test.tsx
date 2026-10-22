@@ -125,7 +125,6 @@ describe("deliveries paused notice", () => {
 
     await waitFor(() => {
       expect(testState.mutateAsync).toHaveBeenCalledWith({
-        rawPayloadRetentionDays: 30,
         deliveryPaused: false,
       });
     });

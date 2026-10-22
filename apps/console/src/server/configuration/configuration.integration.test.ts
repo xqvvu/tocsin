@@ -1366,6 +1366,30 @@ describe("configuration capabilities", () => {
     await store.close();
   });
 
+  it("keeps the stored retention window when a pause toggle omits it", async () => {
+    const { store, services } = await createTestContext();
+
+    await services.settings.updateAppSettings({ rawPayloadRetentionDays: 7 });
+
+    // Pause/resume entry points render from a settings snapshot and send only
+    // the pause flag. A retention change made in another tab must survive them
+    // instead of being written back from the stale snapshot.
+    const paused = await services.settings.updateAppSettings({ deliveryPaused: true });
+    expect(paused.rawPayloadRetentionDays).toBe(7);
+    expect(paused.deliveryPaused).toBe(true);
+
+    const resumed = await services.settings.updateAppSettings({ deliveryPaused: false });
+    expect(resumed.rawPayloadRetentionDays).toBe(7);
+    expect(resumed.deliveryPaused).toBe(false);
+
+    // An explicit retention update still applies without touching the pause.
+    const updated = await services.settings.updateAppSettings({ rawPayloadRetentionDays: 14 });
+    expect(updated.rawPayloadRetentionDays).toBe(14);
+    expect(updated.deliveryPaused).toBe(false);
+
+    await store.close();
+  });
+
   it("exports portable TOML without plaintext destination secrets by default", async () => {
     const { store, services } = await createTestContext();
     const source = await services.sources.createSource({
