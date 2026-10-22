@@ -30,6 +30,9 @@ const SENSITIVE_EXACT_KEYS = new Set([
   "accesskey",
   "secretkey",
   "privatekey",
+  // A PEM-encoded key names its encoding, so the noun no longer ends the key
+  // and the suffix rule misses it.
+  "privatekeypem",
   "signingkey",
   "signingsecret",
   "signsecret",
@@ -57,6 +60,9 @@ const SENSITIVE_EXACT_KEYS = new Set([
   "jwt",
   "signature",
   "xsignature",
+  // AWS SigV4 puts the signature behind a vendor prefix, so the exact
+  // `signature` entry does not cover it.
+  "xamzsignature",
 ]);
 
 /**
