@@ -2,6 +2,103 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 83 轮）
+
+- 时间：2026-10-22 23:58 CST 起（跨日）。
+- 基线：本轮开始时 `origin/main` @ `4e3e702`；main CI 最近 3 次 success；无 open PR；
+  `v0.1.0-beta.62` 的 tag 与 GitHub Release 均已存在。
+- 类型：**`full-audit`（受配额/时间约束只展开 3 条车道）** —— `requirements`（窄扫描）、
+  `ui-triage`、轮转车道 `docs-drift`；实现阶段另并发 3 位专家对 Q-23 + Q-37 做
+  EXPERT_PANEL。`security-exposure`、`release-infra`、`architecture`、`quality` 顺延。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**——本轮未覆盖全部车道，
+  不更新，下一轮仍按「距上次全量审计 ≥6h」处理。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 4h17m（`last_ui_review_at` 2026-10-22 19:45）；
+  自评审以来 UI 路径提交 2 个（`48e0e74`、`10b44f6`），均已在隔离实例浏览器复验；
+  未评审 UI 合并 0；新增未解决 UI 发现 0（candidate 存量 21，未到 25 阈值）。
+  再触发条件：满 48h（2026-10-24 19:45）、未评审 UI 合并 ≥3、新增 UI 发现 ≥2、
+  candidate 存量 ≥25、或出现新的 HIGH 可复现缺陷。
+- `last_ui_review_at`：**2026-10-22 19:45 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证在会话工作树
+  `clever-bose-83d396`。工作树已清理。
+
+### 本轮交付
+
+- PR #373 `fix(console): redact rendered destination preview payloads`：
+  `testDestination`、模板诊断、adapter preview、模板校验错误四处 `renderedPayload`
+  统一过 `redactJsonText`；新增按 `DestinationKindSchema.options` 参数化的回归测试
+  （每种 kind 一个 secret 标记，断言 DTO 不含明文且含 `[REDACTED]`）。
+  反向验证：临时回退 `destination.service.ts` 后新测试失败，恢复后通过。
+  验证：`vp fmt --write`；`vp check` 0 errors / 18 既有 warning；
+  `vp run -r test` console 899 tests；`vp run -r build` 通过。
+- PR #374 `docs: correct drift in route authoring, RC gates, PRDs and architecture`：
+  关闭 DOC-23/26/34/45/48/51/62/66；同一 PR 携带本轮日志、backlog 与决策记录，
+  CI 通过后 rebase 合并。
+
+### 专家发现
+
+- `requirements`（窄扫描，3 条候选，均未达 27 分门槛，已写入 backlog）：
+  - REQ-228（25）按渠道类型暂停出站投递：`claimNext` 无 kind 条件
+    （`delivery.repository.ts:221-242`），全局暂停不区分渠道
+    （`delivery-worker.service.ts:60-76`、`settings.helpers.ts:8-11`）。
+  - REQ-229（25）预览/测试标明配置来源：
+    `destinations-page.tsx:38-41,132-158,180-182,250-256`、
+    `destination-notices.tsx:114-121`、`destination.ts:144-152`。
+  - REQ-230（24）告警源批量启停：`sources-section.tsx:41-91`、
+    `source-actions.tsx:119-190`。
+- `ui-triage`：`defer`（理由与再触发条件见上）。
+- `docs-drift`（8 条均经代码核实）：
+  - DOC-34 `docs/research/route-authoring-current-state.md:17,105,115` 仍称
+    「无解释通道 / 无 route×destination 视图」，实际 `route-match-gaps.ts:57` +
+    `event-detail-route-gaps.tsx:29,45-47` 已交付。
+  - DOC-66 `docs/release/mvp-rc-checklist.md:20-21,148-150` 把 provider contributor
+    guide 列为剩余 gate，E 节 `:177-183` 没有该条目。
+  - DOC-26 三份已交付 mini-PRD 仍用现在时：`delivery-retention-notice.md:5-12`、
+    `event-fingerprint-silence.md:5-9`、`raw-payload-pruned-state.md:5-15`。
+  - DOC-51 `frontend-architecture.md:21-22,160-176,193-194` 清单缺
+    Suppressions/Integrations/Auth（实际 10 个 feature、8 个导航入口）。
+  - DOC-23 `application-container.md:35,39-53` factory 清单缺
+    `createRuntimeInformationService()`，runtime 树缺 5 个服务/类型文件。
+  - DOC-48 四份 PRD 缺状态头；DOC-62 `sqlite-store.md:369,483` 文件名拼写；
+    DOC-45 `README.md:202,229,231` Roadmap 过期。
+
+### EXPERT_PANEL：Q-23 + Q-37
+
+- 三位专家（安全与可靠性 / 产品与运维 / 独立评估者）**一致**：修复必须是三步，
+  不是第 81 轮的两步。
+  1. 存在性判断加 `created_at >= windowStartsAt`，命中即返回、不刷新 `created_at`；
+  2. 插入必须改 UPSERT/条件替换。否则窗口谓词让旧行不可见但仍占主键，
+     裸 `INSERT` 触发 `SQLITE_CONSTRAINT_PRIMARYKEY`：投递事务回滚（webhook 500），
+     自动加急异常被 `delivery-execution.ts:126-132` 吞掉（静默漏呼）。
+     评估者已在 `:memory:` 用仓库自带 better-sqlite3 复现。
+  3. prune 改有界批（rowid 子查询、`ORDER BY created_at LIMIT`、批 100），
+     保留在 enqueue 写事务内且在判定之前；delivery 与 oncall 同 PR。
+- 分歧与裁决：批大小 100（产品/评估者）vs 500（安全）→ 取更保守的 **100**；
+  forward-only `0004` 补 `idx_delivery_dedupe_created_at`（评估者建议、安全专家反对）
+  → 本轮不纳入，另立 **Q-224** 下轮单独评估迁移风险。
+- 决策记录：`docs/planning/decisions/dedupe-window-and-bounded-prune.md`
+  （含三人意见、验收标准、回滚步骤）。
+- 本轮不实施：时间预算不足，且本轮「小修复」名额已被 SEC-25 占用；
+  下一轮最高优先实施。
+
+### 发布决策
+
+- **本轮不发布**：SEC-25 属用户可见修复，理论满足发版条件；但本轮时间预算不足以
+  完成版本递增 PR + tag/Release + 多平台镜像构建与验证，按「超时不再启动新的实现
+  工作」顺延下一轮优先评估。`v0.1.0-beta.62` 仍为最新版本。
+
+### 文档同步
+
+- `obsidian-vault` skill 在本会话不可用，本轮 Obsidian 同步已跳过（仓库内文档已更新）。
+
+### 下一轮优先项
+
+1. Q-23 + Q-37 三步修复（决策已落盘；delivery/oncall 同 PR；补判别性测试）。
+2. 发布评估：`0.1.0-beta.63`（SEC-25 用户可见修复；若 Q-23/Q-37 也合入则一并发布）。
+3. Q-224 老库 dedupe 索引迁移评估（forward-only `0004`）。
+4. REQ-227（27）失效筛选引用；REQ-228/229（25）。
+5. REL-22 扩展 E2E spec 覆盖 Route/Delivery/retry/过滤。
+
 ## 2026-10-22（第 82 轮）
 
 - 时间：2026-10-22 22:46 CST 起。
