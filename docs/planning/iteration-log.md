@@ -2,6 +2,87 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 86 轮）
+
+- 时间：2026-10-23 05:42 CST 起。
+- 基线：本轮开始时 `origin/main` @ `3ff8ef5`；main CI 最近一次 success；无 open PR；
+  `v0.1.0-beta.64` 的 tag 与 GitHub Release 均已存在。
+- 类型：**`full-audit`（受时间/配额约束展开 3 条车道）** —— `requirements`、`ui-triage`、
+  轮转车道 `docs-drift`。`security-exposure`、`release-infra`、`architecture`、`quality` 顺延。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**——本轮未覆盖全部车道。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 9h57m（`last_ui_review_at` 2026-10-22 19:45）；
+  自评审以来未评审 UI 合并 1 个（#378 时间窗锚点 chip，有单测、无浏览器复验）；
+  `UI-` candidate 21 条（阈值 25）；无新增 HIGH。下一次触发：满 48h（2026-10-24 19:45）、
+  未评审 UI 合并 ≥3、新增 UI 发现 ≥2、candidate ≥25，或出现新的 HIGH 可复现缺陷。
+- `last_ui_review_at`：**2026-10-22 19:45 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证在会话工作树
+  `exciting-poitras-8f78eb`。
+
+### 本轮交付
+
+- PR #382 `feat(console): filter deliveries by attempt count`（REQ-232，27 分）：
+  URL 增 `minAttempts`（UI 预设 ≥1 / ≥2 / ≥3 次，空值不限，非法值收敛为不限）；
+  列表与 `total` 共用 `attempt_count >= n`，仅 Deliveries scope 渲染控件与 chip；
+  修改条件回第 1 页、分页保留、内联 Reset 一并清除。新增 PRD
+  `docs/prd/delivery-attempt-filter.md`；新增 URL schema/merge 5 例、仓储三档尝试次数 5 例、
+  service 透传断言、控件可见性与 reset 断言。
+  验证：`vp fmt --write`；`vp check` 0 errors / 18 既有 warning；`vp run -r test`
+  4/4 包通过（console 927 tests）；`vp run -r build` 通过。
+  注：本轮开始时 `vp check` 报 3944 errors（`JsonObject` 退化为 any），
+  `vp install --frozen-lockfile --force` 后恢复为 0 errors；属会话工作树链接残缺，非代码问题。
+- PR #383 `docs: correct stale release gates and version facts`（DOC-67..72）：
+  RC 清单与 retention 文档的 dedupe「无界」断言、post-MVP 的 REQ-22 剩余项、发布 checklist
+  的版本/tag 数、raw payload 搜索测试行号、adapter fixtures 断言、application-container
+  目录树，共 6 处。验证：`vp fmt --check` 通过。
+
+### 专家发现
+
+- `requirements`：
+  - **REQ-235（27）** 全局投递暂停记录「原因」并在顶栏/横幅/恢复框/最近区间展示；
+    证据 `configuration-results.ts:20-25,41-47`、`configuration-commands.ts:142`、
+    `settings-delivery-pause-panel.tsx:29-39`、`deliveries-paused-notice.tsx:58-70`、
+    `delivery-resume-dialog.tsx:28-39`。无迁移、无新端点、不强制填写。
+  - **REQ-236（26）** 运维表格列可见性偏好（localStorage，锁定主标识与操作列）；
+    证据 `components/common/table-features.ts:11-20`、`operations-table.tsx:56-93`、
+    `events-table-layout.ts:3-7`。
+  - **REQ-237（25）** 静默规则按 ID 跨页批量启停；
+    证据 `suppressions-section.tsx:93-140`、`suppressions-page.tsx:69-110`、
+    `suppression.mutations.ts:8-18`、`packages/api/src/contract/suppressions.ts:59-63`。
+- `docs-drift`：DOC-67..72 六条，全部为纯文档更正，本轮已交付（#383）。
+- `ui-triage`：`defer`（理由见上）。
+
+### EXPERT_PANEL
+
+- 本轮无新的裁决事项；SEC-22 / SEC-26 维持既有 EXPERT_PANEL 状态。
+
+### 文档同步
+
+- `obsidian-vault` skill 在本会话不可用，本轮 Obsidian 同步已跳过（仓库内文档已更新）。
+
+### 发布决策
+
+- 三位专家（发布经理 / 阻断审计 / 运维回滚）**一致赞成发布 `0.1.0-beta.65`**。
+- 用户可见变更（自 `v0.1.0-beta.64`）：PR #382 投递按尝试次数筛选（REQ-232）；
+  PR #383 为纯文档，不单独触发发版。
+- 门槛：`025ac9b`/`e87cae4` 的 main CI 与 E2E 在专家审计时为 pending，打 tag 前复核为 success；
+  无 open PR；无 revert；`beta.64..e87cae4` 的 migrate 目录、`Dockerfile`、`docker-compose.yml`、
+  `.env.example` 零变化。
+- 版本：`0.1.0-beta.65`；release PR `chore(release): v0.1.0-beta.65`。
+- tag 指向 release PR 合并后的 main commit（CI/E2E 全绿后创建）；
+  GitHub Release 为 prerelease 且 body 非空。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.65`
+  （linux/amd64 + linux/arm64）；回滚镜像 `0.1.0-beta.64`。
+- 升级/回滚：无 migration、无环境变量/配置格式/启动参数变化；回滚仅需换回旧镜像，无需数据修复。
+
+### 下一轮优先项
+
+1. REQ-233（27）Events/Deliveries 同条件切换（纯前端、成本最低）。
+2. REQ-235（27）投递暂停记录原因。
+3. REQ-227（27）失效筛选引用；REQ-234（25）路由证据直达编辑。
+4. Q-224 老库 dedupe 索引迁移评估（forward-only `0004`）。
+5. REQ-236（26）表格列可见性；REL-22 扩展 E2E spec 覆盖 Route/Delivery/retry/过滤。
+
 ## 2026-10-23（第 85 轮）
 
 - 时间：2026-10-23 04:26 CST 起。
