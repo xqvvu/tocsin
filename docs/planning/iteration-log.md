@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 77 轮）
+
+- 时间：2026-10-22 17:26 – 18:45 CST。
+- 基线：本轮开始时 `origin/main` @ `b3d390a`；main CI 最近 3 次 success；无 open PR；
+  `v0.1.0-beta.59` 的 tag 与 Release 均已存在，无待补建项。
+- 类型：**需求切片 + 文档更正 + 三车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道 `docs-drift`；并发 ≤3。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 8h（< 48h）；09:30 后 12 个 UI 路径合并全部有浏览器验证记录；
+  未解决 `UI-` 候选 19 条（阈值 >20）；自上次评审新增 UI 发现 1 条（UI-35，阈值 ≥2）。
+  UI-35 静态复核：时间渲染已有 `ClientOnly`（`operation-timestamp.tsx:22-34`），嫌疑转向
+  `code-block.tsx:113,143-174` 的模块级 token 缓存导致 SSR 请求间差异；需真实复现再定责。
+  再触发条件：2026-10-24 09:30 满 48h、未验证 UI 合并 ≥3、新增 UI 候选 ≥2、存量 >20 或 UI-35 复现。
+- `last_ui_review_at`：**2026-10-22 09:30 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器检查均在会话工作树
+  `heuristic-williamson-ab28c4`。工作树已清理。
+- 依赖：会话工作树缺 `@rolldown/plugin-babel` 链接，`vp install --frozen-lockfile --force` 修复。
+
+### 本轮交付
+
+- PR #358 `perf(console): keep loader-prefetched queries fresh after hydration`（NEW-BO，28 分）。
+  - 新增 `apps/console/src/lib/query-client.ts`：`createQueryClient()` 默认 `queries.staleTime = 15_000`；
+    `router.tsx` 改用该工厂；各查询既有 `staleTime` 覆盖不变。
+  - 新增单元测试：窗口内不 stale、窗口后 stale、`invalidateQueries` 仍立即生效；PRD
+    `docs/prd/query-client-stale-time.md`。
+  - 验证：`vp check` 0 errors（18 个既有 warning）；`vp run -r test` 167 文件 / 883 项；
+    `vp run -r build` 通过。隔离实例 `localhost:6205` + 临时 SQLite（owner `admin@example.test`）：
+    Events 页浏览器缓存中 `operations.list` 带 15s 新鲜期，加载后无额外 `operations.list` 请求，
+    console 无 error。
+  - **推翻原假设**：首次 hydration 并未复现 `operations.list` 重复请求（默认 0 与 15s 均只请求一次）；
+    真正的重复请求出现在 `settings/get` 与 `suppressions/list`（每次加载各两次，见 Q-223）。
+    PRD 与代码注释已按实测改写，不再声称 hydration 重复查询。
+  - 自查（code-review，low）：发现注释过度断言，已在同一 PR 的第二提交修正。
+- PR #359 `docs(release): align checklists and architecture trees with current code`（AUTO_FIX）。
+  - 修复 docs-drift 的 8 项：REL-29（版本/tag 数）、REL-30（dedupe 行号）、DOC-23（前端树/CSRF/
+    session/suppressions router/工厂清单，部分）、DOC-43（README）、DOC-22（next-round 落后提交数）、
+    DOC-60（server/configuration 职责，前半）、DOC-63（容量信号已实现）、DOC-62 未改（与本次发现
+    的容量项重名，新发现记作 DOC-63）。
+  - 验证：`vp fmt --check` 通过（821 files）。
+
+### 专家发现
+
+- `requirements`：新增 5 条代码可核实的候选（NEW-BT..NEW-BX），均无迁移：
+  - **NEW-BT（27）** 事件/投递搜索不含 `idempotencyKey`，而事件详情把它作为可复制标识展示
+    （`event-normalized-tab.tsx:51-57`、`history.repository.ts:449-464,477-500`）。
+  - **NEW-BU（25）** 存储面板无宿主机磁盘余量（`settings-storage-panel.tsx:34-42`）。
+  - **NEW-BV（26）** 后台 worker 失败只在 Settings 可见（`worker-health.service.ts:40-45`、`dashboard-header.tsx:23-26`）。
+  - **NEW-BW（25）** 补投预览不标注停用目标/路由（`event-replay-action.tsx:195-214`、`delivery.repository.ts:231-232`）。
+  - **NEW-BX（25）** 目标运行配置不可复制（`destination-operational-config-cell.tsx:14-23`）。
+- `docs-drift`：8 项全部有双向 `file:line` 证据；7 项已随 #359 修复，DOC-23/DOC-60 只修了本轮
+  证据覆盖的部分并在 backlog 标注剩余范围。
+- `ui-triage`：见上；未新增未解决 UI 发现。
+
+### EXPERT_PANEL
+
+- 本轮无裁决事项。ARCH-51（worker 启动时机）仍未裁决，留待后续轮次。
+
+### 发布决策
+
+- **本轮不发布**：自 `v0.1.0-beta.59` 以来唯一的代码变更是查询缓存新鲜期（内部性能策略），
+  其余为文档更正；不满足「至少一个用户可见变更或修复」的发布门槛，且不为了发版而发版。
+  下一轮若有用户可见切片（如 NEW-BT）再评估。
+
+### 下一轮优先项
+
+1. **NEW-BT（27）**：事件/投递搜索覆盖幂等键（本批唯一达门槛、无迁移）。
+2. **NEW-BP（27）**：基线安全响应头中间件（先 curl 核对 Nitro 默认头）。
+3. **NEW-BV（26）**：后台 Worker 失败顶栏常驻可见。
+4. **Q-223（24）**：定位 `settings/get`、`suppressions/list` 每次加载各两次的真实原因。
+5. **UI-35**：干净 main 上复现事件详情 hydration mismatch（嫌疑 `code-block.tsx` 模块级缓存）。
+6. 下一轮非必跑车道：**`security-exposure`**。
+
 ## 2026-10-22（第 76 轮）
 
 - 时间：2026-10-22 16:20 – 17:05 CST。
