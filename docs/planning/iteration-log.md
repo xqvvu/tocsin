@@ -2,6 +2,85 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 73 轮）
+
+- 时间：2026-10-22 13:26 – 14:20 CST。
+- 基线：本轮开始时 `origin/main` @ `7893280`；main CI success；无 open PR；
+  `v0.1.0-beta.55` 的 tag 与 GitHub Release 均已存在且 body 非空，无待补建项。
+- 类型：**需求切片 + 安全修复 + 三车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，
+  按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  `release-infra`；并发始终 ≤3。
+- 车道轮转位置：**`architecture`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 3h57m（< 48h）；09:30 后 6 个 UI 提交全部有
+  浏览器验证记录，未验证 UI 合并 0；18 条 `UI-` candidate，与第 62/68/70/71/72 轮持平
+  （提前触发线为存量 >20）。再触发条件：2026-10-24 09:30 满 48h、未验证 UI 合并 ≥3、
+  新增 UI 候选 ≥2 或存量 >20。
+- `last_ui_review_at`：**2026-10-22 09:30 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器检查均在会话工作树
+  `gifted-hamilton-1795e5`。工作树已清理。
+- 文档同步：当前会话未暴露 `obsidian-vault` skill，Obsidian 同步已跳过。
+
+### 本轮交付
+
+- PR #343 `feat(console): show the full urgent-call error in delivery detail`（REQ-168，28 分）。
+  - 投递详情「电话加急」表新增 `DeliveryPingDetailDialog`：完整错误原文 + 呼叫时间线 +
+    复制按钮；无错误时保持共享占位符。新增中英文 `deliveries.detail.pingDialog.*`。
+  - 纯前端；PRD `docs/prd/delivery-ping-error-detail.md`；新增 2 条组件测试。
+  - 验证：`vp check` 0 errors；`vp run -r test` 861 项；`vp run -r build` 通过。
+    浏览器实测（隔离实例 `localhost:6199` + 临时 SQLite，种子数据含失败呼叫）：
+    1280×900 对话框展示完整 386 字符错误、复制按钮存在、无页面横向溢出、console 错误 0；
+    390×844 对话框 358px 宽、无横向溢出；截图 `/tmp/tocsin-ping-ui/dialog-{1280,390}.png`。
+- PR #344 `fix(console): drop URL passwords from destination read projections`（SEC-22，27 分，AUTO_FIX）。
+  - `destinationOperationalConfigFromRuntime` 的 endpoint 去掉 URL 密码、保留用户名；
+    listItem、投递 `destinationMetadata` 与 7 个 route loader 的 SSR 数据不再携带密码。
+  - 编辑草稿仍读存储原值，保存不会抹掉密码；发送路径不变。
+  - 新增 3 条测试（投影剥离 + 序列化不含密码、编辑草稿保留、无凭据 URL 原样）。
+  - 验证：`vp check` 0 errors；`vp run -r test` 862 项；`vp run -r build` 通过。
+
+### 专家发现
+
+- `requirements`（复核 4 条 + 3 条新候选，均已写入 backlog）：
+  - **REQ-22（28）仍成立**：事件补投预览只渲染计数（`event-replay-action.tsx:155-169`），
+    路由补投预览只显示前 10 条（`route-replay-prompt.tsx:164`）却提交全部候选（`:42,54-57`）。
+  - **SEC-22 仍成立**（本轮已交付 #344）：只读投影原样返回 endpoint
+    （`destination.helpers.ts:63,83-85,152-162`）。
+  - **NEW-BD/NEW-BE/NEW-BF/NEW-BG 均仍成立**（`delivery-detail-view.tsx:20-22`、
+    `destination-operational-config-cell.tsx:32-33,61-62`、`route.ts:325,330` vs `:296-298`、
+    `settings-runtime-panel.tsx:23-55`）。
+  - 新候选：**NEW-BH（25）** 运行时参数来源标注；**NEW-BI（26）** 切换 provider 未提示
+    历史事件不重解析（`source-form.tsx:128-160`、`intake.service.ts:212-219`）；
+    **NEW-BJ（21）** 补投无持久操作痕迹（需 forward-only `replay_runs` + EXPERT_PANEL）。
+- `release-infra`（4 个未勾选 gate 仍成立，1 个新并发风险）：
+  - E2E workflow 仍缺失（`.github/workflows/ci.yml:16-51` 只有 quality job）；
+    spec 名为 “set up, route, and deliver” 但没有 Route（`alert-flow.spec.ts:27,90,117-118`）。
+  - dedupe cleanup 仍无界（`delivery.helpers.ts:107-109`、`delivery.repository.ts:85-101`），
+    加 `LIMIT` 有界批是唯一能一轮关闭未勾选代码 gate 的项（Q-23）。
+  - provider fixture 目录仍缺失（6 个 `index.test.ts` 共 19 个内联 payload）。
+  - Docker smoke 已修好生产卷隔离（`scripts/docker-smoke.sh:20-25`，`down -v` 只作用于
+    `tocsin-smoke` 项目），但 project/image/volume 仍是固定标识，并发 worktree 会互删 → REL-27。
+  - 新 docs 漂移：`release-checklist.md:4,20,73-74` 版本/tag 冻结在 beta.54（REL-29）、
+    dedupe 行号 `:99` → `:101`（REL-30）。
+  - main CI 最近 10 次全部 success。
+- `ui-triage`：见上。
+
+### EXPERT_PANEL
+
+- 本轮无新增裁决事项。SEC-23、SEC-26、NEW-AU、NEW-AX、NEW-BJ 仍待后续轮次专家小组。
+
+### 发布决策
+
+- 见下方「发布记录」。
+
+### 下一轮优先项
+
+1. **REQ-22（28）**：补投预览目标级明细，并让「预览数量 = 实际提交数量」。
+2. **Q-23（25）**：dedupe cleanup 改有界批删除（唯一能一轮关闭未勾选代码 gate 的项）。
+3. **REL-7 bundle**：`playwright install chromium` + 全部改 `localhost` + webServer 用 `/api/ready`。
+4. **NEW-BI（26）/ NEW-BD（26）/ NEW-BE（26）**：纯前端切片。
+5. 下一轮非必跑车道：**architecture**。
+
 ## 2026-10-22（第 72 轮）
 
 - 时间：2026-10-22 12:26 – 13:05 CST。
