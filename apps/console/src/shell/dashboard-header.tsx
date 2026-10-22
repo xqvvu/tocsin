@@ -1,5 +1,6 @@
 import { SidebarTrigger } from "#/components/ui/sidebar";
 import { DeliveryPauseIndicator } from "#/features/configuration/ui/delivery-pause-indicator";
+import { DeliveryFailureIndicator } from "#/features/deliveries/ui/delivery-failure-indicator";
 import { ActiveSuppressionIndicator } from "#/features/suppressions/ui/active-suppression-indicator";
 import { useTranslations } from "#/i18n/use-i18n";
 
@@ -22,6 +23,7 @@ export function DashboardHeader() {
 
       <div className="ml-auto flex shrink-0 items-center">
         <DeliveryPauseIndicator />
+        <DeliveryFailureIndicator />
         <ActiveSuppressionIndicator />
       </div>
     </header>

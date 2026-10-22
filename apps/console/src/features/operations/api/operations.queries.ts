@@ -118,6 +118,22 @@ export function deliveryDetailQueryOptions(deliveryId: string) {
 }
 
 /**
+ * Cross-page failure signal for the dashboard header.
+ *
+ * Reuses `operations.list` with a single-row page: its `total` counts every
+ * failed delivery in the window, so the header needs no dedicated summary
+ * endpoint. The indicator polls on a minute, hence the short stale time.
+ */
+export function failedDeliveriesQueryOptions() {
+  return orpc.operations.list.queryOptions({
+    input: { limit: 1, deliveryState: "failed", range: "24h" },
+    queryKey: [...operationsQueryKeys.all, "failed-deliveries"] as const,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+/**
  * What the worker would claim next, used by the paused banner.
  *
  * Callers enable it only while delivery is paused; a short stale time keeps a
