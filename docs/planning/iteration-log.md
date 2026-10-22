@@ -2,6 +2,87 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 68 轮）
+
+- 时间：2026-10-22 08:26 – 09:50 CST。
+- 基线：本轮开始时 `origin/main` @ `0a10af9`；main CI success；无 open PR。
+- 类型：**需求切片 + 真实缺陷修复 + 发版**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  **`security-exposure`**。并发始终 ≤3。
+- 车道轮转位置：**`quality`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审 2h43m（< 48h）；自那以来 3 个 UI 合并
+  （#319/#322/#325）均已在当轮用隔离实例做过浏览器验证；18 条未解决 UI 候选与第 62 轮以来持平，
+  第 65–67 轮零新增 UI 候选；抽查暂停相关四个表面未见新不一致。下次触发：2026-10-24 05:47
+  满 48h、出现未浏览器验证的 UI 合并、新增 UI 候选 ≥2 或存量 >20。
+- `last_ui_review_at`：不变（2026-10-22 05:47 CST）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、发版构建均在会话工作树
+  `trusting-ptolemy-0ff80f`。工作树已清理。
+- 文档同步：本会话未暴露 `obsidian-vault` skill，Obsidian 同步已跳过。
+
+### 本轮交付
+
+- PR #328 `fix(console): stop pause toggles rewriting the retained payload window`（Q-55，rebase 合并 `ab87e24`）。
+  - `UpdateAppSettingsCommandSchema.rawPayloadRetentionDays` 改为可选，`AppSettingsService` 仅在显式提供时写入。
+  - 两个暂停入口只发送 `deliveryPaused`，`DeliveryResumeDialog` 不再接收 retention 属性。
+  - 新增集成回归测试：暂停/恢复省略 retention 时保留已存储窗口，显式更新仍生效。
+  - 验证：`vp check` 0 errors；`vp run -r test` 157 文件 / 837 项；`vp run -r build` 通过。
+- PR #329 `feat(console): disclose how the delivery pause affects replay and test actions`（NEW-AI，rebase 合并 `c9c1156`）。
+  - 新增 `DeliveryPauseHint`（queued / immediate），读取共享 `appSettingsQueryOptions`，仅暂停时渲染。
+  - 接入事件补投框、路由历史匹配框、通知目标测试框；目标测试用 destructive 文案提示「绕过队列立即真实发送」。
+  - 中英文案同步；PRD `docs/prd/delivery-pause-action-hints.md`；组件测试覆盖三态。
+  - 验证：`vp check` 0 errors；`vp run -r test` 158 文件 / 840 项；`vp run -r build` 通过。
+  - 浏览器实测（隔离实例 `localhost:6198` + 临时 SQLite，owner `admin@example.test`）：
+    暂停后三处提示均出现且文案正确；恢复投递并刷新后三处消失；无 console 错误。
+    截图 `/tmp/tocsin-pause-hint-{event,route,destination}.png`（未入库）。
+- 发布：版本 PR #330 `chore(release): v0.1.0-beta.53`（rebase 合并 `f9e92d8`）。
+
+### 专家发现
+
+- `requirements`（3 条新候选，已写入 backlog）：
+  - **NEW-AL（28）** 恢复投递前展示积压影响（数量/最老等待/目标分布）：恢复确认框只有定性警告
+    （`delivery-resume-dialog.tsx:52-74`），从 Settings 恢复看不到积压；建议复用 `getDeliveryBacklog`
+    并扩 destination 聚合；「丢弃积压」终态语义并入 REQ-189 后再做。
+  - **NEW-AM（27）** 同指纹相邻事件差异对照：详情只读当前事件（`history.repository.ts:150-232`），
+    索引 `(source_id, fingerprint, received_at)` 已存在；只读返回上一条并展示字段 diff。
+  - **NEW-AN（25）** 投递尝试错误变化标注：尝试表错误列只有详情按钮（`delivery-attempts-table.tsx:70-73`），
+    纯前端派生「首次/重复/已变化」。
+- `security-exposure`（复核，无新增暴露面）：
+  - SEC-25 仍成立（LOW/AUTO_FIX）：`destination.service.ts:202,314,326,340` 的 `renderedPayload`
+    仍未过 `redactJsonText`；同文件已导入该函数，最小修法只覆盖这四处。
+  - SEC-22 仍成立（MEDIUM/AUTO_FIX 子集）：`destination.helpers.ts:63,84` 只读投影原样返回 endpoint
+    userinfo；editor draft（`:116,129`）必须保持原值，否则保存会用无密码 URL 覆盖存储值。
+  - SEC-23 / SEC-26 未变；SEC-26 影响面仍为 7 个 route loader + 投递详情 + 目标表，维持 EXPERT_PANEL。
+  - 脱敏回归测试仍未按 `DestinationKindSchema.options` 参数化：缺四类 kind 的 endpoint userinfo
+    投影断言与 test/preview `renderedPayload` 投影断言。
+  - 旧仓库名 `xqvvu/vane` 仅剩 ACR 镜像坐标与历史日志，`github.com/xqvvu/vane` 为 0。
+- `ui-triage`：defer（理由见上）。
+
+### EXPERT_PANEL
+
+- 本轮无新增裁决事项；SEC-26 仍待后续轮次专家小组。
+
+### 发布决策
+
+- 发布经理 / 阻断审计员 / 运维回滚专家三位一致 **APPROVE** `v0.1.0-beta.53`：
+  自 beta.52 以来 2 个用户可见变更（#328、#329）；`origin/main` @ `c9c1156` 与版本提交 `f9e92d8`
+  main CI success；零 open PR；零 migration、零环境变量/启动参数/Docker 配置变化；
+  `v0.1.0-beta.53` 未被占用；回滚只需换回 beta.52 镜像，SQLite schema 未变。
+- tag：`v0.1.0-beta.53` → `f9e92d8`；GitHub Release 已创建（prerelease，正文非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.53`
+  （linux/amd64 + linux/arm64，index digest `sha256:03edbbf2…`；`imagetools inspect` 已确认两个平台）。
+- 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.52`。
+
+### 下一轮优先项
+
+1. **NEW-AL（28）** 恢复投递前积压影响；**NEW-AJ（27）** 告警源接入健康；**NEW-AE（27）** 事件详情加急呼叫结果。
+2. **NEW-AM（27）** 同指纹相邻事件差异；**SEC-25** AUTO_FIX（`renderedPayload` 投影）；
+   **SEC-22** AUTO_FIX（只读 endpoint userinfo）。
+3. **Q-56/Q-57** 低成本测试补齐；**ARCH-45/46** 两个 S 级分层修正；
+   **SEC-26** 交 EXPERT_PANEL；**NEW-AK（25）/NEW-AN（25）**。
+4. 轮转车道 **`quality`**；UI 评审遗留：暂停开关即时生效说明/成功 toast、横幅视觉强化、
+   `Run worker` 禁用原因可见化。
+
 ## 2026-10-22（第 67 轮）
 
 - 时间：2026-10-22 07:53 – 08:20 CST。
