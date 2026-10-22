@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "#/components/ui/select";
+import { DeliveryPauseHint } from "#/features/configuration/ui/delivery-pause-hint";
 import type { DestinationPreviewSampleEvent } from "#/features/destinations/ui/destination-notices";
 import { useTranslations } from "#/i18n/use-i18n";
 
@@ -95,6 +96,7 @@ export function DestinationTestDialog({
             {t("destinations.test.confirmTitle", { name: destinationName })}
           </DialogTitle>
           <DialogDescription>{t("destinations.test.confirmDescription")}</DialogDescription>
+          <DeliveryPauseHint mode="immediate" />
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-2 text-xs">
             <label className="text-muted-foreground" htmlFor="destination-test-sample">
               {t("destinations.test.sampleLabel")}

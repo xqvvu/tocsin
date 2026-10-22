@@ -257,6 +257,8 @@
   "deliveries.page.runWorkerPausedTitle": "Outbound delivery is paused, resume it first",
   "deliveries.page.runWorkerTitle": "Run delivery worker",
   "deliveries.page.title": "Deliveries",
+  "deliveries.pauseHint.immediate": "Outbound delivery is paused, but destination tests bypass the queue and send immediately",
+  "deliveries.pauseHint.queued": "Outbound delivery is paused: these deliveries are queued and only send after resuming",
   "deliveries.paused.backlog": "{count} queued deliveries will be claimed immediately after resuming · oldest waiting {wait}",
   "deliveries.paused.backlogEmpty": "No queued deliveries are ready to be claimed",
   "deliveries.paused.backlogNoWait": "{count} queued deliveries will be claimed immediately after resuming",
