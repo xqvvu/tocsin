@@ -2,6 +2,89 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 70 轮）
+
+- 时间：2026-10-22 10:25 – 11:05 CST。
+- 基线：本轮开始时 `origin/main` @ `fc24f33`；main CI success；无 open PR。
+- 类型：**需求切片 + 三车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  `architecture`；并发始终 ≤3。
+- 车道轮转位置：**`docs-drift`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审仅 56 分钟（< 48h）；此后 4 个提交里只有 1 个触及 UI
+  （`c507970`，第 69 轮评审产出的 #332，当轮已在隔离实例 6195 做过 1280/390 浏览器验证），
+  其余 3 个是 docs；18 条未解决 UI 候选与第 62 轮持平、属既有存量（第 68 轮把提前触发线定为
+  存量 >20）。三个强信号只有「候选 ≥2」技术成立，重复评审同一暂停簇价值低。
+  再触发条件：2026-10-24 09:30 满 48h、未验证 UI 合并 ≥3、新增 UI 候选 ≥2 或存量 >20。
+- `last_ui_review_at`：**2026-10-22 09:30 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器检查均在会话工作树
+  `sharp-elgamal-d123d3`。工作树已清理。
+- 文档同步：当前会话未暴露 `obsidian-vault` skill，Obsidian 同步已跳过。
+
+### 本轮交付
+
+- PR #TBD `feat(console): disclose the alert scope of a silence rule`。
+  - 新增 `features/suppressions/model/suppression-scope.ts`（纯投影：告警源名称/停用/已删除、
+    severity/status、是否有文本条件）与 `ui/suppression-scope-preview.tsx`「命中范围」面板，
+    在 `suppression-forms.tsx` 的 `UrgentImpactPreview` 之前渲染，创建与编辑共用。
+  - 面板三行：告警源（未限制「所有告警源」；停用源「（已停用）」；已删除源按 id「（已删除）」）、
+    严重级别、告警状态；设置了指纹/标签/标题/消息条件时追加「会进一步收窄命中范围」说明。
+  - 中英文案各 11 键；`suppression-scope-preview.test.tsx` 5 条组件测试；PRD
+    `docs/prd/suppression-condition-scope.md`；backlog NEW-AO → shipped。
+  - 验证：`vp check` 0 errors（18 个既有 warning）；`vp run -r test` 4/4 workspace 任务、
+    console 160 文件 / 849 项；`vp run -r build` 通过。
+  - 浏览器实测（隔离实例 `localhost:6196` + 临时 SQLite，owner `admin@example.test`；
+    6190 已被其他会话占用且不是本分支代码，故未复用）：空 matcher 三行均为「所有…」；
+    勾选「严重」「触发中」后即时更新；输入标题条件后出现收窄说明；新建告警源并勾选后显示
+    「Grafana Prod」；停用该源后显示「Grafana Prod（已停用）」；窄视口（500px）无横向溢出；
+    无 console 错误或警告。截图 `/tmp/tocsin-suppression-scope-{zh,panel-zh,source-zh,narrow-zh}.png`
+    （未入库）。
+
+### 专家发现
+
+- `requirements`（5 条新候选，已写入 backlog）：
+  - **NEW-AT（27）** Settings 数据库存储健康面板：runtime 面板无存储指标
+    （`settings-runtime-panel.tsx:15-47`），`/api/ready` 只有三个布尔（`routes/api/ready.ts:17-31`），
+    全仓无 `page_count`/`fileSize`/`integrity_check` 运行时消费。
+  - **NEW-AU（25）** 周期性维护窗口：静默只有绝对起止（`suppression.ts:44-60`），
+    需 recurrence 与 occurrence 投影，属语义变更，落地前需 EXPERT_PANEL。
+  - **NEW-AV（25）** 源级 Webhook 载荷上限：只有全局 `TOCSIN_MAX_WEBHOOK_BYTES`
+    （`env.ts:33`），入口在读 body 前未取源策略（`routes/api/sources/$sourceId/webhook.ts:41-46`）。
+  - **NEW-AW（23）** 源级 raw payload 保留覆盖：只有全局 `rawPayloadRetentionDays`
+    （`settings.repository.ts:33,59-60`），`SourceSummary` 无策略字段（`source.ts:13-18`）。
+  - **NEW-AX（20）** 自监控告警：`/api/ready` 只返回状态码，worker 停转/积压无外发信号；
+    与暂停/积压语义相互递归，价值高但成本最高。
+- `architecture`（无新增违规类别，全部归入既有 backlog）：
+  - 已核实干净：无模块级 service 单例；`*.service.ts` 不抛 `ORPCError`；router 不自行翻译
+    domain error；无 DI 框架；`components/common` 15 个文件无 feature/server/oRPC 导入；
+    无新增缺失 `server-only` 标记。
+  - 复核仍成立并更新行号：ARCH-1 `route-forms.tsx` 1035 行（`:62/:128`）、ARCH-2
+    `suppression-forms.tsx` 728 行（`:68/:137`）、ARCH-10 `destination-form.tsx` 1393 行（`:82`）、
+    ARCH-5 service 直抛 `RecordNotFoundError`（`destination.service.ts:138,158,211,259,383`、
+    `oncall.service.ts:59,73`）、ARCH-6 `ready.ts:10,19,22,26`、ARCH-8 加重证据
+    （`server/orpc/features/i18n/router.ts:16` 直接 `getApplicationContainer()`）、
+    ARCH-9 `locale-cookie.ts:29-47` 且被 `i18n/router.ts:1` 导入、FIX-9/FIX-10 仍成立。
+  - 债务集中在三条主线：入口过厚（worker 编排、readiness、public container 访问）、
+    巨型表单（1393/1035/728 行）、`features/operations` 成为事实上的跨 feature 共享库
+    （ARCH-32 复核仍成立）。
+
+### EXPERT_PANEL
+
+- 本轮无新增裁决事项；NEW-AU/NEW-AX 落地前需专家小组。SEC-26 仍待后续轮次专家小组。
+
+### 发布决策
+
+- 待本轮 PR 合并后按第 9.5 步评估（结论见下一条记录或本节追加）。
+
+### 下一轮优先项
+
+1. **NEW-AT（27）** Settings 存储健康；**NEW-AP（28）** 路由规则只读展开；
+   **NEW-AQ（27）** 覆盖率名单展开；**NEW-AL（28）** 恢复前积压影响。
+2. **SEC-25** AUTO_FIX（`renderedPayload` 投影）；**SEC-22** AUTO_FIX（只读 endpoint userinfo）；
+   **Q-58/Q-56/Q-57** 低成本测试补齐。
+3. **NEW-AU/NEW-AX** 交 EXPERT_PANEL；**SEC-26** 交 EXPERT_PANEL。
+4. 轮转车道 **`docs-drift`**（DOC-6/DOC-22/DOC-23/DOC-24 等）；UI 遗留：暂停横幅视觉权重。
+
 ## 2026-10-22（第 69 轮）
 
 - 时间：2026-10-22 09:20 – 09:50 CST。

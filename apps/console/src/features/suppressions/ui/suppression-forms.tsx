@@ -50,6 +50,7 @@ import {
   suppressionStatusValues,
   type SuppressionFormValues,
 } from "#/features/suppressions/model/suppression-form";
+import { SuppressionScopePreview } from "#/features/suppressions/ui/suppression-scope-preview";
 import { UrgentImpactPreview } from "#/features/suppressions/ui/urgent-impact-preview";
 import { fallbackTimeZone } from "#/i18n/time-zone";
 import { useTimeZone, useTranslations } from "#/i18n/use-i18n";
@@ -431,6 +432,7 @@ function SuppressionForm({
         values={values.matcher.messageContains}
         onChange={(messageContains) => updateMatcher({ messageContains })}
       />
+      <SuppressionScopePreview sources={sources} matcher={matcher} />
       <UrgentImpactPreview destinations={destinations} matcher={matcher} />
       <UiField>
         <label className="flex items-center gap-2 text-xs font-medium">
