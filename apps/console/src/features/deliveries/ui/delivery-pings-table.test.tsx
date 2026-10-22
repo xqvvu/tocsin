@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { OncallPing } from "@tocsin/core";
@@ -82,6 +82,30 @@ describe("delivery pings table", () => {
     expect(screen.getByText(/Automatic paging is off for this destination/)).toBeTruthy();
     expect(screen.getByText(/Based on the destination's current configuration/)).toBeTruthy();
     expect(screen.queryByText("No urgent calls for this delivery")).toBeNull();
+  });
+
+  it("opens the full error that the pings table truncates", async () => {
+    const longError = "feishu urgent phone rejected: receiver unavailable ".repeat(6);
+
+    renderTable(detailFixture([pingFixture({ state: "failed", lastError: longError })]));
+
+    // The cell keeps one truncated line; the dialog is the only place the full
+    // provider error is readable.
+    expect(screen.queryByText(longError)).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "View the full error for receiver ou_123" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).toContain(longError);
+    expect(screen.getByRole("button", { name: "Copy error" })).toBeTruthy();
+  });
+
+  it("shows a dashboard placeholder and no error dialog when a ping has no error", () => {
+    renderTable(detailFixture([pingFixture({ lastError: null })]));
+
+    expect(screen.queryByRole("button", { name: /View the full error/ })).toBeNull();
   });
 
   it("names the destination kind when it is not Feishu at all", () => {

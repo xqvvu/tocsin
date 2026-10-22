@@ -8,6 +8,7 @@ import {
 } from "#/components/ui/table";
 import { DeliveryDetailSectionHeader } from "#/features/deliveries/ui/delivery-detail-section-header";
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
+import { DeliveryPingDetailDialog } from "#/features/deliveries/ui/delivery-ping-detail-dialog";
 import { DeliveryPingStateBadge } from "#/features/deliveries/ui/delivery-state-badge";
 import { DeliveryUrgentPingExplanation } from "#/features/deliveries/ui/delivery-urgent-ping-explanation";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
@@ -99,7 +100,11 @@ export function DeliveryPingsTable({ detail }: { detail: DeliveryDetailData }) {
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground truncate text-xs">
-                    {ping.lastError ?? t("common.placeholder.empty")}
+                    {ping.lastError ? (
+                      <DeliveryPingDetailDialog ping={ping} />
+                    ) : (
+                      t("common.placeholder.empty")
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
