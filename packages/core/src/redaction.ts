@@ -318,7 +318,8 @@ export function redactEventRecord(event: EventRecord): EventRecord {
     ...event,
     normalized: redactNormalizedEvent(event.normalized),
     // The idempotency key is provider-supplied and rendered on the detail page.
-    // It is not used for matching at read time, so the DTO can redact it.
+    // Search matches the stored raw value, like title and message, but the DTO
+    // projection still redacts it: a hit only reveals that the row exists.
     idempotencyKey: event.idempotencyKey === null ? null : redactText(event.idempotencyKey),
     providerMetadata: redactJsonText(event.providerMetadata) as JsonObject,
     rawPayload: redactJsonText(event.rawPayload),

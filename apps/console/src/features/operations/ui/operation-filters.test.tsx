@@ -142,7 +142,7 @@ describe("operation filters by page scope", () => {
 
     expect(
       screen.getByPlaceholderText(
-        "title, message, fingerprint, label, upstream metadata, ID, error, destination, route, or external reference",
+        "title, message, fingerprint, idempotency key, label, upstream metadata, ID, error, destination, route, or external reference",
       ),
     ).toBeTruthy();
   });
@@ -151,7 +151,9 @@ describe("operation filters by page scope", () => {
     renderFilters("events", {}, "toolbar");
 
     expect(
-      screen.getByPlaceholderText("title, message, fingerprint, label, upstream metadata, or ID"),
+      screen.getByPlaceholderText(
+        "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
+      ),
     ).toBeTruthy();
   });
 
@@ -159,7 +161,7 @@ describe("operation filters by page scope", () => {
     renderFilters("events", {}, "toolbar");
 
     const input = screen.getByPlaceholderText(
-      "title, message, fingerprint, label, upstream metadata, or ID",
+      "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
     );
 
     expect((input as HTMLInputElement).maxLength).toBe(OPERATION_SEARCH_MAX_LENGTH);
@@ -175,7 +177,7 @@ describe("operation search input", () => {
     const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
     renderFilters("events", {}, "toolbar", onChange);
     const input = screen.getByPlaceholderText(
-      "title, message, fingerprint, label, upstream metadata, or ID",
+      "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
     ) as HTMLInputElement;
 
     // Each change is one keystroke as React sees it. The old input wrote every
@@ -195,7 +197,7 @@ describe("operation search input", () => {
     const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
     renderFilters("events", { q: "checkout" }, "toolbar", onChange);
     const input = screen.getByPlaceholderText(
-      "title, message, fingerprint, label, upstream metadata, or ID",
+      "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
     ) as HTMLInputElement;
 
     // Still inside the debounce window: the URL does not know about "now" yet.
@@ -212,7 +214,7 @@ describe("operation search input", () => {
     const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
     const { rerender } = renderFilters("events", { q: "checkout" }, "toolbar", onChange);
     const input = screen.getByPlaceholderText(
-      "title, message, fingerprint, label, upstream metadata, or ID",
+      "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
     ) as HTMLInputElement;
 
     fireEvent.change(input, { target: { value: "checkout now" } });
@@ -222,7 +224,7 @@ describe("operation search input", () => {
     rerender(filtersTree("events", {}, "toolbar", onChange));
 
     const reset = screen.getByPlaceholderText(
-      "title, message, fingerprint, label, upstream metadata, or ID",
+      "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
     ) as HTMLInputElement;
     expect(reset.value).toBe("");
 

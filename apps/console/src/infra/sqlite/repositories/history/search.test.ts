@@ -63,6 +63,7 @@ async function repositoryWithSearchFixtures(): Promise<
     title: string,
     message: string,
     overrides: Partial<{
+      idempotency_key: string;
       labels_json: string;
       provider_metadata_json: string;
       raw_payload_json: string;
@@ -104,6 +105,19 @@ async function repositoryWithSearchFixtures(): Promise<
       event("event-upstream", "fp-upstream", "Fire", "burn", {
         provider_metadata_json: '{"provider":"grafana","receiver":"platform-burn"}',
       }),
+      // The idempotency key is shown with a copy action on event detail, so a
+      // pasted value must find the event and the deliveries it produced.
+      event("event-idempotency", "fp-idem", "Idem probe one", "quux7", {
+        idempotency_key: "req-2f9c-77ab",
+      }),
+      // `_` in an idempotency key is a literal character, not a wildcard.
+      // The hyphen variant is a decoy: an unescaped `_` would match both.
+      event("event-idempotency-underscore", "fp-idem-underscore", "Idem probe two", "quux8", {
+        idempotency_key: "req_100_done",
+      }),
+      event("event-idempotency-hyphen", "fp-idem-hyphen", "Idem probe three", "quux9", {
+        idempotency_key: "req-100-done",
+      }),
       // A credential pasted into the raw payload is not searchable; only the
       // redacted projection is ever shown, so matching it would be an oracle.
       event("event-raw-secret", "fp-raw-secret", "Quiet", "nothing", {
@@ -126,6 +140,9 @@ async function repositoryWithSearchFixtures(): Promise<
         "event-hyphen",
         "event-percent",
         "event-message",
+        "event-idempotency",
+        "event-idempotency-underscore",
+        "event-idempotency-hyphen",
       ].map((eventId) => ({
         id: `delivery-${eventId}`,
         event_id: eventId,
@@ -228,6 +245,33 @@ describe("history search", () => {
     expect(ids(events.items)).toEqual(["evt-opaque-7f3a"]);
     expect(events.total).toBe(1);
     expect(ids(deliveries.items)).toEqual(["dlv-opaque-91c2"]);
+    expect(deliveries.total).toBe(1);
+  });
+
+  it("matches a pasted idempotency key on both lists", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "req-2f9c-77ab" });
+    const deliveries = await repository.listDeliveries({ q: "req-2f9c-77ab" });
+
+    expect(ids(events.items)).toEqual(["event-idempotency"]);
+    expect(events.total).toBe(1);
+    // The key belongs to the event, so it narrows deliveries to what it
+    // produced, the same way a pasted event id does.
+    expect(ids(deliveries.items)).toEqual(["delivery-event-idempotency"]);
+    expect(deliveries.total).toBe(1);
+  });
+
+  it("treats _ in an idempotency key as a literal character", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const events = await repository.listEvents({ q: "req_100_done" });
+    const deliveries = await repository.listDeliveries({ q: "req_100_done" });
+
+    // The hyphen variant differs only at the escaped character.
+    expect(ids(events.items)).toEqual(["event-idempotency-underscore"]);
+    expect(events.total).toBe(1);
+    expect(ids(deliveries.items)).toEqual(["delivery-event-idempotency-underscore"]);
     expect(deliveries.total).toBe(1);
   });
 
