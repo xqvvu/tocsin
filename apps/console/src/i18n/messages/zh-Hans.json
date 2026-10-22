@@ -287,7 +287,7 @@
   "deliveries.detail.terms.state": "状态",
   "deliveries.detail.title": "投递详情",
   "deliveries.failureIndicator.label": "投递失败：{count} 条",
-  "deliveries.failureIndicator.title": "最近 24 小时有 {count} 条投递失败",
+  "deliveries.failureIndicator.title": "最近 24 小时内创建的投递有 {count} 条失败",
   "deliveries.page.description": "检查出站通知任务、渲染 payload、尝试记录和重试计划",
   "deliveries.page.loaded": "已加载 {count} 条",
   "deliveries.page.operationFailed": "操作失败",
