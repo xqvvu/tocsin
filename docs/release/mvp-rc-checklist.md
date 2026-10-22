@@ -168,7 +168,7 @@ sink 仍应在发布或 post-MVP 中继续设计。
 - [x] raw payload retention 可配置并有测试覆盖。
 - [x] 增加 delivery history retention 或明确不自动清理 delivery history 的产品理由。→ **决定不自动清理**，理由与代价见 `docs/release/history-retention-and-snapshots.md` §1。
 - [x] 将 raw payload pruning 从 intake hot path 中移出或限制成本。→ 接入改为**有界批**（100/次，主键定位），积压由响应路径外的单飞 sweep 清空；保留行为不变。见 `docs/release/history-retention-and-snapshots.md` §2。
-- [ ] 将 dedupe cleanup 从接入热路径移出或限制成本。→ 尚未完成：`pruneDedupeKeys` 仍是**无界** `DELETE FROM delivery_dedupe_keys`，并且在每次 `enqueueForEvent` 内执行（`apps/console/src/infra/sqlite/repositories/delivery/delivery.helpers.ts:107-108`、`delivery.repository.ts:99`）。这与「运行时策略」中「dedupe cleanup 成本上限仍应继续设计」一致。
+- [ ] 将 dedupe cleanup 从接入热路径移出或限制成本。→ 尚未完成：`pruneDedupeKeys` 仍是**无界** `DELETE FROM delivery_dedupe_keys`，并且在每次 `enqueueForEvent` 内执行（`apps/console/src/infra/sqlite/repositories/delivery/delivery.helpers.ts:107-108`、`delivery.repository.ts:101`）。这与「运行时策略」中「dedupe cleanup 成本上限仍应继续设计」一致。
 - [x] 评估 Delivery detail 所需的历史快照字段，避免配置重命名破坏历史解释。→ **评估完成：缺陷成立**（改名会追溯改写历史显示名；删除则级联删掉投递行）。需 schema 变更，属发布决策，见 `docs/release/history-retention-and-snapshots.md` §3。
 - [x] 增加 secret-safe logging 测试或边界测试。
 

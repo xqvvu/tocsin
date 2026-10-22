@@ -1,6 +1,7 @@
 # 下一轮工作决策备忘（Next Round Decision Memo）
 
-> **状态：已过期存档（2026-10-20）。** 基线 `2f48153` 已落后 main 120+ 提交，正文中的
+> **状态：已过期存档（2026-10-20）。** 基线 `2f48153` 截至 2026-10-22 已落后 main 296 个提交
+> （以 `git rev-list --count 2f48153..origin/main` 为准），正文中的
 > S0 脱敏、registry audit、变量面板 D2/D5 等缺口均已交付。本文只保留历史决策背景，
 > **不要按 §3 直接执行**；当前待办以 `docs/planning/iteration-backlog.md` 与
 > `docs/planning/iteration-log.md` 为准。

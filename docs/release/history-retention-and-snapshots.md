@@ -40,7 +40,7 @@
 
 **行为等价性**：保留设置仍然生效（保留策略不变，只是把工作挪走），既有测试「prunes retained raw payloads after the configured retention window」仍通过；新增测试覆盖「单次有界调用只清一批且可继续推进」「sweep 能清空整个积压」「经 webhook 端到端仍会清理」。
 
-**本节不覆盖 dedupe cleanup**：`pruneDedupeKeys` 仍是**无界** `DELETE FROM delivery_dedupe_keys`，并且在每次 `enqueueForEvent` 内执行（`delivery.helpers.ts:107-108`、`delivery.repository.ts:99`）。它与 raw payload pruning 是两条独立路径，成本上限仍待设计，见 `mvp-rc-checklist.md` 的未勾选项。
+**本节不覆盖 dedupe cleanup**：`pruneDedupeKeys` 仍是**无界** `DELETE FROM delivery_dedupe_keys`，并且在每次 `enqueueForEvent` 内执行（`delivery.helpers.ts:107-108`、`delivery.repository.ts:101`）。它与 raw payload pruning 是两条独立路径，成本上限仍待设计，见 `mvp-rc-checklist.md` 的未勾选项。
 
 **sweep 故意不 await**：webhook 不应等房子打扫完。失败被吞掉（下一次 webhook 会重试）——在这里抛出会把一个**已成功**的 webhook 报成失败。
 
@@ -89,4 +89,4 @@ apps/console/src/infra/sqlite/repositories/destination/destination.repository.ts
 ## 附：本轮未做的事
 
 - **浏览器 E2E 与 Docker/compose 冒烟自动化**：脚本已存在（`just e2e` / `just docker-smoke`），但都未接入 CI；发布前仍需人工执行。
-- **容量信号**（§1 的缓解措施）：未实现。
+- ~~**容量信号**（§1 的缓解措施）：未实现。~~ **已实现（2026-10-22）**：Settings 页「存储」面板展示数据库体积、剩余空间、各表行数与最早/最新事件时间；数据来自只读 `storageHealth` 服务（`apps/console/src/server/runtime/storage-health.service.ts:18-32`、`apps/console/src/features/configuration/ui/settings-storage-panel.tsx:20-48`、`apps/console/src/server/orpc/features/settings/router.ts:27-29`）。

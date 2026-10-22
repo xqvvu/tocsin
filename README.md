@@ -31,9 +31,9 @@ Tocsin 把这些能力集中到一个私有部署里：
 
 仓库当前实现围绕 MVP Alert Hub 方向展开：
 
-- TanStack Start 控制台，包含登录、首次 setup、dashboard shell、Sources、Routes、Destinations、Events、Deliveries 和 Settings 页面。
+- TanStack Start 控制台，包含登录、首次 setup、dashboard shell、Sources、Routes、Destinations、Events、Deliveries、Suppressions（静默）、Integrations（飞书应用）和 Settings 页面。
 - Better Auth dashboard 登录；首次注册用户可成为 owner。
-- SQLite-first 持久化层，显式 migrations，仓储位于 `apps/console/src/infra/sqlite/repositories/`，按 Sources、Destinations、Routes、Intake、Deliveries、History、Settings 切分。
+- SQLite-first 持久化层，显式 migrations，仓储位于 `apps/console/src/infra/sqlite/repositories/`，按 Sources、Destinations、Routes、Intake、Deliveries、History、Settings、Suppression、Feishu App、On-call 切分。
 - Provider parser registry：`generic`、`signoz`、`grafana`、`uptime_kuma`、`alertmanager`、`fastgpt`。
 - FastGPT 模型探测 Source：接收 FastGPT 模型状态探测 webhook（`model_status_error` / `model_status_recovered`），把探测状态 red/yellow/green 规范化为 firing/resolved 告警，并以 `modelId` 作为 fingerprint；FastGPT 侧的 `webhookUrl` 填 Tocsin 的接入 URL，`webhookToken` 填 Tocsin 的接入 Token。
 - Destination sender registry：`generic_webhook`、`feishu`、`slack`、`email`。
@@ -52,7 +52,7 @@ Tocsin 把这些能力集中到一个私有部署里：
 ```txt
 apps/console
   TanStack Start console。拥有 UI、API routes、Better Auth、SQLite、migrations、
-  server functions、按能力组织的 services、SQLite repositories、in-process worker 和 Docker runtime。
+  oRPC procedures、按能力组织的 services、SQLite repositories、in-process worker 和 Docker runtime。
 
 packages/core
   共享领域 schema、类型、路由规则、delivery 类型、config schema、JSON helper、
