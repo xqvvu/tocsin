@@ -199,7 +199,10 @@ export class DestinationService {
       statusCode: result.statusCode,
       responseBody: redactNullableText(result.responseBody),
       error: redactNullableText(result.ok ? null : result.errorMessage),
-      renderedPayload: result.renderedPayload,
+      // The adapter renders operator-owned templates and event data. Project
+      // the outbound body before it becomes a dashboard DTO, the same way the
+      // delivery detail read path does.
+      renderedPayload: redactJsonText(result.renderedPayload),
     };
   }
 
@@ -311,7 +314,7 @@ export class DestinationService {
     if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
       return {
         destination,
-        renderedPayload: templateDiagnosticsPayload(diagnostics),
+        renderedPayload: redactJsonText(templateDiagnosticsPayload(diagnostics)),
         sample: sample.metadata,
         context,
         normalizedEvent: sample.normalizedEvent,
@@ -323,7 +326,7 @@ export class DestinationService {
     try {
       return {
         destination,
-        renderedPayload: await this.destinations.preview(destination.kind, input),
+        renderedPayload: redactJsonText(await this.destinations.preview(destination.kind, input)),
         sample: sample.metadata,
         context,
         normalizedEvent: sample.normalizedEvent,
@@ -337,7 +340,7 @@ export class DestinationService {
 
       return {
         destination,
-        renderedPayload: DestinationTemplateEngine.validationErrorToPayload(error),
+        renderedPayload: redactJsonText(DestinationTemplateEngine.validationErrorToPayload(error)),
         sample: sample.metadata,
         context,
         normalizedEvent: sample.normalizedEvent,
