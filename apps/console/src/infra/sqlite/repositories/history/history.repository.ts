@@ -432,11 +432,12 @@ function countMatchedRoutes(routeMatchesJson: string | null): number {
 }
 
 /**
- * Event search covers title, message, fingerprint, labels, upstream provider
- * metadata, and identifiers (`operations.filters.searchPlaceholder`). A pasted
- * delivery id also finds the event that produced it, so on-call can jump from
- * an alert notification back to the event. Every event list and count query
- * shares this predicate so a page and its `total` cannot disagree.
+ * Event search covers title, message, fingerprint, idempotency key, labels,
+ * upstream provider metadata, and identifiers
+ * (`operations.filters.searchPlaceholder`). A pasted delivery id also finds the
+ * event that produced it, so on-call can jump from an alert notification back
+ * to the event. Every event list and count query shares this predicate so a
+ * page and its `total` cannot disagree.
  *
  * Labels and provider metadata are matched against their stored JSON text, the
  * same way title and message are matched: matching uses the raw value, while
@@ -454,6 +455,7 @@ function eventSearchPredicate(term: string) {
     OR events.title LIKE ${pattern} ESCAPE '\\'
     OR events.message LIKE ${pattern} ESCAPE '\\'
     OR events.fingerprint LIKE ${pattern} ESCAPE '\\'
+    OR events.idempotency_key LIKE ${pattern} ESCAPE '\\'
     OR events.labels_json LIKE ${pattern} ESCAPE '\\'
     OR events.provider_metadata_json LIKE ${pattern} ESCAPE '\\'
     OR EXISTS (
@@ -465,14 +467,14 @@ function eventSearchPredicate(term: string) {
 }
 
 /**
- * Delivery search covers the event fields above (including labels and upstream
- * provider metadata), both identifiers (the delivery id itself and the id of
- * the event it belongs to), and the facts the deliveries table and detail page
- * display: the latest error, the destination name, the route name, and the
- * external message reference returned by the destination provider. Destination and route are matched through correlated
- * `EXISTS` subqueries so the count query keeps its existing joins and cannot
- * count duplicated rows. Like the event predicate, list and count queries
- * share it.
+ * Delivery search covers the event fields above (including the idempotency key,
+ * labels, and upstream provider metadata), both identifiers (the delivery id
+ * itself and the id of the event it belongs to), and the facts the deliveries
+ * table and detail page display: the latest error, the destination name, the
+ * route name, and the external message reference returned by the destination
+ * provider. Destination and route are matched through correlated `EXISTS`
+ * subqueries so the count query keeps its existing joins and cannot count
+ * duplicated rows. Like the event predicate, list and count queries share it.
  */
 function deliverySearchPredicate(term: string) {
   const pattern = escapeLikeTerm(term);
@@ -483,6 +485,7 @@ function deliverySearchPredicate(term: string) {
     OR events.title LIKE ${pattern} ESCAPE '\\'
     OR events.message LIKE ${pattern} ESCAPE '\\'
     OR events.fingerprint LIKE ${pattern} ESCAPE '\\'
+    OR events.idempotency_key LIKE ${pattern} ESCAPE '\\'
     OR events.labels_json LIKE ${pattern} ESCAPE '\\'
     OR events.provider_metadata_json LIKE ${pattern} ESCAPE '\\'
     OR deliveries.last_error LIKE ${pattern} ESCAPE '\\'
