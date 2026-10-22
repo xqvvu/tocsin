@@ -67,6 +67,7 @@ export function SuppressionsPage() {
       main={
         <>
           <PageToolbar
+            title={t("suppressions.page.title")}
             description={t("suppressions.page.description")}
             actions={
               <>

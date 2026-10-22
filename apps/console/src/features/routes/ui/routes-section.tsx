@@ -37,10 +37,14 @@ import {
   EmptyTitle,
 } from "#/components/ui/empty";
 import { QueuedDeliveriesNotice } from "#/features/operations/ui/queued-deliveries-notice";
-import { buildRouteRuleChips, describeRouteRule } from "#/features/routes/model/route-rule-summary";
+import {
+  buildRouteRuleGroups,
+  describeRouteRule,
+} from "#/features/routes/model/route-rule-summary";
 import { routeRuleSummaryCopy } from "#/features/routes/model/route-rule-summary-copy";
 import { EditRouteForm } from "#/features/routes/ui/route-forms";
 import { useTranslations } from "#/i18n/use-i18n";
+import { cn } from "#/lib/utils";
 
 type RouteSummary = RouteDefinition;
 
@@ -339,30 +343,43 @@ function RouteIdentityCell({ route }: { route: RouteSummary }) {
 function RouteRuleCell({ route, sources }: { route: RouteSummary; sources: SourceSummary[] }) {
   const t = useTranslations();
   const copy = routeRuleSummaryCopy(t);
-  const chips = buildRouteRuleChips(
+  const groups = buildRouteRuleGroups(
     route.rule,
     (sourceId) => sourceNameForId(sourceId, sources),
     copy,
   );
 
-  if (chips.length === 0) {
+  if (groups.length === 0) {
     return (
-      <span className="text-muted-foreground text-xs italic">{t("routing.table.allEvents")}</span>
+      <div className="flex min-w-0 items-center text-left">
+        <span className="text-muted-foreground text-xs italic">{t("routing.table.allEvents")}</span>
+      </div>
     );
   }
 
   return (
     <div
-      className="flex min-w-0 flex-nowrap gap-1 overflow-hidden"
+      className="flex min-w-0 flex-wrap items-center gap-1"
       title={describeRouteRule(route.rule, copy)}
     >
-      {chips.map((chip) => (
+      {groups.map((group) => (
         <Badge
-          key={chip}
+          key={group.kind}
           variant="outline"
-          className="max-w-48 min-w-0 shrink truncate font-mono text-[11px]"
+          className="max-w-full min-w-0 justify-start gap-1.5 font-normal"
         >
-          {chip}
+          <span className="text-muted-foreground shrink-0 text-[10px] font-medium">
+            {group.label}
+          </span>
+          {/*
+            Keep each chip on one line. A single long title or message matcher
+            would otherwise stretch the row to several lines; the cell tooltip
+            still carries the full rule, and the DOM keeps the full text for
+            assistive technology.
+          */}
+          <span className={cn("min-w-0 truncate text-[11px]", group.mono ? "font-mono" : null)}>
+            {group.value}
+          </span>
         </Badge>
       ))}
     </div>
@@ -430,13 +447,16 @@ function sourceNameForId(sourceId: string, sources: SourceSummary[]): string {
 function routesColumnClassName(columnId: string): string | null {
   switch (columnId) {
     case "name":
-      return "w-[24%]";
+      return "w-[22%]";
     case "rule":
-      return "w-[31%]";
+      // The rule column carries the most variable content: up to six grouped
+      // condition chips. Give it the width back from the fixed-width columns so
+      // a rich rule usually stays on two lines instead of three.
+      return "w-[36%]";
     case "destinations":
-      return "w-[19%]";
+      return "w-[17%]";
     case "state":
-      return "w-[10%]";
+      return "w-[9%]";
     case "actions":
       return "w-[16%]";
     default:

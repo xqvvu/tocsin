@@ -160,13 +160,13 @@ describe("Feishu apps page header matches the other list pages", () => {
 
     const header = (container: HTMLElement) => ({
       headers: container.querySelectorAll("header").length,
-      // The dashboard shell renders the page heading; the toolbar must NOT add
-      // its own, which is what made this page's header stand out.
+      // The shell no longer renders the page name; every list page owns its
+      // `<h1>` in the toolbar, so both pages must have exactly one heading.
       headings: container.querySelectorAll("h1").length,
       descriptions: container.querySelectorAll("p").length,
     });
 
     expect(header(feishu)).toEqual(header(sources));
-    expect(header(feishu).headings).toBe(0);
+    expect(header(feishu).headings).toBe(1);
   });
 });

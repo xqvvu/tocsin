@@ -4,15 +4,18 @@ import { PageToolbar } from "#/components/common/page-toolbar";
 import { useTranslations } from "#/i18n/use-i18n";
 
 /**
- * Mirrors the other list pages' toolbars: `PageToolbar` with only a
- * description and actions.
- *
- * Deliberately no `title`. The dashboard shell already renders the page heading
- * from the navigation item; passing one here adds a second `<h1>` on this page
- * alone, which is why the header looked different from every other list.
+ * Mirrors the other list pages' toolbars: `PageToolbar` with a page title,
+ * description, and actions. The shell no longer renders the page name, so every
+ * list page owns its `<h1>` here.
  */
 export function FeishuAppsPageToolbar({ actions }: { actions: ReactNode }) {
   const t = useTranslations();
 
-  return <PageToolbar description={t("integrations.page.description")} actions={actions} />;
+  return (
+    <PageToolbar
+      title={t("integrations.page.title")}
+      description={t("integrations.page.description")}
+      actions={actions}
+    />
+  );
 }

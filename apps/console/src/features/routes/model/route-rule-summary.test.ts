@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
-  buildRouteRuleChips,
+  buildRouteRuleGroups,
   describeRouteRule,
   describeRule,
   type RouteRule,
@@ -60,19 +60,20 @@ const multiRule: RouteRule = {
 };
 
 describe("route rule summary", () => {
-  it("builds operator-facing chips with localized labels and display values", () => {
+  it("groups conditions into one chip per dimension with joined values", () => {
     expect(
-      buildRouteRuleChips(multiRule, (id) => (id === "source-grafana" ? "Grafana" : id), zhOpsCopy),
+      buildRouteRuleGroups(
+        multiRule,
+        (id) => (id === "source-grafana" ? "Grafana" : id),
+        zhOpsCopy,
+      ),
     ).toEqual([
-      "告警源: Grafana",
-      "告警源: source-am",
-      "级别: 严重",
-      "级别: 警告",
-      "状态: 触发中",
-      "team=sre",
-      "service~api",
-      "标题含: LatencyHigh",
-      "消息含: timeout",
+      { kind: "source", label: "告警源", value: "Grafana、source-am", mono: false },
+      { kind: "severity", label: "级别", value: "严重、警告", mono: false },
+      { kind: "status", label: "状态", value: "触发中", mono: false },
+      { kind: "label", label: "标签", value: "team=sre、service~api", mono: true },
+      { kind: "title", label: "标题含", value: "LatencyHigh", mono: true },
+      { kind: "message", label: "消息含", value: "timeout", mono: true },
     ]);
   });
 
@@ -101,7 +102,7 @@ describe("route rule summary", () => {
       messageContains: ["timeout", "volume"],
     };
 
-    const chips = buildRouteRuleChips(
+    const groups = buildRouteRuleGroups(
       everyEntryRule,
       (id) => (id === "source-grafana" ? "Grafana" : id),
       enOpsCopy,
@@ -109,19 +110,13 @@ describe("route rule summary", () => {
 
     // The rule summary is the read-only counterpart of the edit form, so it has
     // to account for every entry the form now shows.
-    expect(chips).toEqual([
-      "Source: Grafana",
-      "Source: source-am",
-      "Severity: Critical",
-      "Severity: Warning",
-      "Status: Firing",
-      "Status: Unknown",
-      "team=sre",
-      "service~api",
-      "Title: LatencyHigh",
-      "Title: DiskFull",
-      "Message: timeout",
-      "Message: volume",
+    expect(groups.map((group) => `${group.label}: ${group.value}`)).toEqual([
+      "Source: Grafana, source-am",
+      "Severity: Critical, Warning",
+      "Status: Firing, Unknown",
+      "Labels: team=sre, service~api",
+      "Title: LatencyHigh, DiskFull",
+      "Message: timeout, volume",
     ]);
   });
 

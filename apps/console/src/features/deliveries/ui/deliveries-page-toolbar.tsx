@@ -23,6 +23,7 @@ export function DeliveriesPageToolbar({
 
   return (
     <PageToolbar
+      title={t("deliveries.page.title")}
       description={t("deliveries.page.description")}
       actions={
         <div className="flex flex-col items-start gap-1 sm:items-end">

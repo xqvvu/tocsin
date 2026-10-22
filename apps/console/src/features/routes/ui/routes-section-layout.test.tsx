@@ -92,16 +92,28 @@ describe("routes section table layout", () => {
     expect(tableRegion?.className).toContain("min-h-0");
   });
 
-  it("keeps a many-condition rule to one row and retains the full tooltip", () => {
+  it("wraps a many-condition rule into one chip per dimension without clipping", () => {
     const { container } = renderSection();
     const rule = container.querySelector('[title*="Sources: 2"]');
 
     expect(rule, "rule summary container missing").not.toBeNull();
-    expect(rule!.className).toContain("flex-nowrap");
-    expect(rule!.className).toContain("overflow-hidden");
-    expect(rule!.className).not.toContain("flex-wrap");
+    // The old cell was a nowrap strip of one badge per value, so a rich rule was
+    // squeezed into unreadable stubs. Grouped chips must wrap instead, and the
+    // container must not clip what it cannot fit.
+    expect(rule!.className).toContain("flex-wrap");
+    expect(rule!.className).not.toContain("flex-nowrap");
+    expect(rule!.className).not.toContain("overflow-hidden");
     expect(rule!.getAttribute("title")).toContain("Message contains: timeout, volume");
-    expect(rule!.querySelectorAll("[data-slot=badge]").length).toBe(12);
+    expect(rule!.querySelectorAll("[data-slot=badge]").length).toBe(6);
+
+    // Every value stays visible: grouped by dimension, joined in the locale's
+    // list separator rather than split into one badge per value.
+    expect(screen.getByText("Grafana, Alertmanager")).toBeTruthy();
+    expect(screen.getByText("Critical, Warning")).toBeTruthy();
+    expect(screen.getByText("Firing, Unknown")).toBeTruthy();
+    expect(screen.getByText("team=sre, service~api")).toBeTruthy();
+    expect(screen.getByText("LatencyHigh, DiskFull")).toBeTruthy();
+    expect(screen.getByText("timeout, volume")).toBeTruthy();
   });
 
   it("marks a target list that includes a disabled destination", () => {
