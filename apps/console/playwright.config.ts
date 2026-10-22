@@ -30,7 +30,7 @@ export default defineConfig({
     // Delete the throwaway database before the server opens it. Doing this in a
     // globalSetup instead races the webServer: Playwright may have already
     // booted the app (and migrated the file) before setup removes it.
-    command: `rm -f ${e2eDatabasePath()} ${e2eDatabasePath()}-wal ${e2eDatabasePath()}-shm && vp -C apps/console dev --port ${port} --host localhost`,
+    command: `rm -f "${e2eDatabasePath()}" "${e2eDatabasePath()}-wal" "${e2eDatabasePath()}-shm" && vp -C apps/console dev --port ${port} --host localhost`,
     // Ready, not healthy: the spec needs a migrated database, and /api/ready
     // reports the checks (SQLite included) that /api/health only names.
     url: `http://localhost:${port}/api/ready`,
