@@ -39,7 +39,7 @@
   （`copyable-code-line.tsx:71-78`、`delivery-ping-detail-dialog.tsx:131-138`、
   `delivery-attempt-detail-dialog.tsx:161-168`），`copyText` 由返回 boolean 改为
   失败抛错不会造成未捕获拒绝。合并后 main CI（`4856b5b`）success。
-- PR #<LOG_PR> `docs(planning): record round 81`：本轮日志与 backlog 更新
+- PR #370 `docs(planning): record round 81 and refresh release baselines`：本轮日志与 backlog 更新
   （UI-36/Q-38 → shipped；Q-23/Q-37 补 dedupe 窗口谓词陷阱；REL-21 补可执行
   workflow 方案与文档同步清单；REL-24 补第一批搬运方案；REL-16/REL-23 → blocked-autonomous）。
 
