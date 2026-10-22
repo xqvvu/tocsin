@@ -36,7 +36,9 @@ Settings 的页面路由；新增前端代码应继续沿用 route-first 形状�
 apps/console/src/
   routes/
     __root.tsx
+    index.tsx
     login.tsx
+    setup.tsx
     _dashboard.tsx
     _dashboard.sources.tsx
     _dashboard.routes.tsx
@@ -45,6 +47,10 @@ apps/console/src/
     _dashboard.events_.$eventId.tsx
     _dashboard.deliveries.tsx
     _dashboard.deliveries_.$deliveryId.tsx
+    _dashboard.suppressions.tsx
+    _dashboard.suppressions_.$suppressionId.tsx
+    _dashboard.integrations.tsx
+    _dashboard.settings.tsx
     api/
   shell/
     dashboard-layout.tsx
@@ -76,11 +82,24 @@ apps/console/src/
       api/
       model/
       ui/
+    suppressions/
+      api/
+      model/
+      ui/
+    integrations/
+      api/
+      model/
+      ui/
+    auth/
+      api/
+      model/
+      ui/
   components/
     ui/
     common/
   middlewares/
-    request-logging.middleware.ts   # 全局 request middleware，仅剩这一项
+    request-logging.middleware.ts   # 请求日志
+    csrf.middleware.ts              # 写请求 CSRF 校验（start.ts 与日志中间件一起注册）
   server/
     orpc/                     # oRPC implementer、feature router、middleware、handler
       os.ts, router.ts, handler.ts, openapi.ts
@@ -94,6 +113,8 @@ apps/console/src/
     operations/               # event-replay.service.ts, event-replay.service.types.ts
     deliveries/               # delivery-worker.service.ts, delivery-worker.service.types.ts
     intake/                   # intake.service.ts, intake.service.types.ts
+    suppressions/             # suppression.service.ts, suppression.service.types.ts
+    integrations/             # feishu-app.service.ts 等飞书应用能力
   lib/
     orpc.ts                   # isomorphic oRPC client：SSR 走 createRouterClient，浏览器走 RPCLink
   infra/
@@ -106,6 +127,9 @@ apps/console/src/
         delivery/
         history/
         settings/
+        suppression/
+        feishu-app/
+        oncall/
 ```
 
 > 共享命令 schema、操作 DTO 等 client/server 契约放在 `@tocsin/core` 包，oRPC contract
@@ -239,10 +263,10 @@ protection 的模块。相关文件：
   和 procedure middleware（controller 层 / client/server 边界适配）。
 - `server/runtime`：application container、request context、dashboard session/auth 类型、
   delivery worker runner 等跨能力运行时基础设施。
-- `server/configuration`：Source/Destination/Route/Settings 配置管理、TOML import/export 与 JSON
-  import/export。各能力
-  各有 `*.service.ts` / `*.service.types.ts`（`source.service.ts` 等），没有聚合门面——container
-  直接按能力暴露 `createSourceService`/`createDestinationService`/… 工厂。
+- `server/configuration`：应用设置与可移植配置，即 `app-settings.service.ts`、`config-portability.*`
+  与 `configuration-support.ts`（TOML/JSON import/export）。
+- `server/suppressions`、`server/integrations`：静默规则与飞书应用能力；容器按能力暴露
+  `createSuppressionService`、`createFeishuAppService` 等工厂，没有聚合门面。
 - `server/sources`、`server/destinations`、`server/routes`：各能力的服务端 `*.service.ts` /
   `*.service.types.ts`，与 `features/<同名>` 左右对称。
 - `server/intake`：webhook 接入解析与 `intake.service.ts`（`WebhookIntakeService`）。
