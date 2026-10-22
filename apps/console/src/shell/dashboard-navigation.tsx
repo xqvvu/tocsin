@@ -2,11 +2,11 @@ import {
   RiAlertLine,
   RiApps2Line,
   RiBellLine,
+  RiHistoryLine,
   RiNotificationOffLine,
   RiRouteLine,
   RiSendPlaneLine,
   RiSettings3Line,
-  RiTruckLine,
   RiWebhookLine,
   type RemixiconComponentType,
 } from "@remixicon/react";
@@ -70,7 +70,7 @@ export const dashboardNavGroups: readonly DashboardNavGroup[] = [
     labelKey: "shell.nav.groups.delivery",
     items: [
       { to: "/destinations", labelKey: "common.routes.destinations", icon: RiSendPlaneLine },
-      { to: "/deliveries", labelKey: "common.routes.deliveries", icon: RiTruckLine },
+      { to: "/deliveries", labelKey: "common.routes.deliveries", icon: RiHistoryLine },
     ],
   },
   {
