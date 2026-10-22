@@ -2,6 +2,81 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 74 轮）
+
+- 时间：2026-10-22 14:26 – 15:35 CST。
+- 基线：本轮开始时 `origin/main` @ `e8eecc6`；main CI 最近 3 次 success；无 open PR；
+  `v0.1.0-beta.56` 的 tag 与 GitHub Release 均已存在，无待补建项。
+- 类型：**需求切片 + 两车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  `architecture`；并发始终 ≤3。`requirements` 在 75 分钟预算内未返回，本轮未消费其结论
+  （下轮重新派发，不视为已审计）。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 4h58m（< 48h）；09:30 后 6 个 UI 提交全部有
+  浏览器验证记录，未验证合并 0；未解决 `UI-` 候选 18 条（存量 >20 才提前触发）。
+  再触发条件：2026-10-24 09:30 满 48h、未验证 UI 合并 ≥3、新增 UI 候选 ≥2 或存量 >20；
+  triage 另建议从存量挑一个 S 切片（如 UI-21 `Close` 本地化）顺带消化。
+- `last_ui_review_at`：**2026-10-22 09:30 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器检查均在会话工作树
+  `elegant-lewin-d1b91c`。工作树已清理。
+- 依赖：会话工作树 `node_modules` 缺 `@rolldown/plugin-babel` 链接，`vp install --force`
+  （8.4s，热 store）修复。
+
+### 本轮交付
+
+- PR #349 `feat(console): show replay preview target details`（REQ-22，28 分）。
+  - 事件补投预览渲染 `EventReplayPreview.targets`：`新建/已存在` 徽标 + 路由名 + 通知目标名；
+    目标名复用 `destinationsQueryOptions()`，缺失回退 `destinationId`。
+  - 路由补投预览移除 `slice(0, 10)`，渲染全部候选；每个候选增加「新建目标」徽标组，
+    底部增加「确认后将补投以上全部 N 条候选事件」。
+  - 新增 3 条组件测试；PRD `docs/prd/replay-preview-target-detail.md`；纯前端无 DTO/迁移。
+  - 验证：`vp check` 0 errors（18 个既有 warning）；`vp run -r test` 164 文件 / 867 项；
+    `vp run -r build` 通过。浏览器实测（隔离实例 `localhost:6201` + 临时 SQLite，
+    owner `admin@example.test`，1 源 / 12 事件 / 2 目标 / 1 路由）：
+    事件预览显示 `已有 1 条` + `可新建 1 条` 的目标矩阵；路由预览 12 条候选全部渲染，
+    第 1 条只列 `Audit channel`，计数 23 = 12×2−1；1280 与窄视口无横向溢出
+    （`scrollWidth === clientWidth`），console 除下述 hydration mismatch 外无新错误；
+    截图 `/tmp/tocsin-replay-verify/*.png`（未入库）。
+
+### 专家发现
+
+- `architecture`（5 条新发现，均已写入 backlog）：
+  - **ARCH-47（24）** `operation-filters.tsx` 695 行，内聚 `OperationFilters`（`:52`）、
+    `OperationFiltersPanel`（`:202`）、`useOperationSearchDraft`（`:617`）、
+    `OperationSearchInput`（`:663`），违反大组件拆 sibling 约定。
+  - **ARCH-48（22）** 表单值/视图模型类型仍在 `ui/`：`destination-ui-types.ts:24,55`、
+    `source-ui-types.ts:7`、`event-detail-stats.ts:5`。
+  - **ARCH-49（21）** `packages/api` 无 `#api/*` 别名，契约层跨目录相对导入
+    （`contract/operations.ts:4,5,23,24` 等）。
+  - **ARCH-50（20）** `DashboardNavigationSkeleton` 具名导出（`dashboard-navigation.tsx:186`），
+    未按 `Component.Skeleton` 暴露。
+  - **ARCH-51（26，EXPERT_PANEL）** `getSqliteStore()` 内启动两个后台 worker
+    （`container.ts:205-210`），任何只读 service 工厂都会触发。
+  - 已核验无新增违规：router 薄、无 `ORPCError`、无 DI 框架/模块级单例、
+    `components/common` 纯净、server-only 标记无新缺口。
+- `ui-triage`：见上。
+- 浏览器观察：**UI-35（24）** 事件详情 SSR hydration mismatch（console msgid 111，
+  `TabsContent value="normalized"`），随后 msgid 112-130 级联；未确认是否既有问题，
+  下轮先在干净 `origin/main` 复现再定责。
+- `requirements`：本轮未返回（超时），下轮重新派发。
+
+### EXPERT_PANEL
+
+- 本轮无新增裁决事项。ARCH-51 记为候选但未裁决（需评估 worker 启动时机，非纯重构）。
+
+### 发布决策
+
+- 见本轮后续记录（发布评估在 PR 合并后执行）。
+
+### 下一轮优先项
+
+1. **Q-23（25）**：dedupe cleanup 改有界批删除（唯一能一轮关闭未勾选代码 gate 的项）。
+2. **REL-7 bundle**：`playwright install chromium` + 全部改 `localhost` + webServer 用 `/api/ready`。
+3. **NEW-BI（26）/ NEW-BD（26）/ NEW-BE（26）**：纯前端切片。
+4. **UI-35 复现与定责**：先在干净 main 上打开事件详情确认 hydration mismatch 是否既有。
+5. 下一轮非必跑车道：**security-exposure**。
+
 ## 2026-10-22（第 73 轮）
 
 - 时间：2026-10-22 13:26 – 14:20 CST。
