@@ -16,7 +16,8 @@ boundary + query cache + shadcn primitives**。
 
 `apps/console/src/routes/index.tsx` 当前只是根 URL redirect 到 `/events`。Dashboard 已拆成
 `_dashboard` layout route，以及 Sources / Routes / Destinations / Events / Deliveries /
-Settings 的页面路由；新增前端代码应继续沿用 route-first 形状：
+Suppressions / Integrations / Settings 的页面路由；`login` 与 `setup` 是未认证入口。新增前端
+代码应继续沿用 route-first 形状：
 
 1. `routes` 决定 URL、layout、search params、loader、beforeLoad 和薄渲染入口。
 2. `features` 按业务对象纵切 Sources、Routes、Destinations、Events、Deliveries。
@@ -172,6 +173,11 @@ worker、secret helper 或任何 server-only 基础设施。route 文件可以�
 - `features/operations`：Events/Deliveries 暂共享的 query keys、list/detail query、filter/search
   model、retry/run worker mutations、格式化 helper。RC 收尾阶段可再拆成 events/deliveries 各自
   api/model。
+- `features/suppressions`：静默规则列表/详情、创建与编辑表单、命中记录，以及从事件、标签或
+  通知目标预填的静默对话框。
+- `features/integrations`：飞书应用资源的管理、校验与测试连接 UI。
+- `features/configuration`：Settings 偏好、运行时信息面板与 TOML 导入/导出 UI。
+- `features/auth`：登录、初始化 owner 与认证表单实现。
 
 每个 feature 可以拥有自己的 `api/`、`model/`、`ui/` 和测试。feature 层可以组合 shadcn
 primitives、TanStack Form、TanStack Table、TanStack Query hooks，也可以调 oRPC procedure；
@@ -191,7 +197,8 @@ primitives、TanStack Form、TanStack Table、TanStack Query hooks，也可以�
 - 全局 loading、error、empty shell 状态。
 
 shell 可以知道“这是 Tocsin console 的 dashboard”，可以展示 Sources、Routes、Destinations、
-Events、Deliveries 导航项，但不实现这些 feature 的表单、表格、loader 和 mutations。
+Events、Deliveries、Suppressions、Integrations、Settings 导航项，但不实现这些 feature 的
+表单、表格、loader 和 mutations。
 `routes/_dashboard.tsx` 应主要挂载 shell、执行 dashboard UX guard，并渲染子路由 outlet。
 通用表格、分页、复制控件、面板、tooltip、状态 badge 等不属于 shell；它们应放在
 `components/common`，避免 feature 为了复用 dashboard 外壳而反向依赖 shell。

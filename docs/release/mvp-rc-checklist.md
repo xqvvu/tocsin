@@ -16,8 +16,8 @@ Docker runtime 形态。
 
 它不等于稳定公开发布已经完成。截至 2026-10-20，发布文档（release checklist、Docker 生产部署、
 备份/恢复/升级/回滚）与 README 的状态措辞已经补齐，见 `docs/release/`；仍未完成的发布 gate 有
-三类：dedupe cleanup 成本上限（D 节）、provider inline payload fixture 化与多版本 payload 覆盖
-（E 节），以及 provider 侧 contributor guide（B/E 节）。关键浏览器 E2E 已接入 CI
+四类：dedupe cleanup 成本上限（D 节）、provider inline payload fixture 化与多版本 payload 覆盖
+（E 节）、provider 侧 contributor guide（B/E 节），以及 E2E spec 覆盖面（A 节）。关键浏览器 E2E 已接入 CI
 （`.github/workflows/e2e.yml`，2026-10-22），但 spec 覆盖面仍小于 gate 要求（见 A 节与 REL-22）。compose smoke 已交付并明确保留为本地人工 gate，不计划接入 CI；
 delivery history retention 已决定不自动清理，理由见
 `docs/release/history-retention-and-snapshots.md` §1。
@@ -176,6 +176,8 @@ sink 仍应在发布或 post-MVP 中继续设计。
 
 ### E. Fixtures 与贡献体验
 
+- [ ] 补充 provider 侧 contributor guide：manifest、config schema、parse 失败形状、fixture 组织与
+      registry 注册点，与 `docs/contributing/destination-adapter.md` 并列。
 - [ ] 将 provider inline payload tests 扩展为 fixture 文件。
 - [ ] 覆盖 SigNoz、Grafana、Uptime Kuma、Alertmanager、FastGPT 的多版本/代表性 payload。
 - [x] 增加 adapter 开发贡献指南：manifest、schema、preview/send、secret handling、tests、registry。

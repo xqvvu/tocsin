@@ -200,6 +200,7 @@ BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 - 完善 Event detail：normalized fields、raw debug view、route match 解释、关联 deliveries。
 - 完善 Delivery detail：rendered payload、attempt history、last error、next attempt、手动 retry。
 - 完善 Route authoring：更清晰的条件编辑、匹配预览、目标 destination 多选与规则解释。
+  （2026-10-22 更新：多条件增删、route explain 与投递缺口解释已交付；剩余为更细的规则预览体验。）
 - 完善 Destination test/preview：真实发送测试、模板预览、失败信息脱敏展示。
 - 完善 TOML import/export：secret env ref、导入差异预览、校验错误定位、配置迁移策略。
 - 补齐端到端 workflow 测试：Source -> Event -> Route -> Delivery -> retry/history。
@@ -227,8 +228,10 @@ BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 ### 4. 运维体验增强
 
 - 更强的搜索和筛选：按 source、severity、status、destination、delivery state、fingerprint、时间范围过滤。
+  （2026-10-22 更新：除 fingerprint 聚合视图外均已交付。）
 - 更好的 retry 操作：批量 retry、retry reason、retry 后差异记录。
 - 更清晰的 route explain：某个 Event 为什么匹配或没有匹配某条 Route。
+  （2026-10-19 已交付：`route-match-gaps.ts` 与 `event-detail-route-gaps.tsx`。）
 - 更细的 dashboard 权限：owner/admin/member 的只读与管理边界。
 - 更完善的配置审计：谁在何时改了 Source、Route、Destination 或 Settings。
 

@@ -366,7 +366,7 @@ vp exec auth@latest generate \
   --yes
 ```
 
-生成文件只是当前 auth schema 的参考，和 `better-auth-schema.ts` 放在同一目录，方便对照
+生成文件只是当前 auth schema 的参考，和 `better-auth.schema.ts` 放在同一目录，方便对照
 CLI 输出和手写 Kysely builder。全新库的运行时迁移仍由 `0001_initial_schema.ts` 调用
 `better-auth.schema.ts` 创建表；已部署库由 `0002`/`0003` 补齐。涉及默认值、约束、owner
 bootstrap 等 Tocsin 语义时，以 Tocsin builder 为准。
@@ -480,7 +480,7 @@ vp -C apps/console build
 3. 更新对应 repository helper / implementation。
 4. 补充 schema plan 和 repository 测试。
 5. 如果 Better Auth 配置或 plugin 改变，先运行 `auth:schema` 生成参考 schema，再把差异转写
-   到 `better-auth-schema.ts`。
+   到 `better-auth.schema.ts`。
 6. 发布后需要兼容已有部署时，新增 forward-only step 并在 `migrate/plan.ts` 显式注册，不再
    修改旧 step。
 
