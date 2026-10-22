@@ -66,10 +66,28 @@ export function SettingsDeliveryPausePanel() {
       {settings.deliveryPaused ? (
         <p className="text-destructive text-[11px] font-medium">
           {settings.deliveryPausedAt
-            ? t("configuration.deliveryPause.pausedAt", {
-                time: formatDateTime(settings.deliveryPausedAt, { locale, timeZone }),
-              })
+            ? settings.deliveryPausedBy
+              ? t("configuration.deliveryPause.pausedAtBy", {
+                  time: formatDateTime(settings.deliveryPausedAt, { locale, timeZone }),
+                  actor: settings.deliveryPausedBy,
+                })
+              : t("configuration.deliveryPause.pausedAt", {
+                  time: formatDateTime(settings.deliveryPausedAt, { locale, timeZone }),
+                })
             : t("configuration.deliveryPause.paused")}
+        </p>
+      ) : settings.lastDeliveryPause ? (
+        <p className="text-muted-foreground text-[11px]">
+          {settings.lastDeliveryPause.pausedBy
+            ? t("configuration.deliveryPause.lastPause", {
+                start: formatDateTime(settings.lastDeliveryPause.startedAt, { locale, timeZone }),
+                end: formatDateTime(settings.lastDeliveryPause.endedAt, { locale, timeZone }),
+                actor: settings.lastDeliveryPause.pausedBy,
+              })
+            : t("configuration.deliveryPause.lastPauseNoActor", {
+                start: formatDateTime(settings.lastDeliveryPause.startedAt, { locale, timeZone }),
+                end: formatDateTime(settings.lastDeliveryPause.endedAt, { locale, timeZone }),
+              })}
         </p>
       ) : null}
       <DeliveryResumeDialog open={resumeOpen} onOpenChange={setResumeOpen} />

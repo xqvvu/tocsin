@@ -10,6 +10,14 @@ import { AppIntlProvider } from "#/i18n/provider";
 
 const testState = vi.hoisted(() => ({
   paused: true,
+  pausedAt: null as string | null,
+  pausedBy: null as string | null,
+  lastPause: null as {
+    startedAt: string;
+    endedAt: string;
+    pausedBy: string | null;
+    resumedBy: string | null;
+  } | null,
   queries: 0,
   mutateAsync: vi.fn<(input: unknown) => Promise<unknown>>(),
   toast: {
@@ -26,7 +34,9 @@ vi.mock("#/features/configuration/api/configuration.queries", () => ({
 
       return {
         deliveryPaused: testState.paused,
-        deliveryPausedAt: null,
+        deliveryPausedAt: testState.pausedAt,
+        deliveryPausedBy: testState.pausedBy,
+        lastDeliveryPause: testState.lastPause,
         rawPayloadRetentionDays: 30,
       };
     },
@@ -47,6 +57,9 @@ describe("settings delivery pause panel", () => {
   afterEach(() => {
     cleanup();
     testState.paused = true;
+    testState.pausedAt = null;
+    testState.pausedBy = null;
+    testState.lastPause = null;
     testState.queries = 0;
     testState.mutateAsync.mockReset();
     testState.toast.success.mockClear();
@@ -88,6 +101,43 @@ describe("settings delivery pause panel", () => {
       expect(screen.queryByText("Resume outbound delivery?")).toBeNull();
     });
     expect(testState.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("names the operator who started the current pause", async () => {
+    testState.pausedAt = "2026-06-01T10:00:00.000Z";
+    testState.pausedBy = "oncall@example.test";
+
+    renderPanel();
+
+    expect(await screen.findByText(/Paused since .* by oncall@example\.test/)).toBeTruthy();
+  });
+
+  it("shows the last completed pause interval once delivery is running", async () => {
+    testState.paused = false;
+    testState.lastPause = {
+      startedAt: "2026-06-01T10:00:00.000Z",
+      endedAt: "2026-06-01T10:30:00.000Z",
+      pausedBy: "oncall@example.test",
+      resumedBy: "lead@example.test",
+    };
+
+    renderPanel();
+
+    expect(await screen.findByText(/Last pause: .+ – .+ by oncall@example\.test/)).toBeTruthy();
+  });
+
+  it("keeps the last pause readable when the operator is unknown", async () => {
+    testState.paused = false;
+    testState.lastPause = {
+      startedAt: "2026-06-01T10:00:00.000Z",
+      endedAt: "2026-06-01T10:30:00.000Z",
+      pausedBy: null,
+      resumedBy: null,
+    };
+
+    renderPanel();
+
+    expect(await screen.findByText(/Last pause: .+ – .+$/)).toBeTruthy();
   });
 
   it("resumes after confirmation", async () => {

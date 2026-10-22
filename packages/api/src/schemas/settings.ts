@@ -1,4 +1,9 @@
-import { IanaTimeZoneSchema, IsoDateTimeSchema, LocaleSchema } from "@tocsin/core";
+import {
+  DeliveryPauseRecordSchema,
+  IanaTimeZoneSchema,
+  IsoDateTimeSchema,
+  LocaleSchema,
+} from "@tocsin/core";
 import * as z from "zod";
 
 /** Console runtime settings owned by the dashboard operator. */
@@ -8,6 +13,8 @@ export const AppSettingsOutputSchema = z.object({
   rawPayloadRetentionDays: z.number().int().min(0),
   deliveryPaused: z.boolean(),
   deliveryPausedAt: IsoDateTimeSchema.nullable(),
+  deliveryPausedBy: z.string().nullable(),
+  lastDeliveryPause: DeliveryPauseRecordSchema.nullable(),
 });
 
 /**
