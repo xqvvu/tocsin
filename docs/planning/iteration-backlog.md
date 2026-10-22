@@ -574,12 +574,9 @@
 
 ## 发布记录
 
-> 待发布：`0.1.0-beta.54`（PR #336）已由三位发布专家一致通过，但发布 PR 的 CI 连续 3 次卡在
-> `Setup Vite+`（上游 npm 元数据 `@voidzero-dev/vite-plus-cli-linux-x64-gnu@1.3.0` 解析失败，
-> 发生在任何仓库代码执行之前）。**未打 tag、未推镜像**；下一轮优先重跑 #336 的 CI，绿后合并再发布。
-
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.54` | `708c404` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.54`（linux/amd64 + linux/arm64，index digest `sha256:d9ce6443…`） | Settings 数据库存储健康面板（#338，NEW-AT）+ 路由规则列可读性与页面标题（#337，`ee00fa2`）+ 静默命中范围（#335）+ 暂停态 worker 禁用原因（#332）+ 依赖补丁升级（`5ae2e68`，better-auth 1.7.10→1.7.12、Node 26.12.1）；无迁移/配置变化；回滚镜像 `0.1.0-beta.53` |
 | `0.1.0-beta.53` | `f9e92d8` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.53`（linux/amd64 + linux/arm64，index digest `sha256:03edbbf2…`） | 暂停期间补投/目标测试时机提示（#329，NEW-AI）+ 暂停不再回写陈旧 retention（#328，Q-55）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.52` |
 | `0.1.0-beta.52` | `b9d080e` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.52`（linux/amd64 + linux/arm64，index digest `sha256:d6a87873…`） | 暂停期间可领取积压摘要（#325，NEW-AH）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.51` |
 | `0.1.0-beta.51` | `35f5a14` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.51`（linux/amd64 + linux/arm64，index digest `sha256:83f28f04…`） | 恢复投递前的加急影响披露（#322，NEW-AG）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.50` |
