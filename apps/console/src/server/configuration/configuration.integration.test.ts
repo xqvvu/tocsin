@@ -100,6 +100,65 @@ const destinationSecretCases: Record<
   },
 };
 
+/**
+ * One rendered-payload secret marker per destination kind. Preview and test
+ * results are dashboard DTOs, so the rendered outbound body must come back as
+ * a redacted projection even when the marker sits in an operator-shaped JSON
+ * payload or in a secret-shaped assignment inside a custom template. Keyed by
+ * kind so adding a destination kind fails typecheck until its rendered-payload
+ * redaction case exists.
+ */
+const destinationRenderedPayloadSecretCases: Record<
+  DestinationKind,
+  { config: JsonObject; marker: string }
+> = {
+  generic_webhook: {
+    config: {
+      url: "https://example.test/webhook",
+      template: {
+        mode: "json_payload",
+        payload: {
+          event: "{{event.title}}",
+          apiSecret: "generic-rendered-payload-secret",
+        },
+      },
+    },
+    marker: "generic-rendered-payload-secret",
+  },
+  feishu: {
+    config: {
+      sendMode: "webhook",
+      webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/example",
+      template: {
+        source: "custom",
+        mode: "text",
+        text: "token=feishu-rendered-payload-secret",
+      },
+    },
+    marker: "feishu-rendered-payload-secret",
+  },
+  slack: {
+    config: {
+      webhookUrl: "https://hooks.slack.com/services/example",
+      template: {
+        source: "custom",
+        mode: "text",
+        text: "token=slack-rendered-payload-secret",
+      },
+    },
+    marker: "slack-rendered-payload-secret",
+  },
+  email: {
+    config: {
+      endpointUrl: "https://mail-gateway.example.test/send",
+      to: ["sre@example.test"],
+      from: "tocsin@example.test",
+      subjectTemplate: "token=email-rendered-payload-secret",
+    },
+    marker: "email-rendered-payload-secret",
+  },
+};
+
 async function createStore() {
   return openSqliteStore({
     databasePath: ":memory:",
@@ -1024,6 +1083,28 @@ describe("configuration capabilities", () => {
     expect(emailPreview.renderedPayload).not.toHaveProperty("replyTo");
     expect(JSON.stringify(emailPreview)).not.toContain("https://mail-gateway.example.test/send");
     expect(JSON.stringify(emailPreview)).not.toContain("sre@example.test");
+
+    await store.close();
+  });
+
+  it("redacts rendered payloads for every destination kind", async () => {
+    const { store, services } = await createTestContext();
+
+    for (const kind of DestinationKindSchema.options) {
+      const { config, marker } = destinationRenderedPayloadSecretCases[kind];
+      const result = await services.destinations.previewDestinationDraft({
+        name: `${kind} redaction draft`,
+        kind,
+        config,
+      });
+      const rendered = JSON.stringify(result.renderedPayload);
+
+      expect({
+        kind,
+        containsSecret: rendered.includes(marker),
+        redacted: rendered.includes("[REDACTED]"),
+      }).toEqual({ kind, containsSecret: false, redacted: true });
+    }
 
     await store.close();
   });
