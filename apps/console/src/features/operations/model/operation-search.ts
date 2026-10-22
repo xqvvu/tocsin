@@ -41,6 +41,14 @@ export const DashboardOperationSearchSchema = z.object({
     .union([OperationTimeRangeSchema, z.literal("")])
     .catch("")
     .optional(),
+  // The instant the operator opened the window. Without it the server resolves
+  // the window against each request, so paging or reopening a shared link moves
+  // the lower bound and rows shift between pages.
+  rangeAnchor: z
+    .string()
+    .refine((value) => value === "" || !Number.isNaN(Date.parse(value)))
+    .catch("")
+    .optional(),
   q: z.string().catch("").optional(),
   eventPage: z.coerce.number().int().min(1).catch(1).optional(),
   deliveryPage: z.coerce.number().int().min(1).catch(1).optional(),
@@ -55,6 +63,7 @@ export interface DashboardOperationSearch {
   routeId?: string;
   deliveryState?: DeliveryState | "";
   range?: OperationTimeRange | "";
+  rangeAnchor?: string;
   q?: string;
   eventPage?: number;
   deliveryPage?: number;
@@ -69,6 +78,7 @@ export type OperationFilterData = {
   routeId?: string;
   deliveryState?: DeliveryState;
   range?: OperationTimeRange;
+  rangeAnchor?: string;
   q?: string;
   eventPage?: number;
   deliveryPage?: number;
@@ -111,6 +121,10 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
       // Spacing is preserved: the search input is backed by this value, and
       // trimming on every keystroke used to eat the space in "Disk usage".
       q: search.q?.slice(0, OPERATION_SEARCH_MAX_LENGTH),
+      // An anchor only means something together with the window it was captured
+      // for; keeping it after the window is cleared would attach a stale instant
+      // to the next window the operator picks.
+      rangeAnchor: search.range ? search.rangeAnchor : undefined,
       // Both page counters follow the same rule: page 1 is the default, so it
       // stays out of the URL rather than making every link carry `=1`.
       eventPage: search.eventPage && search.eventPage > 1 ? search.eventPage : undefined,
@@ -136,13 +150,19 @@ export function mergeOperationSearch(
     "routeId",
     "deliveryState",
     "range",
+    "rangeAnchor",
     "q",
   ];
   const filterChanged = filterKeys.some((key) => Object.hasOwn(next, key));
+  // A new window without a new anchor would inherit the old instant. Anchors
+  // are only valid for the window they were captured with, so an explicit
+  // window change drops the stale one.
+  const anchorStale = Object.hasOwn(next, "range") && !Object.hasOwn(next, "rangeAnchor");
 
   return pruneSearch({
     ...search,
     ...next,
+    ...(anchorStale ? { rangeAnchor: "" } : {}),
     // A filter change starts a fresh result set, so both lists go back to their
     // first page — otherwise the reader lands mid-way through a different set.
     ...(filterChanged ? { eventPage: 1, deliveryPage: 1 } : {}),

@@ -91,6 +91,7 @@ describe("operation filters by page scope", () => {
         routeId: "route-1",
         deliveryState: "failed",
         range: "1h",
+        rangeAnchor: "2026-10-23T04:00:00.000Z",
         q: "checkout",
       },
       "toolbar",
@@ -109,8 +110,25 @@ describe("operation filters by page scope", () => {
       routeId: "",
       deliveryState: "",
       range: "",
+      rangeAnchor: "",
       q: "",
     });
+  });
+
+  it("names the pinned lower bound on the time range chip", () => {
+    // A shared link with an anchor describes a fixed window; the chip has to say
+    // which one, or readers cannot tell it apart from a live "last hour".
+    renderFilters("events", { range: "1h", rangeAnchor: "2026-10-23T04:00:00.000Z" }, "toolbar");
+
+    expect(screen.getByTitle("Clear Time range")).toBeTruthy();
+    expect(screen.getByText("Last hour · from 10/23, 04:00")).toBeTruthy();
+  });
+
+  it("keeps the plain window label when the link has no anchor", () => {
+    renderFilters("events", { range: "1h" }, "toolbar");
+
+    expect(screen.getByText("Last hour")).toBeTruthy();
+    expect(screen.queryByText(/· from/)).toBeNull();
   });
 
   it("does not surface delivery-only chips on the events page", () => {

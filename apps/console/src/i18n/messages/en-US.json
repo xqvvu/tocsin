@@ -811,6 +811,7 @@
   "operations.filters.timeRangeOptions.6h": "Last 6 hours",
   "operations.filters.timeRangeOptions.24h": "Last 24 hours",
   "operations.filters.timeRangeOptions.7d": "Last 7 days",
+  "operations.filters.timeRangeAnchored": "{range} · from {time}",
   "operations.filters.search": "Search",
   "operations.filters.searchPlaceholder": "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
   "operations.filters.searchPlaceholderDeliveries": "title, message, fingerprint, idempotency key, label, upstream metadata, ID, error, destination, route, or external reference",

@@ -5,6 +5,8 @@ import { useLocale, useTimeZone } from "#/i18n/use-i18n";
 
 export interface OperationDateFormatter {
   formatDateTime: (value: string) => string;
+  /** Month, day, hour, and minute: fits a chip without the year and seconds. */
+  formatDateTimeCompact: (value: string) => string;
   formatTime: (value: string) => string;
 }
 
@@ -22,6 +24,7 @@ function useOperationDateFormatterForTimeZone(
   return React.useMemo(
     () => ({
       formatDateTime: (value) => formatDateTime(value, { locale, timeZone }),
+      formatDateTimeCompact: (value) => formatDateTimeCompact(value, { locale, timeZone }),
       formatTime: (value) => formatTime(value, { locale, timeZone }),
     }),
     [locale, timeZone],
@@ -43,6 +46,21 @@ export function formatDateTime(value: string, options: DateFormatOptions = {}): 
     month: "2-digit",
     second: "2-digit",
     year: "numeric",
+  }).format(new Date(value));
+}
+
+/**
+ * Same instant as {@link formatDateTime} without the year and seconds.
+ *
+ * Filter chips are one line of 11px text beside the filter name; the full form
+ * pushes the value past the truncation point and hides the part that matters.
+ */
+export function formatDateTimeCompact(value: string, options: DateFormatOptions = {}): string {
+  return createDateTimeFormat(options, {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "2-digit",
   }).format(new Date(value));
 }
 
