@@ -23,7 +23,7 @@
 
 ### 本轮交付
 
-- PR #TBD `feat(console): disclose the alert scope of a silence rule`。
+- PR #335 `feat(console): disclose the alert scope of a silence rule`。
   - 新增 `features/suppressions/model/suppression-scope.ts`（纯投影：告警源名称/停用/已删除、
     severity/status、是否有文本条件）与 `ui/suppression-scope-preview.tsx`「命中范围」面板，
     在 `suppression-forms.tsx` 的 `UrgentImpactPreview` 之前渲染，创建与编辑共用。
