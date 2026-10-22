@@ -9,8 +9,11 @@ import { requireEvent } from "#/infra/sqlite/repositories/intake/intake.helpers"
 import type { IntakeRepository } from "#/infra/sqlite/repositories/intake/intake.interface";
 import { SqliteIntakeRepository } from "#/infra/sqlite/repositories/intake/intake.repository";
 import {
+  findOncallDedupeKey,
   oncallPingFromRow,
+  pruneOncallDedupeKeys,
   requireOncallPing,
+  saveOncallDedupeKey,
 } from "#/infra/sqlite/repositories/oncall/oncall.helpers";
 import type {
   ClaimOncallPingsInput,
@@ -35,18 +38,17 @@ export class SqliteOncallRepository implements OncallRepository {
       const repository = this.withContext(context);
       const now = input.now ?? this.context.now();
 
-      await context.db
-        .deleteFrom("oncall_ping_dedupe_keys")
-        .where("created_at", "<", input.dedupeWindowStartsAt)
-        .execute();
+      await pruneOncallDedupeKeys(context.db, input.dedupeWindowStartsAt);
 
-      const existing = await context.db
-        .selectFrom("oncall_ping_dedupe_keys")
-        .select("first_ping_id")
-        .where("fingerprint", "=", input.fingerprint)
-        .where("destination_id", "=", input.destinationId)
-        .where("receiver", "=", input.receiver)
-        .executeTakeFirst();
+      const existing = await findOncallDedupeKey(
+        context.db,
+        {
+          fingerprint: input.fingerprint,
+          destination_id: input.destinationId,
+          receiver: input.receiver,
+        },
+        input.dedupeWindowStartsAt,
+      );
 
       if (existing) {
         return null;
@@ -80,16 +82,13 @@ export class SqliteOncallRepository implements OncallRepository {
         })
         .execute();
 
-      await context.db
-        .insertInto("oncall_ping_dedupe_keys")
-        .values({
-          fingerprint: input.fingerprint,
-          destination_id: input.destinationId,
-          receiver: input.receiver,
-          first_ping_id: id,
-          created_at: now,
-        })
-        .execute();
+      await saveOncallDedupeKey(context.db, {
+        fingerprint: input.fingerprint,
+        destination_id: input.destinationId,
+        receiver: input.receiver,
+        first_ping_id: id,
+        created_at: now,
+      });
 
       return requireOncallPing(await repository.get(id));
     });

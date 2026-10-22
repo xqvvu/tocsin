@@ -144,9 +144,10 @@ function classify(input: {
     return "destination_disabled";
   }
 
-  // Still inside the dedupe window and the row survives: name the event that
-  // won. Past the window it is pruned and this becomes unknowable — which is
-  // exactly why `unknown` has to exist as a first-class answer.
+  // The key is still on disk: name the event that won. Leaving the window
+  // stops the key from suppressing new deliveries, and a bounded prune clears
+  // it later, so this evidence outlives the window and eventually disappears —
+  // which is exactly why `unknown` has to exist as a first-class answer.
   if (input.firstEventId) {
     return "duplicate_within_window";
   }
