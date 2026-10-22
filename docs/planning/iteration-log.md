@@ -2,6 +2,96 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 69 轮）
+
+- 时间：2026-10-22 09:20 – 10:15 CST。
+- 基线：本轮开始时 `origin/main` @ `f23520b`；main CI success；无 open PR。
+- 类型：**UI 评审切片 + 三车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`review_now`**（限缩到投递暂停簇），
+  `ui-review` 取第三名额；`quality` 为轮转车道，与 requirements 并行。ui-triage 结束后才启动
+  ui-review，并发始终 ≤3。
+- 车道轮转位置：**`architecture`**（下一轮非必跑车道）。
+- `ui-triage`：**`review_now`** —— 距上次评审 3h39m（< 48h），但自上次以来 5 个 UI 合并（阈值为 3），
+  18 条未解决 UI 候选，且 5 个合并全部聚集在同一个新功能（全局投递暂停）上、每次只验证单表面，
+  代码快览已确认三处跨表面落差（横幅中性 Alert vs 顶栏 destructive 徽标；暂停一键生效 vs 恢复需确认；
+  `Run worker` 禁用原因只在 `title`）。判定做**限缩评审**而不是全量重审。
+- `last_ui_review_at`：**2026-10-22 09:30 CST**（第 69 轮暂停簇浏览器评审，隔离实例 6195 + 临时 SQLite）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器检查均在会话工作树
+  `serene-heyrovsky-8bfcb5`。工作树已清理。
+- 文档同步：当前会话未暴露 `obsidian-vault` skill，Obsidian 同步已跳过。
+
+### 本轮交付
+
+- PR #332 `feat(console): explain why the worker action is disabled while paused`（rebase 合并 `c507970`）。
+  - 暂停时在工具栏动作区下方渲染可见说明「出站投递已暂停，恢复后才能运行 worker」，并用
+    `aria-describedby` 关联到按钮；保留原生 `title`；中英文案同步。
+  - 新增 `deliveries-page-toolbar.test.tsx` 三态覆盖（运行中 / 暂停 / 其他操作 pending）。
+  - PRD `docs/prd/delivery-worker-paused-reason.md`；backlog 新增 `UI-34`（shipped）。
+  - 验证：`vp check` 0 errors（18 个既有 warning）；`vp run -r test` 4/4 workspace 任务、
+    console 159 文件 / 844 项；`vp run -r build` 通过。
+  - 浏览器实测（隔离实例 `localhost:6195` + 临时 SQLite，owner `admin@example.test`）：
+    1280×900 与 390×844 下暂停态说明均可见、不溢出；无障碍树按钮 `description` 为说明文案且保持
+    `disabled`；恢复后说明消失、按钮可用；无 console 错误，请求均 200。
+    截图 `/tmp/tocsin-run-worker-paused-{1280,390}.png`（未入库）。
+
+### 专家发现
+
+- `requirements`（5 条新候选，已写入 backlog）：
+  - **NEW-AO（29）** 静默规则创建/编辑披露条件范围（源/严重级别/状态）：抑制 PRD 的安全护栏要求
+    （`docs/prd/alert-suppression.md:99,287`），已交付切片只做目标/加急
+    （`docs/prd/suppression-scope-disclosure.md:47`）；表单已有 matcher 输入
+    （`suppression-forms.tsx:368-408`），影响区只有 `UrgentImpactPreview`
+    （`urgent-impact-preview.tsx:18-86`）。纯前端。
+  - **NEW-AP（28）** 路由列表规则摘要可只读展开完整条件：chips 单行截断、完整条件只在 `title`
+    （`routes-section.tsx:354-369`），`describeRouteRule` 折叠 source 数量
+    （`route-rule-summary.ts:39-48,60-91`）。
+  - **NEW-AQ（27）** 覆盖率徽标可展开路由名单与阻断原因：名单只在 `title`
+    （`source-route-coverage-cell.tsx:17-35`、`destination-route-coverage.ts:20-24`）。
+  - **NEW-AR（26）** 暂停支持自动恢复时间：暂停 PRD 明确列为非目标（`docs/prd/delivery-pause.md:50`），
+    需 mini-PRD + EXPERT_PANEL。
+  - **NEW-AS（24）** 未命中路由事件的 24h 聚合信号：只有逐行徽标
+    （`event-delivery-counts-cell.tsx:37-45`），低于门槛，建议与 REQ-21 协同。
+- `quality`（6 条复核，结论已写入 backlog）：
+  - **Q-5/Q-43** 仍成立：损坏 JSON 无读取容错，`claimNext` 事务内 `intake.get(job.eventId)` 抛错会
+    回滚整批（`delivery.repository.ts:323`），Events 列表 `route_matches_json` 损坏整页 500
+    （`history.repository.ts:132,424-432`）；`rendered_payload_json` 影响投递详情
+    （`delivery.helpers.ts:55-57`）。
+  - **Q-13** 仍成立：唯一 worker 脱敏测试 `sendContext: {}` 且绑定驱动文案
+    （`delivery-worker.service.test.ts:851-865`），脱敏断言恒真。
+  - **Q-10** 部分修复、剩余成立：`settings.get()` 已前置（`delivery-worker.service.ts:54-58`）；
+    post-claim 单条抛错中断整批（`:99-109`）与 `markSucceeded` 失败被当发送失败重试
+    （`delivery-execution.ts:105-120`）仍在。
+  - **Q-2** 仍成立：`response.text()` 无字节预算（`packages/destinations/src/utils.ts:77-83`），
+    落库未截断（`delivery.repository.ts:386,432`）。
+  - **Q-4/Q-12/Q-57** 仍成立：6 个 NOT_FOUND 分支无覆盖，测试 harness 未注入 resolver
+    （`configuration.integration.test.ts:118-122`），`testDestination` 解析失败语义与投递路径不一致
+    （`destination.service.ts:176-181`）。
+  - **新增 Q-58（22）**：两条第 67/68 轮新测试无法证明其声称行为——`operations.service.test.ts:148-197`
+    未注入服务时钟，`delivery-pause-hint.test.tsx:51-59` 未等查询落地。
+  - **Q-56 降级**：`markFailed` 在 `oncall.repository.ts:211` 自行重算 `shouldRetry`，原「无限重排
+    并重复呼叫」风险不成立，测试缺口仍在但降为 LOW。
+- `ui-review`（限缩暂停簇，代码 + 浏览器）：
+  - 已确认并交付：`Run worker` 禁用原因只在原生 `title`（`deliveries-page-toolbar.tsx:36-50`）→ PR #332。
+  - 已确认、保留为候选：暂停横幅用中性 `Alert`（`deliveries-paused-notice.tsx:59`），而顶栏徽标用
+    `destructive`（`delivery-pause-indicator.tsx:28-29`）、Settings 用 `text-destructive`
+    （`settings-delivery-pause-panel.tsx:67`），视觉权重不一致；本轮未改，避免把紧急停止横幅
+    过度染色，留待下一次 UI 评审结合截图决定。
+  - 判定为合理设计、不改：Settings「暂停一键生效 / 恢复需确认」的方向差异——暂停只停止发送，
+    恢复会触发积压发送与重新呼叫，确认放在危险方向（`delivery-resume-dialog.tsx:16-24`）。
+
+### EXPERT_PANEL
+
+- 本轮无新增裁决事项；SEC-26 仍待后续轮次专家小组。
+
+### 下一轮优先项
+
+1. **NEW-AO（29）** 静默条件范围披露；**NEW-AP（28）** 路由规则只读展开；**NEW-AQ（27）** 覆盖率名单展开。
+2. **NEW-AL（28）** 恢复投递前积压影响；**SEC-25** AUTO_FIX（`renderedPayload` 投影）；
+   **SEC-22** AUTO_FIX（只读 endpoint userinfo）。
+3. **Q-58/Q-56/Q-57** 低成本测试补齐；**ARCH-45/46** 两个 S 级分层修正；**SEC-26** 交 EXPERT_PANEL。
+4. 轮转车道 **`architecture`**；UI 评审遗留：暂停横幅视觉权重、`Run worker` 说明已交付。
+
 ## 2026-10-22（第 68 轮）
 
 - 时间：2026-10-22 08:26 – 09:50 CST。
