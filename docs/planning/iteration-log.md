@@ -2,6 +2,83 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 88 轮）
+
+- 时间：2026-10-23 07:10 CST 起。
+- 基线：本轮开始时 `origin/main` @ `7f60dd2`；main CI 最近一次 success；无 open PR；
+  `v0.1.0-beta.66` 的 tag 与 GitHub Release 均已存在。
+- 类型：**`full-audit`（3 条车道）** —— `requirements`、`ui-triage`→`ui-review`、`docs-drift`。
+  `security-exposure`、`release-infra`、`architecture`、`quality` 顺延。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**——仍未覆盖全部车道。
+- 车道轮转位置：**`release-infra`**（下一轮非必跑车道）。
+- `ui-triage`：**`review_now`** —— 自上次评审 UI 路径合并 5 个（`10b44f6`、`dcff721` #378、
+  `025ac9b` #382、`bf19c17` #386、`99cea2f`），其中 3 个未经浏览器复验；#386 在顶栏新增
+  常驻指示器，只有 jsdom 测试。
+- `last_ui_review_at`：**2026-10-23 07:50 CST**（本轮完成真实浏览器评审）。
+- 工作树：`agent-iteration` 用于并发锁与干净基线；实现与验证在会话工作树
+  `zealous-volhard-c028bb`。
+
+### 本轮交付
+
+- PR #389 `feat(console): silence a route from its row`（REQ-238，29 分）：
+  路由行新增「临时静默此路由」操作，预填 matcher = 路由 `rule` + `destinationIds`；
+  目标行与路由行共用 `suppression-from-row-dialog-content.tsx`，目标行适配层行为不变。
+  新增 PRD `docs/prd/route-row-silence.md`（含「静默没有路由维度」的已知限制）。
+  验证：`vp check` 0 errors / 18 warnings（基线）；`vp run -r test` 4/4 包通过；
+  `vp run -r build` 通过；PR 的 `check · test · build` 与 `playwright · chromium` 均 success。
+- PR #390 `docs: correct stale PRD status and release facts`（DOC-1..8）：
+  5 个 PRD 补「已交付」状态头、release checklist 的 annotated tag 数量 57→58、
+  `request-context.ts` 的 server-only 标记、`delivery-attempt-filter.md` 的投递表路径。
+
+### 专家发现
+
+- `requirements`：
+  - **REQ-240（27）** Events 按通知目标过滤（含「未投递到该目标」反向筛选）：
+    `operations.service.ts:37-46` 的 `listEvents` 无目标字段、`history.interface.ts:24-34`
+    无 `destinationId`、`operation-filters.tsx:38-44,347` 只在 Deliveries scope 渲染目标下拉；
+    URL 已有 `destinationId`（`operation-search.ts:30`）但 Events 页静默忽略。
+    建议契约加 `destinationMatch: any|delivered|missing`，用 `EXISTS`/`NOT EXISTS` 子查询，
+    v1 不加索引。已核实 backlog 无对应条目，且 `operation-filter-scope.md:54-56` 明确把
+    该决策挂起——本候选即那次「另行决策」。
+  - **FIX-16** Deliveries 工具栏「重置筛选」不清 `minAttempts`：`deliveries-page.tsx:67-77`
+    的 `resetFilters` 未包含该字段，`pruneSearch` 因 `>0` 继续写回 URL；
+    同页内联 Reset（`operation-filters.tsx:186-201`）却包含，两者语义相反。
+- `docs-drift`：8 条断言过期，全部由 #390 修复；已确认 suppression UI、`xqvvu/vane`→`tocsin`、
+  `config-portability.ts` 穷尽 switch、provider fixture、raw payload 搜索测试行号、
+  application-container 工厂清单等既有修复仍成立。
+- `ui-review`（真实浏览器，隔离临时实例 + 种子库）：
+  - **UI-22 浏览器复现（HIGH）**：内联编辑面板打开时 `OperationsTable` 根节点高度 0px
+    （`operations-table.tsx:106` 的 `flex min-h-0 flex-1`），分页条（y 153–204）压在
+    面板标题（y 176）上；Routes 与 Suppressions 两页同因。注入 `min-height:288px` 后
+    几何恢复正常（`/tmp/ui-22-fixsim2.png`）。一行修复即可。
+  - **UI-23 重新定性（MEDIUM）**：390px 下表格 980px 宽、视口 348px，动作列在首屏外，
+    但横向滚动后可点达——「不可达」表述不准确，真实缺陷是零可发现性。
+  - **UI-40（MEDIUM）**：390px 顶栏 `delivery-failure-indicator.tsx:43` 与
+    `delivery-pause-indicator.tsx:35` 的 `hidden sm:inline` 让失败计数与暂停文案消失，
+    只剩两个红色图标，且无 tooltip；抑制指示器却保留全文，三者不一致。
+  - **UI-41（LOW）**：`table-pagination.tsx:88` 的 `aria-label={page}` 让读屏只念数字。
+  - 复核：顶栏三个指示器在 1280/390 均共存；无硬编码 UI 文案；破坏性操作均有确认框。
+  - `/routes` 不接受 `range`/`rangeAnchor`（`_dashboard.routes.tsx` 无 `validateSearch`），
+    #378 的锚点 chip 只在 Events/Deliveries——属规格预期，非缺陷。
+
+### EXPERT_PANEL
+
+- 本轮无新的裁决事项。
+
+### 发布决策
+
+- 本轮不发布 `0.1.0-beta.67`：PR #389 合并时已接近单轮时间预算上限，无法在剩余时间内完成
+  版本递增 PR、打 tag、创建 Release 并完成多平台镜像构建与推送。按「超出预算后不再启动新工作」
+  的规定，发版整体顺延到下一轮首项；本轮的用户可见变更（REQ-238）留待 beta.67。
+
+### 下一轮优先项
+
+1. **发版 `0.1.0-beta.67`**（含 #389 REQ-238），按第 9.5 步完整执行 tag/Release/镜像。
+2. **UI-22 一行修复**（`operations-table.tsx:106` → `min-h-72` + 布局回归测试），浏览器复验。
+3. **FIX-16** Deliveries 工具栏 Reset 清 `minAttempts`，补一条断言。
+4. **REQ-240（27）** Events 按通知目标过滤；需同步改 `operation-filter-scope.md`。
+5. `release-infra`（轮转车道）。
+
 ## 2026-10-23（第 87 轮）
 
 - 时间：2026-10-23 06:20 CST 起。
