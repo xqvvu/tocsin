@@ -466,6 +466,11 @@ authenticated dashboard operators; only true secrets stay out of browser state.
   sensitive header values through route loader data, client components, query
   data, route context, serialized route data, default TOML exports, or console
   logs.
+- Exception: the one-time Source token returned by create/rotate may be rendered
+  in transient component state until the operator dismisses the notice, because
+  that notice is the only chance to save it. It must still never be persisted,
+  logged, or placed in query data, route loader data, the URL, browser storage,
+  or any later read path.
 - Mark the modules that directly touch secrets or server-exclusive APIs
   (`node:*`, the SQLite driver, filesystem, `process.env` / secret config,
   `better-auth` server runtime) with `import "@tanstack/react-start/server-only";`

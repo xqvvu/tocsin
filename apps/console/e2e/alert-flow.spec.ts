@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 // The notice hands the operator the webhook URL and token through copy buttons
-// rather than printing them, so the spec reads them from the clipboard — the
-// same way a person would.
+// and prints the token for manual copying, so the spec reads both from the
+// clipboard — the same way a person would.
 test.use({ permissions: ["clipboard-read", "clipboard-write"] });
 
 /**
@@ -122,10 +122,10 @@ test("a first-run operator can set up, route, and deliver an alert", async ({ pa
  * Read the webhook URL and token the create-notice produces.
  *
  * Both come from the notice's own copy buttons, which is exactly what an
- * operator does. The notice deliberately does **not** render either value — its
- * description says the secrets are shown once, and it offers "Copy URL" /
- * "Copy Token" instead of printing them. So the clipboard is where they are;
- * scraping the DOM for a URL finds only the table cell's relative path.
+ * operator does. The notice renders the token as selectable text so an operator
+ * on a non-secure origin can still copy it by hand; the webhook URL stays in
+ * the table cell and the copy button. The clipboard assertion therefore also
+ * proves the copy button yields the same value the operator can see.
  *
  * The token is not a query parameter either (`sourceWebhookPath` is just
  * `/api/sources/{id}/webhook`), so it travels as a header — see
@@ -150,6 +150,8 @@ async function readNoticeSecrets(page: import("@playwright/test").Page): Promise
   if (token.length === 0) {
     throw new Error("copy-token produced an empty string");
   }
+
+  await expect(page.getByText(token)).toBeVisible();
 
   return { webhookUrl, token };
 }
