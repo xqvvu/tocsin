@@ -82,7 +82,13 @@
   查询缓存 15s 新鲜期（#358，`aba053a`）与事件/投递按幂等键搜索（#360）。
   `origin/main` 与 #360 的 CI 均为 success；无其他 open PR；migration 目录零改动；
   Dockerfile/环境变量/依赖均无变化。回滚镜像 `0.1.0-beta.59`。
-  版本递增、tag、Release 与镜像推送记录见本轮 release 记录。
+- 版本：`0.1.0-beta.60`；版本 PR #361（`chore(release): v0.1.0-beta.60`，rebase 合并 `af7a4b3`）。
+- tag：`v0.1.0-beta.60`（annotated，指向 `af7a4b3`；该 commit 的 main CI 为 success）。
+- Release：<https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.60>（prerelease，body 已校验非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.60`
+  （linux/amd64 + linux/arm64，index digest `sha256:96f455fc…`）；回滚镜像 `0.1.0-beta.59`。
+- 发布依据：`release-manager` / `release-blocker` / `release-ops` 三人一致通过；无 migration、
+  无依赖/环境变量/Dockerfile 变化。
 
 ### 下一轮优先项
 
