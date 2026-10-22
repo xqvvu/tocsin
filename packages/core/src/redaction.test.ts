@@ -100,6 +100,8 @@ describe("redaction", () => {
     "api_secret",
     "privateKey",
     "private_key",
+    "privateKeyPem",
+    "private_key_pem",
     "X-Auth-Token",
     "x-auth-token",
     "X-API-Key",
@@ -131,6 +133,8 @@ describe("redaction", () => {
     "jwt",
     "signature",
     "X-Signature",
+    "X-Amz-Signature",
+    "x-amz-signature",
   ])("treats %s as a sensitive key", (key) => {
     expect(isSensitiveKey(key)).toBe(true);
   });
