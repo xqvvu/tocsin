@@ -23,7 +23,7 @@
 | REQ-4 | 过滤态空状态与一键重置 | 运维摩擦 | 26 | shipped | #184 | = UI-2；`events-empty-state.tsx:15-40`、`deliveries-empty-state.tsx:15-42` 已区分筛选无匹配并提供内联重置 |
 | REQ-20 | 配置导入预检与变更摘要 | requirements lane | 27 | candidate | — | 只读 preview procedure + 导入前 create/update/unchanged 摘要；`config-portability.service.ts:140-245` |
 | REQ-21 | Events 按投递结果筛选（无投递/失败/被抑制） | requirements lane | 27 | candidate | — | URL `deliveryOutcome`；EXISTS/NOT EXISTS；`history.repository.ts:47-77` 已有统计。建议扩为 `deliveryOutcome + routeMatch=none\|any`，否则「未命中任何路由」的静默丢失仍无法发现 |
-| REQ-22 | 补投预览目标级明细与执行范围一致 | requirements lane | 28 | candidate | — | Event 预览已有 `targets` 未渲染；Route 预览只显示前 10 条却执行全部（`route-replay-prompt.tsx:161-162`） |
+| REQ-22 | 补投预览目标级明细与执行范围一致 | requirements lane | 28 | shipped | #349 | 第 74 轮交付：事件预览渲染 `targets`（路由 + 通知目标名 + 新建/已存在），路由预览移除 `slice(0,10)` 并列出每个候选的新建目标与范围说明；目标名走既有 `destinationsQueryOptions()`，缺失回退 id；PRD `docs/prd/replay-preview-target-detail.md`；纯前端、无 DTO/迁移 |
 | REQ-23 | Raw payload 保留策略清理的显式状态 | requirements lane | 28 | shipped | #118 | `EventDetail.rawPayloadPruned` 派生字段 + Raw 标签页清理说明；PRD `docs/prd/raw-payload-pruned-state.md` |
 | REQ-24 | 抑制窗口汇总（影响面复盘） | requirements lane | 28 | candidate | — | 新增只读 summary procedure；`suppression-detail-page.tsx:35-43` 只有 hits.total |
 | REQ-7 | 停用目标造成投递静默滞留 | requirements lane | 29 | shipped | #111 | 投递详情滞留警示 + 路由列表停用目标徽标；`DeliveryRetentionNotice`；PRD `docs/prd/delivery-retention-notice.md` |
@@ -580,6 +580,12 @@
 | NEW-BH | 运行时参数不显示来自环境变量还是默认值 | requirements lane（第 73 轮） | 25 | candidate | — | `settings-runtime-panel.tsx:23-55` 只显示最终值，DTO 无来源字段（`runtime-information.service.ts:32-47`），而 env schema 为 `TOCSIN_WORKER_BATCH_SIZE`、`TOCSIN_DESTINATION_TIMEOUT_MS` 等都定义默认值（`env.ts:23-46`）；建议每个 limit 增加 `source: "env" \| "default"` 布尔标注，不回显 env 原文；延伸自 REQ-84/REQ-216 |
 | NEW-BI | 修改告警源 provider 时未提示历史事件不重解析 | requirements lane（第 73 轮） | 26 | candidate | — | 编辑源可直接切换 `provider`（`source-form.tsx:128-160`、`edit-source-form.tsx:41-45`），历史事件已按接入时解析器落库（`intake.service.ts:212-219`）；表单无提示，排障时易误读历史归一化字段；纯前端 notice，不改 matcher/入库 |
 | NEW-BJ | 补投是唯一没有持久操作痕迹的运维动作 | requirements lane（第 73 轮） | 21 | candidate | — | 事件/路由补投只在 toast 报数量（`event-replay-action.tsx:75-80`、`route-replay-prompt.tsx:70-75`），deliveries 无 origin/actor 字段（`migrate/schema.ts:63-83`）；建议 forward-only `replay_runs` 表 + 详情只读记录；需 EXPERT_PANEL 确认保留期与级联 |
+| ARCH-47 | `operation-filters.tsx` 695 行内聚 3 个组件 + 私有 hook | architecture lane（第 74 轮） | 24 | candidate | — | `operation-filters.tsx:52`（`OperationFilters`）、`:202`（`OperationFiltersPanel`）、`:617`（`useOperationSearchDraft`）、`:663`（`OperationSearchInput`），全文件 695 行；违反 AGENTS.md 的「大组件拆 sibling」约定；建议抽 `operation-filters-panel.tsx` / `operation-search-input.tsx`，行为不变 |
+| ARCH-48 | 表单值与视图模型类型仍落在 `ui/` 而非 `model/` | architecture lane（第 74 轮） | 22 | candidate | — | `features/destinations/ui/destination-ui-types.ts:24,55`（`DestinationFormValues`/`DestinationFormSubmitInput`，92 行）、`features/sources/ui/source-ui-types.ts:7`、`features/events/ui/event-detail-stats.ts:5`；ARCH-39 只覆盖 `event-detail-route-delivery-outcomes.ts`；纯迁移，行为不变 |
+| ARCH-49 | `@tocsin/api` 契约层使用跨目录相对导入且无包内别名 | architecture lane（第 74 轮） | 21 | candidate | — | `packages/api/src/contract/operations.ts:4,5,23,24`、`contract/destinations.ts:13,14,23`、`index.ts:1-3`；包 `package.json`/`tsconfig.json` 均无 `#api/*` 映射，与 core/providers/destinations 不一致；补 import map 后改导入即可，行为不变 |
+| ARCH-50 | `DashboardNavigationSkeleton` 未按 `Component.Skeleton` 暴露 | architecture lane（第 74 轮） | 20 | candidate | — | `shell/dashboard-navigation.tsx:186` 具名导出，`shell/dashboard-layout.tsx:15,43` 直接导入；AGENTS.md 要求骨架作为静态属性挂在对应组件上；纯重构 |
+| ARCH-51 | `getSqliteStore()` 隐式启动两个后台 worker | architecture lane（第 74 轮） | 26 | candidate | — | `server/runtime/container.ts:205-210` 在 `getSqliteStore()` 内 `void ensureDeliveryWorkerRunner()/ensureOncallWorkerRunner()`，所有 `create*Service`（`:233-367`）都会触发，只读过程也会启动循环；建议上移到 bootstrap 或显式 `ensureWorkers()`；启动时机变化 → EXPERT_PANEL |
+| UI-35 | 事件详情 SSR hydration mismatch | 浏览器实测（第 74 轮） | 24 | candidate | — | 隔离实例打开 `/events/$eventId` 时 console msgid 111 报 `Hydration failed ... server rendered text didn't match the client`，栈指向 `TabsContent value="normalized"`（`features/events/ui/event-detail-page.tsx` 一带）；随后 msgid 112-130 为其级联；未确认是否与时间格式化/时区有关，下一轮先在 `origin/main` 上复现再定责 |
 
 ## 发布记录
 
@@ -635,6 +641,14 @@
 
 ## 下一轮优先项
 
+0. **第 74 轮交付**：REQ-22（28）补投预览目标级明细与执行范围一致（#349）。
+   下一优先：**Q-23（25）** dedupe cleanup 有界批；**REL-7 bundle**（playwright install +
+   `localhost` + `/api/ready`）；**NEW-BI / NEW-BD / NEW-BE（26）** 纯前端切片；
+   **UI-35（24）** 先在干净 main 复现事件详情 hydration mismatch 再定责；
+   **ARCH-51（26）** 交 EXPERT_PANEL（worker 启动时机）；**ARCH-47（24）** 拆
+   `operation-filters.tsx`。车道轮转：第 74 轮 `architecture` 已跑，下一轮非必跑车道为
+   **`security-exposure`**。`ui-triage` 第 74 轮 **`defer`**，`last_ui_review_at`
+   = 2026-10-22 09:30 CST。
 0. **第 69 轮交付**：UI-34（24）暂停期间「运行 worker」禁用原因可见化（#332）。
    下一优先：**NEW-AO（29）** 静默条件范围；**NEW-AP（28）** 路由规则只读展开；
    **NEW-AQ（27）** 覆盖率名单展开；**NEW-AL（28）** 恢复前积压影响；
