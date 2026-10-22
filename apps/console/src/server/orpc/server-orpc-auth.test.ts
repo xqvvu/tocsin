@@ -133,7 +133,10 @@ const expectedProcedures: Record<
     public: [],
     private: ["list", "get", "hits", "create", "update", "setEnabled", "delete"],
   },
-  settings: { public: [], private: ["get", "getRuntime", "getStorageHealth", "update"] },
+  settings: {
+    public: [],
+    private: ["get", "getRuntime", "getStorageHealth", "getWorkerHealth", "update"],
+  },
   sources: {
     public: [],
     private: ["list", "create", "update", "rotateToken", "delete"],

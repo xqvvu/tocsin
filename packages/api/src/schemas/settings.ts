@@ -6,6 +6,8 @@ import {
 } from "@tocsin/core";
 import * as z from "zod";
 
+import { DeliveryWorkerHealthSnapshotSchema } from "./worker";
+
 /** Console runtime settings owned by the dashboard operator. */
 export const AppSettingsOutputSchema = z.object({
   locale: LocaleSchema,
@@ -63,3 +65,24 @@ export const StorageHealthOutputSchema = z.object({
 });
 
 export type StorageHealth = z.infer<typeof StorageHealthOutputSchema>;
+
+/**
+ * One background worker's health.
+ *
+ * `started` separates "the in-process runner was never assembled" from "it is
+ * assembled and idle", because both report `state: "idle"` otherwise. Reading
+ * health never starts a runner.
+ */
+export const WorkerHealthEntrySchema = DeliveryWorkerHealthSnapshotSchema.extend({
+  started: z.boolean(),
+});
+
+export type WorkerHealthEntry = z.infer<typeof WorkerHealthEntrySchema>;
+
+/** Background delivery and on-call worker health for the settings screen. */
+export const WorkerHealthOutputSchema = z.object({
+  delivery: WorkerHealthEntrySchema,
+  oncall: WorkerHealthEntrySchema,
+});
+
+export type WorkerHealthOutput = z.infer<typeof WorkerHealthOutputSchema>;

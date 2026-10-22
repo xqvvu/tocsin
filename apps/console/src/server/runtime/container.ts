@@ -53,6 +53,7 @@ import { RuntimeInformationService } from "#/server/runtime/runtime-information.
 import type { RuntimeInformationServiceOptions } from "#/server/runtime/runtime-information.service.types";
 import { StorageHealthService } from "#/server/runtime/storage-health.service";
 import type { StorageHealthServiceOptions } from "#/server/runtime/storage-health.service.types";
+import { WorkerHealthService } from "#/server/runtime/worker-health.service";
 import { SourceService } from "#/server/sources/source.service";
 import type { SourceServiceOptions } from "#/server/sources/source.service.types";
 import { SuppressionService } from "#/server/suppressions/suppression.service";
@@ -99,6 +100,7 @@ export interface ApplicationContainer {
   createStorageHealthService(
     options?: Partial<Omit<StorageHealthServiceOptions, "store">>,
   ): Promise<StorageHealthService>;
+  createWorkerHealthService(): Promise<WorkerHealthService>;
   createConfigPortabilityService(
     options?: Partial<Omit<ConfigPortabilityServiceOptions, "store" | "destinations">>,
   ): Promise<ConfigPortabilityService>;
@@ -274,6 +276,15 @@ export function createApplicationContainer(
       return new StorageHealthService({
         store: await container.getSqliteStore(),
         ...serviceOptions,
+      });
+    },
+
+    async createWorkerHealthService() {
+      // Deliberately does not touch the store: reading health observes the
+      // runners that already exist and must not assemble (or start) one.
+      return new WorkerHealthService({
+        readDeliveryWorker: () => runner?.getHealth() ?? null,
+        readOncallWorker: () => oncallRunner?.getHealth() ?? null,
       });
     },
 

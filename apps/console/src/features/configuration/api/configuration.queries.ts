@@ -32,3 +32,14 @@ export function storageHealthQueryOptions() {
     queryKey: storageHealthQueryKeys.detail(),
   });
 }
+
+export const workerHealthQueryKeys = {
+  all: ["worker-health"] as const,
+  detail: () => [...workerHealthQueryKeys.all, "detail"] as const,
+};
+
+export function workerHealthQueryOptions() {
+  return orpc.settings.getWorkerHealth.queryOptions({
+    queryKey: workerHealthQueryKeys.detail(),
+  });
+}

@@ -532,6 +532,9 @@ function createTestContainer(): ApplicationContainer {
     createStorageHealthService: async () => {
       throw new Error("Storage health service is not used by webhook tests");
     },
+    createWorkerHealthService: async () => {
+      throw new Error("Worker health service is not used by webhook tests");
+    },
     createConfigPortabilityService: async () => {
       throw new Error("Configuration services are not used by webhook tests");
     },

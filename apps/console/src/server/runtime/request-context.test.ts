@@ -205,6 +205,9 @@ function createFakeContainer(): ApplicationContainer {
     createStorageHealthService: async () => {
       throw new Error("Storage health service is not used by request context tests");
     },
+    createWorkerHealthService: async () => {
+      throw new Error("Worker health service is not used by request context tests");
+    },
     createConfigPortabilityService: async () => {
       throw new Error("Configuration services are not used by request context tests");
     },
