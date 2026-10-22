@@ -254,6 +254,7 @@
   "deliveries.page.loaded": "{count} loaded",
   "deliveries.page.operationFailed": "Operation failed",
   "deliveries.page.resetTitle": "Reset delivery filters",
+  "deliveries.page.runWorkerPausedHint": "Outbound delivery is paused, resume it before running the worker",
   "deliveries.page.runWorkerPausedTitle": "Outbound delivery is paused, resume it first",
   "deliveries.page.runWorkerTitle": "Run delivery worker",
   "deliveries.page.title": "Deliveries",

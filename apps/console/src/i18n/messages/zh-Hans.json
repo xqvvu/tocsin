@@ -254,6 +254,7 @@
   "deliveries.page.loaded": "已加载 {count} 条",
   "deliveries.page.operationFailed": "操作失败",
   "deliveries.page.resetTitle": "重置投递筛选",
+  "deliveries.page.runWorkerPausedHint": "出站投递已暂停，恢复后才能运行 worker",
   "deliveries.page.runWorkerPausedTitle": "出站投递已暂停，先恢复投递",
   "deliveries.page.runWorkerTitle": "运行 delivery worker",
   "deliveries.page.title": "投递",
