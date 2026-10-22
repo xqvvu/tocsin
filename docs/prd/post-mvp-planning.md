@@ -96,7 +96,8 @@ Email 的 `subjectTemplate` / `htmlTemplate`、预览与 TOML 表示均已落地
 
 **部分交付（2026-10-21 复核）。** 多条件规则编辑与摘要、Event 详情 route explain、投递缺口解释均已落地
 （`apps/console/src/features/events/ui/event-detail-route-gaps.tsx`、`apps/console/src/features/routes/ui/route-forms.tsx`）；
-剩余为样例 Event 干跑预览（backlog REQ-3）与补投预览一致性修正（REQ-22）。
+剩余为样例 Event 干跑预览（backlog REQ-3）；补投预览一致性修正（REQ-22）已于第 74 轮交付
+（PR #349，`docs/prd/replay-preview-target-detail.md`）。
 
 候选范围：
 
@@ -140,7 +141,7 @@ Email 的 `subjectTemplate` / `htmlTemplate`、预览与 TOML 表示均已落地
 source/severity/status/destination/route/state 组合过滤、按路由过滤、ID/标签/上游 metadata 搜索与
 route explain 已落地；fingerprint 聚合（REQ-6）、绝对时间窗口（REQ-33）与筛选结果导出（REQ-34）
 仍待做。raw/debug JSON 不纳入搜索以避免凭据回显
-（`apps/console/src/infra/sqlite/repositories/history/search.test.ts:340`），delivery history 已决定
+（`apps/console/src/infra/sqlite/repositories/history/search.test.ts:384`），delivery history 已决定
 不自动清理（`docs/release/history-retention-and-snapshots.md:14`），二者不再作为待实现项。
 
 问题：Events 和 Deliveries 已经可查看，但生产排障需要更强的过滤、时间范围、fingerprint 聚合和历史保留策略。
@@ -230,8 +231,8 @@ test-kit（`packages/destinations/src/test-kit/`）、registry audit
 
 新的优先级建议：
 
-1. **Route Authoring 与 Explain 的剩余切片**：方向 2 中 explain、多条件规则编辑与投递缺口解释均已
-   落地；剩余增量是样例 Event 干跑预览（REQ-3）与补投预览一致性（REQ-22）。
+1. **Route Authoring 与 Explain 的剩余切片**：方向 2 中 explain、多条件规则编辑、投递缺口解释与
+   补投预览一致性（REQ-22，第 74 轮 #349）均已落地；剩余增量只有样例 Event 干跑预览（REQ-3）。
 2. **方向 4 的剩余排障能力**：fingerprint 聚合视图、绝对时间窗口与筛选结果导出；raw/debug JSON 搜索与
    delivery history retention 已明确不再作为待实现项（见本文方向 4 小节）。
 3. **方向 5 自托管发布硬化与方向 6 Adapter 贡献体验**：按 backlog 中的 release-infra 与

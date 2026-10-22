@@ -7,11 +7,13 @@
 ## 设计目标
 
 Tocsin 的扩展性优先服务仓库内维护的精选适配器，而不是运行时安装第三方插件。新增一个
-provider 或 destination 应该主要涉及 adapter 实现、schema-backed manifest、fixtures、
+provider 或 destination 应该主要涉及 adapter 实现、schema-backed manifest、代表性 payload
 测试、显式 registry 注册，以及必要的 console UI override。
 
 每个第三方 adapter 使用独立目录模块，例如 `packages/destinations/src/feishu/index.ts`
-或 `packages/providers/src/grafana/index.ts`，同目录放置 fixtures 和 adapter 自测。包根
+或 `packages/providers/src/grafana/index.ts`，同目录放置 adapter 自测；代表性 payload 目前
+内联在 `index.test.ts`，独立的 fixture 目录仍是目标形态（provider 侧缺口见
+`docs/release/mvp-rc-checklist.md` E 节）。包根
 `index.ts` 只做聚合导出；`package.json` 为每个 adapter 提供子路径导出，例如
 `@tocsin/destinations/feishu` 和 `@tocsin/providers/grafana`。
 

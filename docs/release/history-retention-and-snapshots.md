@@ -40,7 +40,7 @@
 
 **行为等价性**：保留设置仍然生效（保留策略不变，只是把工作挪走），既有测试「prunes retained raw payloads after the configured retention window」仍通过；新增测试覆盖「单次有界调用只清一批且可继续推进」「sweep 能清空整个积压」「经 webhook 端到端仍会清理」。
 
-**本节不覆盖 dedupe cleanup**：`pruneDedupeKeys` 仍是**无界** `DELETE FROM delivery_dedupe_keys`，并且在每次 `enqueueForEvent` 内执行（`delivery.helpers.ts:107-108`、`delivery.repository.ts:101`）。它与 raw payload pruning 是两条独立路径，成本上限仍待设计，见 `mvp-rc-checklist.md` 的未勾选项。
+**dedupe cleanup 的独立成本上限**：`pruneDedupeKeys` 改为最旧优先的有界批（每批 100 条），每次 `enqueueForEvent` 在写事务内、去重判定之前执行一次（`delivery.helpers.ts:144-160`、`delivery.repository.ts:101`）；oncall 队列同构（`oncall.helpers.ts:50-67`）。老库缺少 `idx_delivery_dedupe_created_at` 时仍可能退化为全表扫描，扫描成本待评估（backlog Q-224）。
 
 **sweep 故意不 await**：webhook 不应等房子打扫完。失败被吞掉（下一次 webhook 会重试）——在这里抛出会把一个**已成功**的 webhook 报成失败。
 
