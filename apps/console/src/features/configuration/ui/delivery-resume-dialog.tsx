@@ -25,21 +25,18 @@ import { useTranslations } from "#/i18n/use-i18n";
 export function DeliveryResumeDialog({
   open,
   onOpenChange,
-  rawPayloadRetentionDays,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  rawPayloadRetentionDays: number;
 }) {
   const t = useTranslations();
   const mutation = useAppSettingsMutation();
 
   async function resume() {
     try {
-      await mutation.mutateAsync({
-        rawPayloadRetentionDays,
-        deliveryPaused: false,
-      });
+      // Only the pause flag: this dialog may have been rendered from a settings
+      // snapshot that another tab has since updated.
+      await mutation.mutateAsync({ deliveryPaused: false });
       toast.success(t("deliveries.paused.resumed"));
       onOpenChange(false);
     } catch (error) {

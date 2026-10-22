@@ -28,10 +28,9 @@ export function SettingsDeliveryPausePanel() {
 
   async function pause() {
     try {
-      await mutation.mutateAsync({
-        rawPayloadRetentionDays: settings.rawPayloadRetentionDays,
-        deliveryPaused: true,
-      });
+      // Only the pause flag: this panel may have been rendered from a settings
+      // snapshot that another tab has since updated.
+      await mutation.mutateAsync({ deliveryPaused: true });
     } catch (error) {
       toast.error(t("configuration.deliveryPause.operationFailed"), {
         description: error instanceof Error ? error.message : String(error),
@@ -73,11 +72,7 @@ export function SettingsDeliveryPausePanel() {
             : t("configuration.deliveryPause.paused")}
         </p>
       ) : null}
-      <DeliveryResumeDialog
-        open={resumeOpen}
-        onOpenChange={setResumeOpen}
-        rawPayloadRetentionDays={settings.rawPayloadRetentionDays}
-      />
+      <DeliveryResumeDialog open={resumeOpen} onOpenChange={setResumeOpen} />
     </section>
   );
 }

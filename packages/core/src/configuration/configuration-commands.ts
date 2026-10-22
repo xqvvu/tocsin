@@ -129,7 +129,12 @@ export const ImportConfigurationJsonCommandSchema = z.object({
 export const UpdateAppSettingsCommandSchema = z.object({
   locale: LocaleSchema.optional(),
   timeZone: IanaTimeZoneSchema.optional(),
-  rawPayloadRetentionDays: z.number().int().min(0).max(3650),
+  /**
+   * Omitted keeps the stored window. Pause/resume entry points must not send it:
+   * they render from a settings snapshot, and a second tab may have changed the
+   * retention window since that snapshot was taken.
+   */
+  rawPayloadRetentionDays: z.number().int().min(0).max(3650).optional(),
   /**
    * Emergency stop for outbound delivery. Omitted keeps the current state so
    * unrelated settings edits cannot accidentally resume a paused instance.

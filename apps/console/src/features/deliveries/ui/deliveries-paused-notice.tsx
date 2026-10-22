@@ -74,11 +74,7 @@ export function DeliveriesPausedNotice() {
           {t("deliveries.paused.resume")}
         </Button>
       </AlertAction>
-      <DeliveryResumeDialog
-        open={resumeOpen}
-        onOpenChange={setResumeOpen}
-        rawPayloadRetentionDays={settings.rawPayloadRetentionDays}
-      />
+      <DeliveryResumeDialog open={resumeOpen} onOpenChange={setResumeOpen} />
     </Alert>
   );
 }
