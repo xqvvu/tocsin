@@ -43,6 +43,7 @@ import {
 } from "#/features/routes/model/route-rule-summary";
 import { routeRuleSummaryCopy } from "#/features/routes/model/route-rule-summary-copy";
 import { EditRouteForm } from "#/features/routes/ui/route-forms";
+import { SuppressionFromRouteDialog } from "#/features/suppressions/ui/suppression-from-route-dialog";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
 
@@ -210,6 +211,7 @@ function RouteActions({
           <RiRefreshLine data-icon="inline-start" aria-hidden />
         </Button>
       </IconTooltip>
+      <SuppressionFromRouteDialog route={route} disabled={pending} />
       {route.enabled ? (
         <AlertDialog
           open={disableDialogOpen}

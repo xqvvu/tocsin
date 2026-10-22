@@ -8,6 +8,7 @@ import {
   suppressionDefaultsFromDestination,
   suppressionDefaultsFromEvent,
   suppressionDefaultsFromLabel,
+  suppressionDefaultsFromRoute,
   suppressionDefaultsFromText,
   suppressionFormDefaultsFromRule,
   suppressionMatcherFromValues,
@@ -100,6 +101,91 @@ describe("suppression form model", () => {
     expect(suppressionMatcherIsEmpty(defaults.matcher)).toBe(false);
     expect(defaults.startsAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
     expect(Date.parse(defaults.endsAt)).toBeGreaterThan(Date.parse(defaults.startsAt));
+  });
+
+  it("prefills the route's rule and targets when silencing one route", () => {
+    const defaults = suppressionDefaultsFromRoute({
+      name: "Silence: Critical alerts",
+      route: {
+        destinationIds: ["destination-pager", "destination-audit"],
+        rule: {
+          sourceIds: ["source-grafana"],
+          severities: ["critical"],
+          statuses: ["firing"],
+          labels: [{ key: "team", operator: "contains", value: "sre" }],
+          titleContains: ["LatencyHigh"],
+          messageContains: ["timeout"],
+        },
+      },
+      timeZone: "UTC",
+      now: new Date("2026-10-18T09:00:00.000Z"),
+    });
+
+    expect(defaults.name).toBe("Silence: Critical alerts");
+    expect(defaults.kind).toBe("silence");
+    expect(defaults.enabled).toBe(true);
+    // The route is pinned as a whole: its rule narrows the alerts, and its
+    // targets keep the silence from muting a destination this route never
+    // reaches.
+    expect(defaults.matcher).toEqual({
+      sourceIds: ["source-grafana"],
+      destinationIds: ["destination-pager", "destination-audit"],
+      severities: ["critical"],
+      statuses: ["firing"],
+      fingerprints: [],
+      labels: [{ key: "team", operator: "contains", value: "sre" }],
+      titleContains: ["LatencyHigh"],
+      messageContains: ["timeout"],
+    });
+    expect(suppressionMatcherIsEmpty(defaults.matcher)).toBe(false);
+  });
+
+  it("copies the route rule so later edits cannot mutate the route", () => {
+    const rule = {
+      sourceIds: ["source-grafana"],
+      severities: ["critical" as const],
+      statuses: ["firing" as const],
+      labels: [{ key: "team", operator: "equals" as const, value: "sre" }],
+      titleContains: ["LatencyHigh"],
+      messageContains: [] as string[],
+    };
+    const destinationIds = ["destination-pager"];
+    const defaults = suppressionDefaultsFromRoute({
+      name: "Silence: Critical alerts",
+      route: { rule, destinationIds },
+      timeZone: "UTC",
+    });
+
+    defaults.matcher.sourceIds.push("source-other");
+    defaults.matcher.labels[0]!.value = "platform";
+    defaults.matcher.destinationIds.push("destination-other");
+
+    expect(rule.sourceIds).toEqual(["source-grafana"]);
+    expect(rule.labels[0]!.value).toBe("sre");
+    expect(destinationIds).toEqual(["destination-pager"]);
+  });
+
+  it("keeps an all-matching route silence scoped to the route's targets", () => {
+    const defaults = suppressionDefaultsFromRoute({
+      name: "Silence: Everything",
+      route: {
+        destinationIds: ["destination-pager"],
+        rule: {
+          sourceIds: [],
+          severities: [],
+          statuses: [],
+          labels: [],
+          titleContains: [],
+          messageContains: [],
+        },
+      },
+      timeZone: "UTC",
+    });
+
+    // An empty rule matches every alert; the targets are the only thing that
+    // keeps the silence from disabling every destination.
+    expect(suppressionMatcherIsEmpty(defaults.matcher)).toBe(false);
+    expect(defaults.matcher.destinationIds).toEqual(["destination-pager"]);
   });
 
   it("prefills the event's source and fingerprint when silencing one alert", () => {

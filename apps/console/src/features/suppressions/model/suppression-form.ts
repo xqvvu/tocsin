@@ -1,4 +1,9 @@
-import type { Suppression, SuppressionKind, SuppressionMatcher } from "@tocsin/core";
+import type {
+  RouteDefinition,
+  Suppression,
+  SuppressionKind,
+  SuppressionMatcher,
+} from "@tocsin/core";
 
 /**
  * Editable mirror of a suppression rule.
@@ -265,6 +270,43 @@ export function suppressionDefaultsFromDestination(input: {
     matcher: {
       ...emptySuppressionMatcher(),
       destinationIds: [input.destinationId],
+    },
+  };
+}
+
+/**
+ * Prefills the create form when the operator silences one route from its row.
+ *
+ * The route rule and the route's targets are both pinned, which is what makes
+ * the silence route-shaped rather than target-shaped: only events this route
+ * would deliver are muted, and only to the targets it delivers to. Narrowing
+ * at the recipe level (a fingerprint, a label) is left to the operator.
+ */
+export function suppressionDefaultsFromRoute(input: {
+  name: string;
+  route: Pick<RouteDefinition, "rule" | "destinationIds">;
+  timeZone: string;
+  now?: Date;
+}): SuppressionFormValues {
+  const window = defaultSuppressionWindow(input.timeZone, input.now);
+  const rule = input.route.rule;
+
+  return {
+    name: input.name,
+    kind: "silence",
+    reason: "",
+    enabled: true,
+    startsAt: window.startsAt,
+    endsAt: window.endsAt,
+    matcher: {
+      ...emptySuppressionMatcher(),
+      sourceIds: [...rule.sourceIds],
+      destinationIds: [...input.route.destinationIds],
+      severities: [...rule.severities],
+      statuses: [...rule.statuses],
+      labels: rule.labels.map((label) => ({ ...label })),
+      titleContains: [...rule.titleContains],
+      messageContains: [...rule.messageContains],
     },
   };
 }
