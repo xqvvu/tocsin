@@ -2,6 +2,93 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 72 轮）
+
+- 时间：2026-10-22 12:26 – 13:05 CST。
+- 基线：本轮开始时 `origin/main` @ `7acb669`；main CI success；无 open PR；
+  `v0.1.0-beta.54` 的 tag 与 GitHub Release 均已存在且 body 非空，无待补建项。
+- 类型：**需求切片 + 三车道审计**（非 full-audit）。backlog 有多个 ≥28 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  `security-exposure`；并发始终 ≤3。
+- 车道轮转位置：**`release-infra`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 2h35m（< 48h）；09:30 后 4 个提交触及 UI
+  （`4b9328d`、`ee00fa2`、`5fccd2b`、`c507970`），但四者都有 1280/390 浏览器验证记录，
+  未验证合并为 0；`UI-` 未解决候选 18 条，与第 62/68/70/71 轮持平（提前触发线为存量 >20）。
+  再触发条件：2026-10-24 09:30 满 48h、未验证 UI 合并 ≥3、新增 UI 候选 ≥2 或存量 >20。
+- `last_ui_review_at`：**2026-10-22 09:30 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器检查均在会话工作树
+  `suspicious-volhard-5bdcea`。工作树已清理。
+- 文档同步：当前会话未暴露 `obsidian-vault` skill，Obsidian 同步已跳过。
+
+### 本轮交付
+
+- PR #340 `feat(console): show silence evidence on event deliveries`（REQ-176，29 分）。
+  - 事件详情投递表新增只读「静默」列：原因快照两行截断 + `title` 全文，
+    规则存在时链接 `/suppressions/$suppressionId`，规则已删除时显式说明快照仍保留；
+    未抑制行显示共享占位符。
+  - 新组件 `features/events/ui/event-detail-delivery-suppression-cell.tsx`（一文件一导出组件）；
+    DTO 字段早已存在，无新 oRPC、无迁移、无 service 变更。
+  - PRD `docs/prd/event-delivery-suppression-evidence.md`；backlog REQ-176 → shipped。
+  - 验证：`vp check` 0 errors（18 个既有 warning）；`vp run -r test` 162 文件 / 859 项；
+    `vp run -r build` 通过。浏览器实测（隔离实例 `localhost:6198` + 临时 SQLite，
+    owner `admin@example.test`）：种子数据下「静默」列显示原因与 `sup_demo` 链接，
+    1280×900 与窄视口 `docScrollWidth === docClientWidth`，无 console 错误；
+    截图 `/tmp/tocsin-suppression-cell-{1280,390}.png`（未入库）。
+  - 说明：本轮投递数据用 SQLite 种子写入（该切片只消费已持久化字段），未走完整 Webhook 链路。
+
+### 专家发现
+
+- `requirements`（4 条新候选，已写入 backlog，均带当前代码行号）：
+  - **NEW-BD（26）** 投递详情在全局暂停期间不解释「为什么还没发」：
+    `delivery-detail-view.tsx:19-24` 只挂 suppression/retention，暂停横幅只在列表页
+    （`deliveries-page.tsx:102`）；复用 `appSettingsQueryOptions()` 加只读 notice。
+  - **NEW-BE（26）** 目标列表看不出使用哪个飞书应用：`destination-operational-config-cell.tsx:32-33,61-62`
+    只显示 chatId；DTO 只有 `appRef`（`destination.ts:45-50`），但页面已加载 `feishuApps`
+    （`destinations-page.tsx:49,55`），可纯前端解析应用名。
+  - **NEW-BF（24）** 路由编辑器未说明大小写语义：标题/消息大小写不敏感
+    （`packages/core/src/route/route.ts:330`），标签 equals/contains 敏感（`:297-299`）；
+    静默表单已写「不区分大小写」，两处不一致。
+  - **NEW-BG（25）** Settings 运行时面板看不到 schema 版本：
+    `settings-runtime-panel.tsx:23-55`、`runtime-information.service.ts:31-50` 均无该字段，
+    而 `store.schemaVersion()` 已存在（`store.ts:132-140`）。
+  - 复核 **REQ-22（28）仍成立**：事件补投预览只渲染 `targets.length`
+    （`event-replay-action.tsx:155-168`），路由补投预览只显示前 10 条
+    （`route-replay-prompt.tsx:164`）却提交全部候选（`:42,54-57`，服务端上限 100）。
+  - 复核 **REQ-176**：审计时发现该切片正被本会话实现，结论为「已过期（被实现）」。
+- `security-exposure`（无新 HIGH/MEDIUM）：
+  - 第 71 轮新增的 `settings.getStorageHealth` 白名单 DTO 无 secret/路径泄漏，
+    已列入 private procedure（`server-orpc-auth.test.ts:136`）；唯一副作用是 4 次
+    `count(*)` + `min/max` 在超大库上可能阻塞 worker，属性能问题。
+  - import protection 全量核对：`server/**`、`infra/**` 中直接使用 `node:*`、SQLite 驱动、
+    `process.env`、better-auth runtime 的 11 个文件均带 server-only 标记，违规 0；
+    `packages/core`、`packages/api`、feature `model/*` 无环境专属导入。
+  - **SEC-22 仍成立且是当前唯一真实外泄**：endpoint 的 URL userinfo 密码原样进入 listItem、
+    deliveryMetadata 与 7 个 route loader 的 SSR 数据（`destination.helpers.ts:63,84,162`）；
+    建议只剥离 userinfo 密码，编辑草稿保持原值（否则保存会用无密码 URL 覆盖）。
+  - **SEC-25 仍成立**（`destination.service.ts:202,314,326,340` 的 `renderedPayload` 未过
+    `redactJsonText`），当前无实际泄漏，属边界不对称。
+  - **SEC-23 / SEC-26 仍成立**，均需 EXPERT_PANEL（外发/匹配依赖原值；完整 webhook URL
+    是否可见是产品决策）。
+  - 旧仓库名 `xqvvu/vane` 仅剩真实 ACR 镜像坐标与历史文本，无失效链接。
+- `ui-triage`：见上。
+
+### EXPERT_PANEL
+
+- 本轮无新增裁决事项。SEC-26、SEC-23、NEW-AU、NEW-AX 仍待后续轮次专家小组。
+
+### 发布决策
+
+- 本轮发布评估在 PR #340 合并后执行；结果见后续 `docs(planning)` 记录。
+
+### 下一轮优先项
+
+1. **SEC-22**：目标 endpoint 的 URL userinfo 密码只读投影（安全车道推荐的单轮 AUTO_FIX）。
+2. **REQ-22**：补投预览目标级明细，并让「预览数量 = 实际提交数量」。
+3. **NEW-BD / NEW-BE**：投递详情暂停说明、目标列表飞书应用名（均为纯前端）。
+4. **REQ-168（28）**：加急呼叫失败原因完整查看（pings 表错误列只有截断文本）。
+5. 下一轮非必跑车道：**release-infra**。
+
 ## 2026-10-22（第 71 轮）
 
 - 时间：2026-10-22 11:26 – 12:00 CST。
