@@ -2,6 +2,97 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 82 轮）
+
+- 时间：2026-10-22 22:46 CST 起。
+- 基线：本轮开始时 `origin/main` @ `6a26b46`；main CI 最近 3 次 success；有 1 个遗留
+  open PR `#371`（第 81 轮日志的 PR 引用修正，1 行 docs 改动），本轮已 rebase 合入
+  `22449b1`；`v0.1.0-beta.62` 的 tag 与 GitHub Release 均已存在。
+- 类型：**`full-audit`（受配额约束只展开 3 条车道）** —— `requirements`、`ui-triage`、
+  轮转车道 `security-exposure`；`docs-drift`、`release-infra`、`architecture`、`quality`
+  顺延。实现名额给 REL-21 + REL-7（E2E 接入 CI 与 harness 修复）。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**——本轮未覆盖全部车道，
+  不更新，下一轮仍按「距上次全量审计 ≥6h」处理。
+- 车道轮转位置：**`docs-drift`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 3h02m（`last_ui_review_at` 2026-10-22 19:45）；
+  自评审以来 UI 路径提交 2 个（`48e0e74`、`10b44f6`），均已在隔离实例浏览器复验；
+  未评审 UI 合并 0；未解决 `UI-` 发现 21 条（18 shipped / 21 candidate，自评审后新增 0）。
+  再触发条件：满 48h（2026-10-24 19:45）、未评审 UI 合并 ≥3、新增 UI 发现 ≥2、
+  candidate 存量 ≥25、或出现新的 HIGH 可复现缺陷。
+- `last_ui_review_at`：**2026-10-22 19:45 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证在会话工作树
+  `zen-gauss-d93075`。工作树已清理。
+- 依赖：`agent-iteration` 与会话工作树都执行了 `vp install --frozen-lockfile`（热 store，
+  3–6s）；另装了 Playwright 1.64.1 期望的 Chromium **1248**（本机原先只有 1234）。
+
+### 本轮交付
+
+- PR #371 `docs(planning): fix the round 81 PR reference`（rebase 合并 `22449b1`）。
+- PR #372 `ci(e2e): run the browser suite in GitHub Actions`：
+  - 新增 `.github/workflows/e2e.yml`（job `playwright · chromium`，25 分钟上限，
+    `push` main + `pull_request`，`playwright install --with-deps chromium`，
+    失败上传 `apps/console/test-results` 保留 3 天）。
+  - `playwright.config.ts`：host/baseURL 改 `localhost`；就绪探针改 `/api/ready`；
+    清库移入 webServer 启动命令并删除 `e2e/global-setup.ts`（消除「服务先打开并迁移
+    数据库、globalSetup 后删库」的时序竞争）。
+  - `Justfile`：`just e2e` / `e2e-ui` 显式 `playwright install chromium`。
+  - `vite.config.ts`：`vp staged` 的 fmt 规则加 `--no-error-on-unmatched-pattern`。
+    `.github/**` 在 `ignorePatterns` 内，单独提交 workflow YAML 会让 pre-commit
+    以 "all matched files may have been excluded" 失败——本次新增 workflow 正好触发。
+  - 发布文档同步 7 个文件（README、release-checklist、mvp-rc-checklist、
+    post-mvp-planning、self-hosted-alert-hub-mvp、history-retention-and-snapshots、
+    backup-restore-upgrade）；gate A 拆成「workflow 已存在（勾选）」与「spec 覆盖面
+    （留给 REL-22）」。
+  - 验证：`vp fmt --write`；`vp check` 0 errors / 18 既有 warning；`vp run -r test`
+    4/4（console 898 tests）；`vp run -r build`；`playwright test` 改动前后各 1 passed
+    （15.7s / 15.0s，改动后刻意保留旧数据库以证明清库发生在启动前）。
+
+### 专家发现
+
+- `requirements`（窄扫描，15 分钟时间盒内产出 2 条）：
+  - REQ-226（26）：筛选只有「包含」语义，值班时无法「排除刷屏的上游」而不改变投递语义
+    （`operation-filters.tsx:255-258,345-346,399-400`、`history.repository.ts:98-100,268-290`）。
+  - REQ-227（27）：URL 引用的 Source/Destination/Route 被删除后，chip 静默回退为原始 ID，
+    空态只提示「有筛选」，分享链接会表现为「没有告警」（`operation-filters.tsx:523-530,
+    551-556,570-575`、`events-empty-state.tsx:29-43`、`deliveries-empty-state.tsx:29-45`）。
+  - 两条均已写入 backlog（均为 candidate，本轮未实现）。
+- `ui-triage`：`defer`，理由与再触发条件见上。
+- `security-exposure`（只读，附 `file:line`）：
+  - MEDIUM / SEC-25 仍开放：test/preview 的 `renderedPayload` 未投影
+    （`apps/console/src/server/destinations/destination.service.ts:202,314,326,340`，
+    `redactJsonText` 已在 `:30` 导入）→ AUTO_FIX 可做。
+  - MEDIUM / SEC-26 + SEC-22 仍开放：`destination.helpers.ts:63` 仅去 URL userinfo 密码
+    （`:346-363`），Slack/Feishu path token 与 generic `?token=`/`?sig=` 原样进入 5 个
+    SSR loader 预取的 `destinations.list`，以及 `:161-163` 投递元数据与 `:116,129`
+    编辑草稿 → 查询串投影可 AUTO_FIX，完整 URL 可见性仍需 EXPERT_PANEL。
+  - 未发现问题：脱敏测试对凭据型 key 有真实覆盖（`packages/core/src/redaction.test.ts:94-158`、
+    `read-projection-redaction.test.ts:113-147`）；import protection 标记无违规；
+    `xqvvu/vane` 无代码/配置残留；近期提交未把 secret 写入日志或 DTO。
+
+### EXPERT_PANEL
+
+- 本轮无代码级裁决事项。Q-23 + Q-37（dedupe 窗口谓词 + 有界 prune）仍待下一轮
+  EXPERT_PANEL 后再实施；SEC-26 的完整 URL 可见性同样待裁决。
+
+### 发布决策
+
+- **本轮不发布**：自 `v0.1.0-beta.62` 以来的变更只有 PR #371/#372（CI workflow、
+  E2E harness、pre-commit 配置、文档状态同步），没有用户可见的行为变化或修复；
+  按 routine「纯 docs/chore/test 变更永远不触发发版」跳过打 tag 与镜像推送。
+- 补建检查：最近 10 个 tag 均有对应 GitHub Release，无待补建项。
+
+### 文档同步
+
+- `obsidian-vault` skill 在本会话不可用，本轮 Obsidian 同步已跳过（仓库内文档已更新）。
+
+### 下一轮优先项
+
+1. `docs-drift` 车道（轮转）。
+2. Q-23 + Q-37：dedupe `created_at` 窗口谓词 + 有界批，先 EXPERT_PANEL。
+3. SEC-25：test/preview `renderedPayload` 套 `redactJsonText`（AUTO_FIX，按 kind 参数化断言）。
+4. REQ-227（27）：失效筛选引用识别与一键清除（纯前端）。
+5. REL-22：扩展 E2E spec 覆盖 Route/Delivery/retry/过滤。
+
 ## 2026-10-22（第 81 轮）
 
 - 时间：2026-10-22 21:28 CST 起。
