@@ -73,6 +73,23 @@
 
 - 本轮无裁决事项。ARCH-51（worker 启动时机）仍未裁决，留待后续轮次。
 
+### 发布决策
+
+- **已发布 `v0.1.0-beta.59`**：三位发布专家一致 APPROVE。
+  - 发布经理：`v0.1.0-beta.58..origin/main` 的用户可见变更为 #355（设置页后台 Worker 健康面板
+    与 `settings.getWorkerHealth`）；其余为 docs/健壮性补丁；建议预发布递增。
+  - 发布阻断审计员：6/6 PASS —— 目标 commit `841ea2c` main CI success、无 open PR、
+    migration 零 diff、版本与 tag 不冲突、最近 10 个 tag 与 Release 一一对应；
+    唯一 `blocked-autonomous` 为 REL-13（LICENSE，非运行时阻断）。
+  - 运维/回滚专家：Dockerfile/compose/env/启动参数/lockfile 零改动，`migrate/` 零 diff；
+    旧库直接打开安全，回滚只需换回 `0.1.0-beta.58` 镜像，无需恢复备份。
+- 版本变更走 PR #356 `chore(release): v0.1.0-beta.59`（rebase 合并 `a97ac34`），
+  该 commit main CI success。
+- tag：`v0.1.0-beta.59`（annotated，指向 `a97ac34`）；
+  Release：<https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.59>（prerelease，body 已校验非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.59`，
+  linux/amd64 + linux/arm64，index digest `sha256:77d2dbbb…`；回滚镜像 `0.1.0-beta.58`。
+
 ### 下一轮优先项
 
 1. **NEW-BO（28）**：QueryClient `staleTime` 默认值，消除 hydration 后重复查询。
