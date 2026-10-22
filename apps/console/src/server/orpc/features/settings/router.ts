@@ -25,7 +25,11 @@ export const settingsRouter = os.settings.router({
     .use(withStorageHealthService)
     .handler(({ context }) => context.service.getStorageHealth()),
 
-  update: os.settings.update
-    .use(withAppSettingsService)
-    .handler(({ context, input }) => context.service.updateAppSettings(input)),
+  update: os.settings.update.use(withAppSettingsService).handler(({ context, input }) =>
+    // Pause/resume evidence is written server-side from the verified session;
+    // the browser never supplies the operator identity.
+    context.service.updateAppSettings(input, {
+      actor: context.dashboardRequest.currentUser.email,
+    }),
+  ),
 });

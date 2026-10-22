@@ -78,6 +78,8 @@ describe("sqlite store", () => {
       rawPayloadRetentionDays: 30,
       deliveryPaused: false,
       deliveryPausedAt: null,
+      deliveryPausedBy: null,
+      lastDeliveryPause: null,
     });
 
     await store.settings.update({ locale: "zh-Hans", timeZone: "Asia/Shanghai" });
@@ -88,6 +90,8 @@ describe("sqlite store", () => {
       rawPayloadRetentionDays: 30,
       deliveryPaused: false,
       deliveryPausedAt: null,
+      deliveryPausedBy: null,
+      lastDeliveryPause: null,
     });
     await expect(store.settings.update({ timeZone: "Mars/Olympus" })).rejects.toThrow(
       "valid IANA time zone",
@@ -96,29 +100,56 @@ describe("sqlite store", () => {
     await store.close();
   });
 
-  it("pauses outbound delivery and keeps the original pause start time", async () => {
+  it("pauses outbound delivery and keeps the original pause start time and operator", async () => {
     let clock = now;
     const store = await openSqliteStore({ databasePath: ":memory:", now: () => clock });
 
     expect((await store.settings.get()).deliveryPaused).toBe(false);
     expect((await store.settings.get()).deliveryPausedAt).toBeNull();
+    expect((await store.settings.get()).deliveryPausedBy).toBeNull();
+    expect((await store.settings.get()).lastDeliveryPause).toBeNull();
 
-    expect(await store.settings.update({ deliveryPaused: true })).toMatchObject({
+    expect(
+      await store.settings.update({ deliveryPaused: true, actor: "first@example.test" }),
+    ).toMatchObject({
       deliveryPaused: true,
       deliveryPausedAt: now,
+      deliveryPausedBy: "first@example.test",
     });
 
     clock = "2026-06-07T00:05:00.000Z";
 
-    // Re-issuing the pause must not rewrite when the incident began.
-    expect(await store.settings.update({ deliveryPaused: true })).toMatchObject({
+    // Re-issuing the pause must not rewrite when the incident began or who
+    // began it.
+    expect(
+      await store.settings.update({ deliveryPaused: true, actor: "second@example.test" }),
+    ).toMatchObject({
       deliveryPaused: true,
       deliveryPausedAt: now,
+      deliveryPausedBy: "first@example.test",
     });
 
-    expect(await store.settings.update({ deliveryPaused: false })).toMatchObject({
+    expect(
+      await store.settings.update({ deliveryPaused: false, actor: "second@example.test" }),
+    ).toMatchObject({
       deliveryPaused: false,
       deliveryPausedAt: null,
+      deliveryPausedBy: null,
+      lastDeliveryPause: {
+        startedAt: now,
+        endedAt: "2026-06-07T00:05:00.000Z",
+        pausedBy: "first@example.test",
+        resumedBy: "second@example.test",
+      },
+    });
+
+    // The completed interval is incident evidence, not pause state: an
+    // unrelated settings write must not erase it.
+    expect(
+      (await store.settings.update({ rawPayloadRetentionDays: 14 })).lastDeliveryPause,
+    ).toMatchObject({
+      startedAt: now,
+      endedAt: "2026-06-07T00:05:00.000Z",
     });
 
     await store.close();

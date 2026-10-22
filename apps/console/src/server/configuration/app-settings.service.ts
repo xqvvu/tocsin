@@ -6,6 +6,7 @@ import {
 
 import type {
   AppSettingsServiceOptions,
+  UpdateAppSettingsOptions,
   UpdateAppSettingsResult,
 } from "#/server/configuration/app-settings.service.types";
 
@@ -20,7 +21,10 @@ export class AppSettingsService {
     return this.store.settings.get();
   }
 
-  async updateAppSettings(command: UpdateAppSettingsCommand): Promise<UpdateAppSettingsResult> {
+  async updateAppSettings(
+    command: UpdateAppSettingsCommand,
+    options: UpdateAppSettingsOptions = {},
+  ): Promise<UpdateAppSettingsResult> {
     const input = UpdateAppSettingsCommandSchema.parse(command);
 
     return this.store.settings.update({
@@ -30,6 +34,7 @@ export class AppSettingsService {
       ...(input.rawPayloadRetentionDays === undefined
         ? {}
         : { rawPayloadRetentionDays: input.rawPayloadRetentionDays }),
+      ...(options.actor === undefined ? {} : { actor: options.actor }),
     });
   }
 }

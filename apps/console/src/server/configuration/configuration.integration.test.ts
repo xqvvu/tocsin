@@ -1390,6 +1390,46 @@ describe("configuration capabilities", () => {
     await store.close();
   });
 
+  it("records who paused and resumed delivery, and the completed interval", async () => {
+    const { store, services } = await createTestContext();
+
+    const paused = await services.settings.updateAppSettings(
+      { deliveryPaused: true },
+      { actor: "oncall@example.test" },
+    );
+    expect(paused).toMatchObject({
+      deliveryPaused: true,
+      deliveryPausedBy: "oncall@example.test",
+      lastDeliveryPause: null,
+    });
+
+    const resumed = await services.settings.updateAppSettings(
+      { deliveryPaused: false },
+      { actor: "lead@example.test" },
+    );
+    expect(resumed).toMatchObject({
+      deliveryPaused: false,
+      deliveryPausedBy: null,
+      lastDeliveryPause: {
+        startedAt: expect.any(String),
+        endedAt: expect.any(String),
+        pausedBy: "oncall@example.test",
+        resumedBy: "lead@example.test",
+      },
+    });
+
+    // An unattributed write (configuration import or an in-process caller) still
+    // records the interval, just without naming an operator.
+    await services.settings.updateAppSettings({ deliveryPaused: true });
+    const unattributed = await services.settings.updateAppSettings({ deliveryPaused: false });
+    expect(unattributed.lastDeliveryPause).toMatchObject({
+      pausedBy: null,
+      resumedBy: null,
+    });
+
+    await store.close();
+  });
+
   it("exports portable TOML without plaintext destination secrets by default", async () => {
     const { store, services } = await createTestContext();
     const source = await services.sources.createSource({
@@ -1613,6 +1653,8 @@ describe("configuration capabilities", () => {
       rawPayloadRetentionDays: 7,
       deliveryPaused: false,
       deliveryPausedAt: null,
+      deliveryPausedBy: null,
+      lastDeliveryPause: null,
     });
     expect(await second.store.sources.get(source.source.id)).toMatchObject({
       name: "Grafana prod",
@@ -1780,6 +1822,8 @@ describe("configuration capabilities", () => {
       rawPayloadRetentionDays: 7,
       deliveryPaused: false,
       deliveryPausedAt: null,
+      deliveryPausedBy: null,
+      lastDeliveryPause: null,
     });
     expect(await second.store.sources.get(source.source.id)).toMatchObject({
       name: "Grafana prod",
