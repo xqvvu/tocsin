@@ -313,34 +313,40 @@ export const CodeBlockContent = ({
 }) => {
   const rawTokens = useMemo(() => createRawTokens(code), [code]);
 
-  const syncTokens = useMemo(
-    () => highlightCode(code, language) ?? rawTokens,
-    [code, language, rawTokens],
-  );
-
-  const [asyncTokens, setAsyncTokens] = useState<TokenizedCode | null>(null);
-  const asyncKeyRef = useRef({ code, language });
-
-  if (asyncKeyRef.current.code !== code || asyncKeyRef.current.language !== language) {
-    asyncKeyRef.current = { code, language };
-    setAsyncTokens(null);
-  }
+  // Highlighting starts after mount. The Shiki cache is warm in the server
+  // process after the first render but empty in a fresh browser tab, so reading
+  // it during render makes the server HTML and the hydration pass disagree and
+  // React rebuilds the tree on every event detail refresh. Rendering raw tokens
+  // first keeps the first client render identical to the server's.
+  const [highlighted, setHighlighted] = useState<{
+    code: string;
+    language: CodeBlockLanguage;
+    tokenized: TokenizedCode;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    highlightCode(code, language, (result) => {
+    const apply = (result: TokenizedCode) => {
       if (!cancelled) {
-        setAsyncTokens(result);
+        setHighlighted({ code, language, tokenized: result });
       }
-    });
+    };
+
+    const cached = highlightCode(code, language, apply);
+    if (cached) {
+      apply(cached);
+    }
 
     return () => {
       cancelled = true;
     };
   }, [code, language]);
 
-  const tokenized = asyncTokens ?? syncTokens;
+  const tokenized =
+    highlighted && highlighted.code === code && highlighted.language === language
+      ? highlighted.tokenized
+      : rawTokens;
 
   return (
     <div className={cn("relative overflow-auto bg-background/60", className)}>
