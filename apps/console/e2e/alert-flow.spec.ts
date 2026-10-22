@@ -53,8 +53,8 @@ test("a first-run operator can set up, route, and deliver an alert", async ({ pa
   // --- 2. Create a Source and copy its webhook URL ------------------------
   await page.goto("/sources");
 
-  // The sources page has no <h1> — the shell renders the title from the nav item
-  // and the page supplies only a description. Anchor on what is actually there.
+  // Anchor on the page description, which is rendered by the page toolbar
+  // alongside its title, rather than on the title itself.
   await expect(page.getByText("Manage inbound webhook senders and secure intake")).toBeVisible({
     timeout: 30_000,
   });

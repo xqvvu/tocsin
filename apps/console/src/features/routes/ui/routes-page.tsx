@@ -139,6 +139,7 @@ function RoutesPageToolbar({
 
   return (
     <PageToolbar
+      title={t("routing.page.title")}
       description={t("routing.page.description")}
       actions={
         <>

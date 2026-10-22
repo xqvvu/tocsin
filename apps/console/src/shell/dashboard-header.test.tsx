@@ -7,16 +7,6 @@ import { SidebarProvider } from "#/components/ui/sidebar";
 import { AppIntlProvider } from "#/i18n/provider";
 import { DashboardHeader } from "#/shell/dashboard-header";
 
-const testState = vi.hoisted(() => ({ pathname: "/sources" }));
-
-vi.mock("@tanstack/react-router", () => ({
-  useRouterState: ({
-    select,
-  }: {
-    select: (state: { location: { pathname: string } }) => unknown;
-  }) => select({ location: { pathname: testState.pathname } }),
-}));
-
 vi.mock("#/hooks/use-mobile", () => ({
   useIsMobile: () => false,
 }));
@@ -30,12 +20,9 @@ vi.mock("#/features/configuration/ui/delivery-pause-indicator", () => ({
 }));
 
 describe("dashboard header", () => {
-  afterEach(() => {
-    cleanup();
-    testState.pathname = "/sources";
-  });
+  afterEach(cleanup);
 
-  it("shows the sidebar trigger and the current section", () => {
+  it("renders app chrome and global indicators without a page title", () => {
     render(
       <AppIntlProvider locale="en-US">
         <SidebarProvider>
@@ -45,22 +32,13 @@ describe("dashboard header", () => {
     );
 
     expect(screen.getByRole("button", { name: "Toggle sidebar" })).toBeTruthy();
-    expect(screen.getByText("Sources")).toBeTruthy();
     expect(screen.getByTestId("delivery-pause-indicator")).toBeTruthy();
     expect(screen.getByTestId("active-suppression-indicator")).toBeTruthy();
-  });
 
-  it("falls back to the console label outside registered sections", () => {
-    testState.pathname = "/not-registered";
-
-    render(
-      <AppIntlProvider locale="en-US">
-        <SidebarProvider>
-          <DashboardHeader />
-        </SidebarProvider>
-      </AppIntlProvider>,
-    );
-
-    expect(screen.getByText("Console")).toBeTruthy();
+    // The current section is marked by the sidebar and by the page's own
+    // `PageToolbar` heading. Repeating it here duplicated both and rendered the
+    // only title in the app at chrome size, with an icon that did not match.
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.queryByText("Sources")).toBeNull();
   });
 });

@@ -25,19 +25,91 @@ export interface RouteRuleSummaryCopy {
   statusLabel: (status: RouteRule["statuses"][number]) => string;
 }
 
-export function buildRouteRuleChips(
+export type RouteRuleGroupKind = "source" | "severity" | "status" | "label" | "title" | "message";
+
+/**
+ * One chip per condition dimension, with that dimension's values joined.
+ *
+ * A rule holds at most six dimensions but any number of values in each. One
+ * chip per value repeats the dimension label and multiplies the chips a narrow
+ * table column has to fit, which is what squeezed the Routes rule cell. Grouping
+ * bounds the cell at six chips and keeps each condition class readable as a
+ * unit: `告警源 A、B`, `级别 严重、警告`, `标签 team=sre、service~api`.
+ */
+export interface RouteRuleGroup {
+  kind: RouteRuleGroupKind;
+  /** Localized dimension label, rendered muted inside the chip. */
+  label: string;
+  /** This dimension's values joined with the locale list separator. */
+  value: string;
+  /** Operator-authored matchers read better in mono; names and enums do not. */
+  mono: boolean;
+}
+
+export function buildRouteRuleGroups(
   rule: RouteRule,
   sourceNameForId: (sourceId: string) => string,
   copy: RouteRuleSummaryCopy,
-): string[] {
-  return [
-    ...rule.sourceIds.map((sourceId) => `${copy.source}: ${sourceNameForId(sourceId)}`),
-    ...rule.severities.map((severity) => `${copy.severity}: ${copy.severityLabel(severity)}`),
-    ...rule.statuses.map((status) => `${copy.status}: ${copy.statusLabel(status)}`),
-    ...rule.labels.map((label) => formatLabelCondition(label)),
-    ...rule.titleContains.map((value) => `${copy.title}: ${value}`),
-    ...rule.messageContains.map((value) => `${copy.message}: ${value}`),
-  ];
+): RouteRuleGroup[] {
+  const groups: RouteRuleGroup[] = [];
+
+  if (rule.sourceIds.length > 0) {
+    groups.push({
+      kind: "source",
+      label: copy.source,
+      value: rule.sourceIds.map(sourceNameForId).join(copy.listSeparator),
+      mono: false,
+    });
+  }
+
+  if (rule.severities.length > 0) {
+    groups.push({
+      kind: "severity",
+      label: copy.severity,
+      value: rule.severities
+        .map((severity) => copy.severityLabel(severity))
+        .join(copy.listSeparator),
+      mono: false,
+    });
+  }
+
+  if (rule.statuses.length > 0) {
+    groups.push({
+      kind: "status",
+      label: copy.status,
+      value: rule.statuses.map((status) => copy.statusLabel(status)).join(copy.listSeparator),
+      mono: false,
+    });
+  }
+
+  if (rule.labels.length > 0) {
+    groups.push({
+      kind: "label",
+      label: copy.labels,
+      value: rule.labels.map((label) => formatLabelCondition(label)).join(copy.listSeparator),
+      mono: true,
+    });
+  }
+
+  if (rule.titleContains.length > 0) {
+    groups.push({
+      kind: "title",
+      label: copy.title,
+      value: rule.titleContains.join(copy.listSeparator),
+      mono: true,
+    });
+  }
+
+  if (rule.messageContains.length > 0) {
+    groups.push({
+      kind: "message",
+      label: copy.message,
+      value: rule.messageContains.join(copy.listSeparator),
+      mono: true,
+    });
+  }
+
+  return groups;
 }
 
 /** Compact operator-facing rule summary for tooltips and titles. */

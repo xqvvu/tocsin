@@ -143,8 +143,6 @@ function DashboardHeaderSkeleton() {
   return (
     <header className="border-border bg-card flex h-12 shrink-0 items-center gap-2 border-b px-2">
       <Skeleton className="size-7 shrink-0" />
-      <div className="bg-border h-4 w-px shrink-0" />
-      <Skeleton className="h-4 w-24" />
     </header>
   );
 }

@@ -17,6 +17,7 @@ export function EventsPageToolbar({
 
   return (
     <PageToolbar
+      title={t("events.page.title")}
       description={t("events.page.description")}
       actions={
         <>

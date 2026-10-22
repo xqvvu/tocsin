@@ -16,6 +16,7 @@ export function SettingsPageToolbar({
 
   return (
     <PageToolbar
+      title={t("configuration.settings.title")}
       tabs={
         <TabsList
           variant="line"
