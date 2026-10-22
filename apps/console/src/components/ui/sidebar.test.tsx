@@ -3,7 +3,13 @@
 import { render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vite-plus/test";
 
-import { Sidebar, SidebarProvider } from "#/components/ui/sidebar";
+import {
+  Sidebar,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarProvider,
+} from "#/components/ui/sidebar";
 
 function stubMatchMedia() {
   Object.defineProperty(window, "matchMedia", {
@@ -59,5 +65,33 @@ describe("sidebar persisted state", () => {
     const { container } = renderSidebar();
 
     expect(sidebarState(container)).toBe("expanded");
+  });
+});
+
+describe("sidebar collapsed group labels", () => {
+  beforeEach(() => {
+    stubMatchMedia();
+  });
+
+  it("does not intercept pointer events over the previous group", () => {
+    const { container } = render(
+      <SidebarProvider>
+        <Sidebar collapsible="icon">
+          <SidebarGroup>
+            <SidebarGroupLabel>Operations</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <a href="/events">Events</a>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </Sidebar>
+      </SidebarProvider>,
+    );
+
+    const label = container.querySelector('[data-slot="sidebar-group-label"]');
+
+    // In icon-collapsed mode the label is pulled up over the previous group's
+    // last menu item. It is invisible there, so it must stay out of hit
+    // testing or the item loses its pointer cursor and click target.
+    expect(label?.className).toContain("group-data-[collapsible=icon]:pointer-events-none");
   });
 });
