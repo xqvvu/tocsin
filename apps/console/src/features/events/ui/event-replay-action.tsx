@@ -19,6 +19,7 @@ import {
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { DeliveryPauseHint } from "#/features/configuration/ui/delivery-pause-hint";
+import { destinationsQueryOptions } from "#/features/destinations/api/destination.queries";
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import {
   eventReplayPreviewQueryOptions,
@@ -139,6 +140,17 @@ function ReplayPreviewBody({
   preview: EventReplayPreview | null | undefined;
 }) {
   const t = useTranslations();
+  const destinationsQuery = useQuery({
+    ...destinationsQueryOptions(),
+    enabled: (preview?.targets.length ?? 0) > 0,
+  });
+  const destinationNames = React.useMemo(
+    () =>
+      new Map(
+        (destinationsQuery.data ?? []).map((destination) => [destination.id, destination.name]),
+      ),
+    [destinationsQuery.data],
+  );
 
   if (pending) {
     return <p className="text-muted-foreground text-xs">{t("events.replay.previewLoading")}</p>;
@@ -175,6 +187,36 @@ function ReplayPreviewBody({
             ? t("events.replay.previewNoNew")
             : t("events.replay.previewReady")}
       </p>
+
+      {preview.targets.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <p className="text-muted-foreground text-[11px]">{t("events.replay.previewTargets")}</p>
+          <div className="border-border max-h-56 overflow-auto border">
+            {preview.targets.map((target) => (
+              <div
+                key={`${target.routeId}:${target.destinationId}`}
+                className="border-border flex min-w-0 flex-col gap-1 border-b p-2 last:border-b-0"
+              >
+                <div className="flex min-w-0 items-center gap-1">
+                  <Badge variant={target.alreadyExists ? "outline" : "default"}>
+                    {target.alreadyExists
+                      ? t("events.replay.targetExisting")
+                      : t("events.replay.targetNew")}
+                  </Badge>
+                  <span className="truncate text-xs font-medium" title={target.routeName}>
+                    {target.routeName}
+                  </span>
+                </div>
+                <div className="text-muted-foreground truncate text-[11px]">
+                  {t("events.replay.targetDestination", {
+                    destination: destinationNames.get(target.destinationId) ?? target.destinationId,
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
