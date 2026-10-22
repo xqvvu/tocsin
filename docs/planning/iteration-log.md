@@ -2,6 +2,85 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 84 轮）
+
+- 时间：2026-10-23 00:57 CST 起。
+- 基线：本轮开始时 `origin/main` @ `bd4bfbe`；main CI 最近 3 次 success；无 open PR；
+  `v0.1.0-beta.62` 的 tag 与 GitHub Release 均已存在。
+- 类型：**`full-audit`（受时间约束只展开 2 条车道）** —— `requirements`（窄扫描）与
+  `ui-triage`；轮转车道 `security-exposure` 顺延。实现名额给第 83 轮已裁决的 Q-23 + Q-37。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**——本轮未覆盖全部车道。
+- 车道轮转位置：**`security-exposure`**（未变，下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 5h14m（`last_ui_review_at` 2026-10-22 19:45）；
+  自评审以来 UI 路径合并 2 个（`48e0e74`、`10b44f6`），均已浏览器复验；未评审 UI 合并 0；
+  `UI-` candidate 21 条（阈值 25）；无新增 HIGH。再触发条件：满 48h（2026-10-24 19:45）、
+  未评审 UI 合并 ≥3、新增 UI 发现 ≥2、candidate ≥25、或出现新 HIGH 可复现缺陷。
+- `last_ui_review_at`：**2026-10-22 19:45 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证在会话工作树
+  `eloquent-williams-a13a69`。工作树已清理。
+
+### 本轮交付
+
+- PR #375 `fix(console): bound dedupe cleanup and window the key check`：
+  按第 83 轮 EXPERT_PANEL 的三步决策实施 Q-23 + Q-37，delivery 与 oncall 同 PR。
+  1. 存在性判断加 `created_at >= windowStartsAt`，命中返回且不刷新 `created_at`；
+  2. 插入改 UPSERT（`onConflict().doUpdateSet()`），接管有界清理尚未触及的旧行；
+     否则裸 INSERT 会撞四列主键并回滚整个 enqueue（自动加急异常还会被吞掉）；
+  3. 清理改最旧优先有界批（100 条，`rowid IN (SELECT … LIMIT)`），仍在写事务内、判定之前。
+  新增 `delivery-dedupe.test.ts` 6 例：窗口边界（`>=` 抑制 / `-1ms` 不抑制）、命中不刷新、
+  250 条旧键一次只删 100 且最旧优先、旧键被接管后重投成功、replay 绕过、oncall 同构两例。
+  反向验证：临时回退 UPSERT 后两例以 `UNIQUE constraint failed` 失败，恢复后全绿。
+  同步修正 `route-match-gaps.ts` 注释与 `docs/prd/route-explain-delivery-gap.md`
+  「超过窗口必然被 prune」的旧表述（有界清理后旧行可留存）。
+  验证：`vp fmt --write`；`vp check` 0 errors / 18 既有 warning；`vp run -r test`
+  4/4 包通过（console 905 tests）；`vp run -r build` 通过。
+  注：本轮开始时 `vp check` 报 3935 errors（`JsonObject` 退化为 any），
+  `vp install --frozen-lockfile --force` 后恢复为 0 errors；属会话工作树链接残缺，
+  非代码问题，与此前轮次记录的现象一致。
+
+### 专家发现
+
+- `requirements`（窄扫描，2 条候选，均 27 分，已达门槛但本轮未实现）：
+  - REQ-231（27）相对时间窗锚定：每次请求用服务端当前时刻重算 `since`
+    （`operations.service.ts:36,107`），URL 只有 `range`（`operation-search.ts:40-43`），
+    翻页/分享链接窗口滑动会重复或漏行；chip 不显示解析后的绝对窗口
+    （`operation-filters.tsx:589-596`）。
+  - REQ-232（27）投递按尝试次数筛选：查询无 `attempt_count` 谓词
+    （`history.repository.ts:280-298`），但 DTO 已暴露（`packages/core/src/operations.ts:120`）
+    且表格已展示（`deliveries-table.tsx:93-95`），筛选面板缺控件
+    （`operation-filters.tsx:337-419,456-493`）。
+- `ui-triage`：`defer`（理由见上）。
+- 轮转车道 `security-exposure` 本轮未跑，顺延下一轮。
+
+### EXPERT_PANEL
+
+- 本轮无新的裁决事项；执行第 83 轮已落盘决策
+  `docs/planning/decisions/dedupe-window-and-bounded-prune.md`，状态已更新为「已实施」。
+- Q-224（老库 `idx_delivery_dedupe_created_at` 迁移）仍未评估，下一轮单独处理。
+
+### 发布决策
+
+- 三位专家（发布经理 / 阻断审计 / 运维回滚）**一致赞成发布 `0.1.0-beta.63`**。
+- 用户可见变更（自 `v0.1.0-beta.62`）：PR #373 预览/测试载荷脱敏（SEC-25）、
+  PR #375 去重窗口与有界清理（Q-23/Q-37）；PR #372/#374 为 CI/文档，不单独触发发版。
+- 门槛：目标 SHA `a95bace` 的 `check · test · build` 与 `playwright · chromium` 均 success；
+  无 open PR；无 revert/未修复回归；`v0.1.0-beta.62..a95bace` 的 migrate 目录零变化。
+- 版本：`0.1.0-beta.63`；release PR #376（`chore(release): v0.1.0-beta.63`）rebase 合并为
+  `4e1a3da`。
+- tag：`v0.1.0-beta.63`（annotated，指向 `4e1a3da`）；GitHub Release 已创建（prerelease，
+  body 非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.63`
+  （linux/amd64 + linux/arm64，index digest `sha256:0830ffc0…`）；回滚镜像 `0.1.0-beta.62`。
+- 升级/回滚：无 migration、无环境变量/配置格式变化；回滚仅需换回旧镜像，无需数据修复。
+
+### 下一轮优先项
+
+1. REQ-231（27）相对时间窗锚定。
+2. REQ-232（27）投递按尝试次数筛选。
+3. Q-224 老库 dedupe 索引迁移评估（forward-only `0004`）。
+4. REQ-227（27）失效筛选引用；REQ-228/229（25）。
+5. REL-22 扩展 E2E spec 覆盖 Route/Delivery/retry/过滤。
+
 ## 2026-10-23（第 83 轮）
 
 - 时间：2026-10-22 23:58 CST 起（跨日）。
