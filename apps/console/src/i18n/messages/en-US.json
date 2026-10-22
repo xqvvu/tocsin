@@ -585,6 +585,8 @@
   "events.detail.deliveryHeaders.next": "Next retry",
   "events.detail.deliveryHeaders.route": "Route",
   "events.detail.deliveryHeaders.state": "Delivery state",
+  "events.detail.deliveryHeaders.suppression": "Silence",
+  "events.detail.deliverySuppression.ruleDeleted": "Rule deleted",
   "events.detail.description": "Inspect normalized fields, intake-time route matches, deliveries, and redacted raw data",
   "events.detail.empty.deliveries": "No deliveries created",
   "events.detail.empty.labels": "No labels",
