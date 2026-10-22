@@ -283,6 +283,91 @@ describe("operations service time range", () => {
 
     await store.close();
   });
+
+  it("pins the lower bound to the anchor instead of the request clock", async () => {
+    let nextId = 0;
+    const store = await openSqliteStore({
+      databasePath: ":memory:",
+      now: () => "2026-10-12T10:00:00.000Z",
+      ids: {
+        source: () => "source-1",
+        event: () => `event-${++nextId}`,
+      },
+    });
+    const service = new OperationsService({
+      store,
+      oncall: new OncallService({ store }),
+      now: () => new Date("2026-10-12T10:00:00.000Z"),
+    });
+
+    await store.sources.create({
+      id: "source-1",
+      name: "Generic source",
+      provider: "generic",
+      tokenHash: "token-hash",
+    });
+
+    const record = (title: string, receivedAt: string) =>
+      store.intake.recordEvent({
+        sourceId: "source-1",
+        idempotencyKey: title,
+        receivedAt,
+        normalized: {
+          title,
+          message: title,
+          severity: "critical",
+          status: "firing",
+          fingerprint: `fp-${title}`,
+          labels: {},
+          occurredAt: receivedAt,
+        },
+        rawPayload: {},
+      });
+
+    await record("old", "2026-10-12T09:10:00.000Z");
+    await record("recent", "2026-10-12T09:55:00.000Z");
+
+    // The live window starts 15 minutes before the request clock: 09:45.
+    const live = await service.listOperations({ limit: 10, range: "15m" });
+    expect(live.events.total).toBe(1);
+
+    // Anchoring at 09:20 moves the lower bound back to 09:05, so the 09:10
+    // event stays inside the same 15-minute window. This is what keeps page 2
+    // identical to the page the operator was reading.
+    const anchored = await service.listOperations({
+      limit: 10,
+      range: "15m",
+      rangeAnchor: "2026-10-12T09:20:00.000Z",
+    });
+    expect(anchored.events.items.map((event) => event.title)).toEqual(["recent", "old"]);
+    expect(anchored.events.total).toBe(2);
+
+    // A client clock running ahead must not produce a future lower bound and
+    // an empty list; the anchor is clamped to the request clock.
+    const future = await service.listOperations({
+      limit: 10,
+      range: "15m",
+      rangeAnchor: "2026-10-12T11:00:00.000Z",
+    });
+    expect(future.events.total).toBe(1);
+
+    // A hand-edited URL cannot break the read path.
+    const garbage = await service.listOperations({
+      limit: 10,
+      range: "15m",
+      rangeAnchor: "not-a-date",
+    });
+    expect(garbage.events.total).toBe(1);
+
+    // Without a window the anchor describes nothing and is ignored.
+    const anchorOnly = await service.listOperations({
+      limit: 10,
+      rangeAnchor: "2026-10-12T09:20:00.000Z",
+    });
+    expect(anchorOnly.events.total).toBe(2);
+
+    await store.close();
+  });
 });
 
 function oncallPing(): OncallPing {

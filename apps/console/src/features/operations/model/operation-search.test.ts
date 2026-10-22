@@ -161,3 +161,59 @@ describe("time range in the operation search", () => {
     expect(merged.eventPage).toBe(3);
   });
 });
+
+describe("time range anchor in the operation search", () => {
+  const anchor = "2026-10-23T04:00:00.000Z";
+
+  it("pins the window to the anchor and keeps it in the URL", () => {
+    const search = DashboardOperationSearchSchema.parse({ range: "1h", rangeAnchor: anchor });
+
+    expect(search.rangeAnchor).toBe(anchor);
+    expect(pruneSearch(search).rangeAnchor).toBe(anchor);
+    expect(operationFiltersFromSearch(search).rangeAnchor).toBe(anchor);
+  });
+
+  it("falls back to a live window when the anchor is not a timestamp", () => {
+    // The URL is user-editable; an unparseable anchor must not reach the
+    // server, where it would fail contract validation and break the page.
+    expect(
+      DashboardOperationSearchSchema.parse({ range: "1h", rangeAnchor: "yesterday" }),
+    ).toMatchObject({ range: "1h", rangeAnchor: "" });
+  });
+
+  it("keeps the anchor out of the URL when there is no window", () => {
+    // An anchor alone describes nothing: without a range the server ignores it,
+    // and carrying it forward would attach a stale instant to the next window.
+    expect(pruneSearch({ rangeAnchor: anchor }).rangeAnchor).toBeUndefined();
+  });
+
+  it("drops a stale anchor when the window changes without a new one", () => {
+    const merged = mergeOperationSearch({ range: "24h", rangeAnchor: anchor }, { range: "1h" });
+
+    expect(merged.range).toBe("1h");
+    expect(merged.rangeAnchor).toBeUndefined();
+  });
+
+  it("keeps the anchor while paging or changing another filter", () => {
+    const paged = mergeOperationSearch(
+      { range: "1h", rangeAnchor: anchor, eventPage: 2 },
+      { eventPage: 3 },
+    );
+    expect(paged.rangeAnchor).toBe(anchor);
+
+    const narrowed = mergeOperationSearch(
+      { range: "1h", rangeAnchor: anchor },
+      { severity: "critical" },
+    );
+    expect(narrowed.rangeAnchor).toBe(anchor);
+  });
+
+  it("replaces the anchor when the operator reopens the same window", () => {
+    const reopened = mergeOperationSearch(
+      { range: "1h", rangeAnchor: anchor },
+      { range: "1h", rangeAnchor: "2026-10-23T05:00:00.000Z" },
+    );
+
+    expect(reopened.rangeAnchor).toBe("2026-10-23T05:00:00.000Z");
+  });
+});

@@ -227,6 +227,12 @@ export const ListOperationsInputSchema = z
     deliveryState: DeliveryStateSchema.optional(),
     /** Relative window resolved against the server's request time. */
     range: OperationTimeRangeSchema.optional(),
+    /**
+     * Instant the operator opened the window. Pins the lower bound so paging
+     * and shared links describe the same window instead of one that slides
+     * forward on every request. Ignored without `range`.
+     */
+    rangeAnchor: IsoDateTimeSchema.optional(),
     q: z.string().trim().min(1).max(OPERATION_SEARCH_MAX_LENGTH).optional(),
     eventPage: z.number().int().min(1).default(1),
     deliveryPage: z.number().int().min(1).default(1),

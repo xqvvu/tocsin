@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  formatDateTimeCompact,
   formatDurationBetween,
   formatDurationMs,
   retryTimestampFormat,
@@ -69,5 +70,23 @@ describe("retry timestamp formatting", () => {
 
   it("falls back to the dated format for an unusable timestamp", () => {
     expect(retryTimestampFormat("not-a-date", now, "UTC")).toBe("dateTime");
+  });
+});
+
+describe("compact timestamp formatting", () => {
+  it("drops the year and seconds so the value fits a chip", () => {
+    expect(
+      formatDateTimeCompact("2026-10-23T04:05:06.000Z", { locale: "en-US", timeZone: "UTC" }),
+    ).toBe("10/23, 04:05");
+  });
+
+  it("formats in the configured time zone", () => {
+    // 2026-10-22T20:05Z is 2026-10-23 04:05 in Shanghai.
+    expect(
+      formatDateTimeCompact("2026-10-22T20:05:00.000Z", {
+        locale: "zh-Hans",
+        timeZone: "Asia/Shanghai",
+      }),
+    ).toBe("10/23 04:05");
   });
 });

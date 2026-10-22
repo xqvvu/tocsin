@@ -37,6 +37,8 @@ export interface ListOperationsInput {
   routeId?: string;
   deliveryState?: DeliveryState;
   range?: OperationTimeRange;
+  /** Instant the window was opened; without it the window follows the clock. */
+  rangeAnchor?: string;
   q?: string;
   eventPage?: number;
   deliveryPage?: number;

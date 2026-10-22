@@ -33,7 +33,7 @@ export class OperationsService {
 
   async listOperations(input: ListOperationsInput = {}): Promise<OperationsList> {
     const limit = input.limit ?? 20;
-    const since = timeRangeSince(input.range, this.now());
+    const since = timeRangeSince(input.range, this.now(), input.rangeAnchor);
     const [events, deliveries] = await Promise.all([
       this.store.history.listEvents({
         limit,
@@ -103,11 +103,46 @@ export class OperationsService {
  * inside the window. There is no upper bound, because "the last hour" means
  * "up to now", and a future-dated record is a data problem the operator should
  * still see rather than have hidden by a filter.
+ *
+ * An anchor pins "now" to the instant the operator opened the window, so the
+ * lower bound no longer moves between page requests or when a shared link is
+ * reopened. Without one the window keeps following the clock, which is the
+ * behavior every existing link already has.
  */
-function timeRangeSince(range: OperationTimeRange | undefined, now: Date): string | undefined {
+function timeRangeSince(
+  range: OperationTimeRange | undefined,
+  now: Date,
+  anchorInput?: string,
+): string | undefined {
   if (!range) {
     return undefined;
   }
 
-  return new Date(now.getTime() - TIME_RANGE_MS[range]).toISOString();
+  const anchor = resolveRangeAnchor(anchorInput, now);
+
+  return new Date(anchor.getTime() - TIME_RANGE_MS[range]).toISOString();
+}
+
+/**
+ * Resolves the anchor, falling back to the request time.
+ *
+ * A client clock running ahead would otherwise push the lower bound into the
+ * future and empty the list for a window that is supposed to exist, so a
+ * future anchor is clamped to the request time. Unparseable input falls back
+ * for the same reason: a hand-edited URL must not break the read path.
+ */
+function resolveRangeAnchor(anchorInput: string | undefined, now: Date): Date {
+  if (!anchorInput) {
+    return now;
+  }
+
+  const parsed = Date.parse(anchorInput);
+
+  if (!Number.isFinite(parsed)) {
+    return now;
+  }
+
+  const anchor = new Date(parsed);
+
+  return anchor.getTime() > now.getTime() ? now : anchor;
 }
