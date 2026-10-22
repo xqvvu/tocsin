@@ -130,6 +130,16 @@ describe("routes section table layout", () => {
     expect(screen.queryByText("1 disabled")).toBeNull();
   });
 
+  it("offers a one-click silence action on every route row", () => {
+    renderSection();
+
+    // Disabling or deleting the route would also stop its matching evidence;
+    // the row action mutes what this route delivers without touching it.
+    expect(
+      screen.getByRole("button", { name: "Silence Critical alerts temporarily" }),
+    ).toBeTruthy();
+  });
+
   it("asks for confirmation before disabling a route", () => {
     const onToggle = vi.fn<() => void>();
     renderSection([enabledDestination], onToggle);
