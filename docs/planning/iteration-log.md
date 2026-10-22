@@ -2,6 +2,102 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 71 轮）
+
+- 时间：2026-10-22 11:26 – 12:00 CST。
+- 基线：本轮开始时 `origin/main` @ `5ae2e68`；main CI success；无 open PR。
+- 类型：**需求切片 + 三车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  `docs-drift`；并发始终 ≤3。`requirements` 约 15 分钟后返回 5 条新候选（见下）。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 1h56m（< 48h）；09:30 后 8 个提交中 3 个触及 UI
+  （`c507970`、`5fccd2b`、`ee00fa2`），但三者都有浏览器验证记录，未验证 UI 合并为 0；
+  18 条 candidate 与第 62/68/70 轮持平（提前触发线为存量 >20）。再触发条件：
+  2026-10-24 09:30 满 48h、未验证 UI 合并 ≥3、新增 UI 候选 ≥2 或存量 >20。
+- `last_ui_review_at`：**2026-10-22 09:30 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器检查均在会话工作树
+  `elegant-tereshkova-c317e9`。工作树已清理。
+- 文档同步：当前会话未暴露 `obsidian-vault` skill，Obsidian 同步已跳过。
+
+### 本轮交付
+
+- PR #338 `feat(console): surface SQLite storage health in settings`（NEW-AT，27 分）。
+  - 新增只读 `settings.getStorageHealth`：数据库体积（`page_count × page_size`）、
+    可回收空间（freelist）、`events`/`deliveries`/`delivery_attempts`/`oncall_pings` 行数、
+    最老/最新事件时间（空库 `null`）。
+  - `SqliteStore.storageHealth()` 与 `sqliteVersion()`/`schemaVersion()` 同层；
+    `StorageHealthService` 逐字段映射 DTO；`withDashboardService` 注入。
+  - Settings「界面」页签新增「数据库存储」面板；抽出共享 `formatBytes`；
+    oRPC auth inventory 与两个 fake container 同步。
+  - `quick_check` 明确非目标：全文件扫描会阻塞单进程 worker，需独立限时入口。
+  - PRD `docs/prd/settings-storage-health.md`；backlog NEW-AT → shipped。
+  - 验证：`vp check` 0 errors（18 个既有 warning）；`vp run -r test` 162 文件 / 856 项
+    （首轮 `server-orpc-auth.test.ts` inventory 因新过程失败，已补预期）；`vp run -r build` 通过。
+  - 浏览器实测（隔离实例 `localhost:6197` + 临时 SQLite，owner `admin@example.test`）：
+    空库显示 `248 KiB` / `8 KiB`、四表 0、事件时间「暂无事件」；经真实 Webhook 写入两个事件后
+    事件数 2、最老/最新时间正常；1280×900 与 390×844 均无横向溢出
+    （`docScrollWidth === docClientWidth`），无 console 错误。截图
+    `/tmp/tocsin-storage-health-{1280,390}.png`（未入库）。
+
+### 专家发现
+
+- `requirements`（5 条新候选，已写入 backlog）：
+  - **NEW-AZ（27）** Raw payload 保留期缩短影响预检：保留天数直接保存
+    （`settings-preferences-panel.tsx:60-64,160-201`），缩短后下一条 Webhook 即按新 cutoff
+    不可逆清理（`intake.service.ts:127-134`、`intake.repository.ts:105-135`）。建议只读
+    `previewRetentionImpact`，谓词与 `pruneRawPayloads` 共用。
+  - **NEW-AY（26）** Settings 最近诊断：LogTape 只有 console sink（`logging.ts:35-60`），
+    Settings 无最近错误（`settings-runtime-panel.tsx:15-55`）。建议有界内存 ring（warning+，
+    复用 `log-safety.ts:8-10,29-39` 脱敏）+ 只读 procedure + 诊断面板。
+  - **NEW-BB（26）** 事件接入 request ID：中间件已生成并回写（`request-logging.middleware.ts:13-26,84-98`），
+    但 events 表无 `request_id`（`migrate/schema.ts:63-83`），raw headers 清理后不可追溯。
+    建议 forward-only `0004` 加 nullable 列 + 详情复制；不回填历史。
+  - **NEW-BC（24）** 通知目标复制为停用草稿：表单已接受 `defaultValues`
+    （`destination-form.tsx:82-103`），编辑草稿已返回非密钥值；纯前端，密钥置空、默认停用。
+  - **NEW-BA（24）** 飞书群 `chat_id` 校验：当前纯文本输入（`feishu/manifest.ts:50-56`、
+    `feishu/schema.ts:104-109`），发送时才失败；建议只读 `validateFeishuChat` 复用 tenant token。
+  - 复核：**NEW-AL（28）**、**NEW-AQ（27）** 仍成立并更新行号；**NEW-AP 降为 25**——
+    `ee00fa2` 已把规则 chip 改为按维度分组换行（`routes-section.tsx:343-390`、
+    `route-rule-summary.ts:39-92`），剩余价值只有键盘/触屏可达的只读展开与 source 名称，
+    若认为分组 + tooltip 已足够可直接 retire。
+- `docs-drift`（10 条，均已核实代码）：
+  - **DOC-6/DOC-23**：`frontend-architecture.md:18-19,37-108` 仍缺 setup/integrations/
+    settings/suppressions 路由与 `features/{auth,integrations,suppressions}`；
+    `:83` 仍称中间件「仅剩」request-logging（实际还有 `csrf.middleware.ts`，`start.ts:3-7`）。
+    `application-container.md:35` 工厂列表仍未含 suppression/runtime-information/event-replay/
+    operations（本轮又新增 `createStorageHealthService`）；`:56-69,86,95` 缺 session/suppressions/
+    dashboard-context/operations.service。
+  - **DOC-60**：`frontend-architecture.md:242-245` 仍称 `server/configuration` 含 source/
+    destination/route service；实际各自独立目录。`:314-315` 与 `application-container.md:114`
+    仍称 private procedure 用裸 `requireDashboard()`，实际 8 个 router 文件 10 处
+    `withDashboardService`，裸调用仅剩 `operations/router.ts:69`。
+  - **DOC-62/DOC-66**：`sqlite-store.md:369,483` 仍写 `better-auth-schema.ts`（实际
+    `better-auth.schema.ts`）；RC checklist E 节缺 provider 贡献指南勾选项（新增 DOC-66）。
+  - **DOC-24 关闭**：PRD 已把 `preview` 标为 REQ-25 计划项、AC 勾选为有意保留；
+    contract 恰好 7 个过程。四状态是 core 既有语义，非文档漂移。
+- `ui-triage`：见上；补充记录 `ee00fa2` 的浏览器验证只写在 commit message，
+  未回写 iteration-log，本轮已由 triage 记录（1280/1440/390、每个列表页一个 h1）。
+
+### EXPERT_PANEL
+
+- 本轮无新增裁决事项。SEC-26、NEW-AU、NEW-AX 仍待后续轮次专家小组。
+
+### 发布决策
+
+- 待本轮 PR 合并后按第 9.5 步评估（结论见发布记录或下一轮）。
+
+### 下一轮优先项
+
+1. **NEW-AZ（27）** 保留期缩短影响预检；**NEW-AL（28）** 恢复前积压影响；
+   **NEW-AQ（27）** 覆盖率名单展开；**NEW-AP（25，可 retire）** 路由规则只读展开。
+2. **SEC-25** AUTO_FIX（`renderedPayload` 投影）；**SEC-22** AUTO_FIX（只读 endpoint userinfo）；
+   **Q-58/Q-56/Q-57** 低成本测试补齐。
+3. **NEW-AY（26）/NEW-BB（26）** 诊断与 request ID（NEW-BB 需 additive migration）；
+   **NEW-BC/NEW-BA（24）** 配置体验。
+4. **DOC-6/DOC-23/DOC-60/DOC-62/DOC-66** 文档更正批次（可独立 docs-only PR）。
+5. 轮转车道 **`security-exposure`**；**SEC-26/NEW-AU/NEW-AX** 交 EXPERT_PANEL。
+
 ## 2026-10-22（第 70 轮）
 
 - 时间：2026-10-22 10:25 – 11:05 CST。
