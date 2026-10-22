@@ -2,6 +2,81 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 67 轮）
+
+- 时间：2026-10-22 07:53 – 08:50 CST。
+- 基线：本轮开始时 `origin/main` @ `c0894ec`；main CI success；无 open PR。
+- 类型：**需求切片 + 发版**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
+  **`quality`**。并发始终 ≤3。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次评审 2h08m（< 48h）、自上次评审以来 2 个 UI 合并（#319/#322，
+  均当轮浏览器验证）、18 条未解决 UI 候选属稳定存量、零新增 UI 候选。触发条件：UI 合并累计 ≥3、
+  新增候选 ≥2、存量 >20、出现未浏览器验证的 UI 修复，或 2026-10-24 05:47 满 48h。
+- `last_ui_review_at`：不变（2026-10-22 05:47 CST）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `intelligent-tharp-a86e0b`。工作树已清理。
+
+### 本轮交付
+
+- PR #325 `feat(console): summarize the claimable delivery backlog while paused`（NEW-AH，rebase 合并 `8bab0c8`）。
+  - 新增只读 `operations.getDeliveryBacklog`：`claimable` + `oldestCreatedAt`，谓词与 `claimNext` 一致
+    （pending、目标启用、路由为空或启用、退避已到、`attempt_count < max_attempts`）。
+  - Deliveries 暂停横幅在说明下增加一行：有积压显示条数与最早等待，无积压显式说明；仅暂停时启用、
+    30 秒刷新，等待时长复用 `useOperationalNow` 推进；查询失败/加载中静默。
+  - 仓储新增 `summarizeClaimable`，operations service/router 保持薄入口；DTO 在 `@tocsin/core`；
+    无迁移、无新依赖；中英文案同步；PRD `docs/prd/delivery-backlog-summary.md`。
+  - 测试：仓储覆盖停用目标/停用路由/未到退避/重试耗尽，并断言与 `claimNext` 在同一数据集上一致；
+    service 固定时钟；组件覆盖有积压、无积压、未暂停不查询。
+  - 验证：`vp check` 0 errors；`vp run -r test` 157 文件 / 836 项；`vp run -r build` 通过。
+  - 浏览器实测（隔离实例 `localhost:6197` + 临时 SQLite）：暂停后空队列显示「No queued deliveries are
+    ready to be claimed」；直接种入 5 条 pending（2 条可领取、1 条停用目标、1 条未到退避、1 条重试耗尽）后，
+    横幅显示「2 queued deliveries will be claimed immediately after resuming · oldest waiting 1h 59m」，
+    证明谓词与计数一致；无 console/网络错误。
+
+### 专家发现
+
+- `requirements`（2 条新候选，已写入 backlog）：
+  - **NEW-AJ（27）** 告警源接入健康信号（速率突增 + 解析失败计数）：`SourceSummary` 无流量/解析字段
+    （`source.ts:10-16`），Sources 表无健康列（`sources-section.tsx:41-76`），但索引与解析失败标签已具备
+    （`schema.ts:245-248`、`intake.service.ts:192-239`）；建议与 REQ-9/REQ-12 共用 activity DTO。
+  - **NEW-AK（25）** 死路由巡检（最近命中 + 7 天命中数）：`RouteDefinitionSchema` 无活动字段
+    （`route.ts:37-52`），缺 `(route_id, created_at)` 索引（`schema.ts:260-266`）；优先并入共享 DTO。
+- `quality`（3 条新候选，已写入 backlog）：
+  - **Q-55（26，真实缺陷）** 暂停/恢复会静默回写陈旧的 `rawPayloadRetentionDays`：契约必填
+    （`configuration-commands.ts:129-138`），两个暂停入口用渲染时快照回填
+    （`delivery-resume-dialog.tsx:37-44`、`settings-delivery-pause-panel.tsx:29-39`）；跨标签页改保留期后恢复
+    会写回旧值。
+  - **Q-56（25）** oncall 过期 reclaim 的「重试耗尽」分支无测试（`oncall.repository.ts:120-125`）。
+  - **Q-57（22）** `testDestination` 配置解析失败路径未定义/未测试（`destination.service.ts:176-181`）。
+- `ui-triage`：defer（理由见上）。
+
+### EXPERT_PANEL
+
+- 本轮无新增裁决事项；SEC-26 仍待后续轮次专家小组。
+
+### 发布决策
+
+- 发布经理、阻断审计员、运维/回滚专家三位一致 **APPROVE** `v0.1.0-beta.52`：
+  自 beta.51 以来 1 个用户可见变更（#325）；`origin/main` @ `8bab0c8` main CI success；零 open PR；
+  零迁移、零配置/环境变量/启动参数变化、零锁文件变动；`v0.1.0-beta.52` 未被占用；
+  回滚风险 LOW（换回 beta.51 镜像即可，暂停/积压是运行时状态，不受版本回滚影响）。
+- 版本 PR #326 `chore(release): v0.1.0-beta.52`（rebase 合并 `b9d080e`）；根 `package.json` 为唯一版本来源，
+  `release-checklist.md` 版本与 tag 计数（44）同步。
+- tag：`v0.1.0-beta.52` → `b9d080e`（main CI success 后创建）；GitHub Release 已创建
+  （prerelease，正文非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.52`
+  （linux/amd64 + linux/arm64，index digest `sha256:d6a87873…`）。
+
+### 下一轮优先项
+
+1. **Q-55（26）** 暂停回写陈旧 retention（真实缺陷）；**NEW-AI（27）** 补投/重试/测试发送的时机标注。
+2. **NEW-AJ（27）** 告警源接入健康；**NEW-AE（27）** 事件详情加急呼叫结果；**NEW-AK（25）** 死路由巡检。
+3. **Q-56/Q-57** 低成本测试补齐；**SEC-25/SEC-22** AUTO_FIX；**SEC-26** 交 EXPERT_PANEL；
+   **ARCH-45/46** 两个 S 级分层修正。
+4. 轮转车道 **`security-exposure`**；UI 评审遗留：暂停开关即时生效说明/成功 toast、横幅视觉强化、
+   `Run worker` 禁用原因可见化。
+
 ## 2026-10-22（第 66 轮）
 
 - 时间：2026-10-22 06:26 – 06:45 CST。

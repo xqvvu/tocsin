@@ -541,8 +541,13 @@
 | Q-54 | 补投服务 nullable 与停用路由分支无测试 | quality lane（第 64 轮） | 23 | candidate | — | 契约四个输出 nullable（`packages/api/src/contract/operations.ts:50-78`），UI 有 notFound/disabled 分支（`route-replay-prompt.tsx:140-143`），`event-replay.service.test.ts` 仅 happy path。补四条断言 |
 | NEW-AF | 全局投递暂停的常驻可见性 | requirements lane（第 65 轮）+ ui-review 浏览器实测 | 29 | shipped | #319 | 第 65 轮交付：header 新增 `DeliveryPauseIndicator`，读 `appSettingsQueryOptions`，暂停时 destructive 徽标链接 `/deliveries`，加载/失败静默，< `sm` 仅图标 + `aria-label`；设置 mutation 已 `setQueryData`，恢复即消失。PRD `docs/prd/delivery-pause-visibility.md`；1280/390 浏览器实测 |
 | NEW-AG | 恢复投递前的加急影响披露 | requirements lane（第 65 轮） | 28 | shipped | #322 | 第 66 轮交付：新增 `DeliveryResumeDialog`，Deliveries 横幅与 Settings 取消勾选都先确认；披露排队投递会立即发送、飞书 app + 自动加急会对仍处于触发中的告警重新呼叫；暂停仍单击生效。暂停态文案补充「加急呼叫不受暂停影响」；PRD `docs/prd/delivery-resume-disclosure.md`；1280 浏览器实测两处入口。未含积压数量/受影响目标统计（见 NEW-AH） |
-| NEW-AH | 暂停期间的「可领取积压规模 + 最老等待」只读投影 | requirements lane（第 66 轮） | 28 | candidate | — | 暂停态 UI 只显示暂停时间；恢复后 worker 每 5s 领取一批 10 条（`delivery-worker-runner.ts:50`、`delivery-worker.service.ts:39`），操作员无法预判会立即发出多少条。需按 `claimNext` 真实谓词计数（目标/路由启用、`attempt_count < max_attempts`，`delivery.repository.ts:228-240`）并给出最老可领取 `created_at`；现有 `operations.list` 只能给裸 pending 总数。只读投影，无迁移 |
+| NEW-AH | 暂停期间的「可领取积压规模 + 最老等待」只读投影 | requirements lane（第 66 轮） | 28 | shipped | #325 | 第 67 轮交付：新增只读 `operations.getDeliveryBacklog`（`claimable` + `oldestCreatedAt`），谓词与 `claimNext` 一致；暂停横幅在说明下显示条数与最早等待（无积压时显式说明），仅暂停时启用、30 秒刷新、等待时长随 `useOperationalNow` 前进；仓储测试覆盖停用目标/路由、未到退避、重试耗尽，并断言与 `claimNext` 一致；PRD `docs/prd/delivery-backlog-summary.md`；浏览器实测 5 条 pending 中仅 2 条可领取（排除停用目标、未到退避、重试耗尽），横幅显示「2 queued … oldest waiting 1h 59m」 |
 | NEW-AI | 暂停期间补投/重试/目标测试的「入队 vs 立即发送」时机标注 | requirements lane（第 66 轮） | 27 | candidate | — | 补投与重试入口不读暂停状态（`event-replay-action.tsx:1-40`、`route-replay-prompt.tsx:34-59`、`delivery-retry-button.tsx:17-56`），成功 toast 仍暗示已发送；目标测试绕过 worker 直接调用 adapter（`destination.service.ts:175-198`），暂停期间会真实发到群/邮箱而对话框无提示。纯前端 + i18n，复用 settings 查询 |
+| NEW-AJ | 告警源接入健康信号（速率突增 + 解析失败计数） | requirements lane（第 67 轮） | 27 | candidate | — | `SourceSummary` 只有 `id/name/provider/enabled`（`packages/core/src/source/source.ts:10-16`），Sources 表无流量/解析健康列（`sources-section.tsx:41-76`）；索引 `idx_events_source_received_at` 已存在（`schema.ts:245-248`），可按源聚合 15m/24h 事件数与 `parse_failed` 计数（解析失败已落 Event：`intake.service.ts:192-239`，`labels.parse_failed`）。建议与 REQ-9/REQ-12 共用 `ConfigurationActivitySummary` DTO；只读、无迁移 |
+| NEW-AK | 死路由巡检（最近命中 + 7 天命中数） | requirements lane（第 67 轮） | 25 | candidate | — | 路由表只有 name/rule/destinations/state（`routes-section.tsx:81-112`），`RouteDefinitionSchema` 无活动字段（`packages/core/src/route/route.ts:37-52`）；`deliveries.route_id` 可作命中证据，但缺 `(route_id, created_at)` 索引（`schema.ts:260-266`），首版先不加索引。与 REQ-9 备注存在边界重叠，优先并入共享 activity DTO，不另起平行 endpoint |
+| Q-55 | 暂停/恢复会静默回写陈旧的 `rawPayloadRetentionDays` | quality lane（第 67 轮） | 26 | candidate | — | 契约把 retention 设为必填（`configuration-commands.ts:129-138`），服务无条件落库（`app-settings.service.ts:26-31`）；两个暂停入口用渲染时快照回填（`delivery-resume-dialog.tsx:37-44`、`settings-delivery-pause-panel.tsx:29-39`）。标签页 A 打开 Deliveries → 标签页 B 改保留期 → A 恢复投递，会把 retention 写回旧值。最小修复：retention 改 `.optional()` 且仅提供时写入，补 service 回归 + 调整两个 UI 测试载荷 |
+| Q-56 | oncall 过期 reclaim 的「重试耗尽」分支无测试 | quality lane（第 67 轮） | 25 | candidate | — | `oncall.repository.ts:120-125` 的 `retryAt: attemptCount < maxAttempts ? now : null` 无直接断言；现有用例只覆盖 requeue（`oncall-worker.service.test.ts:101-125`），delivery 侧已有耗尽用例（`delivery-worker.service.test.ts:634`）。若条件写反，超时且耗尽的重试会被无限重排并重复呼叫。纯测试 |
+| Q-57 | `testDestination` 的配置解析失败路径未定义/未测试 | quality lane（第 67 轮） | 22 | candidate | — | `destination.service.ts:176-181` 直接 await resolver，`DomainValidationError`（`destination-config-resolver.ts:47`）会以 BAD_REQUEST 抛出，与 `DeliveryExecution` 落 `configuration_error` 不一致；现有目标测试用例只用可解析配置（`configuration.integration.test.ts:844,891`）。择一：测试固化当前行为，或捕获后返回脱敏失败结果 |
 | ARCH-45 | `getAuthBootstrap` 在入口直连全局 container | architecture lane（第 65 轮） | 24 | candidate | — | `server/orpc/features/session/router.ts:35-39` 直接 `getApplicationContainer().hasRegisteredUsers()`，既未走 service 也未用注入 container，违反 AGENTS.md:124-135。最小修复：抽 `AuthBootstrapService` 或等价注入式 middleware；S |
 | ARCH-46 | 「重复暂停保留首次时间」产品规则落在仓储 | architecture lane（第 65 轮） | 22 | candidate | — | `settings.repository.ts:63-80` 把暂停时间语义写进仓储，service 仅透传，违反 AGENTS.md:137-140 的业务逻辑归属。建议上移 `AppSettingsService`；S |
 
@@ -550,6 +555,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.52` | `b9d080e` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.52`（linux/amd64 + linux/arm64，index digest `sha256:d6a87873…`） | 暂停期间可领取积压摘要（#325，NEW-AH）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.51` |
 | `0.1.0-beta.51` | `35f5a14` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.51`（linux/amd64 + linux/arm64，index digest `sha256:83f28f04…`） | 恢复投递前的加急影响披露（#322，NEW-AG）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.50` |
 | `0.1.0-beta.50` | `51f4f34` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.50`（linux/amd64 + linux/arm64，index digest `sha256:54710b64…`） | 全局暂停顶栏指示（#319，NEW-AF）+ 运维时间不再冻结（#318，Q-51）；无迁移/配置变化；回滚镜像 `0.1.0-beta.49` |
 | `0.1.0-beta.49` | `9ceebb4` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.49`（linux/amd64 + linux/arm64，index digest `sha256:55eb3de3…`） | 全局暂停出站投递（#313，NEW-AA）+ 跨天重试列溢出（#314，UI-33）+ 生产拒绝公开/缺失 `BETTER_AUTH_SECRET`（#315，SEC-27）；无迁移；部署契约变化：缺 secret/占位值会拒绝服务；回滚镜像 `0.1.0-beta.48` |
@@ -595,6 +601,16 @@
 
 ## 下一轮优先项
 
+0. **第 67 轮交付**：NEW-AH（28）暂停期间可领取积压摘要（#325）+ `v0.1.0-beta.52` 发布。
+   下一优先：**NEW-AI（27）** 补投/重试/测试发送的时机标注；**NEW-AJ（27）** 告警源接入健康；
+   **NEW-AE（27）** 事件详情加急呼叫结果；**NEW-AK（25）** 死路由巡检（优先并入共享 activity DTO）。
+   **Q-55（26）** 暂停回写陈旧 retention 为真实缺陷，优先修；**Q-56/Q-57** 低成本测试补齐；
+   **SEC-25 / SEC-22** 可作为 AUTO_FIX（第 66 轮复核仍成立）；**SEC-26** 交 EXPERT_PANEL；
+   **ARCH-45/46** 两个 S 级分层修正。
+   UI 评审遗留：暂停开关「点击即生效」无说明/无成功 toast、Deliveries 横幅视觉强化、
+   `Run worker` 禁用原因可见化。
+   车道轮转：第 67 轮 `quality` 已跑，下一轮非必跑车道为 **`security-exposure`**。
+   `ui-triage` 本轮 `defer`（距上次评审 2h08m、仅 2 个已当轮浏览器验证的 UI 合并、零新增 UI 候选）。
 0. **第 66 轮交付**：NEW-AG（28）恢复投递前的加急影响披露（#322）+ `v0.1.0-beta.51` 发布。
    下一优先：**NEW-AH（28）** 暂停积压摘要；**NEW-AI（27）** 补投/重试/测试发送的时机标注；
    **NEW-AE（27）** 事件详情加急呼叫结果；**NEW-W（27）** 中文输入法组合期间不提交搜索；
