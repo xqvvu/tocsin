@@ -179,9 +179,17 @@
     非运行时阻断）、无未修复回归。
   - 运维/回滚专家 **APPROVE**：变更只在浏览器渲染层（feature UI + i18n），零迁移、零配置变化；
     新旧镜像可读同一库；回滚只需换回 `0.1.0-beta.53` 镜像并重启。
-- 发布内容：tag `v0.1.0-beta.54`、GitHub Release、镜像
-  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.54`（`linux/amd64` + `linux/arm64`），
-  回滚镜像 `0.1.0-beta.53`。
+- **发布被 CI 基础设施阻断，未执行**：发布 PR #336（`chore(release): v0.1.0-beta.54`）的
+  `check · test · build` 连续 3 次在 **Setup Vite+** 步骤失败——
+  `Failed to parse CLI package metadata for @voidzero-dev/vite-plus-cli-linux-x64-gnu@1.3.0`、
+  `Error: Failed to install Vite+ after 8 attempts across 4 URL(s)`（`gh run 39713020639`）。
+  失败发生在任何仓库代码执行之前，与 PR 内容无关；同一 job 在 30 分钟前的 #335 上仍是 success，
+  判定为上游 npm 元数据/安装脚本的瞬时故障。
+- 处理：PR #336 **保持 open**，不打 tag、不推镜像（tag 必须指向 CI 已绿的 commit）；
+  下一轮优先重跑 #336 的 CI，绿后 rebase 合并、再打 `v0.1.0-beta.54` 并推送双平台镜像。
+- 已就绪待用：发布说明草稿 `/tmp/tocsin-release-notes-v0.1.0-beta.54.md`；
+  发布内容将是 tag + GitHub Release + `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.54`
+  （`linux/amd64` + `linux/arm64`），回滚镜像 `0.1.0-beta.53`。
 
 ### 下一轮优先项
 
