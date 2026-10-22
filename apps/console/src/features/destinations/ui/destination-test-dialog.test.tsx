@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { DestinationTestResult } from "@tocsin/core";
@@ -8,6 +10,20 @@ import type { DestinationTestResult } from "@tocsin/core";
 import { AppIntlProvider } from "#/i18n/provider";
 
 import { DestinationTestDialog } from "./destination-test-dialog";
+
+const settingsState = vi.hoisted(() => ({ paused: false }));
+
+vi.mock("#/features/configuration/api/configuration.queries", () => ({
+  appSettingsQueryOptions: () => ({
+    queryKey: ["test", "app-settings"],
+    queryFn: async () => ({
+      deliveryPaused: settingsState.paused,
+      deliveryPausedAt: null,
+      rawPayloadRetentionDays: 30,
+    }),
+    staleTime: Infinity,
+  }),
+}));
 
 const testResult: DestinationTestResult = {
   destination: {
@@ -24,7 +40,10 @@ const testResult: DestinationTestResult = {
 };
 
 describe("destination test dialog", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    settingsState.paused = false;
+  });
 
   it("sends the built-in sample by default", async () => {
     const onSend = vi.fn<(sampleEventId: string | null) => Promise<DestinationTestResult | null>>(
@@ -32,15 +51,13 @@ describe("destination test dialog", () => {
     );
     const onOpenChange = vi.fn<(open: boolean) => void>();
 
-    render(
-      <AppIntlProvider locale="en-US">
-        <DestinationTestDialog
-          destinationName="Ops webhook"
-          open
-          onOpenChange={onOpenChange}
-          onSend={onSend}
-        />
-      </AppIntlProvider>,
+    renderDialog(
+      <DestinationTestDialog
+        destinationName="Ops webhook"
+        open
+        onOpenChange={onOpenChange}
+        onSend={onSend}
+      />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Send test" }));
@@ -54,23 +71,21 @@ describe("destination test dialog", () => {
       async () => testResult,
     );
 
-    render(
-      <AppIntlProvider locale="en-US">
-        <DestinationTestDialog
-          destinationName="Ops webhook"
-          open
-          onOpenChange={() => {}}
-          sampleEvents={[
-            {
-              id: "event-1",
-              title: "Disk full",
-              sourceName: "Grafana",
-              receivedAt: "2026-01-01T00:00:00.000Z",
-            },
-          ]}
-          onSend={onSend}
-        />
-      </AppIntlProvider>,
+    renderDialog(
+      <DestinationTestDialog
+        destinationName="Ops webhook"
+        open
+        onOpenChange={() => {}}
+        sampleEvents={[
+          {
+            id: "event-1",
+            title: "Disk full",
+            sourceName: "Grafana",
+            receivedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ]}
+        onSend={onSend}
+      />,
     );
 
     const picker = screen.getByRole("combobox", { name: "Test sample" });
@@ -87,15 +102,13 @@ describe("destination test dialog", () => {
     const onSend = vi.fn<() => Promise<DestinationTestResult | null>>(async () => null);
     const onOpenChange = vi.fn<(open: boolean) => void>();
 
-    render(
-      <AppIntlProvider locale="en-US">
-        <DestinationTestDialog
-          destinationName="Ops webhook"
-          open
-          onOpenChange={onOpenChange}
-          onSend={onSend}
-        />
-      </AppIntlProvider>,
+    renderDialog(
+      <DestinationTestDialog
+        destinationName="Ops webhook"
+        open
+        onOpenChange={onOpenChange}
+        onSend={onSend}
+      />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Send test" }));
@@ -104,4 +117,33 @@ describe("destination test dialog", () => {
     expect(onSend).toHaveBeenCalledTimes(1);
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
+
+  it("warns that a test send bypasses the delivery pause", async () => {
+    settingsState.paused = true;
+
+    renderDialog(
+      <DestinationTestDialog
+        destinationName="Ops webhook"
+        open
+        onOpenChange={() => {}}
+        onSend={async () => testResult}
+      />,
+    );
+
+    expect((await screen.findByRole("note")).textContent).toContain(
+      "bypass the queue and send immediately",
+    );
+  });
 });
+
+function renderDialog(ui: ReactElement): void {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  render(
+    <AppIntlProvider locale="en-US">
+      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+    </AppIntlProvider>,
+  );
+}

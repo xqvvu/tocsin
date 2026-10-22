@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "#/components/ui/alert-dialog";
 import { Badge } from "#/components/ui/badge";
+import { DeliveryPauseHint } from "#/features/configuration/ui/delivery-pause-hint";
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import {
   operationsQueryKeys,
@@ -102,6 +103,7 @@ export function RouteReplayPrompt({
           error={replayPreviewQuery.error}
           preview={preview}
         />
+        <DeliveryPauseHint mode="queued" />
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{t("routing.replay.cancel")}</AlertDialogCancel>

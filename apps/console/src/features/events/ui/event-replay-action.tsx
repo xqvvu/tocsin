@@ -18,6 +18,7 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { DeliveryPauseHint } from "#/features/configuration/ui/delivery-pause-hint";
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import {
   eventReplayPreviewQueryOptions,
@@ -115,6 +116,7 @@ export function EventReplayAction({
           error={previewQuery.error}
           preview={preview}
         />
+        <DeliveryPauseHint mode="queued" />
 
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{t("events.replay.cancel")}</AlertDialogCancel>
