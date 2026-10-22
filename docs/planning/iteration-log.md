@@ -10,8 +10,8 @@
 - 类型：**需求切片 + 两车道审计**（非 full-audit）。backlog 有多个 ≥27 候选，按第 1.5 步继续。
 - 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
 - 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**，第三名额给轮转车道
-  `architecture`；并发始终 ≤3。`requirements` 在 75 分钟预算内未返回，本轮未消费其结论
-  （下轮重新派发，不视为已审计）。
+  `architecture`；并发始终 ≤3。`requirements` 在 75 分钟实现预算结束后才返回（约 61 分钟），
+  4 条候选已补记入 backlog（NEW-BK..NEW-BN），未影响本轮选题。
 - 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
 - `ui-triage`：**`defer`** —— 距上次评审 4h58m（< 48h）；09:30 后 6 个 UI 提交全部有
   浏览器验证记录，未验证合并 0；未解决 `UI-` 候选 18 条（存量 >20 才提前触发）。
@@ -59,7 +59,13 @@
 - 浏览器观察：**UI-35（24）** 事件详情 SSR hydration mismatch（console msgid 111，
   `TabsContent value="normalized"`），随后 msgid 112-130 级联；未确认是否既有问题，
   下轮先在干净 `origin/main` 复现再定责。
-- `requirements`：本轮未返回（超时），下轮重新派发。
+- `requirements`（4 条新候选，均在预算结束后返回并已写入 backlog）：
+  - **NEW-BK（28）** 全局投递暂停缺操作者与最近暂停区间：暂停/恢复不带 actor
+    （`settings-delivery-pause-panel.tsx:33,66-72`、`settings.repository.ts:63-79`）。
+  - **NEW-BL（27）** 加急 Worker 健康不可见：`OncallWorker.getHealth()` 无消费者
+    （`oncall-worker.service.ts:47-49`），`/api/ready` 只确保 delivery runner。
+  - **NEW-BM（26）** 静默命中列表无筛选：契约只有 id/page/limit，底层仓储已支持谓词。
+  - **NEW-BN（25）** 证据包不记录导出者（`evidence-bundle.ts:27-34`），session 已在前端可用。
 
 ### EXPERT_PANEL
 
@@ -67,13 +73,25 @@
 
 ### 发布决策
 
-- 见本轮后续记录（发布评估在 PR 合并后执行）。
+- **已发布 `v0.1.0-beta.57`**：三位发布专家一致 APPROVE。
+  - 发布经理：`v0.1.0-beta.56..origin/main` 的用户可见变更为 #349（补投预览目标明细）、
+    `777147e`（折叠侧边栏标签不再拦截点击）、`a5d8b51`（投递导航 history 图标），
+    其余为 docs；建议预发布递增。
+  - 发布阻断审计员：目标 `f979f61` main CI success、无 open PR、`migrate/` 零改动、
+    `v0.1.0-beta.57` tag 不存在、beta.56 Release body 非空；`blocked-autonomous` 仅 REL-13。
+  - 运维/回滚专家：无迁移、无 Dockerfile/compose/env/启动参数变化；回滚只需换回
+    `0.1.0-beta.56` 镜像，库结构兼容。
+- 版本变更走 PR #350 `chore(release): v0.1.0-beta.57`（rebase 合并 `f979f61`）。
+- tag：`v0.1.0-beta.57`（annotated，指向 `f979f61`）；
+  Release：<https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.57>（body 已校验非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.57`，
+  linux/amd64 + linux/arm64，index digest `sha256:b1717048…`；回滚镜像 `0.1.0-beta.56`。
 
 ### 下一轮优先项
 
-1. **Q-23（25）**：dedupe cleanup 改有界批删除（唯一能一轮关闭未勾选代码 gate 的项）。
-2. **REL-7 bundle**：`playwright install chromium` + 全部改 `localhost` + webServer 用 `/api/ready`。
-3. **NEW-BI（26）/ NEW-BD（26）/ NEW-BE（26）**：纯前端切片。
+1. **NEW-BK（28）**：全局投递暂停的操作者与最近一次暂停区间（settings KV，无迁移）。
+2. **NEW-BL（27）**：加急 Worker 健康只读投影（复用 `DeliveryWorkerHealthSnapshot`）。
+3. **Q-23（25）**：dedupe cleanup 改有界批删除（唯一能一轮关闭未勾选代码 gate 的项）。
 4. **UI-35 复现与定责**：先在干净 main 上打开事件详情确认 hydration mismatch 是否既有。
 5. 下一轮非必跑车道：**security-exposure**。
 

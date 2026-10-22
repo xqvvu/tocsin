@@ -586,11 +586,16 @@
 | ARCH-50 | `DashboardNavigationSkeleton` 未按 `Component.Skeleton` 暴露 | architecture lane（第 74 轮） | 20 | candidate | — | `shell/dashboard-navigation.tsx:186` 具名导出，`shell/dashboard-layout.tsx:15,43` 直接导入；AGENTS.md 要求骨架作为静态属性挂在对应组件上；纯重构 |
 | ARCH-51 | `getSqliteStore()` 隐式启动两个后台 worker | architecture lane（第 74 轮） | 26 | candidate | — | `server/runtime/container.ts:205-210` 在 `getSqliteStore()` 内 `void ensureDeliveryWorkerRunner()/ensureOncallWorkerRunner()`，所有 `create*Service`（`:233-367`）都会触发，只读过程也会启动循环；建议上移到 bootstrap 或显式 `ensureWorkers()`；启动时机变化 → EXPERT_PANEL |
 | UI-35 | 事件详情 SSR hydration mismatch | 浏览器实测（第 74 轮） | 24 | candidate | — | 隔离实例打开 `/events/$eventId` 时 console msgid 111 报 `Hydration failed ... server rendered text didn't match the client`，栈指向 `TabsContent value="normalized"`（`features/events/ui/event-detail-page.tsx` 一带）；随后 msgid 112-130 为其级联；未确认是否与时间格式化/时区有关，下一轮先在 `origin/main` 上复现再定责 |
+| NEW-BK | 全局投递暂停的操作者与最近一次暂停区间 | requirements lane（第 74 轮） | 28 | candidate | — | 暂停/恢复只发 `{deliveryPaused}`，不带 actor；仓储恢复时清空 `delivery_paused_at`（`settings.repository.ts:63-79`、`settings.helpers.ts:8-9`），DTO 只有两个字段（`packages/core/src/configuration/configuration-results.ts:19-21`、`packages/api/src/schemas/settings.ts:9-10`）；建议 settings KV 增加只读 `lastDeliveryPause{pausedAt,pausedBy,resumedAt,resumedBy}`，actor 只从 session 取；只保留最近一次区间，完整历史交给 REQ-85；无迁移/无投递语义变化 |
+| NEW-BL | 加急（电话）Worker 健康投影 | requirements lane（第 74 轮） | 27 | candidate | — | `OncallWorker.getHealth()` 已存在但无生产消费者（`oncall-worker.service.ts:47-49`、`oncall-worker.service.types.ts:32-37`）；`/api/ready` 只 ensure delivery runner（`routes/api/ready.ts:26`），`operations.runDeliveryWorker` 只返回 delivery health（`server/orpc/features/operations/router.ts:68-81`）；新增只读 `operations.getOncallWorkerHealth` + Settings 区块；与 REQ-11 若同时落地可合并 |
+| NEW-BM | 静默命中列表按目标/状态/关键词筛选 | requirements lane（第 74 轮） | 26 | candidate | — | `SuppressionHitsInputSchema` 只有 id/page/limit（`packages/api/src/schemas/suppressions.ts:24-27`），UI 无筛选控件（`suppression-hits-table.tsx:23-31,99-106`），而底层 `history.listDeliveries` 已支持 `destinationId/state/q/since`（`history.repository.ts:280-305`）；只读契约扩展，无需新索引/迁移 |
+| NEW-BN | 证据包记录导出操作者 | requirements lane（第 74 轮） | 25 | candidate | — | `EvidenceBundle` 只有 `schemaVersion/kind/subjectId/exportedAt`（`features/operations/model/evidence-bundle.ts:27-34`），PRD `docs/prd/evidence-bundle-download.md:26-37` 让复核者凭这四项判断来源；dashboard session 已在 loader 加载（`routes/_dashboard.tsx:14-20`），可用已缓存数据加 `exportedBy{id,name}`，不新增 oRPC/服务端 DTO；纯前端 |
 
 ## 发布记录
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.57` | `f979f61` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.57`（linux/amd64 + linux/arm64，index digest `sha256:b1717048…`） | 补投预览目标级明细与执行范围一致（#349，REQ-22）+ 折叠侧边栏不可见标签不再拦截点击（`777147e`）+ 投递导航 history 图标（`a5d8b51`）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.56` |
 | `0.1.0-beta.56` | `7df71dc` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.56`（linux/amd64 + linux/arm64，index digest `sha256:1432f782…`） | 电话加急完整错误对话框（#343，REQ-168）+ 目标读取投影剥离 URL 密码（#344，SEC-22）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.55` |
 | `0.1.0-beta.55` | `03bec20` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.55`（linux/amd64 + linux/arm64，index digest `sha256:8702bda7…`） | 事件详情投递表显示静默证据（#340，REQ-176）；无迁移/配置/依赖变化；回滚镜像 `0.1.0-beta.54` |
 | `0.1.0-beta.54` | `708c404` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.54`（linux/amd64 + linux/arm64，index digest `sha256:d9ce6443…`） | Settings 数据库存储健康面板（#338，NEW-AT）+ 路由规则列可读性与页面标题（#337，`ee00fa2`）+ 静默命中范围（#335）+ 暂停态 worker 禁用原因（#332）+ 依赖补丁升级（`5ae2e68`，better-auth 1.7.10→1.7.12、Node 26.12.1）；无迁移/配置变化；回滚镜像 `0.1.0-beta.53` |
@@ -641,8 +646,9 @@
 
 ## 下一轮优先项
 
-0. **第 74 轮交付**：REQ-22（28）补投预览目标级明细与执行范围一致（#349）。
-   下一优先：**Q-23（25）** dedupe cleanup 有界批；**REL-7 bundle**（playwright install +
+0. **第 74 轮交付**：REQ-22（28）补投预览目标级明细与执行范围一致（#349）+ `v0.1.0-beta.57` 发布。
+   下一优先：**NEW-BK（28）** 暂停操作者与最近区间；**NEW-BL（27）** 加急 Worker 健康投影；
+   **Q-23（25）** dedupe cleanup 有界批；**REL-7 bundle**（playwright install +
    `localhost` + `/api/ready`）；**NEW-BI / NEW-BD / NEW-BE（26）** 纯前端切片；
    **UI-35（24）** 先在干净 main 复现事件详情 hydration mismatch 再定责；
    **ARCH-51（26）** 交 EXPERT_PANEL（worker 启动时机）；**ARCH-47（24）** 拆
