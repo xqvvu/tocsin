@@ -286,6 +286,8 @@
   "deliveries.detail.terms.source": "Source",
   "deliveries.detail.terms.state": "State",
   "deliveries.detail.title": "Delivery detail",
+  "deliveries.failureIndicator.label": "Failed deliveries: {count}",
+  "deliveries.failureIndicator.title": "Delivery failed in the last 24 hours: {count}",
   "deliveries.page.description": "Inspect outbound notification jobs, rendered payloads, attempts, and retry schedules",
   "deliveries.page.loaded": "{count} loaded",
   "deliveries.page.operationFailed": "Operation failed",
