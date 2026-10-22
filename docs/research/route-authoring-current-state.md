@@ -1,6 +1,7 @@
 # Route 路由能力现状盘点（Route Authoring 与 Explain）
 
-- 调研基线：`origin/main`，工作树 `/Users/chuanhu9/devs/vane/.wt/a`，commit `73d84d3`
+- 调研基线（历史）：commit `73d84d3`；当时的工作树 `/Users/chuanhu9/devs/vane/.wt/a` 已不存在，
+  续做前以当前 `origin/main` 为准
 - 方法：只读代码侦察，范围限定 `packages/core/src/route/`、`apps/console/src/server/`、`apps/console/src/features/routes/` 及直接相邻的 event/delivery/UI 路径
 - 对应上游文档：`docs/prd/post-mvp-planning.md:88`「### 2. Route Authoring 与 Explain」（第 203 行给出第二优先级理由）
 - 状态校正（2026-10-19，第 17 轮）：下文部分「缺口」已交付——投递缺口解释
@@ -14,7 +15,7 @@
 
 ## 一句话结论
 
-**部分能。** Tocsin 已经在**接入时刻**为每条 route 落盘了完整、逐条件的匹配证据（`events.route_matches_json`，含 `matched` 与 `checks`），并在 Event detail 以「路由匹配」页签展示；但它**只回答「规则比对结果」**，不回答「为什么没投递」，且证据文案是**英文硬编码、不含实际值**，`routeMatches` 为 `null` 时会被**当前规则静默重算**，UI 不区分「接入快照」与「现状重算」——这三处使「信任告警路由」的核心诉求仍未被满足。
+**部分能。** Tocsin 已经在**接入时刻**为每条 route 落盘了完整、逐条件的匹配证据（`events.route_matches_json`，含 `matched` 与 `checks`），并在 Event detail 以「路由匹配」页签展示。「命中却没投递」也已有解释通道（2026-10-19 第 17 轮交付）：`route-match-gaps.ts` 按 route × destination 给出 `route_deleted` / `route_disabled` / `destination_missing` / `destination_disabled` / `duplicate_within_window` / `unknown`，`event-detail-route-gaps.tsx` 在详情页渲染。仍未满足的是：证据文案**英文硬编码、不含实际值**，以及 `routeMatches` 为 `null` 时被**当前规则静默重算**、UI 不区分「接入快照」与「现状重算」。
 
 ---
 
@@ -102,7 +103,7 @@
    - `label` / `title` / `message` 三类**只输出期望值，不输出事件里的实际值**——用户必须自己切到 Normalized 页签对照。
    - UI 直接渲染原始字符串：`event-detail-route-matches-table.tsx` 的 `RouteCheckBadge` `{check.detail}`。中文化只覆盖到 `field` 标签（i18n `events.detail.routeCheckFields.*`），**detail 正文仍是英文**。
 
-2. **「命中却没投递」无解释通道。** 命中 route ≠ 产生投递：`enqueueForEvent` 可能 `deduped`（幂等去重）或 `skippedExisting`（`delivery.repository.ts:81-107`）。这两个计数只出现在 `AcceptedWebhook`（`intake.service.types.ts:26` 附近的 `dedupedDeliveryCount`）和 HTTP 响应里，**不落库**；Event detail 只有 `routeMatches` + `deliveries`，没有「本条 route 的这一跳被去重/已存在/目标禁用」的记录。用户会看到「路由 1/1 命中」但投递为 0。
+2. **「命中却没投递」的解释通道已交付（2026-10-19 第 17 轮）。** `route-match-gaps.ts` 以接入快照为基准，对每个 route × destination 判定 `route_deleted` / `route_disabled` / `destination_missing` / `destination_disabled` / `duplicate_within_window` / `unknown`，并由 `event-detail-route-gaps.tsx` 渲染。仍存限制：`duplicate_within_window` 依赖仍在窗口内的 dedupe 行，窗口被清理后退化为 `unknown`；`AcceptedWebhook` 的 `dedupedDeliveryCount` / `skippedExisting` 计数仍不落库（`delivery.repository.ts:81-107`、`intake.service.types.ts:26`）。
 
 3. **`routeMatches` 为 `null` 时被当前规则静默重算，UI 不区分。** `history.repository.ts:131-137`：
    ```
@@ -112,7 +113,7 @@
 
 4. **route 事后禁用会让快照与行为分叉。** 快照永久保留 `matched: true`（测试钉死），但 `claimNext`（`delivery.repository.ts:192`）会因 `routes.enabled = 0` 永不认领。用户看到「命中」却永远等不到投递，且无任何 UI 提示「该 route 已禁用」。
 
-5. **快照只覆盖规则比对，不覆盖 destination 解析。** `RouteMatchResult.destinationIds` 是 route 配置项，不代表这些 destination 当时存在/启用；`deliveries` 表虽有 `route_id` 可对账，但没有「route × destination 已投递/缺失」的视图。
+5. **快照只覆盖规则比对，不覆盖 destination 解析。** `RouteMatchResult.destinationIds` 是 route 配置项，不代表这些 destination 当时存在/启用；`event-detail-route-matches-table.tsx` 与 `route-match-gaps.ts` 已提供「route × destination 已投递/缺失」的现状视图（2026-10-19），剩余缺口是没有 destination 当时是否存在/启用的历史快照。
 
 ### 4.3 记录落点速查
 

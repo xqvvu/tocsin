@@ -1,5 +1,8 @@
 # PRD: On-call 加急（飞书电话呼叫）
 
+> 状态：已交付（PR #32 飞书应用资源 + PR #35 加急队列与自动触发）。以下 Problem Statement
+> 保留交付前的现状记录。
+
 Labels: `ready-for-agent`
 
 ## Problem Statement
