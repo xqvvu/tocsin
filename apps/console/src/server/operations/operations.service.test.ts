@@ -108,6 +108,16 @@ describe("operations service", () => {
     expect(otherKind.deliveries.total).toBe(0);
     expect(otherKind.events.total).toBe(1);
 
+    // The job failed its first attempt, so "at least one" keeps it while
+    // "at least two" drops it. Events have no attempt dimension and stay put.
+    const attempted = await service.listOperations({ limit: 10, minAttempts: 1 });
+    expect(attempted.deliveries.items.map((item) => item.id)).toEqual([delivery.id]);
+    expect(attempted.deliveries.total).toBe(1);
+    expect(attempted.events.total).toBe(1);
+    const retried = await service.listOperations({ limit: 10, minAttempts: 2 });
+    expect(retried.deliveries.total).toBe(0);
+    expect(retried.events.total).toBe(1);
+
     await expect(service.getEventDetail(event.id)).resolves.toMatchObject({
       event: { id: event.id },
     });

@@ -225,6 +225,11 @@ export const ListOperationsInputSchema = z
     /** Restricts the delivery list to one route; manual deliveries have none. */
     routeId: z.string().min(1).optional(),
     deliveryState: DeliveryStateSchema.optional(),
+    /**
+     * Delivery-only lower bound on `attempt_count`. Lets an operator isolate
+     * jobs that were retried instead of reading the attempt column row by row.
+     */
+    minAttempts: z.number().int().min(1).max(100).optional(),
     /** Relative window resolved against the server's request time. */
     range: OperationTimeRangeSchema.optional(),
     /**

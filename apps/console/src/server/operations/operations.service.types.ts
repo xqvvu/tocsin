@@ -36,6 +36,8 @@ export interface ListOperationsInput {
   destinationKind?: DestinationKind;
   routeId?: string;
   deliveryState?: DeliveryState;
+  /** Delivery-only: keep jobs attempted at least this many times. */
+  minAttempts?: number;
   range?: OperationTimeRange;
   /** Instant the window was opened; without it the window follows the clock. */
   rangeAnchor?: string;

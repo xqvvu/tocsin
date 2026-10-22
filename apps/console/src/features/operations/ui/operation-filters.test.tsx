@@ -53,6 +53,7 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByText("Destination kind")).toBeNull();
     expect(screen.queryByText("Route")).toBeNull();
     expect(screen.queryByText("Delivery state")).toBeNull();
+    expect(screen.queryByText("Attempts")).toBeNull();
   });
 
   it("shows every filter on the deliveries page", () => {
@@ -63,7 +64,17 @@ describe("operation filters by page scope", () => {
     expect(screen.getByText("Destination kind")).toBeTruthy();
     expect(screen.getByText("Route")).toBeTruthy();
     expect(screen.getByText("Delivery state")).toBeTruthy();
+    expect(screen.getByText("Attempts")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
+  });
+
+  it("names the attempt-count chip and keeps it off the events page", () => {
+    renderFilters("deliveries", { minAttempts: 2 }, "toolbar");
+    expect(screen.getByTitle("Clear Attempts")).toBeTruthy();
+
+    cleanup();
+    renderFilters("events", { minAttempts: 2 }, "toolbar");
+    expect(screen.queryByTitle("Clear Attempts")).toBeNull();
   });
 
   it("names the destination kind chip and keeps it off the events page", () => {
@@ -90,6 +101,7 @@ describe("operation filters by page scope", () => {
         destinationKind: "feishu",
         routeId: "route-1",
         deliveryState: "failed",
+        minAttempts: 2,
         range: "1h",
         rangeAnchor: "2026-10-23T04:00:00.000Z",
         q: "checkout",
@@ -109,6 +121,7 @@ describe("operation filters by page scope", () => {
       destinationKind: "",
       routeId: "",
       deliveryState: "",
+      minAttempts: 0,
       range: "",
       rangeAnchor: "",
       q: "",

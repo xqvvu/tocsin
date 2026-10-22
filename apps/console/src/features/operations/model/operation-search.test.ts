@@ -127,6 +127,43 @@ describe("destination kind filter in the operation search", () => {
   });
 });
 
+describe("minimum attempt count in the operation search", () => {
+  it("parses the bound from the URL as a number", () => {
+    // Search params arrive as strings; the route validates with this schema.
+    expect(DashboardOperationSearchSchema.parse({ minAttempts: "2" }).minAttempts).toBe(2);
+  });
+
+  it("falls back to any attempt count on an invalid value", () => {
+    // A hand-edited URL must not break the read path, and "less than one
+    // attempt" describes nothing, so out-of-range input means "no bound".
+    for (const value of ["abc", "0", "-1", "101"]) {
+      expect(DashboardOperationSearchSchema.parse({ minAttempts: value }).minAttempts).toBe(0);
+    }
+  });
+
+  it("keeps the sentinel out of the URL but sends a real bound", () => {
+    expect(pruneSearch({ minAttempts: 0 }).minAttempts).toBeUndefined();
+    expect(pruneSearch({ minAttempts: 2 }).minAttempts).toBe(2);
+    expect(operationFiltersFromSearch({ minAttempts: 0 }).minAttempts).toBeUndefined();
+    expect(operationFiltersFromSearch({ minAttempts: 2 }).minAttempts).toBe(2);
+  });
+
+  it("resets both lists to the first page when the bound changes", () => {
+    const merged = mergeOperationSearch({ eventPage: 4, deliveryPage: 3 }, { minAttempts: 2 });
+
+    expect(merged.minAttempts).toBe(2);
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+
+  it("keeps the bound while paging", () => {
+    const merged = mergeOperationSearch({ minAttempts: 2, deliveryPage: 2 }, { deliveryPage: 3 });
+
+    expect(merged.minAttempts).toBe(2);
+    expect(merged.deliveryPage).toBe(3);
+  });
+});
+
 describe("time range in the operation search", () => {
   it("accepts every supported window and rejects an unknown one", () => {
     // The URL is user-editable; an unknown window must fall back to "all time"

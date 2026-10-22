@@ -297,6 +297,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("deliveries.state", "=", query.state);
     }
 
+    if (query.minAttempts) {
+      builder = builder.where("deliveries.attempt_count", ">=", query.minAttempts);
+    }
+
     if (query.since) {
       builder = builder.where("deliveries.created_at", ">=", query.since);
     }
@@ -405,6 +409,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.state) {
       builder = builder.where("deliveries.state", "=", query.state);
+    }
+
+    if (query.minAttempts) {
+      builder = builder.where("deliveries.attempt_count", ">=", query.minAttempts);
     }
 
     if (query.since) {
