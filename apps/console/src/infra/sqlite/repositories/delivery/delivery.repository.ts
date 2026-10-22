@@ -112,14 +112,18 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
           }
 
           if (input.dedupeByIdempotency !== false && input.event.idempotencyKey) {
-            const dedupe = await reserveDedupeKey(context.db, {
-              source_id: input.event.sourceId,
-              idempotency_key: input.event.idempotencyKey,
-              route_id: match.routeId,
-              destination_id: destinationId,
-              first_event_id: input.event.id,
-              created_at: now,
-            });
+            const dedupe = await reserveDedupeKey(
+              context.db,
+              {
+                source_id: input.event.sourceId,
+                idempotency_key: input.event.idempotencyKey,
+                route_id: match.routeId,
+                destination_id: destinationId,
+                first_event_id: input.event.id,
+                created_at: now,
+              },
+              input.dedupeWindowStartsAt,
+            );
 
             if (dedupe !== null) {
               deduped.push({

@@ -53,14 +53,14 @@
 
 `route-authoring-current-state.md` §4.3 说「被去重 / 被跳过的证据 —— **不存在持久化字段**（仅 API 返回值）」。**这句话对 `skippedExisting` 成立，对「去重」不准确：**
 
-- 去重证据**确实落库**：`delivery_dedupe_keys` 表持久化了 `source_id` / `idempotency_key` / `route_id` / `destination_id` / `first_event_id` / `created_at`（`schema.ts:164-183`），且 `reserveDedupeKey` 在命中时**回传已存在的行**（含 `first_event_id`），不只是回传计数（`delivery.helpers.ts:73-93`）。
-- **但它会被主动清掉**：每次 `enqueueForEvent` 都先跑 `pruneDedupeKeys(context.db, input.dedupeWindowStartsAt)`（`delivery.repository.ts:76`），而该函数直接 `deleteFrom("delivery_dedupe_keys").where("created_at", "<", startsAt)`（`delivery.helpers.ts:95-97`）。
+- 去重证据**确实落库**：`delivery_dedupe_keys` 表持久化了 `source_id` / `idempotency_key` / `route_id` / `destination_id` / `first_event_id` / `created_at`（`schema.ts:164-183`），且 `reserveDedupeKey` 在命中时**回传已存在的行**（含 `first_event_id`），不只是回传计数（`delivery.helpers.ts:103-141`）。
+- **但它不会被立即清掉，只是不再生效**：每次 `enqueueForEvent` 都先跑 `pruneDedupeKeys(context.db, input.dedupeWindowStartsAt)`（`delivery.repository.ts:101`），该函数按 `created_at` 最旧优先删除**一个有界批次**（`DEDUPE_PRUNE_BATCH_SIZE = 100`，`delivery.helpers.ts:95-163`）；窗口外的旧行要等后续 enqueue 逐批清理才消失。
 - 窗口只有 **5 分钟**：`dedupeWindowMs = options.dedupeWindowMs ?? 5 * 60 * 1000`（`intake.service.ts:54`），窗口起点 = `receivedAt - dedupeWindowMs`（`:121-122`）。
 
-**结论：去重证据存在，但生命周期以分钟计。** 因此 R6 的可解释性是**时间相关的**：
+**结论：去重证据存在，窗口外不再生效，但留存时间不确定（取决于后续 enqueue 的清理进度）。** 因此 R6 的可解释性是**时间相关的**：
 
-- 事件接入后约 5 分钟内打开详情 → 可以指出「这条投递被去重，首次由 `<first_event_id>` 触发」（该字段可点击跳转，是很有价值的线索）。
-- 超过窗口 → `delivery_dedupe_keys` 行已被 prune，**此时必须承认查不到**。
+- 去重发生时（窗口内）打开详情 → 可以指出「这条投递被去重，首次由 `<first_event_id>` 触发」（该字段可点击跳转，是很有价值的线索）。
+- 超过窗口 → 该行不再抑制新投递（存在性判断带 `created_at >= windowStartsAt`，`delivery.helpers.ts:103-133`），并会在后续 enqueue 中有界清理；**行被清掉之后必须承认查不到**。查得到时所述事实仍然为真，只是不再是「此刻仍在窗口内」的证据。
 
 ### 因此 R6 的措辞必须分三态，不能合成一句话
 
@@ -74,7 +74,7 @@
 
 | en-US | zh-Hans |
 |---|---|
-| `Dedupe evidence is pruned about five minutes after intake, so older gaps cannot be explained` | `去重证据在接入后约五分钟被清理，更早的缺口无法解释` |
+| `Dedupe evidence is cleared in batches after intake, so older gaps cannot always be explained` | `去重证据在接入后会被分批清理，更早的缺口不一定还能解释` |
 
 ## 5. UI 落点
 
@@ -85,7 +85,7 @@
 
 ## 6. 本切片明确不承诺
 
-1. **不承诺解释每一条缺口。** 超过去重窗口的缺口就是解释不了，UI 会这么说。
+1. **不承诺解释每一条缺口。** 去重证据被清理后的缺口就是解释不了，UI 会这么说。
 2. **不改写入路径。** `enqueueForEvent` 不新增落库字段，`delivered`/`deduped`/`skippedExisting` 的返回值语义不变。
 3. **不加表、不做迁移。** 本切片仍不加表；当前 migration plan 已有 `0001`–`0003`，但本切片的解释数据全部来自既有表。
 4. **抑制不进入本表。** 抑制已实现为投递状态 `suppressed`；被抑制的投递是真实投递行，因此 `routeMatchGaps` 不会把它算作「命中但未投递」的缺口。
