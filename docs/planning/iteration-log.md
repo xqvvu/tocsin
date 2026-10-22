@@ -170,7 +170,18 @@
 
 ### 发布决策
 
-- 待本轮 PR 合并后按第 9.5 步评估（结论见下一条记录或本节追加）。
+- **本轮发布 `v0.1.0-beta.54`**：三位专家一致 APPROVE。
+  - 发布经理 **APPROVE**：`v0.1.0-beta.53..origin/main` 有 2 个用户可见提交——
+    #335 静默规则「命中范围」面板（`5fccd2b`）、#332 暂停态 worker 禁用原因可达（`c507970`）；
+    一个完整功能切片 + 一个无障碍修复，不属于为发版而发版。建议预发布递增为 `0.1.0-beta.54`。
+  - 发布阻断审计员 **APPROVE**：6/6 PASS —— `origin/main` @ `b0ecfe2` CI success、无 open PR、
+    migrate 目录零 diff、Dockerfile/compose/env/scripts 零 diff、唯一 blocked 项为 REL-13（LICENSE，
+    非运行时阻断）、无未修复回归。
+  - 运维/回滚专家 **APPROVE**：变更只在浏览器渲染层（feature UI + i18n），零迁移、零配置变化；
+    新旧镜像可读同一库；回滚只需换回 `0.1.0-beta.53` 镜像并重启。
+- 发布内容：tag `v0.1.0-beta.54`、GitHub Release、镜像
+  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.54`（`linux/amd64` + `linux/arm64`），
+  回滚镜像 `0.1.0-beta.53`。
 
 ### 下一轮优先项
 
