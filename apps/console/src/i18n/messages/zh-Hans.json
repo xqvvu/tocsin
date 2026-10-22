@@ -585,6 +585,8 @@
   "events.detail.deliveryHeaders.next": "下次重试",
   "events.detail.deliveryHeaders.route": "路由",
   "events.detail.deliveryHeaders.state": "投递状态",
+  "events.detail.deliveryHeaders.suppression": "静默",
+  "events.detail.deliverySuppression.ruleDeleted": "规则已删除",
   "events.detail.description": "检查标准化字段、接入时路由匹配、投递和已脱敏 raw 数据",
   "events.detail.empty.deliveries": "还没有创建投递",
   "events.detail.empty.labels": "没有标签",

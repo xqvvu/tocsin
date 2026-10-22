@@ -9,6 +9,7 @@ import {
 import { DeliveryRetryButton } from "#/features/deliveries/ui/delivery-retry-button";
 import { DeliveryStateBadge } from "#/features/deliveries/ui/delivery-state-badge";
 import { sortDeliveriesByOperationalPriority } from "#/features/events/model/delivery-priority";
+import { EventDetailDeliverySuppressionCell } from "#/features/events/ui/event-detail-delivery-suppression-cell";
 import { EventDetailSectionHeader } from "#/features/events/ui/event-detail-section-header";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { RetryTimestamp } from "#/features/operations/ui/retry-timestamp";
@@ -29,20 +30,23 @@ export function EventDetailDeliveriesTable({
         meta={t("events.detail.summary.deliveries", { count: deliveries.length })}
       />
       <div className="border-border bg-background min-h-0 flex-1 overflow-auto border">
-        <Table className="min-w-190 table-fixed">
+        <Table className="min-w-210 table-fixed">
           <TableHeader className="bg-muted/50 text-muted-foreground sticky top-0 z-10">
             <TableRow>
-              <TableHead className="w-[17%]">
+              <TableHead className="w-[15%]">
                 {t("events.detail.deliveryHeaders.destination")}
               </TableHead>
-              <TableHead className="w-[14%]">{t("events.detail.deliveryHeaders.route")}</TableHead>
-              <TableHead className="w-[12%]">{t("events.detail.deliveryHeaders.state")}</TableHead>
-              <TableHead className="w-[8%]">
+              <TableHead className="w-[12%]">{t("events.detail.deliveryHeaders.route")}</TableHead>
+              <TableHead className="w-[11%]">{t("events.detail.deliveryHeaders.state")}</TableHead>
+              <TableHead className="w-[6%]">
                 {t("events.detail.deliveryHeaders.attempts")}
               </TableHead>
-              <TableHead className="w-[16%]">{t("events.detail.deliveryHeaders.next")}</TableHead>
-              <TableHead className="w-[23%]">
+              <TableHead className="w-[14%]">{t("events.detail.deliveryHeaders.next")}</TableHead>
+              <TableHead className="w-[17%]">
                 {t("events.detail.deliveryHeaders.lastError")}
+              </TableHead>
+              <TableHead className="w-[15%]">
+                {t("events.detail.deliveryHeaders.suppression")}
               </TableHead>
               <TableHead className="w-[10%]">
                 {t("events.detail.deliveryHeaders.actions")}
@@ -52,7 +56,7 @@ export function EventDetailDeliveriesTable({
           <TableBody>
             {deliveries.length === 0 ? (
               <TableRow>
-                <TableCell className="text-muted-foreground" colSpan={7}>
+                <TableCell className="text-muted-foreground" colSpan={8}>
                   {t("events.detail.empty.deliveries")}
                 </TableCell>
               </TableRow>
@@ -84,6 +88,9 @@ export function EventDetailDeliveriesTable({
                     ) : (
                       "-"
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <EventDetailDeliverySuppressionCell delivery={delivery} />
                   </TableCell>
                   <TableCell>
                     <DeliveryRetryButton id={delivery.id} state={delivery.state} />

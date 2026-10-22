@@ -1,11 +1,27 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { EventDetailDeliveriesTable } from "#/features/events/ui/event-detail-deliveries-table";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { AppIntlProvider } from "#/i18n/provider";
+
+// The silence column decides between a rule link and a "rule deleted" note; the
+// link needs no router in this unit test.
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    to,
+    params,
+  }: {
+    children: ReactNode;
+    to: string;
+    params: { suppressionId: string };
+  }) => <a href={`${to}/${params.suppressionId}`}>{children}</a>,
+  ClientOnly: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
 
 const testState = vi.hoisted(() => ({
   retryDelivery: vi.fn<(input: { id: string }) => Promise<unknown>>(),
@@ -95,6 +111,48 @@ describe("event detail deliveries table", () => {
 
     expect(screen.getByText(lastError)).toBeTruthy();
     expect(screen.getByTitle(lastError)).toBeTruthy();
+  });
+
+  it("explains a silenced delivery in place and links the rule that did it", () => {
+    const suppressReason = "Maintenance window matched destination in [destination-1]";
+
+    renderTable([
+      delivery({
+        id: "delivery-suppressed",
+        state: "suppressed",
+        suppressReason,
+        suppressionId: "suppression-1",
+      }),
+    ]);
+
+    expect(screen.getByText(suppressReason)).toBeTruthy();
+    expect(screen.getByTitle(suppressReason)).toBeTruthy();
+    expect(screen.getByRole("link").getAttribute("href")).toBe(
+      "/suppressions/$suppressionId/suppression-1",
+    );
+  });
+
+  it("keeps the reason snapshot when the rule has been deleted", () => {
+    const suppressReason = "Maintenance window matched destination in [destination-1]";
+
+    renderTable([
+      delivery({
+        id: "delivery-suppressed",
+        state: "suppressed",
+        suppressReason,
+        suppressionId: null,
+      }),
+    ]);
+
+    expect(screen.getByText(suppressReason)).toBeTruthy();
+    expect(screen.getByText("Rule deleted")).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("falls back to the shared dash for deliveries that were not silenced", () => {
+    renderTable([delivery({ id: "delivery-succeeded", state: "succeeded" })]);
+
+    expect(screen.getByText("—")).toBeTruthy();
   });
 
   it("shows the date for a retry that falls on a later day", () => {
