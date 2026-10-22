@@ -2,6 +2,122 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-22（第 81 轮）
+
+- 时间：2026-10-22 21:28 CST 起。
+- 基线：本轮开始时 `origin/main` @ `ada8f2a`；main CI 最近 3 次 success；有 1 个遗留
+  open PR `#368`（第 80 轮创建，CI 卡在 `Install system deps`）；`v0.1.0-beta.61` 的
+  tag 与 GitHub Release 均已存在，最近 10 个 tag 全部有 release，无待补建项。
+- 类型：**遗留 PR 收尾 + 三车道审计 + 发布评估**（非 full-audit）。按第 1 步「有遗留
+  open PR 优先推进」，本轮实现名额由 #368 收尾占用，不再开新需求切片。
+- 全量审计时间戳：第 1 轮（2026-10-18 13:30 CST，未变）。
+- 车道：`requirements` + `ui-triage` 必跑；`ui-triage` 判定 **`defer`**；第三名额给
+  `release-infra`（第 80 轮遗留的 REL-21 需要落地评估，轮转的 `security-exposure`
+  顺延下一轮）；并发 ≤3。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `requirements`：连续第 3 轮（第 78、80、81 轮）在限时内无产出（本轮 23 分钟仍停在
+  「列出 backlog 标题以避免重复」），按时间纪律终止；下一轮改为窄扫描：只读
+  `docs/prd/post-mvp-planning.md` + 3 个指定 UI 目录，先给 2 条候选再扩展。
+- `ui-triage`：**`defer`** —— 距上次评审 1h47m（`last_ui_review_at` 2026-10-22 19:45）；
+  自评审以来 UI 路径提交仅 1 个且已于第 79 轮浏览器复验（`48e0e74`）；triage 时未评审
+  UI 合并 0；新增未解决 UI 发现 0（22 条存量均为第 79 轮评审自身产出）；静态扫描仅
+  已知的 `destinations-empty-state.tsx:16` 一处空态不一致（UI-37）。#368 在 triage 后合并，
+  第 80 轮已在隔离实例 6207 实测 Token 可见 / 失败提示 / 关闭后消失，计入已评审。
+  再触发条件：满 48h（2026-10-24 19:45）、未评审 UI 合并 ≥3、新增 UI 发现 ≥2、
+  存量 ≥25、或出现新的 HIGH 可复现缺陷。
+- `last_ui_review_at`：**2026-10-22 19:45 CST**（未变，本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现与验证在会话工作树
+  `nervous-rosalind-bca514`。工作树已清理。
+- 依赖：会话工作树 `node_modules` 已存在且可用；本轮无代码改动，未重装。
+
+### 本轮交付
+
+- PR #368 `fix(console): show the one-time source token and report copy failures` ——
+  第 80 轮创建的遗留 open PR，本轮 CI 恢复后 **rebase 合并为 `4856b5b`**（含 `10b44f6`
+  修复、`3ba4338` 决策记录、`4856b5b` 第 80 轮日志）。合并前复核：
+  `check · test · build` 2m18s 通过；其余 3 个 `copyText` 调用方均有 try/catch
+  （`copyable-code-line.tsx:71-78`、`delivery-ping-detail-dialog.tsx:131-138`、
+  `delivery-attempt-detail-dialog.tsx:161-168`），`copyText` 由返回 boolean 改为
+  失败抛错不会造成未捕获拒绝。合并后 main CI（`4856b5b`）success。
+- PR #<LOG_PR> `docs(planning): record round 81`：本轮日志与 backlog 更新
+  （UI-36/Q-38 → shipped；Q-23/Q-37 补 dedupe 窗口谓词陷阱；REL-21 补可执行
+  workflow 方案与文档同步清单；REL-24 补第一批搬运方案；REL-16/REL-23 → blocked-autonomous）。
+
+### 专家发现
+
+- `requirements`：无输出（限时终止，见上）。
+- `ui-triage`：`defer`（见上）。
+- `release-infra`（只读，附 `file:line`）：
+  - HIGH / REL-21：仓库仍无 E2E workflow（`.github/workflows/` 仅 `ci.yml:16-51`）。
+    已给出可直接落地的 `e2e.yml`：job `playwright · chromium`、`timeout-minutes: 25`、
+    `voidzero-dev/setup-vp@v1` + `vp install --frozen-lockfile` +
+    `vp -C apps/console exec playwright install --with-deps chromium` +
+    `vp -C apps/console exec playwright test`，失败上传 `apps/console/test-results`。
+    不需要 workflow 级 env：`playwright.config.ts:32-43` 已起 webServer 并注入
+    `TOCSIN_DATABASE_PATH`/`BETTER_AUTH_SECRET`/`BETTER_AUTH_URL`。本地前置：Playwright
+    1.64.1 期望 Chromium **1248**，本机缓存 1234，必须先 `playwright install chromium`。
+    不要用 `just e2e`（GitHub runner 无 `just`，且 `justfile:78-79` 不装浏览器）。
+  - MEDIUM / Q-23 + Q-37（**新发现的语义陷阱**）：dedupe 存在性判断没有 `created_at`
+    窗口谓词（`delivery.helpers.ts:88-99`、`oncall.repository.ts:41-47`）。若只把 prune
+    改成有界批，窗口外的旧 key 仍会命中并**错误抑制新投递**；必须同一 PR 两步：
+    ① 判定加 `created_at >= windowStartsAt`；② prune 改有界批或移出写事务。
+    `created_at` 已有索引（`migrate/schema.ts:275-276,290`）。触及投递语义 → EXPERT_PANEL。
+  - MEDIUM / REL-24：6 个 provider 测试文件共 848 行、19 个内联 payload；第一批只搬
+    5 文件 / 10 payload 到**包根** `packages/providers/fixtures/<provider>/<scenario>.json`
+    （`feishu/index.test.ts:15-16` 的 `with { type: "json" }` 先例可用）。多版本真实
+    payload 需上游样本，禁止编造。
+  - MEDIUM：`mvp-rc-checklist.md:129-130` 的 gate A 把「workflow 存在」与「spec 覆盖
+    Route/Delivery/retry/过滤」混在一起，需拆分；新增 workflow 后需同步 7 个文档文件
+    （`README.md:9-10`、`release-checklist.md` 6 处、`history-retention-and-snapshots.md:91`、
+    `backup-restore-upgrade.md:180`、`mvp-rc-checklist.md` 7 处、`post-mvp-planning.md:169`、
+    `self-hosted-alert-hub-mvp.md:20`）。
+  - MEDIUM：`release-checklist.md` 的版本断言已由第 80 轮 #367 修正，无新增过期。
+  - LOW：`e2e/global-setup.ts:13-18` 在 webServer 启动后才删库（本地会删掉运行中连接
+    的库；CI 干净 runner 上是 no-op）；建议把 `rm -f` 前移到 webServer command。
+  - 事实：main 无 branch protection、rulesets 为空（REL-16/REL-23）；当前 token 仅
+    `repo`+`workflow`、无 admin，无法启用保护 → 保持 blocked-autonomous。新增
+    `e2e.yml` 不受影响，也不会自动成为门禁。
+
+### EXPERT_PANEL
+
+- 本轮无代码级裁决事项；Q-23 + Q-37 的修复方案已明确但需下一轮 EXPERT_PANEL 批准后实施。
+- 发布评估由三位专家（发布经理 / 阻断审计 / 运维回滚）独立给出，见「发布决策」。
+
+### 发布决策
+
+- 三位专家（发布经理 / 阻断审计 / 运维回滚）**一致赞成发布 `0.1.0-beta.62`**。
+  - 发布经理：`v0.1.0-beta.61..origin/main` 共 5 个提交，唯一用户可见变更为 `10b44f6`；
+    预发布递增 N。
+  - 阻断审计：目标 commit `4856b5b` CI success 且 SHA 对齐；无 open PR；无未修复 HIGH；
+    `beta.61..main` 未触碰 `migrate/`；#368 已 rebase 合并。
+  - 运维/回滚：`Dockerfile`/`Justfile`/compose/`.node-version`/lockfile/`server/**` 均未改动；
+    无迁移，SQLite 双向兼容；回滚只需换回 `0.1.0-beta.61` 镜像；版本号须先 bump 再构建，
+    否则容器自报 beta.61。
+- 发布结果见下方「发布记录」。
+
+### 发布记录
+
+- 版本：`0.1.0-beta.62`；release PR #369（`chore(release): v0.1.0-beta.62`）rebase 合并为
+  `63c8931`，main CI success。
+- tag：`v0.1.0-beta.62`（annotated，指向 `63c8931`）；GitHub Release 已创建
+  （prerelease，描述含镜像、升级与回滚说明，body 非空校验通过）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.62`
+  （linux/amd64 + linux/arm64，index digest `sha256:b658c913…`），
+  构建参数 `--provenance=false --sbom=false`，builder `tocsin-multi`。
+- 发布依据：自 `v0.1.0-beta.61` 起唯一用户可见变更 #368（一次性 Token 可见 + 复制失败
+  真实提示）；无迁移、无配置/环境变量/依赖变化。
+- 回滚：换回 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.61`，无需清理
+  持久化状态。
+
+### 下一轮优先项
+
+1. `security-exposure` 车道（轮转）：脱敏 key 形态测试、secret 投影回归。
+2. REL-21：落地 `e2e.yml`（先本地跑通 Chromium 1248 + `playwright test`），同一 PR 拆分
+   gate A 文本并同步 7 个文档断言。
+3. Q-23 + Q-37：dedupe 窗口谓词 + 有界批，先 EXPERT_PANEL 再实施。
+4. REL-24 第一批 fixture 搬运（5 文件 / 10 payload）。
+5. `requirements` 改窄扫描（连续 3 轮停滞）。
+
 ## 2026-10-22（第 80 轮）
 
 - 时间：2026-10-22 20:26 CST 起。
