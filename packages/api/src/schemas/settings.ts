@@ -34,3 +34,25 @@ export const RuntimeInformationOutputSchema = z.object({
 });
 
 export type RuntimeInformation = z.infer<typeof RuntimeInformationOutputSchema>;
+
+/**
+ * Read-only storage projection for self-hosted operators.
+ *
+ * Counts are whole-table totals so an operator can see history growth without
+ * opening the database. No path, pragma output, payload, or credential is
+ * included.
+ */
+export const StorageHealthOutputSchema = z.object({
+  databaseBytes: z.number().int().nonnegative(),
+  freeBytes: z.number().int().nonnegative(),
+  tableCounts: z.object({
+    events: z.number().int().nonnegative(),
+    deliveries: z.number().int().nonnegative(),
+    deliveryAttempts: z.number().int().nonnegative(),
+    oncallPings: z.number().int().nonnegative(),
+  }),
+  oldestEventAt: IsoDateTimeSchema.nullable(),
+  newestEventAt: IsoDateTimeSchema.nullable(),
+});
+
+export type StorageHealth = z.infer<typeof StorageHealthOutputSchema>;

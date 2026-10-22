@@ -27,6 +27,7 @@ import { SqliteSourceRepository } from "#/infra/sqlite/repositories/source/sourc
 import type { SuppressionRepository } from "#/infra/sqlite/repositories/suppression/suppression.interface";
 import { SqliteSuppressionRepository } from "#/infra/sqlite/repositories/suppression/suppression.repository";
 import type { SqliteKysely } from "#/infra/sqlite/schema";
+import type { StorageHealthSnapshot } from "#/infra/sqlite/storage-health";
 
 export interface OpenSqliteStoreOptions {
   databasePath?: string;
@@ -62,6 +63,14 @@ export interface SqliteStoreUnitOfWork {
 export interface SqliteStore extends SqliteStoreUnitOfWork {
   sqliteVersion(): Promise<string>;
   schemaVersion(): Promise<string | null>;
+  /**
+   * Reads file size and row counters from the live database.
+   *
+   * Deliberately excludes `integrity_check` / `quick_check`: those scan the
+   * whole file and would block the single-process worker, so an operator-run
+   * check needs its own gated entry point.
+   */
+  storageHealth(): Promise<StorageHealthSnapshot>;
 
   close(): Promise<void>;
   transaction<T>(fn: (tx: SqliteStoreUnitOfWork) => Promise<T>): Promise<T>;
@@ -137,6 +146,52 @@ export class OpenedSqliteStore implements SqliteStore {
     );
 
     return result.rows[0]!.version;
+  }
+
+  async storageHealth(): Promise<StorageHealthSnapshot> {
+    const pages = await sql<{
+      page_count: number;
+      page_size: number;
+      freelist_count: number;
+    }>`
+      select page_count, page_size, freelist_count
+      from pragma_page_count(), pragma_page_size(), pragma_freelist_count()
+    `.execute(this.db);
+
+    const counts = await sql<{
+      events: number;
+      deliveries: number;
+      delivery_attempts: number;
+      oncall_pings: number;
+    }>`
+      select
+        (select count(*) from events) as events,
+        (select count(*) from deliveries) as deliveries,
+        (select count(*) from delivery_attempts) as delivery_attempts,
+        (select count(*) from oncall_pings) as oncall_pings
+    `.execute(this.db);
+
+    const eventTimes = await sql<{ oldest: string | null; newest: string | null }>`
+      select min(received_at) as oldest, max(received_at) as newest from events
+    `.execute(this.db);
+
+    const page = pages.rows[0]!;
+    const table = counts.rows[0]!;
+    const times = eventTimes.rows[0];
+
+    return {
+      pageCount: page.page_count,
+      pageSizeBytes: page.page_size,
+      freePageCount: page.freelist_count,
+      tableCounts: {
+        events: table.events,
+        deliveries: table.deliveries,
+        deliveryAttempts: table.delivery_attempts,
+        oncallPings: table.oncall_pings,
+      },
+      oldestEventAt: times?.oldest ?? null,
+      newestEventAt: times?.newest ?? null,
+    };
   }
 
   get sources() {

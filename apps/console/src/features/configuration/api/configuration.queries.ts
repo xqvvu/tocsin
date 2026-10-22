@@ -21,3 +21,14 @@ export function runtimeInformationQueryOptions() {
     queryKey: runtimeInformationQueryKeys.detail(),
   });
 }
+
+export const storageHealthQueryKeys = {
+  all: ["storage-health"] as const,
+  detail: () => [...storageHealthQueryKeys.all, "detail"] as const,
+};
+
+export function storageHealthQueryOptions() {
+  return orpc.settings.getStorageHealth.queryOptions({
+    queryKey: storageHealthQueryKeys.detail(),
+  });
+}

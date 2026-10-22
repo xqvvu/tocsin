@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { runtimeInformationQueryOptions } from "#/features/configuration/api/configuration.queries";
+import { formatBytes } from "#/features/configuration/model/format-bytes";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function SettingsRuntimePanel() {
@@ -78,20 +79,4 @@ function formatDuration(milliseconds: number): string {
   }
 
   return `${milliseconds} ms`;
-}
-
-function formatBytes(bytes: number): string {
-  const mebibytes = bytes / (1024 * 1024);
-
-  if (Number.isInteger(mebibytes)) {
-    return `${mebibytes} MiB`;
-  }
-
-  const kibibytes = bytes / 1024;
-
-  if (Number.isInteger(kibibytes)) {
-    return `${kibibytes} KiB`;
-  }
-
-  return `${bytes} B`;
 }
