@@ -81,6 +81,9 @@ apps/console/src/server/
     config-portability.service.types.ts
     config-portability.ts
   sources/source.service.ts
+  suppressions/
+    suppression.service.ts
+    suppression.service.types.ts
   destinations/destination.service.ts
   routes/route.service.ts
   integrations/

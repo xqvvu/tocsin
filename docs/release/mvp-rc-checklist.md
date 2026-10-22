@@ -16,8 +16,8 @@ Docker runtime 形态。
 
 它不等于稳定公开发布已经完成。截至 2026-10-20，发布文档（release checklist、Docker 生产部署、
 备份/恢复/升级/回滚）与 README 的状态措辞已经补齐，见 `docs/release/`；仍未完成的发布 gate 有
-四类：dedupe cleanup 成本上限（D 节）、provider inline payload fixture 化与多版本 payload 覆盖
-（E 节）、provider 侧 contributor guide（B/E 节），以及 E2E spec 覆盖面（A 节）。关键浏览器 E2E 已接入 CI
+三类：provider inline payload fixture 化与多版本 payload 覆盖（E 节）、provider 侧 contributor
+guide（B/E 节），以及 E2E spec 覆盖面（A 节）。关键浏览器 E2E 已接入 CI
 （`.github/workflows/e2e.yml`，2026-10-22），但 spec 覆盖面仍小于 gate 要求（见 A 节与 REL-22）。compose smoke 已交付并明确保留为本地人工 gate，不计划接入 CI；
 delivery history retention 已决定不自动清理，理由见
 `docs/release/history-retention-and-snapshots.md` §1。
@@ -111,8 +111,8 @@ https://github.com/xqvvu/tocsin/issues/47 已在 `xqvvu/tocsin` 关闭，清单�
 
 raw payload retention 已可配置并在 intake 路径执行清理；服务端已有 LogTape 结构化日志、request ID
 关联、JSON Lines 生产输出与 secret-safe 测试。delivery history retention 已决定不自动清理（见
-`docs/release/history-retention-and-snapshots.md` §1）；dedupe cleanup 成本上限和外部 observability
-sink 仍应在发布或 post-MVP 中继续设计。
+`docs/release/history-retention-and-snapshots.md` §1）；外部 observability sink 仍应在发布或
+post-MVP 中继续设计。dedupe cleanup 已改为有界批（见下方 D 节勾选项）。
 
 ### Fixtures 与贡献体验
 
@@ -170,7 +170,7 @@ sink 仍应在发布或 post-MVP 中继续设计。
 - [x] raw payload retention 可配置并有测试覆盖。
 - [x] 增加 delivery history retention 或明确不自动清理 delivery history 的产品理由。→ **决定不自动清理**，理由与代价见 `docs/release/history-retention-and-snapshots.md` §1。
 - [x] 将 raw payload pruning 从 intake hot path 中移出或限制成本。→ 接入改为**有界批**（100/次，主键定位），积压由响应路径外的单飞 sweep 清空；保留行为不变。见 `docs/release/history-retention-and-snapshots.md` §2。
-- [ ] 将 dedupe cleanup 从接入热路径移出或限制成本。→ 尚未完成：`pruneDedupeKeys` 仍是**无界** `DELETE FROM delivery_dedupe_keys`，并且在每次 `enqueueForEvent` 内执行（`apps/console/src/infra/sqlite/repositories/delivery/delivery.helpers.ts:107-108`、`delivery.repository.ts:101`）。这与「运行时策略」中「dedupe cleanup 成本上限仍应继续设计」一致。
+- [x] 将 dedupe cleanup 从接入热路径移出或限制成本。→ **已限制成本**：`pruneDedupeKeys` 改为最旧优先的有界批（每批 100 条，`rowid IN (SELECT … ORDER BY created_at, rowid LIMIT 100)`），每次 `enqueueForEvent` 只在写事务内、去重判定之前执行一次（`apps/console/src/infra/sqlite/repositories/delivery/delivery.helpers.ts:144-160`、`delivery.repository.ts:101`）；oncall 队列同构（`oncall/oncall.helpers.ts:50-67`）。老库缺少 `idx_delivery_dedupe_created_at` 时扫描成本仍待评估（backlog Q-224）。
 - [x] 评估 Delivery detail 所需的历史快照字段，避免配置重命名破坏历史解释。→ **评估完成：缺陷成立**（改名会追溯改写历史显示名；删除则级联删掉投递行）。需 schema 变更，属发布决策，见 `docs/release/history-retention-and-snapshots.md` §3。
 - [x] 增加 secret-safe logging 测试或边界测试。
 
