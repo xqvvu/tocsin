@@ -26,6 +26,17 @@ export function SourceTokenNoticePanel({
   const copyUrlLabel = t("sources.notice.copyUrl");
   const dismissLabel = t("sources.notice.dismiss");
 
+  async function copy(value: string): Promise<void> {
+    try {
+      await copyText(value);
+      toast.success(t("common.actions.copied"));
+    } catch {
+      toast.error(t("common.actions.copyFailed"), {
+        description: t("common.actions.copyFailedDescription"),
+      });
+    }
+  }
+
   return (
     <section className="border-l-primary bg-muted/50 border-l-4 p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -45,14 +56,7 @@ export function SourceTokenNoticePanel({
               variant="outline"
               size="sm"
               aria-label={copyTokenLabel}
-              onClick={async () => {
-                try {
-                  await copyText(notice.token);
-                  toast.success(t("common.actions.copied"));
-                } catch {
-                  toast.success(t("common.actions.copyFailed"));
-                }
-              }}
+              onClick={() => void copy(notice.token)}
             >
               {copyTokenLabel}
             </Button>
@@ -62,14 +66,7 @@ export function SourceTokenNoticePanel({
               type="button"
               size="sm"
               aria-label={copyUrlLabel}
-              onClick={async () => {
-                try {
-                  await copyText(webhookUrl);
-                  toast.success(t("common.actions.copied"));
-                } catch {
-                  toast.success(t("common.actions.copyFailed"));
-                }
-              }}
+              onClick={() => void copy(webhookUrl)}
             >
               {copyUrlLabel}
             </Button>
@@ -85,6 +82,21 @@ export function SourceTokenNoticePanel({
               <RiCloseLine aria-hidden />
             </Button>
           </IconTooltip>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-1">
+        <span className="text-muted-foreground text-[11px]">{t("sources.notice.tokenLabel")}</span>
+        <code className="bg-background block rounded border px-2 py-1 font-mono text-[11px] break-all select-all">
+          {notice.token}
+        </code>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-muted-foreground text-[11px]">
+            {t("sources.notice.tokenOnceHint")}
+          </span>
+          <Button type="button" variant="outline" size="sm" onClick={onDismiss}>
+            {t("sources.notice.dismissSaved")}
+          </Button>
         </div>
       </div>
     </section>

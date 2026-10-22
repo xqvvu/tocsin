@@ -14,7 +14,7 @@ type SourceActionHandler = (source: SourceSummary) => void;
 type SourceEditHandler = (sourceId: string) => void;
 
 vi.mock("#/lib/browser", () => ({
-  copyText: vi.fn<() => Promise<boolean>>(async () => true),
+  copyText: vi.fn<() => Promise<void>>(async () => {}),
   urlFromCurrentOrigin: (path: string) => `http://localhost${path}`,
 }));
 
