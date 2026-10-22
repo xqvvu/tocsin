@@ -177,7 +177,7 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 
 ## 8. 未验证与未知
 
-- 本仓库已有 E2E 与 Docker smoke 脚本（`apps/console/e2e`、`scripts/docker-smoke.sh`），但都未接入 CI；
+- 本仓库的浏览器 E2E 已接入 CI（`.github/workflows/e2e.yml`，脚本在 `apps/console/e2e`）；Docker smoke（`scripts/docker-smoke.sh`）仍未接入 CI；
   Docker smoke 保留为本地人工 gate（使用独立的 `tocsin-smoke-data` 卷，不会触碰本文件操作的生产卷）。
   本文的 `docker compose cp` / 恢复步骤是标准工具用法，**没有在真实部署上演练过**；首次生产升级请把
   备份校验和回滚演练当成独立动作。

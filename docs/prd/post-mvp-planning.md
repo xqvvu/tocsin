@@ -166,7 +166,8 @@ route explain 已落地；fingerprint 聚合（REQ-6）、绝对时间窗口（R
 
 **大部分已交付（2026-10-21 复核）。** Root CI（`.github/workflows/ci.yml`）、Docker build/compose
 smoke（`scripts/docker-smoke.sh`、`Justfile`）、生产部署与备份/恢复/升级/回滚文档、release checklist、
-脱敏 runtime logs 均已落地；仅浏览器 E2E 尚未接入 CI（脚本 `just e2e` 已存在，见 backlog REL-1/REL-21）。
+脱敏 runtime logs 均已落地；浏览器 E2E 已接入 CI（`.github/workflows/e2e.yml`，2026-10-22），
+详见 backlog REL-21。
 以下保留为当时的候选范围记录。
 
 候选范围：

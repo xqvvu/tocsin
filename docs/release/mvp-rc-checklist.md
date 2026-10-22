@@ -16,9 +16,9 @@ Docker runtime 形态。
 
 它不等于稳定公开发布已经完成。截至 2026-10-20，发布文档（release checklist、Docker 生产部署、
 备份/恢复/升级/回滚）与 README 的状态措辞已经补齐，见 `docs/release/`；仍未完成的发布 gate 有
-四类：把关键浏览器 E2E 接入 CI（脚本已存在并在本机实测通过，见 A 节）、dedupe cleanup 成本上限
-（D 节）、provider inline payload fixture 化与多版本 payload 覆盖（E 节），以及 provider 侧
-contributor guide（B/E 节）。compose smoke 已交付并明确保留为本地人工 gate，不计划接入 CI；
+三类：dedupe cleanup 成本上限（D 节）、provider inline payload fixture 化与多版本 payload 覆盖
+（E 节），以及 provider 侧 contributor guide（B/E 节）。关键浏览器 E2E 已接入 CI
+（`.github/workflows/e2e.yml`，2026-10-22），但 spec 覆盖面仍小于 gate 要求（见 A 节与 REL-22）。compose smoke 已交付并明确保留为本地人工 gate，不计划接入 CI；
 delivery history retention 已决定不自动清理，理由见
 `docs/release/history-retention-and-snapshots.md` §1。
 
@@ -103,9 +103,9 @@ https://github.com/xqvvu/tocsin/issues/47 已在 `xqvvu/tocsin` 关闭，清单�
 - `docs/release/backup-restore-upgrade.md`：SQLite 冷备份/恢复、升级、回滚，以及 baseline + forward
   repair migration（0001–0003）的升级约束。
 
-仍然缺的是自动化接入：仓库只有 `.github/workflows/ci.yml`（`check · test · build`，`push` 到 main 与
-`pull_request` 触发，tag 不触发任何东西）；E2E（`just e2e`）与 Docker smoke（`just docker-smoke`）脚本
-已存在。E2E 尚未接入 CI，继续留在下面的发布 gate 里；Docker smoke 不再计划接入 CI（见 gate 说明）。
+自动化接入现状：`.github/workflows/ci.yml` 跑 `check · test · build`，`.github/workflows/e2e.yml`
+跑浏览器 E2E（两者都在 `push` 到 main 与 `pull_request` 触发，tag 不触发任何东西）；本地入口分别是
+`just e2e` 与 `just docker-smoke`。Docker smoke 不再计划接入 CI（见 gate 说明）。
 
 ### 运行时策略
 
@@ -126,8 +126,10 @@ sink 仍应在发布或 post-MVP 中继续设计。
 ### A. 发布工程
 
 - [x] 增加 root/workspace CI workflow，至少运行 fmt-check、lint、test、console build。
-- [ ] 增加关键浏览器 E2E workflow：setup/login、创建 Source、复制 webhook URL、创建/测试 Destination、
-      创建 Route、发送 webhook、查看 Event/Delivery、过滤历史、失败 retry。
+- [x] 增加关键浏览器 E2E workflow：`.github/workflows/e2e.yml`（Playwright + Chromium，`push` 到 main
+      与 `pull_request` 触发，失败上传 `apps/console/test-results`，保留 3 天）。本机 `just e2e` 实测通过。
+- [ ] 扩展 E2E spec 覆盖到 gate 要求的全部步骤：创建 Route、发送 webhook 后查看 Delivery、过滤历史、
+      失败 retry。当前 spec 覆盖 setup/login、Source、Destination 与 Event（见 REL-22）。
 - [x] 增加 Docker build/compose smoke automation。→ `just docker-smoke` / `scripts/docker-smoke.sh`：构建镜像 → 起栈 → 等 `/api/ready` → 断言 `/api/health` 与 `/api/ready` 不同 → 断言 `/data/tocsin.sqlite` 已挂载 → 断言首页出 HTML → 拆栈并删卷。**已在本机实测通过**（见 PR）。故意不进 `ci.yml`：构镜像慢，快速门禁应保持快。
 - [x] 增加 health endpoint 与 readiness endpoint。
 - [x] Dockerfile 提供 runtime image、数据卷和 container healthcheck。
@@ -196,15 +198,15 @@ sink 仍应在发布或 post-MVP 中继续设计。
   （2026-10-18 校正：Events/Deliveries 筛选、相对时间范围、按事件/投递 ID 搜索、投递按失败原因/
   目标/路由搜索与 route explain 均已落地；仍未实现的是 fingerprint 聚合视图、绝对时间窗口与筛选结果导出。）
 - 自托管发布硬化：CI/E2E/Docker smoke、部署文档、备份恢复、升级回滚。
-  （2026-10-18 校正：部署、备份恢复、升级回滚文档与 release checklist 已完成；E2E 脚本已落地但尚未
-  接入 CI；Docker smoke 脚本已落地，按既定决定保持本地人工 gate，不接入 CI。）
+  （2026-10-18 校正：部署、备份恢复、升级回滚文档与 release checklist 已完成；E2E 脚本已落地。
+  2026-10-22：E2E 已接入 CI（`.github/workflows/e2e.yml`）；Docker smoke 按既定决定保持本地人工 gate。）
 - Adapter 贡献体验：fixture 体系、contributor guide、adapter scaffold。
   （2026-10-13 校正：destination 的 contributor guide 与 scaffold 已完成；provider 的 fixture 体系仍缺。）
 
 ## 验收标准
 
-MVP baseline 已能覆盖以下演示路径；发布前仍需人工执行已存在的 E2E 与 Docker smoke（E2E 待接入 CI；
-Docker smoke 保持本地人工 gate）：
+MVP baseline 已能覆盖以下演示路径；E2E 由 CI 自动运行，Docker smoke 发布前仍需人工执行
+（保持本地人工 gate）：
 
 1. 使用 Docker 或本地命令启动 Tocsin。
 2. 首次 setup owner/admin 并登录 dashboard。
@@ -219,6 +221,6 @@ Docker smoke 保持本地人工 gate）：
 11. 发布 gate 中，CI、测试、build、Docker smoke 和 E2E 通过。
 12. 发布文档能指导用户完成自托管部署、备份、升级和恢复。
 
-> 第 12 条的文档已经就位（`docs/release/`），但**没有在真实部署上演练过**：仓库已有 E2E 与 Docker
-> smoke 脚本，但都不在 CI，备份/恢复/回滚步骤也只是标准工具用法，未在部署环境执行。首次发布前应把
+> 第 12 条的文档已经就位（`docs/release/`），但**没有在真实部署上演练过**：E2E 已在 CI 中运行，
+> Docker smoke 仍是本地脚本，备份/恢复/回滚步骤也只是标准工具用法，未在部署环境执行。首次发布前应把
 > 第 11、12 条当成人工验收项，而不是已完成项。

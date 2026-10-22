@@ -136,6 +136,9 @@ export default defineConfig({
 
   staged: {
     "*.{js,jsx,ts,tsx,mjs,cjs}": ["vp check --fix"],
-    "*.{json,css,yaml,yml}": ["vp fmt --write"],
+    // `.github/**` is in ignorePatterns, so staging a workflow file used to
+    // fail the hook with "all matched files may have been excluded". Tolerate
+    // that instead of making workflow changes require a --no-verify commit.
+    "*.{json,css,yaml,yml}": ["vp fmt --write --no-error-on-unmatched-pattern"],
   },
 });
