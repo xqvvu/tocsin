@@ -2,6 +2,77 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 96 轮）
+
+- 时间：2026-10-23 16:16 CST 起。
+- 基线：本轮开始时 `origin/main` @ `8c1947b`；main CI success。唯一遗留 open PR #414
+  （第 95 轮发布记录，纯文档）检查全绿后 `--rebase` 合入，基线推进到 `e753686`。
+- 类型：**`full-audit`（3 条车道）** —— `requirements`、`ui-triage`（→ `defer`）、`security-exposure`。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**。
+- 车道轮转位置：**`release-infra`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— `last_ui_review_at` 2026-10-23 14:16 距今 2.0h；自评审后
+  UI 路径提交 3 条，剔除纯测试后真实 UI 2 条（`4fcd056` 即 UI-42 修复且已实测、`aa35f2a`
+  投递列表回执列）；25 条 UI candidate、0 条 HIGH。下次自然触发：2026-10-25 14:16、
+  UI 路径合并 ≥3、或新增可复现 HIGH。
+- `last_ui_review_at`：**2026-10-23 14:16 CST**（未变；本轮未做深度 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证都在会话工作树
+  `pensive-lichterman-5883d0`（写入隔离 hook 禁止跨工作树写入）。
+
+### 本轮交付
+
+- **PR #415 `feat(console): flag routes that drop trigger or recovery notifications`
+  （REQ-258，27 分）**：
+  - 新增 `routeStatusScope(statuses)`（`features/routes/model/route-form.ts:59-83`），
+    返回 `{ deliversFiring, deliversResolved }`；空条件视为两类都投递。
+  - 表单：状态条件下方按缺失类别显示 `Alert`（`route-forms.tsx:440-520`），
+    覆盖缺触发/缺恢复/两类都缺；不阻止保存、不改校验。
+  - 列表：规则单元格追加 `outline` 徽标「不含触发中」「不含已恢复」「不含触发与恢复」，
+    `title` 说明后果（`routes-section.tsx:352-415`）；条件 chip 增加 `data-rule-chip`
+    以便测试只数维度 chip。
+  - zh-Hans / en-US 各新增 8 个键；PRD `docs/prd/route-status-scope-hint.md`。
+  - 验证：`vp run -r test` 4/4 包通过（console 983 tests）；`vp check` 0 errors
+    （18 条既有 warning）；`vp run -r build` 通过。未做浏览器实测（本地无运行中的
+    dev server，本轮未启动）。
+  - 环境备注：会话工作树 `node_modules` 残缺（根目录仅 3 个包），按既有经验重建
+    `@rolldown` 符号链接后恢复；`vp install` 自身报「Already up to date」不修复。
+
+### 专家发现
+
+- `requirements`：**运行 31 分钟未产出**（停在读取基线），已终止，留待下一轮。
+- `security-exposure`（全部代码核实，行号相对 `8c1947b`）：
+  - 无 HIGH；无失效 GitHub 仓库引用（`xqvvu/vane` 仅剩有效的 ACR 镜像坐标与历史叙述）。
+  - MEDIUM 仍成立且均需 EXPERT_PANEL：SEC-22 编辑草稿仍原样返回 URL userinfo 密码
+    （`destination.helpers.ts:116,129` → `destination.service.ts:149` →
+    `destination-edit-dialog.tsx:56`；测试 `destination.helpers.test.ts:103-110` 锁定该行为）；
+    SEC-26 Slack/Feishu path token 与 generic 查询凭据进入 7 个 SSR loader 预取的
+    `destinations.list`（`destination.helpers.ts:63,162`、`destination.service.ts:71-75`），
+    而 `config-portability.ts:437-452` 把同一字段当 secret；
+    SEC-23 provider 可控 fingerprint 原值贯穿列表/详情/补投/外发
+    （`history.repository.ts:144`、`event-normalized-tab.tsx:45-47`、
+    `event-replay.service.ts:321-322`、`delivery-execution.ts:97`），
+    并新增预览 DTO 读取路径（`destination.service.ts:319,331,345`）。
+  - AUTO_FIX 可做：**SEC-36** 删除 `EventFingerprintContext.fingerprint`
+    （`packages/core/src/operations.ts:189`、`packages/api/src/schemas/operations.ts:110`、
+    `history.repository.ts:315`，3 处测试断言）；**SEC-35** 按
+    `DestinationKindSchema.options` 参数化 destination 读投影与 `testDestination` 脱敏测试
+    （`configuration.integration.test.ts:903-1019,1090-1108`、
+    `destination.helpers.test.ts:143,154` 仅 feishu/generic）。
+  - import protection 无确证缺口；`dropdown-menu.tsx:1`、`codemirror/toml-language.ts:1`
+    的 client-only 标记无自身浏览器 API，仅记录为可能多余。
+
+### 发布评估
+
+（合并后补充）
+
+### 下一轮优先项
+
+1. **SEC-36 + SEC-35**：合并为一个小 `test:`/`refactor:` PR（均 AUTO_FIX，零语义变更）。
+2. **requirements 车道重跑**（本轮超时未产出），并把候选写入 backlog。
+3. **DOC-73..82 + 第 95 轮新增 MEDIUM/LOW**：合并为一个 `docs:` PR。
+4. **REQ-257（27）**：`Retry-After` 冷却建议，投递语义变更，实施前交 EXPERT_PANEL。
+5. **REQ-256（23）+ REQ-243（27）**：一并交 EXPERT_PANEL（投递语义/状态枚举/迁移）。
+6. **UI-43 / UI-44 / UI-46**：1280 时间截断、同指纹表窄屏滚动、投递详情窄屏复核。
+
 ## 2026-10-23（第 95 轮）
 
 - 时间：2026-10-23 15:08 CST 起。
