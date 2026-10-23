@@ -75,6 +75,11 @@
   `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.69` 即可。
 - 决策：合并 #406 → 以新 main 复核 CI → bump `0.1.0-beta.70` 并合入 → 打 tag / GitHub Release /
   多平台镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.70`。
+- **执行结果**：#406 合入（`25e812c`）→ #407 `chore(release): v0.1.0-beta.70` 合入
+  （main @ `be11de5`，CI success）→ annotated tag `v0.1.0-beta.70` 指向 `be11de5` →
+  GitHub Release（prerelease，body 非空）→ 镜像
+  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.70`（`linux/amd64` + `linux/arm64`，
+  index digest `sha256:fa232575…`）；回滚镜像 `0.1.0-beta.69`。无迁移、无配置变化。
 
 ### 下一轮优先项
 
