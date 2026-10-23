@@ -2,6 +2,89 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 92 轮）
+
+- 时间：2026-10-23 11:30 CST 起。
+- 基线：本轮开始时 `origin/main` @ `e54d9cd`；main CI 最近一次 success；遗留 open PR #401
+  （第 91 轮发布决策记录）已在本轮合并（`586a359`）。
+- 类型：**`full-audit`（3 条车道）** —— `requirements`、`ui-triage`（→ `defer`）、`architecture`。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）** —— 仍未覆盖全部车道。
+- 车道轮转位置：**`docs-drift`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— `last_ui_review_at` 2026-10-23 11:10 距今 0.4h；自评审后 UI 路径合并
+  1 条（`d9d22ef`，UI-31 本身）；21 条 candidate、0 条 HIGH；第 91 轮有隔离实例浏览器实测记录。
+  下次触发：满 48h（2026-10-25 11:10）、UI 路径合并 ≥3、或新增 HIGH 可复现缺陷。
+- `last_ui_review_at`：**2026-10-23 11:10 CST**（未变；本轮只对新回执列做了针对性浏览器验证）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建都在会话工作树
+  `stoic-tu-36d6cf`。收尾时 `agent-iteration` 及其 `node_modules` 已清理，并发锁已删除。
+
+### 本轮交付
+
+- **PR #402 `fix(core): redact empty-username URL userinfo passwords`（SEC-34，27 分）**：
+  `redactUrlUserinfo` 在用户名为空时直接放弃，`redis://:hunter2@cache.local`、
+  `postgres://:hunter2@db.local`、`https://:hunter2@host` 的密码完全不脱敏
+  （`packages/core/src/redaction.ts:188`）。删除该拒绝条件，只保留「密码非空 + 后接 `@`」；
+  端口形态 `https://:8080/path`、`https://:@h`、`ssh://git@host` 保持可见。差分 oracle
+  增加同一条规则（`expectedRedactText`），其余形状仍与冻结实现逐字节对齐；补 Redis/Postgres/
+  PostgreSQL/HTTPS 用例。验证：`vp check` 0 errors / 18 warnings；`vp run -r test` 4/4 包通过
+  （core 160 tests）；`vp run -r build` 通过；`code-review`（low）无发现。
+- **PR #403 `feat(console): show delivery receipts on the event detail page`（REQ-248，29 分）**：
+  事件详情投递投影新增 `providerReference` / `lastResponseStatus` / `lastResponseAt`
+  （`packages/core/src/operations.ts`、`packages/api/src/schemas/operations.ts`）；仓储用一次
+  `delivery_id IN (...)` 读取每个投递最新**已完成**尝试（`history.repository.ts:442-481`，
+  `running` 跳过）；表格新增「回执」列（外部引用可复制 + `HTTP <status>` + 时间），列宽重排，
+  最小宽度 210 → 230；新增组件 `event-detail-delivery-receipt-cell.tsx`；PRD
+  `docs/prd/event-delivery-receipts.md`。验证：`vp check` 0 errors / 18 warnings；
+  `vp run -r test` 4/4 包通过（console 973 tests）；`vp run -r build` 通过；
+  PR 的 `check · test · build` 与 `playwright · chromium` 均 pass。
+  **浏览器验证**（隔离实例 http://localhost:6192 + `/tmp/tocsin-req248.sqlite`，1280×900 与最窄窗口）：
+  失败投递显示 `HTTP 500 · 03:46`，成功投递显示 `om_7f3c9a2b`（可复制）+ `HTTP 200 · 03:46`；
+  1280 下 `scrollWidth == clientWidth`（956px）无越界；窄窗口 `body.scrollWidth` 与视口一致，
+  表格在自身面板内横向滚动。截图 `/tmp/req248-events-detail-1280.png`、`/tmp/req248-events-detail-500.png`。
+
+### 专家发现
+
+- `requirements`（4 条候选，均带代码证据；REQ-248 本轮已交付）：
+  - **REQ-248（29，已交付）** 事件详情投递表缺送达回执。
+  - **REQ-249（27）** 事件详情同指纹上下文与变更对比（收敛 REQ-6/REQ-167）；复用
+    `idx_events_fingerprint_received_at`，只做只读最小切片。
+  - **REQ-250（26）** 投递详情排障上下文：目标近期健康 + 队列位置（收敛 REQ-12/REQ-217/REQ-11）。
+  - **REQ-251（25）** 证据包补齐派生排障证据（需重开 `evidence-bundle-download.md:45` 非目标）。
+  - 已核对不立项：窗口复盘批量导出（与 REQ-34 重叠）、活动告警视图（REQ-6+REQ-167）、
+    接入 request ID（需迁移且日志可轮转）、详情互链与目标健康列（REQ-10/REQ-12 已覆盖）。
+- `ui-triage`：`defer`（理由见上）。
+- `architecture`（轮转车道，read-only）：
+  - **已核实 clean**：service 纯度（零 `ORPCError`）、无 DI/单例、entrypoint 薄（20 处
+    `withDashboardService`）、feature `api/model/ui` 形状、`components/common` 纯度、
+    core 环境中立、repository 三分、adapter barrel；近 30 提交未引入边界违规。
+  - 存量仍成立：ARCH-13（`config-portability.service.ts:99,109` 写死 `process.env`）、
+    ARCH-14（`migrate/runner.ts:1` marker 冗余）、ARCH-27（source 侧仍无 catalog，
+    `source-form.tsx:59-64,149-158`）、ARCH-28（无 core/api DTO parity 守卫）、
+    ARCH-29（`configuration-support.ts:11-125` 混杂 helper）、ARCH-30（`OperationsTable`
+    本地分页 state，`:56,66-79`）、ARCH-35（6 个 `*-impl.tsx` marker 过度）。
+  - 新漂移：**ARCH-NEW-1（低）** `features/deliveries/model/urgent-ping-explanation.test.ts:7`
+    导入 `#/infra/sqlite/.../destination.helpers`，feature model 测试越界拉入 infra；
+    **ARCH-NEW-2（低）** 两个 route 文件跨 feature 引入 `features/operations/model/operation-search`
+    （耦合提示，非硬违规）。
+
+### 发布评估（3 专家小组）
+
+- 发布经理：**发版 `0.1.0-beta.69`** —— 用户可见变更 3 项（#402 安全修复、#403 新功能、
+  `d9d22ef` 可访问性修复），预发布序号递增。
+- 阻断审计员：唯一阻断项是 #403 尚未合入；main CI 绿、无迁移变更、无 tag 冲突、
+  最近 10 个 tag 与 Release 一一对应。合入 #403 并以新 main 复核后即可发布。
+- 运维/回滚专家：**可发布** —— Dockerfile / compose / entrypoint / env / migrate / lockfile
+  零 diff，升级=换镜像；回滚换回 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.68`
+  即可，新版本未写旧版本读不了的数据。
+- 决策：合入 #403 → 新 main CI 绿 → 打 `v0.1.0-beta.69` / GitHub Release / 多平台镜像。
+
+### 下一轮优先项
+
+1. **SEC-33（23）**：交 EXPERT_PANEL 决定敏感名词后缀规则扩展与 oracle 更新（本轮未做）。
+2. **REQ-249（27）**：同指纹上下文与变更对比（requirements 最高分未交付项）。
+3. `docs-drift`（轮转车道）+ SEC-35 参数化脱敏测试补齐。
+4. ARCH-13 / ARCH-14 / ARCH-35 / ARCH-NEW-1 打包为一次低成本 AUTO_FIX。
+5. REQ-243（27）/REQ-244（28，需 EXPERT_PANEL）/REQ-247（27）续做。
+
 ## 2026-10-23（第 91 轮）
 
 - 时间：2026-10-23 10:57 CST 起。
