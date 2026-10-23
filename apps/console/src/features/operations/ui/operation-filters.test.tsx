@@ -195,7 +195,7 @@ describe("operation filters by page scope", () => {
     renderFilters("deliveries", { timeField: "updated" }, "toolbar");
 
     expect(screen.getByTitle("Clear Time basis")).toBeTruthy();
-    expect(screen.getByText("Last activity")).toBeTruthy();
+    expect(screen.getByText("Updated")).toBeTruthy();
 
     cleanup();
     renderFilters("events", { timeField: "updated" }, "toolbar");

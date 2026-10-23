@@ -39,7 +39,7 @@
 1. `timeField=updated` + `range=1h` 时，窗口按 `updated_at` 计算，页面与 `total` 一致。
 2. 同一请求下，`timeField=created`（或缺省）与改造前的行为完全一致。
 3. 不设窗口时，`timeField=updated` 的列表按 `updated_at` 降序、再按 id 降序。
-4. 投递页筛选面板显示「时间口径」，事件页不显示；选择「最后活动」后出现 chip，
+4. 投递页筛选面板显示「时间口径」，事件页不显示；选择「更新时间」（即最后活动）后出现 chip，
    清除后回到默认。
 5. URL 中的未知值（例如 `timeField=sent`）回退为默认，不抛错。
 6. 回归测试覆盖：仓储窗口与排序、URL 解析/清理/合并、筛选面板 chip 与清除。

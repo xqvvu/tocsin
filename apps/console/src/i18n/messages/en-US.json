@@ -853,7 +853,7 @@
   "operations.filters.route": "Route",
   "operations.filters.timeField": "Time basis",
   "operations.filters.timeFieldOptions.created": "Created",
-  "operations.filters.timeFieldOptions.updated": "Last activity",
+  "operations.filters.timeFieldOptions.updated": "Updated",
   "operations.filters.timeRange": "Time range",
   "operations.filters.timeRangeOptions.15m": "Last 15 minutes",
   "operations.filters.timeRangeOptions.1h": "Last hour",
