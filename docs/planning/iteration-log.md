@@ -2,6 +2,88 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 93 轮）
+
+- 时间：2026-10-23 12:35 CST 起。
+- 基线：本轮开始时 `origin/main` @ `3a7b33a`；main CI 最近一次 success；遗留 open PR #405
+  （第 92 轮发布记录）已在本轮合并（`8e45c0d`）。
+- 类型：**`full-audit`（3 条车道）** —— `requirements`、`ui-triage`（→ `defer`）、`docs-drift`。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）** —— 仍未覆盖全部车道。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— `last_ui_review_at` 2026-10-23 11:10 距今 1.5h；自评审后 UI 路径
+  合并 1 条（`4dde523`，REQ-248 回执列）；21 条 candidate UI 发现、0 条 HIGH；第 92 轮已有
+  隔离实例浏览器实测记录。下次触发：满 48h（2026-10-25 11:10）、UI 路径合并 ≥3、或新增
+  HIGH 可复现缺陷。
+- `last_ui_review_at`：**2026-10-23 11:10 CST**（未变；本轮只对新增的同指纹标签页做了
+  针对性浏览器验证，不是深度评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建都在会话工作树
+  `serene-chebyshev-b02592`（写入隔离 hook 禁止跨工作树写入）。收尾时并发锁已删除。
+
+### 本轮交付
+
+- **PR #406 `feat(console): show same-fingerprint history on the event detail page`（REQ-249，27 分）**：
+  - `@tocsin/core` 新增只读 DTO `EventFingerprintContext`（`earlierCount` / `previous` /
+    `recent` 最多 5 条 / `fieldChanges` / `labelChanges`），比较字段固定为
+    `severity/status/title/message`（`packages/core/src/operations.ts:103-163`）。
+  - `@tocsin/api` 新增 `EventFingerprintContextSchema` 与只读过程
+    `operations.getEventFingerprintContext(eventId)`（`packages/api/src/schemas/operations.ts:117-147`、
+    `packages/api/src/contract/operations.ts:52-62`）。
+  - `history` 仓储按同 `source_id` + 精确 `fingerprint` + `received_at <= 当前` 且排除自身
+    取前 5 条与总数（`history.repository.ts:236-305`），复用
+    `idx_events_fingerprint_received_at`（`migrate/schema.ts:250-253`）。
+  - 变更对比在服务端完成，标题/消息/标签先走 `redactNormalizedEvent` 再比较
+    （`history.helpers.ts:116-201`），标签键命中敏感词时值为 `[REDACTED]`。
+  - 事件详情新增「同指纹」标签页（`event-fingerprint-context-tab.tsx`、
+    `event-fingerprint-changes.tsx`、`event-fingerprint-occurrences-table.tsx`），
+    Radix 只挂载激活标签页，默认详情页不产生额外查询；首次出现显示空态。
+  - 测试：新增 `event-fingerprint-context.test.ts`（同源/精确指纹/首次出现/不存在/脱敏/
+    契约校验）；服务用例补委托断言；`server-orpc-auth.test.ts` 的过程清单与鉴权探针同步。
+  - 验证：`vp check` 0 errors / 18 warnings（基线）；`vp run -r test` 4/4 包通过
+    （console 960 tests）；`vp run -r build` 通过。
+  - **浏览器验证**（隔离实例 `localhost:6193` + `/tmp/tocsin-req249.sqlite`，中文界面，
+    1280×900 与 500×900）：「此前已出现 2 次」「最近一次 2026/10/23 03:00:00」；
+    变更列表显示 `严重程度 警告 → 严重`、`标题 High CPU → High CPU on checkout`、
+    `标签 region 移除 cn-east`、`标签 token 新增 [REDACTED]`；历史表列出 evt-b/evt-a；
+    首次出现事件显示「该指纹首次出现」；两种宽度下 `document.body.scrollWidth ==
+    window.innerWidth`（1280/500）。截图 `/tmp/req249-fingerprint-1280.png`、
+    `-first.png`、`-500.png`。
+
+### 专家发现
+
+- `requirements`（4 条新候选，均带代码证据；见 backlog REQ-252..255）：
+  - **REQ-252（28）** 投递列表展示送达回执与「回执缺失」筛选（延续 REQ-248）。
+  - **REQ-253（27）** 运维搜索覆盖关联对象名称（告警源/路由/目标）。
+  - **REQ-254（25）** 模板预览标出「解析为空」的变量。
+  - **REQ-255（23）** 按告警源的接入限流与超限可观测（改接入拒绝语义，实施前交 EXPERT_PANEL）。
+- `ui-triage`：`defer`（理由见上）。
+- `docs-drift`（10 条，全部为文档更正，无代码漂移；见 backlog DOC-73..82）：
+  - 中：DOC-73 架构文档路径/命令过期；DOC-74 `requireDashboard()` 描述与
+    `withDashboardService` 现状不符；DOC-75 MVP 文档仍列已交付的发布硬化项。
+  - 低：DOC-76 目录树漂移；DOC-77 无 importer 的 `server/runtime/store.ts` 仍写作兼容
+    accessor；DOC-78/79/80/81 模板与投递证据类文档缺「已实现」状态或验收项未勾选；
+    DOC-82 第 92 轮回执 PRD 的行号引用已失效（功能本身无漂移）。
+
+### 发布评估（3 专家小组）
+
+- 发布经理：main 上自 `v0.1.0-beta.69` 以来只有一条发版记录文档（`8e45c0d`），无用户可见变更；
+  PR #406（同指纹历史，用户可见新功能）合入后才构成发布理由。建议版本 **`0.1.0-beta.70`**。
+- 阻断审计员：**可发布** —— `origin/main` @ `8e45c0d` 最近 3 次 CI 均 success；唯一 open PR 是
+  本轮 #406（属发布内容）；3 条 `blocked-autonomous` 均低于门槛；beta.69 以来无 migration；
+  `v0.1.0-beta.70` 未被占用；最近 10 个 tag 与 Release 一一对应。
+- 运维/回滚专家：**可发布** —— Dockerfile / compose / entrypoint / env / migrate / 锁文件零 diff；
+  PR #406 全为只读查询，无数据写入；升级=换镜像，回滚换回
+  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.69` 即可。
+- 决策：合并 #406 → 以新 main 复核 CI → bump `0.1.0-beta.70` 并合入 → 打 tag / GitHub Release /
+  多平台镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.70`。
+
+### 下一轮优先项
+
+1. **REQ-252（28）**：投递列表回执列 + `receipt=present|missing` 筛选（requirements 最高分）。
+2. `security-exposure`（轮转车道）+ `SEC-35` 按 kind 参数化脱敏测试补齐。
+3. **REQ-253（27）** 搜索覆盖关联对象名称；**REQ-247（27）** adapter 生命周期可见性。
+4. DOC-73..82 拆一个 `docs:` PR（中优先级三条先做）。
+5. REQ-243（27）/REQ-254（25）/REQ-250（26）/REQ-251（25）续做。
+
 ## 2026-10-23（第 92 轮）
 
 - 时间：2026-10-23 11:30 CST 起。
