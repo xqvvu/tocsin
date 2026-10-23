@@ -46,7 +46,7 @@ apps/console/src/
 跨 client/server 的 command schema 与 DTO 已迁入 `@tocsin/core`：
 
 - `packages/core/src/configuration/configuration-commands.ts`
-- `packages/core/src/operations/operations.ts`
+- `packages/core/src/operations.ts`
 
 仅后端使用的 dashboard session 类型与 dashboard auth 错误就近放在
 `apps/console/src/server/runtime/dashboard-session.ts`。历史上的 `dashboard-auth.ts` wrapper 已删除；
@@ -77,8 +77,8 @@ apps/console/src/
 服务端结构或导入边界发生变化时，至少运行：
 
 ```sh
-vp -C apps/console fmt:check
-vp -C apps/console lint
+vp fmt --check
+vp lint
 vp -C apps/console test run
 vp -C apps/console build
 ```

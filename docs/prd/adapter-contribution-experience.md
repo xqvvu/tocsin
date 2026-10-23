@@ -208,8 +208,8 @@ ADR 0002 的首句是"provider 和 destination 扩展**优先服务仓库内维�
 
 1. **destination registry audit**：ADR 0002 明确写道「Audit 方法检查跨 adapter/软规则，例如 enum 与
    registry 完全一致、`sensitive` 与 `secretFields` 对齐、deprecated replacement 存在、catalog 不含
-   forbidden keys、默认值与 schema 一致」。这条**已在 providers 落地**（`providers/src/registry.ts:88`），
-   **在 destinations 未落地**。补 destination audit 是执行 ADR 已有决定，不需 amend。
+   forbidden keys、默认值与 schema 一致」。这条已在 providers 落地（`providers/src/registry.ts:88`），
+   现已同样在 `packages/destinations/src/registry.ts:83` 的 `audit()` 落地；后续只需保持两侧规则同步。
 2. **manifest-driven 表单渲染**：ADR 0002 分阶段计划第 7 步即「最后逐步替换为 manifest-driven 表单渲染，
    复杂交互保留 feature override」。本方向是推进该计划，不是新决策。若最终选择"所有字段一律 manifest
    driven、彻底移除 per-kind 手写表单"，则需 amend ADR 0002 的"复杂表单作为 feature module 里的 override

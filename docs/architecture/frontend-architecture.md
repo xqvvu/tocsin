@@ -72,8 +72,10 @@ apps/console/src/
       model/
       ui/
     events/
+      model/
       ui/
     deliveries/
+      model/
       ui/
     operations/
       api/
@@ -93,8 +95,6 @@ apps/console/src/
       ui/
     auth/
       api/
-      model/
-      ui/
   components/
     ui/
     common/
@@ -116,6 +116,7 @@ apps/console/src/
     intake/                   # intake.service.ts, intake.service.types.ts
     suppressions/             # suppression.service.ts, suppression.service.types.ts
     integrations/             # feishu-app.service.ts 等飞书应用能力
+    oncall/                   # 加急呼叫 service 与 worker
   lib/
     orpc.ts                   # isomorphic oRPC client：SSR 走 createRouterClient，浏览器走 RPCLink
   infra/
@@ -342,9 +343,10 @@ server-only infra 模块。
 oRPC procedure 规则：
 
 - 所有输入用 schema 校验。
-- 每个 private dashboard procedure 在 contract 上声明 `dashboardAuth.error`，并在实现处
-  `.use(requireDashboard())` 重新建立 dashboard request context、验证 session/角色。public
-  procedure（`health`、`i18n`、`session.getDashboardSession`）不挂该 middleware。
+- 每个 private dashboard procedure 在 contract 上声明 `dashboardAuth.error`，并在实现处用
+  `withDashboardService((container) => container.createXService())` 声明依赖并建立 dashboard
+  request context；handler 只调用 `context.service`。只有需要 container 本身的 procedure 才用
+  `requireDashboard()`。public procedure（`health`、`i18n`、`session.getDashboardSession`）不挂该 middleware。
 - 每个 webhook API route 都用 Source token 或 Tocsin 侧额外共享密钥认证，不依赖 dashboard session。
 - 返回值是 client-safe DTO，不返回 repository row、raw secret config、database object 或
   service 实例。

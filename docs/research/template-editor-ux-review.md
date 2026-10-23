@@ -1,5 +1,8 @@
 # Tocsin Console 模板编辑器交互评审
 
+> 状态（2026-10-23 复核）：历史评审存档。基线 `73d84d3` 已落后 main，文中「现状」与切片编号
+> 请先对照当前表单代码；评审结论保留，不回改正文。
+>
 > 本文档只评审交互，不含视觉稿、不含实现。
 > 评审对象：`apps/console/src/features/destinations/ui/destination-form.tsx`（1249 行）、
 > `apps/console/src/features/destinations/model/destination-form.ts`（751 行）、

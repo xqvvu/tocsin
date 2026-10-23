@@ -156,7 +156,7 @@ Dashboard auth 和 webhook auth 是两条边界：
 - dashboard procedure 有服务端 auth check（contract 声明 `dashboardAuth.error` + 实现挂 `requireDashboard()`）。
 - webhook API route 不依赖 dashboard session。
 - procedure 返回 safe DTO，不返回 row、token hash、destination secret、raw sensitive config 或 database handle。
-- 相关 package-scoped `fmt:check`、`lint`、`test` 通过；触碰 import boundary 时跑 `vp -C apps/console build`。
+- 相关 package-scoped 检查通过：`vp fmt --check`、`vp lint`、`vp -C <dir> test run`；触碰 import boundary 时跑 `vp -C apps/console build`。
 
 ---
 

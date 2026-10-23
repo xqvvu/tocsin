@@ -17,9 +17,9 @@ work should be discussed in a post-MVP PRD before being split into issues.
 
 The MVP baseline being complete does not mean every release-hardening item is
 finished. Remaining release and production-readiness work is tracked in
-`docs/release/mvp-rc-checklist.md`, especially E2E spec coverage (the
-workflow now runs in CI), deployment documentation, release checklist
-quality, and selected UI polish.
+`docs/release/mvp-rc-checklist.md`: provider payload fixtures, the
+backup/restore drill, and wiring the Docker smoke gate into CI. E2E and the
+release documentation are already in place.
 
 ## Problem Statement
 
