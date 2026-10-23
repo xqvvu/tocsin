@@ -2,6 +2,63 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 98 轮）
+
+- 时间：2026-10-23 18:22 CST 起。
+- 基线：本轮开始时 `origin/main` @ `2345f18`（v0.1.0-beta.74）；main CI success；无 open PR。
+- 类型：**`full-audit`（requirements + ui-triage + REQ-244 EXPERT_PANEL）**。`architecture` 轮转顺延。
+- 全量审计时间戳：**2026-10-23 18:22 CST（本轮）**。
+- 车道轮转位置：**`architecture`**（本轮未跑；下一轮非必跑车道，不要重复 `release-infra`）。
+- `ui-triage`：**`defer`** —— 距 `last_ui_review_at` 2026-10-23 17:40 仅 43 分钟；此后真实 UI 合并 0 条
+  （3 个提交均为 docs/chore）；25 条 UI candidate、0 条 HIGH。三个强信号全为 0。
+- `last_ui_review_at`：**2026-10-23 17:40 CST**（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建都在会话工作树
+  `confident-kare-29adf9`（写入隔离 hook 禁止跨工作树写入）。本轮 `agent-iteration` 已清理。
+
+### 本轮交付
+
+- **PR #422 `feat(console): support BETTER_AUTH_SECRET_FILE for secret mounts`（REQ-244，28 分）**：
+  - 新 `apps/console/src/lib/secret-file-env.ts`：白名单 `SECRET_FILE_ENV_VARS = ["BETTER_AUTH_SECRET"]`；
+    内联值优先、空白视为未设置；文件必须单行裸值、≤4 KiB；去结尾 CR/LF；拒绝内部换行；错误只含变量名、
+    路径与 errno，不含内容。
+  - `env.ts` 把解析结果作为 `runtimeEnv` 最后一个 spread，不写回 `process.env`。
+  - `docker-compose.yml` 透传 `BETTER_AUTH_SECRET_FILE`，`BETTER_AUTH_SECRET` 兜底改为空（非空占位值会
+    遮住文件路径）。`auth-config.ts` 生产缺失文案同时指出两个变量。
+  - 文档：部署文档补 Compose/Swarm/K8s/bind mount 权限模型与 `secrets:` 示例；README、RC checklist、
+    备份升级清单同步；新增 PRD `docs/prd/secret-file-injection.md`。
+  - 验证：`vp check` 0 errors；`vp run -r test` 4/4（console 1001）；`vp run -r build` 通过；构建产物烟测
+    只设 `_FILE` 时 `/api/ready` 200，文件缺失时 500 + `Unable to read BETTER_AUTH_SECRET_FILE at …: ENOENT`。
+
+### 专家发现
+
+- `requirements`（**本轮首次恢复产出**，12 次工具调用内返回）：
+  - **REQ-260（25 分，candidate）** 结构化日志文件 sink：RC checklist 把外部 observability sink 列为未设计；
+    实现前需确认 LogTape 文件 sink 是否引入新依赖（charter 禁止）。
+  - **REQ-261（24 分，candidate）** 投递列表 `lastError` 只放在原生 `title`
+    （`deliveries-table.tsx:112-118`），与同页 toolbar 的无障碍规则不一致（`deliveries-page-toolbar.tsx:20-21`）。
+  - 两条均低于 27 分门槛，本轮不实现。
+- `ui-triage`：见上，`defer`。
+- EXPERT_PANEL（REQ-244，3 位专家独立评估，一致选 A 窄切片）：
+  - 安全与可靠性：否决 B（配置导入的 `_FILE` 会把已认证导入变成按任意变量名读文件）；指出空串/空白路径
+    必须视为未设置，否则 compose 的 `""` 会永久遮住 `_FILE` 或让 env-only 部署启动失败。
+  - 产品与运维：A 解锁 Compose file secret / Swarm / K8s 三条真实路径；去掉 compose 占位兜底是**必须**项。
+  - 独立评估者：APPROVE WITH CHANGES；要求补 env 层「内联胜出」「不写回 `process.env`」断言、超限/多行/
+    空白路径用例、错误不含内容断言，并补齐文档矛盾与 Compose 挂载示例。
+  - 决策记录：`docs/planning/decisions/secret-file-injection.md`。
+- 复核上一轮 `SEC-36`：**安全前提不成立** —— 原始 fingerprint 已由事件详情
+  （`event-detail-summary.tsx:88-89`、`event-normalized-tab.tsx:45-47`）与列表
+  （`events-table.tsx:57`）正常展示，删除 `EventFingerprintContext.fingerprint` 不会减少任何暴露面，
+  只是删除重复投影。降级为低价值 chore，继续留在 backlog，不再占用 EXPERT_PANEL。
+
+### 下一轮优先项
+
+1. **REL-24/REL-2 第一批 provider fixtures**：5 文件 / 10 payload，20–25 分钟，路径 `../../fixtures/…`。
+2. **UI-30**：`w-24` 修复 `table-fixed` 下失效的最小宽（XS）。
+3. **architecture 车道**（轮转，本轮顺延）。
+4. **REQ-260** 先确认 LogTape 文件 sink 的依赖成本，再决定是否转 `planned`。
+5. **REQ-261** 可作为下一个 UI 小切片。
+6. **REL-23**：token 已有 admin，仍待 EXPERT_PANEL 决定是否启用 main required checks。
+
 ## 2026-10-23（第 97 轮）
 
 - 时间：2026-10-23 17:25 CST 起。
