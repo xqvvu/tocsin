@@ -71,15 +71,19 @@
 ### 本轮未做 / 限制
 
 - 需求车道未产出，backlog 无新增 REQ 候选。
-- 未发版评估前先交付 PR；发布决策见下方（若 CI 与时间允许）。
+- **本轮不发布**：交付 PR #400 于 12:39 CST 合并（`e54d9cd`），收尾时 `origin/main` 最新 commit
+  的 CI/E2E 尚未完成；本轮已超过 75 分钟时间预算，按规则跳过第 9.5 步，不打 tag、不推镜像。
+  下一轮在 main 全绿后评估 `0.1.0-beta.69`。自 `v0.1.0-beta.68` 的用户可见变更为 UI-31
+  （筛选重置入口的可访问名称拆分）。
+- 发布评估所需的 3 专家小组本轮未启动（时间预算耗尽）；下一轮补做。
 
 ### 下一轮优先项
 
-1. **SEC-34（27）**：空用户名 userinfo 脱敏，AUTO_FIX（一行条件 + oracle/用例）。
-2. **SEC-33（23）**：交 EXPERT_PANEL 决定后缀规则扩展与 oracle 更新。
-3. **requirements 车道重跑**（本轮超时），并续做 REQ-243（27）/REQ-244（28，需 EXPERT_PANEL）。
-4. `architecture`（轮转车道）+ SEC-35 参数化测试补齐。
-5. `docs-drift`：复核 SEC-25/SEC-31 相关文档与 backlog 纠偏。
+1. **发布评估**：main 全绿后按 3 专家小组评估 `0.1.0-beta.69` 并执行 tag/Release/镜像。
+2. **SEC-34（27）**：空用户名 userinfo 脱敏，AUTO_FIX（一行条件 + oracle/用例）。
+3. **SEC-33（23）**：交 EXPERT_PANEL 决定后缀规则扩展与 oracle 更新。
+4. **requirements 车道重跑**（本轮超时），并续做 REQ-243（27）/REQ-244（28，需 EXPERT_PANEL）。
+5. `architecture`（轮转车道）+ SEC-35 参数化测试补齐；`docs-drift` 复核 SEC-25/SEC-31 纠偏。
 
 ## 2026-10-23（第 90 轮）
 
