@@ -58,6 +58,26 @@
 4. **REL-2 / REL-24 第一批 provider fixtures**（继续顺延）。
 5. **REQ-239**（28 分，多关键词 AND 搜索，仓储单文件 + 测试）。
 
+### 发布评估与发布记录
+
+- **发布经理**：`v0.1.0-beta.76..origin/main` 仅 1 个用户可见变更（#428 筛选浮层窄屏可用、
+  chip 可访问名、默认口径归一化），其余为 docs(planning)；建议 `0.1.0-beta.77`。
+- **阻断审计**：6 项中 5 项 PASS；审计期间 `d488c56` 的 E2E 被新推送取消，结论为
+  「暂缓至 E2E 转绿」。`9317f77` 的 CI（`39959105006`）与 E2E（`39959104925`）随后均
+  success，门禁满足；无 open PR、迁移零 diff、版本未占用、3 项 `blocked-autonomous`
+  均不影响运行时。
+- **运维/回滚**：READY。Dockerfile / compose / scripts / lockfile / migrate 零改动；
+  搜索/筛选改动只存在于 URL、不落库；回滚只需换回 `0.1.0-beta.76`。
+- 决策：合并 #429（`chore(release): v0.1.0-beta.77`，`9317f77`）→ 打 tag /
+  GitHub Release → 构建并推送双平台镜像。
+- **已发布 `v0.1.0-beta.77`**：
+  - tag 指向 `9317f77`；GitHub Release 为 prerelease，body 非空；
+  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.77`
+    （`linux/amd64` + `linux/arm64`，index digest `sha256:9470211f…`，
+    amd64 `sha256:8a85a8c5…`，arm64 `sha256:92288e9a…`）；
+  - 回滚镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.76`；
+  - 无迁移、无镜像 / entrypoint / 配置变化。
+
 ## 2026-10-23（第 99 轮）
 
 - 时间：2026-10-23 19:14 CST 起。
