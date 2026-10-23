@@ -6,6 +6,7 @@ import type {
   AlertStatus,
   DeliveryReceiptFilter,
   DeliveryState,
+  DeliveryTimeField,
   DestinationKind,
   EventDeliveryOutcome,
   OperationTimeRange,
@@ -15,6 +16,7 @@ import {
   AlertStatusSchema,
   DeliveryReceiptFilterSchema,
   DeliveryStateSchema,
+  DeliveryTimeFieldSchema,
   DestinationKindSchema,
   EventDeliveryOutcomeSchema,
   OperationTimeRangeSchema,
@@ -61,6 +63,12 @@ export const DashboardOperationSearchSchema = z.object({
     .union([OperationTimeRangeSchema, z.literal("")])
     .catch("")
     .optional(),
+  // Delivery-only: whether `range` measures from enqueue time or last
+  // activity. Empty means the default (`created`), so links stay short.
+  timeField: z
+    .union([DeliveryTimeFieldSchema, z.literal("")])
+    .catch("")
+    .optional(),
   // The instant the operator opened the window. Without it the server resolves
   // the window against each request, so paging or reopening a shared link moves
   // the lower bound and rows shift between pages.
@@ -86,6 +94,7 @@ export interface DashboardOperationSearch {
   deliveryState?: DeliveryState | "";
   minAttempts?: number;
   range?: OperationTimeRange | "";
+  timeField?: DeliveryTimeField | "";
   rangeAnchor?: string;
   q?: string;
   eventPage?: number;
@@ -104,6 +113,7 @@ export type OperationFilterData = {
   deliveryState?: DeliveryState;
   minAttempts?: number;
   range?: OperationTimeRange;
+  timeField?: DeliveryTimeField;
   rangeAnchor?: string;
   q?: string;
   eventPage?: number;
@@ -130,6 +140,7 @@ export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
   deliveryState: "",
   minAttempts: 0,
   range: "",
+  timeField: "",
   rangeAnchor: "",
   q: "",
 };
@@ -152,6 +163,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.deliveryState ||
     search.minAttempts ||
     search.range ||
+    search.timeField ||
     search.q?.trim(),
   );
 }
@@ -209,6 +221,7 @@ export function mergeOperationSearch(
     "deliveryState",
     "minAttempts",
     "range",
+    "timeField",
     "rangeAnchor",
     "q",
   ];

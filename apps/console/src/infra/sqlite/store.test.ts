@@ -355,6 +355,117 @@ describe("sqlite store", () => {
     await store.close();
   });
 
+  it("windows and orders deliveries by last activity when asked", async () => {
+    let currentNow = "2026-06-07T00:00:00.000Z";
+    let nextEventId = 0;
+    let nextDeliveryId = 0;
+    const store = await openSqliteStore({
+      databasePath: ":memory:",
+      now: () => currentNow,
+      ids: {
+        event: () => `event-${++nextEventId}`,
+        delivery: () => `delivery-${++nextDeliveryId}`,
+      },
+    });
+
+    await store.sources.create({
+      id: "source-1",
+      name: "Grafana",
+      provider: "grafana",
+      tokenHash: "token-hash",
+    });
+    await store.destinations.create({
+      id: "destination-1",
+      name: "Ops webhook",
+      kind: "generic_webhook",
+      config: { url: "https://example.test/webhook" },
+    });
+    const route = await store.routes.create({
+      id: "route-1",
+      name: "All alerts",
+      destinationIds: ["destination-1"],
+    });
+
+    const oldEvent = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: "request-old",
+      normalized: {
+        title: "Old alert",
+        message: "Old alert message",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "old:alert",
+        labels: {},
+        occurredAt: currentNow,
+      },
+      rawPayload: {},
+    });
+    const oldDelivery = (
+      await store.deliveries.enqueueForEvent({
+        event: oldEvent,
+        matches: [{ routeId: route.id, destinationIds: route.destinationIds }],
+        dedupeWindowStartsAt: "2026-06-06T23:55:00.000Z",
+      })
+    ).created[0]!;
+
+    currentNow = "2026-06-07T00:10:00.000Z";
+    const newEvent = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: "request-new",
+      normalized: {
+        title: "New alert",
+        message: "New alert message",
+        severity: "warning",
+        status: "firing",
+        fingerprint: "new:alert",
+        labels: {},
+        occurredAt: currentNow,
+      },
+      rawPayload: {},
+    });
+    const newDelivery = (
+      await store.deliveries.enqueueForEvent({
+        event: newEvent,
+        matches: [{ routeId: route.id, destinationIds: route.destinationIds }],
+        dedupeWindowStartsAt: "2026-06-06T23:55:00.000Z",
+      })
+    ).created[0]!;
+
+    // The old job is delivered at 02:00, so its visible 更新时间 moves two
+    // hours past `created_at`. Filtering by enqueue time would hide it from
+    // the window an operator reading that timestamp opened.
+    currentNow = "2026-06-07T02:00:00.000Z";
+    const [claim] = await store.deliveries.claimNext({ limit: 1 });
+    expect(claim?.job.id).toBe(oldDelivery.id);
+    await store.deliveries.markSucceeded({
+      deliveryId: claim!.job.id,
+      attemptId: claim!.attempt.id,
+      responseStatus: 202,
+      responseBody: "accepted",
+      finishedAt: currentNow,
+    });
+
+    const windowStart = "2026-06-07T01:00:00.000Z";
+
+    // Enqueue-time basis: neither job was created inside the window.
+    expect((await store.history.listDeliveries({ since: windowStart })).total).toBe(0);
+
+    // Last-activity basis: only the retried job is inside it, and the page and
+    // its `total` agree on that predicate.
+    const byActivity = await store.history.listDeliveries({
+      since: windowStart,
+      timeField: "updated",
+    });
+    expect(byActivity.items.map((delivery) => delivery.id)).toEqual([oldDelivery.id]);
+    expect(byActivity.total).toBe(1);
+
+    // Unfiltered, the same basis leads with the job touched most recently.
+    const ordered = await store.history.listDeliveries({ timeField: "updated" });
+    expect(ordered.items.map((delivery) => delivery.id)).toEqual([oldDelivery.id, newDelivery.id]);
+
+    await store.close();
+  });
+
   it("records duplicate events while deduping deliveries for the same idempotency key", async () => {
     let nextId = 0;
     const store = await openSqliteStore({

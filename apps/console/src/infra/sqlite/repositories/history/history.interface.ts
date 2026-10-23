@@ -2,6 +2,7 @@ import type {
   DeliveryListItem,
   DeliveryReceiptFilter,
   DeliveryState,
+  DeliveryTimeField,
   DestinationKind,
   EventDeliveryOutcome,
   EventDetail,
@@ -67,7 +68,13 @@ export interface DeliveryListQuery {
   state?: DeliveryState;
   /** Inclusive lower bound on `deliveries.attempt_count`; 0 is "any". */
   minAttempts?: number;
-  /** Inclusive lower bound on `deliveries.created_at`, as an ISO timestamp. */
+  /**
+   * Which timestamp `since` compares against and which one orders the list.
+   * Defaults to `created`; `updated` keeps retried jobs inside the window their
+   * visible 更新时间 belongs to.
+   */
+  timeField?: DeliveryTimeField;
+  /** Inclusive lower bound on the selected `timeField` column, as an ISO timestamp. */
   since?: string;
   /**
    * Literal substring over the event fields, event/delivery ids, the latest

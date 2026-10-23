@@ -4,6 +4,7 @@ import {
   DeliveryJobSchema,
   DeliveryReceiptFilterSchema,
   DeliveryStateSchema,
+  DeliveryTimeFieldSchema,
   DestinationKindSchema,
   EventDeliveryOutcomeSchema,
   EVENT_FINGERPRINT_CHANGE_FIELDS,
@@ -292,6 +293,13 @@ export const ListOperationsInputSchema = z
      * forward on every request. Ignored without `range`.
      */
     rangeAnchor: IsoDateTimeSchema.optional(),
+    /**
+     * Delivery-only: which timestamp `range` compares against and which one
+     * the list is ordered by. `created` (the default) is enqueue time;
+     * `updated` is the last activity, so a retried job stays inside the window
+     * that its visible 更新时间 belongs to.
+     */
+    timeField: DeliveryTimeFieldSchema.optional(),
     q: z.string().trim().min(1).max(OPERATION_SEARCH_MAX_LENGTH).optional(),
     eventPage: z.number().int().min(1).default(1),
     deliveryPage: z.number().int().min(1).default(1),

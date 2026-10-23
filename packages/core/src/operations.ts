@@ -55,6 +55,18 @@ export const DeliveryReceiptFilterSchema = z.enum(["present", "missing"]);
 export type DeliveryReceiptFilter = z.infer<typeof DeliveryReceiptFilterSchema>;
 
 /**
+ * Which delivery timestamp the time window and the list order use.
+ *
+ * `created` is when the job was enqueued; `updated` is the last activity — a
+ * retry, a state change, or the latest attempt. The list renders 更新时间, so
+ * filtering by `created` hides a retried job from the window the operator is
+ * looking at even though its visible timestamp falls inside it.
+ */
+export const DeliveryTimeFieldSchema = z.enum(["created", "updated"]);
+
+export type DeliveryTimeField = z.infer<typeof DeliveryTimeFieldSchema>;
+
+/**
  * Upper bound for the free-text operations search.
  *
  * The oRPC contract and the console URL normalizer share this value so a

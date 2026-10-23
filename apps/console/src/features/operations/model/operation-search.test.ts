@@ -327,6 +327,37 @@ describe("delivery receipt filter in the operation search", () => {
   });
 });
 
+describe("delivery time basis in the operation search", () => {
+  it("falls back to enqueue time instead of throwing on an unknown value", () => {
+    // The URL is user-editable; a stale link must not leave the list stuck.
+    expect(DashboardOperationSearchSchema.parse({ timeField: "sent" }).timeField).toBe("");
+    expect(DashboardOperationSearchSchema.parse({ timeField: "updated" }).timeField).toBe(
+      "updated",
+    );
+  });
+
+  it("keeps last activity out of the URL when it is the default", () => {
+    expect(pruneSearch({ timeField: "" }).timeField).toBeUndefined();
+    expect(pruneSearch({ timeField: "updated" }).timeField).toBe("updated");
+  });
+
+  it("passes the basis to the server filter and counts it as an active filter", () => {
+    expect(operationFiltersFromSearch({ timeField: "updated" }).timeField).toBe("updated");
+    expect(hasOperationFilters({ timeField: "updated" })).toBe(true);
+  });
+
+  it("resets both lists to their first page when the basis changes", () => {
+    const merged = mergeOperationSearch(
+      { eventPage: 4, deliveryPage: 3 },
+      { timeField: "updated" },
+    );
+
+    expect(merged.timeField).toBe("updated");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+});
+
 describe("clearing the operation search", () => {
   it("clears every filter the toolbar can write", () => {
     // One shared list feeds the inline reset and both page-level resets. If a
@@ -346,6 +377,7 @@ describe("clearing the operation search", () => {
       "severity",
       "sourceId",
       "status",
+      "timeField",
     ]);
     expect(hasOperationFilters(clearedOperationSearch)).toBe(false);
     // Nothing survives pruning, so the cleared state leaves a clean URL.

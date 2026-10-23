@@ -2,6 +2,7 @@ import type {
   DeliveryListItem,
   DeliveryReceiptFilter,
   DeliveryState,
+  DeliveryTimeField,
   DestinationKind,
   EventDeliveryOutcome,
   EventListItem,
@@ -47,6 +48,8 @@ export interface ListOperationsInput {
   range?: OperationTimeRange;
   /** Instant the window was opened; without it the window follows the clock. */
   rangeAnchor?: string;
+  /** Delivery-only: compare the window against enqueue or last-activity time. */
+  timeField?: DeliveryTimeField;
   q?: string;
   eventPage?: number;
   deliveryPage?: number;

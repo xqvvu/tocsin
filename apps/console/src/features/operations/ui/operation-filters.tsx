@@ -260,6 +260,12 @@ function OperationFiltersPanel({
       label: t(`operations.filters.receiptOptions.${receipt}`),
     })),
   ];
+  // `created` is the server default, so it stays out of the URL; the select
+  // still shows it as the active value instead of an empty placeholder.
+  const timeFieldItems = [
+    { value: "created", label: t("operations.filters.timeFieldOptions.created") },
+    { value: "updated", label: t("operations.filters.timeFieldOptions.updated") },
+  ];
 
   return (
     <FieldGroup
@@ -497,6 +503,33 @@ function OperationFiltersPanel({
           </UiField>
         </>
       ) : null}
+      {scope === "deliveries" ? (
+        <UiField>
+          <FieldLabel htmlFor="operation-time-field">
+            {t("operations.filters.timeField")}
+          </FieldLabel>
+          <Select
+            id="operation-time-field"
+            items={timeFieldItems}
+            value={search.timeField || "created"}
+            disabled={pending}
+            onValueChange={(value) => onChange({ timeField: value === "updated" ? "updated" : "" })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("operations.filters.timeFieldOptions.created")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {timeFieldItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </UiField>
+      ) : null}
       <UiField>
         <FieldLabel htmlFor="operation-range">{t("operations.filters.timeRange")}</FieldLabel>
         <Select
@@ -725,6 +758,15 @@ function activeFilterChips(
       label: t("operations.filters.minAttempts"),
       valueLabel: t("operations.filters.minAttemptsAtLeast", { count: search.minAttempts }),
       clear: { minAttempts: 0 },
+    });
+  }
+
+  if (scope === "deliveries" && search.timeField) {
+    chips.push({
+      key: "timeField",
+      label: t("operations.filters.timeField"),
+      valueLabel: t(`operations.filters.timeFieldOptions.${search.timeField}`),
+      clear: { timeField: "" },
     });
   }
 
