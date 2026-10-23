@@ -195,6 +195,9 @@ function delivery(overrides: Partial<Delivery> = {}): Delivery {
     finishedAt: "2026-10-20T00:00:01.000Z",
     destinationName: "Feishu on-call",
     routeName: "Critical checkout",
+    providerReference: null,
+    lastResponseStatus: null,
+    lastResponseAt: null,
     ...overrides,
   };
 }

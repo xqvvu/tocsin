@@ -55,6 +55,12 @@ export const EventDetailDeliverySchema = DeliveryJobSchema.extend({
   // before this field existed must still parse.
   destinationKind: DestinationKindSchema.optional(),
   routeName: z.string().min(1).nullable(),
+  // Receipt facts carried from the delivery row and its latest completed
+  // attempt, so the event detail table can show that the target accepted the
+  // alert without opening each delivery.
+  providerReference: ProviderReferenceSchema.nullable(),
+  lastResponseStatus: z.number().int().nullable(),
+  lastResponseAt: IsoDateTimeSchema.nullable(),
 });
 
 export const EventDetailSchema = z.object({

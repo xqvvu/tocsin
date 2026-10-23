@@ -25,6 +25,7 @@ import type { DestinationRepository } from "#/infra/sqlite/repositories/destinat
 import {
   eventDetailDeliveryFromRow,
   type EventDetailDeliveryRow,
+  type EventDetailLatestAttempt,
 } from "#/infra/sqlite/repositories/history/history.helpers";
 import type {
   DeliveryListQuery,
@@ -172,21 +173,26 @@ export class SqliteHistoryRepository implements HistoryRepository {
           event: event.normalized,
         }),
       );
-    const deliveries = (
-      await this.context.db
-        .selectFrom("deliveries")
-        .innerJoin("destinations", "destinations.id", "deliveries.destination_id")
-        .leftJoin("routes", "routes.id", "deliveries.route_id")
-        .selectAll("deliveries")
-        .select([
-          "destinations.name as destination_name",
-          "destinations.kind as destination_kind",
-          "routes.name as route_name",
-        ])
-        .where("deliveries.event_id", "=", eventId)
-        .orderBy("deliveries.created_at")
-        .execute()
-    ).map((row) => eventDetailDeliveryFromRow(row as EventDetailDeliveryRow));
+    const deliveryRows = await this.context.db
+      .selectFrom("deliveries")
+      .innerJoin("destinations", "destinations.id", "deliveries.destination_id")
+      .leftJoin("routes", "routes.id", "deliveries.route_id")
+      .selectAll("deliveries")
+      .select([
+        "destinations.name as destination_name",
+        "destinations.kind as destination_kind",
+        "routes.name as route_name",
+      ])
+      .where("deliveries.event_id", "=", eventId)
+      .orderBy("deliveries.created_at")
+      .execute();
+    // The receipt for each delivery is its latest completed attempt. One
+    // grouped read keeps the detail page at a fixed query count; `running`
+    // attempts are excluded because they have no response yet.
+    const latestAttempts = await this.latestAttemptsByDelivery(deliveryRows.map((row) => row.id));
+    const deliveries = deliveryRows.map((row) =>
+      eventDetailDeliveryFromRow(row as EventDetailDeliveryRow, latestAttempts.get(row.id) ?? null),
+    );
 
     // Explain the pairs the snapshot matched but which produced no delivery.
     //
@@ -435,6 +441,45 @@ export class SqliteHistoryRepository implements HistoryRepository {
     const row = await builder.executeTakeFirst();
 
     return row?.total ?? 0;
+  }
+
+  /**
+   * Maps each delivery to its latest completed attempt.
+   *
+   * One `IN (...)` read for the whole event instead of one read per delivery:
+   * an event fans out to a small number of deliveries, but the detail page is
+   * the page operators open during an incident and the query count should not
+   * grow with the fan-out. Completed only, because a `running` attempt has no
+   * response to show yet.
+   */
+  private async latestAttemptsByDelivery(
+    deliveryIds: string[],
+  ): Promise<Map<string, EventDetailLatestAttempt>> {
+    if (deliveryIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.context.db
+      .selectFrom("delivery_attempts")
+      .select(["delivery_id", "response_status", "finished_at"])
+      .where("delivery_id", "in", deliveryIds)
+      .where("state", "!=", "running")
+      .orderBy("delivery_id")
+      .orderBy("attempt_number", "desc")
+      .execute();
+
+    const latest = new Map<string, EventDetailLatestAttempt>();
+
+    for (const row of rows) {
+      if (!latest.has(row.delivery_id)) {
+        latest.set(row.delivery_id, {
+          response_status: row.response_status,
+          finished_at: row.finished_at,
+        });
+      }
+    }
+
+    return latest;
   }
 }
 

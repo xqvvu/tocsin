@@ -96,6 +96,9 @@ function renderSummary(
     finishedAt: null,
     destinationName: `目标 ${index + 1}`,
     routeName: "夜班",
+    providerReference: null,
+    lastResponseStatus: null,
+    lastResponseAt: null,
   }));
 
   const detail: EventDetailData = {
