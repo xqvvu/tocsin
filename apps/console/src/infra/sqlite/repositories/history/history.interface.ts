@@ -2,6 +2,7 @@ import type {
   DeliveryListItem,
   DeliveryState,
   DestinationKind,
+  EventDeliveryOutcome,
   EventDetail,
   EventListItem,
   NumberedPage,
@@ -25,6 +26,12 @@ export interface EventListQuery {
   sourceId?: string;
   severity?: NormalizedEvent["severity"];
   status?: NormalizedEvent["status"];
+  /**
+   * Only the events whose fan-out produced no delivery (`none`) or at least
+   * one delivery in that state. The deliveries themselves still define the
+   * per-state counts the list shows.
+   */
+  deliveryOutcome?: EventDeliveryOutcome;
   /** Inclusive lower bound on `events.received_at`, as an ISO timestamp. */
   since?: string;
   /** Literal substring over title, message, fingerprint, and event/delivery ids. */

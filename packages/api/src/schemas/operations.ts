@@ -4,6 +4,7 @@ import {
   DeliveryJobSchema,
   DeliveryStateSchema,
   DestinationKindSchema,
+  EventDeliveryOutcomeSchema,
   DestinationSummarySchema,
   EventRecordSchema,
   IsoDateTimeSchema,
@@ -220,6 +221,12 @@ export const ListOperationsInputSchema = z
     severity: AlertSeveritySchema.optional(),
     status: AlertStatusSchema.optional(),
     destinationId: z.string().min(1).optional(),
+    /**
+     * Restricts the events list to alerts whose fan-out produced no delivery
+     * (`none`) or at least one delivery in the given state. Ignored by the
+     * delivery list, which has the exact `deliveryState` dimension instead.
+     */
+    deliveryOutcome: EventDeliveryOutcomeSchema.optional(),
     /** Restricts the delivery list to one destination adapter kind. */
     destinationKind: DestinationKindSchema.optional(),
     /** Restricts the delivery list to one route; manual deliveries have none. */

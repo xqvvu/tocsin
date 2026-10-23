@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { DeliveryStateSchema } from "#core/delivery/delivery";
 import type { DeliveryJob, DeliveryState, ProviderReference } from "#core/delivery/delivery";
 import type { DestinationKind, DestinationSummary } from "#core/destination/destination";
 import type { EventRecord } from "#core/event/event";
@@ -26,6 +27,19 @@ export type IsoDateTimeString = string;
 export const OperationTimeRangeSchema = z.enum(["15m", "1h", "6h", "24h", "7d"]);
 
 export type OperationTimeRange = z.infer<typeof OperationTimeRangeSchema>;
+
+/**
+ * Narrows the events list by what the alert's fan-out produced.
+ *
+ * `none` is not a delivery state: it selects events that produced no delivery
+ * at all, which is how an alert that never reached a destination shows up in
+ * history (no route matched, or the matched route carried no destination).
+ * Every other value means "at least one delivery is in this state", so the
+ * filter answers "which alerts actually reached someone".
+ */
+export const EventDeliveryOutcomeSchema = z.union([z.literal("none"), DeliveryStateSchema]);
+
+export type EventDeliveryOutcome = z.infer<typeof EventDeliveryOutcomeSchema>;
 
 /**
  * Upper bound for the free-text operations search.
