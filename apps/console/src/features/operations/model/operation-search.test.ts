@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { OPERATION_SEARCH_MAX_LENGTH } from "@tocsin/core";
 
 import {
+  clearedOperationSearch,
   DashboardOperationSearchSchema,
   hasOperationFilters,
   mergeOperationSearch,
@@ -295,5 +296,30 @@ describe("delivery outcome filter in the operation search", () => {
     expect(merged.deliveryOutcome).toBe("failed");
     expect(merged.eventPage).toBeUndefined();
     expect(merged.deliveryPage).toBeUndefined();
+  });
+});
+
+describe("clearing the operation search", () => {
+  it("clears every filter the toolbar can write", () => {
+    // One shared list feeds the inline reset and both page-level resets. If a
+    // new filter is added without a clear value here, "Reset filters" leaves it
+    // applied — exactly what happened to `minAttempts` on the deliveries page.
+    expect(Object.keys(clearedOperationSearch).sort()).toEqual([
+      "deliveryOutcome",
+      "deliveryState",
+      "destinationId",
+      "destinationKind",
+      "minAttempts",
+      "q",
+      "range",
+      "rangeAnchor",
+      "routeId",
+      "severity",
+      "sourceId",
+      "status",
+    ]);
+    expect(hasOperationFilters(clearedOperationSearch)).toBe(false);
+    // Nothing survives pruning, so the cleared state leaves a clean URL.
+    expect(pruneSearch(clearedOperationSearch)).toEqual({});
   });
 });

@@ -15,6 +15,7 @@ import { destinationIconNamesByKind } from "#/features/destinations/ui/destinati
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import { operationsQueryOptions } from "#/features/operations/api/operations.queries";
 import {
+  clearedOperationSearch,
   hasOperationFilters,
   type DashboardOperationSearch,
   type OperationFilterData,
@@ -65,17 +66,7 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
   }
 
   function resetFilters() {
-    onSearchChange({
-      sourceId: "",
-      severity: "",
-      status: "",
-      destinationId: "",
-      destinationKind: "",
-      routeId: "",
-      deliveryState: "",
-      range: "",
-      q: "",
-    });
+    onSearchChange(clearedOperationSearch);
   }
 
   async function submitAction<T>(action: string, fn: () => Promise<T>): Promise<T | null> {

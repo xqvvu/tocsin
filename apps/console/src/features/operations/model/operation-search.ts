@@ -101,6 +101,29 @@ export type OperationFilterData = {
 };
 
 /**
+ * Every filter key the toolbar can write, cleared.
+ *
+ * Both the inline "Reset filters" button and each page's own reset use this
+ * one object. Keeping the list in a single place is what stops the two resets
+ * from drifting apart: the deliveries page used to clear every key except
+ * `minAttempts`, so "Reset filters" silently kept filtering by attempt count.
+ */
+export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
+  sourceId: "",
+  severity: "",
+  status: "",
+  deliveryOutcome: "",
+  destinationId: "",
+  destinationKind: "",
+  routeId: "",
+  deliveryState: "",
+  minAttempts: 0,
+  range: "",
+  rangeAnchor: "",
+  q: "",
+};
+
+/**
  * Whether the operator narrowed the list. An empty result means something
  * different when filters are on ("nothing matched") than when they are off
  * ("nothing has happened yet"), and the two empty states must say so.
