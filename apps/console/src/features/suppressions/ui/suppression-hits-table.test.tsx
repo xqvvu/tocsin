@@ -75,6 +75,7 @@ function hitsFixture(): NumberedPage<DeliveryListItem> {
         destinationName: "Ops group",
         destinationKind: "feishu",
         routeName: "Critical alerts",
+        providerReference: null,
         state: "suppressed",
         attemptCount: 0,
         nextAttemptAt: null,
