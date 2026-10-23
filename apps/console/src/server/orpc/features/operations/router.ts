@@ -30,6 +30,10 @@ export const operationsRouter = os.operations.router({
     .use(withOperationsService)
     .handler(({ context, input }) => context.service.getEventDetail(input.id)),
 
+  getEventFingerprintContext: os.operations.getEventFingerprintContext
+    .use(withOperationsService)
+    .handler(({ context, input }) => context.service.getEventFingerprintContext(input.id)),
+
   getDeliveryDetail: os.operations.getDeliveryDetail
     .use(withOperationsService)
     .handler(({ context, input }) => context.service.getDeliveryDetail(input.id)),

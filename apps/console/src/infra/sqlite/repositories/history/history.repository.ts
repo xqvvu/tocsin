@@ -5,6 +5,7 @@ import type {
   DestinationKind,
   EventDeliveryOutcome,
   EventDetail,
+  EventFingerprintContext,
   EventListItem,
   NumberedPage,
 } from "@tocsin/core";
@@ -26,6 +27,9 @@ import {
   eventDetailDeliveryFromRow,
   type EventDetailDeliveryRow,
   type EventDetailLatestAttempt,
+  fingerprintChangesFrom,
+  fingerprintOccurrence,
+  redactedFingerprintFields,
 } from "#/infra/sqlite/repositories/history/history.helpers";
 import type {
   DeliveryListQuery,
@@ -239,6 +243,76 @@ export class SqliteHistoryRepository implements HistoryRepository {
       routeMatchesProvenance,
       routeMatchGaps: gaps,
       deliveries,
+    };
+  }
+
+  /**
+   * Earlier occurrences of the same fingerprint on the same source.
+   *
+   * A fingerprint is only meaningful inside the provider that produced it, so
+   * both reads filter on `source_id` as well: two vendors can legitimately
+   * emit the same string for unrelated alerts. The page is bounded to five
+   * rows and the count is a separate aggregate, which keeps the query cost
+   * independent of how long the alert has been firing.
+   *
+   * `received_at <= current` plus an id exclusion (rather than a strict `<`)
+   * keeps a sibling written in the same millisecond; ordering by time and then
+   * id keeps the page deterministic for those ties.
+   */
+  async getEventFingerprintContext(eventId: string): Promise<EventFingerprintContext | null> {
+    const columns = [
+      "id",
+      "source_id",
+      "title",
+      "message",
+      "severity",
+      "status",
+      "labels_json",
+      "fingerprint",
+      "received_at",
+    ] as const;
+
+    const currentRow = await this.context.db
+      .selectFrom("events")
+      .select(columns)
+      .where("id", "=", eventId)
+      .executeTakeFirst();
+
+    if (!currentRow) {
+      return null;
+    }
+
+    const earlierRows = await this.context.db
+      .selectFrom("events")
+      .select(columns)
+      .where("source_id", "=", currentRow.source_id)
+      .where("fingerprint", "=", currentRow.fingerprint)
+      .where("id", "!=", eventId)
+      .where("received_at", "<=", currentRow.received_at)
+      .orderBy("received_at", "desc")
+      .orderBy("id", "desc")
+      .limit(5)
+      .execute();
+
+    const countRow = await this.context.db
+      .selectFrom("events")
+      .select(sql<number>`COUNT(*)`.as("total"))
+      .where("source_id", "=", currentRow.source_id)
+      .where("fingerprint", "=", currentRow.fingerprint)
+      .where("id", "!=", eventId)
+      .where("received_at", "<=", currentRow.received_at)
+      .executeTakeFirst();
+
+    const currentFields = redactedFingerprintFields(currentRow);
+    const earlierFields = earlierRows.map((row) => redactedFingerprintFields(row));
+    const previous = earlierFields[0] ?? null;
+
+    return {
+      fingerprint: currentRow.fingerprint,
+      earlierCount: countRow?.total ?? 0,
+      previous: previous ? fingerprintOccurrence(previous) : null,
+      recent: earlierFields.map((fields) => fingerprintOccurrence(fields)),
+      ...fingerprintChangesFrom(previous, currentFields),
     };
   }
 

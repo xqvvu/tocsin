@@ -124,6 +124,66 @@ export interface EventDetailDelivery extends DeliveryJob {
   lastResponseAt: IsoDateTimeString | null;
 }
 
+/**
+ * One earlier event that carried the same fingerprint on the same source.
+ *
+ * The projection is deliberately narrow: a recurring alert is answered by
+ * "when did it last fire, did it escalate, and did its text change", so the
+ * occurrence carries the fields the change comparison needs and nothing from
+ * the raw payload.
+ */
+export interface EventFingerprintOccurrence {
+  id: string;
+  severity: NormalizedEvent["severity"];
+  status: NormalizedEvent["status"];
+  /** Redacted with the same rules as the event detail projection. */
+  title: string;
+  receivedAt: IsoDateTimeString;
+}
+
+/**
+ * Scalar fields compared between the current event and its previous
+ * occurrence. `fingerprint`, `occurredAt` and the event id are ordered
+ * differently by definition, so they are not part of the comparison.
+ */
+export const EVENT_FINGERPRINT_CHANGE_FIELDS = ["severity", "status", "title", "message"] as const;
+
+export type EventFingerprintChangeField = (typeof EVENT_FINGERPRINT_CHANGE_FIELDS)[number];
+
+export interface EventFingerprintFieldChange {
+  field: EventFingerprintChangeField;
+  /** Redacted previous value; severity/status stay machine values. */
+  previous: string;
+  current: string;
+}
+
+/** One label that appeared, disappeared, or changed value. */
+export interface EventFingerprintLabelChange {
+  key: string;
+  /** `null` means the label was absent, not empty: the change is an addition. */
+  previous: string | null;
+  current: string | null;
+}
+
+/**
+ * "Has this alert fired before, and what is different this time?"
+ *
+ * Same-source and exact-fingerprint only. A fingerprint is only meaningful
+ * within the provider that produced it, so matching across sources would
+ * merge unrelated alerts that happen to share a string.
+ */
+export interface EventFingerprintContext {
+  fingerprint: string;
+  /** How many earlier events carry the exact fingerprint on this source. */
+  earlierCount: number;
+  /** Most recent earlier occurrence, the baseline for the change lists. */
+  previous: EventFingerprintOccurrence | null;
+  /** Up to five most recent earlier occurrences, newest first. */
+  recent: EventFingerprintOccurrence[];
+  fieldChanges: EventFingerprintFieldChange[];
+  labelChanges: EventFingerprintLabelChange[];
+}
+
 export interface DeliveryListItem {
   id: string;
   eventId: string;

@@ -5,6 +5,7 @@ import { EventDetailRouteMatchesTable } from "#/features/events/ui/event-detail-
 import { getEventDeliveryStats } from "#/features/events/ui/event-detail-stats";
 import { EventDetailSummary } from "#/features/events/ui/event-detail-summary";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
+import { EventFingerprintContextTab } from "#/features/events/ui/event-fingerprint-context-tab";
 import { EventNormalizedTab } from "#/features/events/ui/event-normalized-tab";
 import { EventRawTab } from "#/features/events/ui/event-raw-tab";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -34,6 +35,7 @@ export function EventDetailView({ detail }: { detail: EventDetailData }) {
             <TabsTrigger value="normalized">{t("events.detail.tabs.normalized")}</TabsTrigger>
             <TabsTrigger value="matches">{t("events.detail.tabs.matches")}</TabsTrigger>
             <TabsTrigger value="deliveries">{t("events.detail.tabs.deliveries")}</TabsTrigger>
+            <TabsTrigger value="fingerprint">{t("events.detail.tabs.fingerprint")}</TabsTrigger>
             <TabsTrigger value="raw">{t("events.detail.tabs.raw")}</TabsTrigger>
           </TabsList>
         </div>
@@ -63,6 +65,15 @@ export function EventDetailView({ detail }: { detail: EventDetailData }) {
 
         <TabsContent value="deliveries" className="min-h-0 overflow-hidden p-3">
           <EventDetailDeliveriesTable deliveries={detail.deliveries} />
+        </TabsContent>
+
+        <TabsContent value="fingerprint" className="min-h-0 overflow-hidden p-3">
+          {/*
+            Queried only while this tab is mounted: Radix unmounts inactive
+            content, so opening an event does not fetch its recurrence context
+            unless the operator asks for it.
+          */}
+          <EventFingerprintContextTab eventId={detail.event.id} />
         </TabsContent>
 
         <TabsContent value="raw" className="min-h-0 overflow-hidden p-3">

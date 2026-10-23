@@ -5,6 +5,7 @@ import {
   DeliveryStateSchema,
   DestinationKindSchema,
   EventDeliveryOutcomeSchema,
+  EVENT_FINGERPRINT_CHANGE_FIELDS,
   DestinationSummarySchema,
   EventRecordSchema,
   IsoDateTimeSchema,
@@ -80,6 +81,37 @@ export const EventDetailSchema = z.object({
    */
   routeMatchGaps: z.array(RouteMatchGapSchema),
   deliveries: z.array(EventDetailDeliverySchema),
+});
+
+export const EventFingerprintOccurrenceSchema = z.object({
+  id: z.string().min(1),
+  severity: AlertSeveritySchema,
+  status: AlertStatusSchema,
+  title: z.string(),
+  receivedAt: IsoDateTimeSchema,
+});
+
+export const EventFingerprintFieldChangeSchema = z.object({
+  // Mirrors `EVENT_FINGERPRINT_CHANGE_FIELDS`; the const array is the single
+  // source the service and its tests iterate.
+  field: z.enum(EVENT_FINGERPRINT_CHANGE_FIELDS),
+  previous: z.string(),
+  current: z.string(),
+});
+
+export const EventFingerprintLabelChangeSchema = z.object({
+  key: z.string().min(1),
+  previous: z.string().nullable(),
+  current: z.string().nullable(),
+});
+
+export const EventFingerprintContextSchema = z.object({
+  fingerprint: z.string(),
+  earlierCount: z.number().int().min(0),
+  previous: EventFingerprintOccurrenceSchema.nullable(),
+  recent: z.array(EventFingerprintOccurrenceSchema),
+  fieldChanges: z.array(EventFingerprintFieldChangeSchema),
+  labelChanges: z.array(EventFingerprintLabelChangeSchema),
 });
 
 export const DeliveryListItemSchema = z.object({

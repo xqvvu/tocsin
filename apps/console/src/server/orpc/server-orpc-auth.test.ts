@@ -116,6 +116,7 @@ const expectedProcedures: Record<
     private: [
       "list",
       "getEventDetail",
+      "getEventFingerprintContext",
       "getDeliveryDetail",
       "getDeliveryBacklog",
       "retryDelivery",
@@ -183,6 +184,7 @@ const procedureArgs: Record<string, unknown> = {
   importToml: { toml: "probe" },
   importJson: { json: "probe" },
   getEventDetail: { id: "event-missing" },
+  getEventFingerprintContext: { id: "event-missing" },
   getDeliveryDetail: { id: "delivery-missing" },
   retryDelivery: { id: "delivery-missing" },
   buzzDelivery: { id: "delivery-missing" },
