@@ -72,9 +72,25 @@
   - SEC-22（编辑草稿 userinfo 密码）与 SEC-26（完整 webhook URL 可见性）仍开放，需 EXPERT_PANEL。
   - import protection 无确证缺口；`xqvvu/vane` 仅命中 ACR 镜像坐标；无 secret 进入浏览器状态。
 
-### 发布评估
+### 发布评估（3 专家小组）与发布记录
 
-见下方「发布评估（第 94 轮）」小节。
+- 发布经理：自 `v0.1.0-beta.70` 起 main 上只有 `6fd6777` 文档记录，用户可见变化为零；
+  #409 合入后构成发布理由（窄屏事件详情从不可用恢复），建议 **`0.1.0-beta.71`**。
+- 阻断审计员：**放行** —— `origin/main` @ `317b173`（#409 合入）CI success；唯一 open PR
+  是发布自身 #410；3 条 `blocked-autonomous` 评分均 <27；beta.70 以来无 migration；
+  `v0.1.0-beta.71` 未占用；最近 10 个 tag 与 GitHub Release 一一对应。
+- 运维/回滚专家：**可安全发布** —— Dockerfile / compose / entrypoint / env / 锁文件 / 迁移
+  零 diff；升级只需换镜像；回滚换回 `0.1.0-beta.70` 即可；提示共享 `tabs.tsx` 原语会
+  影响 Settings 与投递详情标签行，建议升级后多看一眼。
+- 决策：合并 #409（`317b173`）→ 合并 #410（版本递增，`8d7145b`）→ 打 tag / GitHub Release →
+  构建并推送双平台镜像。
+- **已发布 `v0.1.0-beta.71`**：
+  - tag 指向 `8d7145b`；GitHub Release 为 prerelease，body 非空；
+  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.71`
+    （`linux/amd64` + `linux/arm64`，index digest `sha256:0de27c17…`，
+    amd64 `sha256:e088ca87…`，arm64 `sha256:14ef2cb8…`）；
+  - 回滚镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.70`；
+  - 无迁移、无配置/环境变量/启动参数变化。
 
 ### 下一轮优先项
 
