@@ -191,6 +191,59 @@ describe("edit route form", () => {
     expect(screen.getByRole("combobox", { name: "Operator 2" }).textContent).toContain("Contains");
   });
 
+  it("warns that recovery notifications are dropped when resolved is not selected", () => {
+    renderEditForm({
+      ...multiConditionRoute(),
+      rule: { ...multiConditionRoute().rule, statuses: ["firing", "unknown"] },
+    });
+
+    expect(
+      screen.getByText("Resolved is not included — recovery notifications will not be delivered"),
+    ).toBeTruthy();
+  });
+
+  it("warns that trigger notifications are dropped when firing is not selected", () => {
+    renderEditForm({
+      ...multiConditionRoute(),
+      rule: { ...multiConditionRoute().rule, statuses: ["resolved"] },
+    });
+
+    expect(
+      screen.getByText("Firing is not included — trigger notifications will not be delivered"),
+    ).toBeTruthy();
+  });
+
+  it("warns about both notification classes when only other states are selected", () => {
+    renderEditForm({
+      ...multiConditionRoute(),
+      rule: { ...multiConditionRoute().rule, statuses: ["unknown"] },
+    });
+
+    expect(
+      screen.getByText(
+        "Neither Firing nor Resolved is included — trigger and recovery notifications will not be delivered",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("stays quiet when the status condition covers both notification classes", () => {
+    renderEditForm({
+      ...multiConditionRoute(),
+      rule: { ...multiConditionRoute().rule, statuses: ["firing", "resolved"] },
+    });
+
+    expect(screen.queryByText(/notifications will not be delivered/)).toBeNull();
+  });
+
+  it("stays quiet when no status condition is set", () => {
+    renderEditForm({
+      ...multiConditionRoute(),
+      rule: { ...multiConditionRoute().rule, statuses: [] },
+    });
+
+    expect(screen.queryByText(/notifications will not be delivered/)).toBeNull();
+  });
+
   it("edits the second entry of a class and leaves the first alone", async () => {
     const route = multiConditionRoute();
 

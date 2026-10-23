@@ -57,6 +57,30 @@ export function isIncompleteLabelCondition(condition: RouteLabelCondition): bool
 }
 
 /**
+ * Which alert states a route's status condition admits.
+ *
+ * An empty condition is unconditional: both firing and resolved events match,
+ * which is also why the form treats it as "every state". Once the operator
+ * picks states, anything unpicked is dropped for good — the consequential case
+ * being a route that pages on trigger but silently never delivers recovery.
+ */
+export interface RouteStatusScope {
+  deliversFiring: boolean;
+  deliversResolved: boolean;
+}
+
+export function routeStatusScope(statuses: readonly RouteStatusCondition[]): RouteStatusScope {
+  if (statuses.length === 0) {
+    return { deliversFiring: true, deliversResolved: true };
+  }
+
+  return {
+    deliversFiring: statuses.includes("firing"),
+    deliversResolved: statuses.includes("resolved"),
+  };
+}
+
+/**
  * A rule with no condition matches every alert. That is legal (it is how an
  * operator routes everything to one destination), but it must never happen by
  * accident: the form asks for confirmation before saving this shape.
