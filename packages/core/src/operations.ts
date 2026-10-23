@@ -109,6 +109,19 @@ export interface EventDetailDelivery extends DeliveryJob {
    */
   destinationKind?: DestinationKind;
   routeName: string | null;
+  /**
+   * Target-system handle for the delivered message, for example a Feishu
+   * `message_id`. The event detail table shows it so an operator can prove the
+   * target accepted the alert without opening every delivery.
+   */
+  providerReference: ProviderReference | null;
+  /**
+   * HTTP status of the most recent completed attempt. `null` before the first
+   * attempt finishes; a failed attempt keeps the status its target returned.
+   */
+  lastResponseStatus: number | null;
+  /** When that attempt finished, so the receipt can be aged against the event. */
+  lastResponseAt: IsoDateTimeString | null;
 }
 
 export interface DeliveryListItem {

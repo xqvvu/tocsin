@@ -1,7 +1,13 @@
 import type { DestinationKind, EventDetailDelivery } from "@tocsin/core";
 
-import { deliveryFromRow } from "#/infra/sqlite/repositories/delivery/delivery.helpers";
-import type { DeliveryRow } from "#/infra/sqlite/repositories/delivery/delivery.interface";
+import {
+  deliveryFromRow,
+  providerReferenceFromRow,
+} from "#/infra/sqlite/repositories/delivery/delivery.helpers";
+import type {
+  DeliveryAttemptRow,
+  DeliveryRow,
+} from "#/infra/sqlite/repositories/delivery/delivery.interface";
 
 export interface EventDetailDeliveryRow extends DeliveryRow {
   destination_name: string;
@@ -9,12 +15,25 @@ export interface EventDetailDeliveryRow extends DeliveryRow {
   route_name: string | null;
 }
 
-export function eventDetailDeliveryFromRow(row: EventDetailDeliveryRow): EventDetailDelivery {
+/**
+ * The most recent completed attempt per delivery, projected into the event
+ * detail delivery. Passed in rather than queried per row so the detail page
+ * keeps a fixed query count.
+ */
+export type EventDetailLatestAttempt = Pick<DeliveryAttemptRow, "response_status" | "finished_at">;
+
+export function eventDetailDeliveryFromRow(
+  row: EventDetailDeliveryRow,
+  latestAttempt: EventDetailLatestAttempt | null = null,
+): EventDetailDelivery {
   return {
     ...deliveryFromRow(row),
     destinationName: row.destination_name,
     destinationKind: row.destination_kind ?? undefined,
     routeName: row.route_name,
+    providerReference: providerReferenceFromRow(row),
+    lastResponseStatus: latestAttempt?.response_status ?? null,
+    lastResponseAt: latestAttempt?.finished_at ?? null,
   };
 }
 

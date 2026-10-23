@@ -164,9 +164,46 @@ describe("event detail deliveries table", () => {
       }),
     ]);
 
-    const retryCell = screen.getAllByRole("cell")[4];
+    const retryCell = screen.getAllByRole("cell")[5];
 
     expect(retryCell?.textContent).toContain("2030");
+  });
+
+  it("shows the target's receipt without opening the delivery", () => {
+    renderTable([
+      delivery({
+        id: "delivery-succeeded",
+        state: "succeeded",
+        providerReference: { type: "feishu_message_id", value: "om_abc123" },
+        lastResponseStatus: 200,
+        lastResponseAt: "2030-01-01T00:00:00.000Z",
+      }),
+    ]);
+
+    const receiptCell = screen.getAllByRole("cell")[4];
+
+    expect(receiptCell?.textContent).toContain("om_abc123");
+    expect(receiptCell?.textContent).toContain("HTTP 200");
+    expect(receiptCell?.querySelector("time")?.getAttribute("datetime")).toBe(
+      "2030-01-01T00:00:00.000Z",
+    );
+    expect(screen.getByRole("button", { name: "Copy external reference" })).toBeTruthy();
+  });
+
+  it("keeps the failed response status in the receipt", () => {
+    renderTable([delivery({ id: "delivery-failed", state: "failed", lastResponseStatus: 503 })]);
+
+    const receiptCell = screen.getAllByRole("cell")[4];
+
+    expect(receiptCell?.textContent).toContain("HTTP 503");
+  });
+
+  it("leaves the receipt empty before the first attempt completes", () => {
+    renderTable([delivery({ id: "delivery-pending", state: "pending" })]);
+
+    const receiptCell = screen.getAllByRole("cell")[4];
+
+    expect(receiptCell?.textContent).toBe("-");
   });
 });
 
@@ -198,6 +235,9 @@ function delivery(
     destinationName: "Feishu on-call",
     destinationKind: "feishu",
     routeName: "Critical checkout",
+    providerReference: null,
+    lastResponseStatus: null,
+    lastResponseAt: null,
     ...overrides,
   } as EventDetailData["deliveries"][number];
 }

@@ -251,6 +251,9 @@ describe("delivery schemas expose destinationKind", () => {
       maxAttempts: 3,
       createdAt: NOW,
       finishedAt: null,
+      providerReference: null,
+      lastResponseStatus: null,
+      lastResponseAt: null,
     };
 
     expect(
@@ -271,6 +274,9 @@ describe("delivery schemas expose destinationKind", () => {
         maxAttempts: 3,
         createdAt: NOW,
         finishedAt: null,
+        providerReference: null,
+        lastResponseStatus: null,
+        lastResponseAt: null,
       }).destinationKind,
     ).toBeUndefined();
   });
