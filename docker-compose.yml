@@ -14,10 +14,13 @@ services:
       HOST: "0.0.0.0"
       PORT: "3000"
       BETTER_AUTH_URL: "${BETTER_AUTH_URL:-http://localhost:3000}"
-      # No working default: the fallback is a published placeholder that the
-      # application refuses to start with in production. Generate one with
-      # `openssl rand -hex 32` and persist it in .env or your secret manager.
-      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-change-me-to-at-least-32-characters}"
+      # No working default: an empty value makes production fail closed with
+      # "BETTER_AUTH_SECRET is required in production". Either set the inline
+      # value (generate one with `openssl rand -hex 32`) or point the `_FILE`
+      # variable at a mounted Docker/Kubernetes secret file. An inline value
+      # always wins, so the file is only read when this one is empty.
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-}"
+      BETTER_AUTH_SECRET_FILE: "${BETTER_AUTH_SECRET_FILE:-}"
       SERVER_URL: "${SERVER_URL:-http://localhost:3000}"
       TOCSIN_DATABASE_PATH: "/data/tocsin.sqlite"
       TOCSIN_LOG_LEVEL: "${TOCSIN_LOG_LEVEL:-info}"

@@ -1,8 +1,8 @@
 # Docker 生产部署（自托管）
 
 > 一句话结论：Tocsin 的受支持形态是**一个容器 + 一个数据卷 + 一个 SQLite 文件**；容器只提供明文 HTTP
-> 3000，TLS、反向代理和 secret 注入都要由运维自己解决，而且 `docker-compose.yml` 里内置的默认
-> `BETTER_AUTH_SECRET` 在真正部署前**必须**替换。
+> 3000，TLS、反向代理和 secret 的分发都要由运维自己解决。`docker-compose.yml` 不再内置任何可用的
+> `BETTER_AUTH_SECRET`，部署前必须提供内联值或 `BETTER_AUTH_SECRET_FILE`。
 
 本文所有端口、路径、变量都核对过当前仓库：`Dockerfile`、`docker-compose.yml`、`scripts/docker-entrypoint.sh`、
 `apps/console/src/env.ts`、`apps/console/src/lib/auth-config.ts`、`apps/console/src/routes/api/{health,ready}.ts`。
@@ -14,8 +14,8 @@
 | 运维预期                     | 现状                                                                             |
 | ---------------------------- | -------------------------------------------------------------------------------- |
 | TLS 终止                     | **没有。** 应用只监听明文 HTTP；生产必须在反向代理终止 TLS                        |
-| Secret 注入                   | **没有 Docker secret / `*_FILE` 支持。** 只能用环境变量（env file 或编排平台 secret） |
-| 默认 secret 安全              | **已修复。** compose 不再内置可用默认值：未设置时回落到公开占位值，应用在 production 模式启动即拒绝；历史公开值也进入黑名单 |
+| Secret 注入                   | **`BETTER_AUTH_SECRET` 支持 `_FILE`**（Compose file secret / Swarm secret / K8s Secret 卷）；其余 secret 仍只走环境变量 |
+| 默认 secret 安全              | **已修复。** compose 不再内置任何默认值：未设置时为「空」，应用在 production 模式启动即拒绝；历史公开值仍在黑名单 |
 | 端口暴露范围                  | compose 默认把 3000 发布在所有网卡（`"${TOCSIN_HTTP_PORT:-3000}:3000"`），不会自动只绑 127.0.0.1 |
 | 多副本 / 横向扩容             | **不支持。** 单进程 + 进程内 worker + 单文件 SQLite 是设计约束                    |
 | unhealthy 自动重启            | **没有。** compose 只有 `restart: unless-stopped`；容器变 unhealthy 不会自动重建  |
@@ -48,6 +48,9 @@
 export BETTER_AUTH_SECRET="$(openssl rand -hex 32)"
 export BETTER_AUTH_URL="https://tocsin.example.com"   # 生产必须，或改用 SERVER_URL
 export SERVER_URL="https://tocsin.example.com"
+# 或者：把同一个值写成单行文件，挂载后改用
+#   export BETTER_AUTH_SECRET_FILE=/run/secrets/tocsin_auth_secret
+# 内联值优先；两者都为空时生产环境仍然拒绝启动。
 
 # 2) 构建并启动
 docker compose up -d --build
@@ -69,7 +72,8 @@ docker compose logs --tail=50 console
 | 变量                              | 默认值（容器内）      | 作用与约束                                                                 |
 | --------------------------------- | --------------------- | -------------------------------------------------------------------------- |
 | `HOST` / `PORT`                   | `0.0.0.0` / `3000`    | Nitro node-server 监听地址与端口（镜像里已设）                             |
-| `BETTER_AUTH_SECRET`              | 无（compose 只回落到已拒绝的占位值） | 生产**必需**：≥32 字符，且不能是占位值或历史公开值；缺失/占位时所有请求（含 `/api/ready`）返回 500，容器被判 unhealthy |
+| `BETTER_AUTH_SECRET`              | 无（compose 回落为空） | 生产**必需**（或改用 `BETTER_AUTH_SECRET_FILE`）：≥32 字符，且不能是占位值或历史公开值；缺失/占位时所有请求（含 `/api/ready`）返回 500，容器被判 unhealthy |
+| `BETTER_AUTH_SECRET_FILE`         | 无                    | 可选：从文件读取同一个 secret。`BETTER_AUTH_SECRET` 非空时忽略；文件须为**单行裸值**、≤4 KiB、对 uid/gid 1000 可读；缺失/不可读/空文件/多行都会让启动失败，错误只含变量名、路径与 errno |
 | `BETTER_AUTH_URL`                 | 无                    | 生产**必需**（或提供 `SERVER_URL`）：Better Auth 的对外 base URL，必须是合法 URL |
 | `SERVER_URL`                      | 无                    | 对外访问 URL；`BETTER_AUTH_URL` 缺省时作为回落值                            |
 | `BETTER_AUTH_ALLOWED_HOSTS`       | 无                    | 可选，逗号/换行分隔的 Host 白名单（走 PVC、反代、临时域名时使用）           |
@@ -128,18 +132,48 @@ docker compose logs --tail=50 console
 
 ## 7. Secrets
 
-- **必须显式提供 `BETTER_AUTH_SECRET`。** compose 不再内置可用的默认值：未设置时回落到公开占位值，
-  应用加载入口时以 `BETTER_AUTH_SECRET must be replaced with a deployment-specific secret` 拒绝服务，
-  所有请求（包括 `/api/ready`）返回 500、healthcheck 判 unhealthy，不会出现「健康但登录 500」的假绿。
-  生成一次并持久化复用，不要每次部署都重新生成：
+- **必须显式提供 `BETTER_AUTH_SECRET`。** compose 不再内置任何默认值：未设置时为空，应用加载入口时以
+  `BETTER_AUTH_SECRET is required in production (set BETTER_AUTH_SECRET or BETTER_AUTH_SECRET_FILE)`
+  拒绝服务，所有请求（包括 `/api/ready`）返回 500、healthcheck 判 unhealthy，不会出现「健康但登录 500」
+  的假绿。生成一次并持久化复用，不要每次部署都重新生成：
   ```bash
   openssl rand -hex 32   # 写入受保护的 .env（已 gitignore）或编排平台的 secret
   ```
   历史 compose 默认值与 `.env.example` 旧值都已加入黑名单。轮换 secret 会让所有 dashboard session
   失效，用户需要重新登录；数据库与其他配置不受影响。
-- 应用**不支持** Docker secret、`*_FILE` 或外部 secret manager；secret 通过环境变量进入进程。
-  这意味着 `docker inspect` / `docker compose config` 会看到明文，请限制宿主访问权限，并使用
-  `--env-file` 或编排平台的 secret 机制管理文件本身。
+- **也可以从文件读取：`BETTER_AUTH_SECRET_FILE`。** 内联值优先；只有 `BETTER_AUTH_SECRET` 为空时才读文件。
+  文件必须是**单行裸值**（不要 `KEY=value`、不要引号、不要注释、不要 PEM），不超过 4 KiB，结尾换行会被
+  去掉，内部换行会被拒绝。缺失、不可读、空文件都会让应用拒绝提供服务（首个请求即失败，`/api/ready`
+  返回 500），错误信息只包含变量名、路径与 errno，不会打印内容；服务端不会把读到的值写回
+  `process.env`。
+- Compose 的最小接线（`docker-compose.override.yml`）：`secrets:` 负责把文件挂到 `/run/secrets/<name>`，
+  `environment` 负责告诉应用去读它。只设 `BETTER_AUTH_SECRET_FILE` 而不挂载文件必然得到 `ENOENT`。
+  ```yaml
+  services:
+    console:
+      environment:
+        BETTER_AUTH_SECRET: ""
+        BETTER_AUTH_SECRET_FILE: /run/secrets/tocsin_auth_secret
+      secrets:
+        - tocsin_auth_secret
+
+  secrets:
+    tocsin_auth_secret:
+      file: ./secrets/tocsin_auth_secret
+  ```
+- **权限模型取决于编排方式**，不要把「支持 Docker secret」当成一句话承诺：
+  - `docker compose` 的非 Swarm `secrets:`：以文件挂载到 `/run/secrets/<name>`，默认 `root:root` `0444`，
+    容器内 uid 1000 可读。
+  - Docker Swarm：只有 `docker stack deploy` 使用 secret store；`docker compose up` 不会读取 Swarm secret。
+    挂载为 tmpfs，默认 `0444`。
+  - Kubernetes：Secret 卷默认 `0644`，可读；若改成 `0400`，必须同时配置 `fsGroup: 1000` /
+    `runAsGroup: 1000`，否则 `node` 用户读不到。卷内的 `..data` symlink 可以正常读取。
+  - 宿主 bind mount：文件必须对 uid/gid 1000 可读（entrypoint 只 chown `/data`，不会 chown secret 文件）。
+  - 轮换 secret 后需要重启容器（`docker compose restart console`），运行中的进程不会重读文件。
+- 使用 `_FILE` 时，`docker inspect` / `docker compose config` 里只有路径，没有明文；但明文仍然存在于进程
+  内存中。应用不实现外部 secret manager 协议，也不支持其他变量的 `_FILE`。
+- 配置导入/导出用的 `TOCSIN_SOURCE_*` / `TOCSIN_DEST_*` / `TOCSIN_FEISHU_APP_*` 引用**仍然只读
+  `process.env`**，不支持 `_FILE`。
 - 不要把 secret 打进镜像：`.dockerignore` 已排除 `.env` 与 `.env.*`（保留 `.env.example`）。
 - 持久化 secret（目标 URL、邮件密码、飞书 app secret 等）保存在 `/data` 的 SQLite 里；导出 TOML/JSON 时
   默认用环境变量引用替换明文 secret，导入时再从环境变量读取。

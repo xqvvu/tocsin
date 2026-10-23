@@ -2,14 +2,26 @@ import "@tanstack/react-start/server-only";
 import { createEnv } from "@t3-oss/env-core";
 import * as z from "zod";
 
+import { resolveSecretFileEnv, SECRET_FILE_ENV_VARS } from "#/lib/secret-file-env";
+
 const delimitedListSchema = z
   .string()
   .transform(parseDelimitedEnvList)
   .refine((items) => items.length > 0, "Expected at least one value");
 
+const processEnv = typeof process !== "undefined" ? process.env : {};
+
+/**
+ * `*_FILE` values are merged into the parsed environment object only; they are
+ * never written back to `process.env`, so a file-supplied secret does not show
+ * up in `/proc/self/environ` or a child process.
+ */
 const runtimeEnv = {
   ...import.meta.env,
-  ...(typeof process !== "undefined" ? process.env : {}),
+  ...processEnv,
+  ...(typeof process !== "undefined"
+    ? resolveSecretFileEnv(SECRET_FILE_ENV_VARS, { env: processEnv })
+    : {}),
 };
 
 export const env = createEnv({

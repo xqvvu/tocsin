@@ -167,7 +167,7 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 | - | ------------------------------------------------------------ | -------------------------------------------- |
 | 1 | 读本版本 release 说明，确认是否新增 migration step            | 知道升级时会不会执行 schema 变更              |
 | 2 | 冷备份 `/data`                                                | 三个文件齐全、`integrity_check` 通过          |
-| 3 | 确认 `BETTER_AUTH_SECRET` 已显式设置并持久化（`openssl rand -hex 32`） | 未设置或沿用历史公开值时，新版本会在 bootstrap 阶段退出 |
+| 3 | 确认 `BETTER_AUTH_SECRET` 或 `BETTER_AUTH_SECRET_FILE` 已显式设置并持久化（`openssl rand -hex 32`） | 未设置或沿用历史公开值时，新版本会在 bootstrap 阶段退出 |
 | 4 | 记录当前镜像 tag 与 compose 文件                              | 能原样回滚                                   |
 | 5 | 构建/获取新镜像并打版本 tag                                    | 镜像 tag 可区分版本                          |
 | 6 | `docker compose up -d`                                        | 容器进入 running，日志没有 migration 报错     |
