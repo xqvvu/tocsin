@@ -58,6 +58,8 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByText("Delivery state")).toBeNull();
     expect(screen.queryByText("Receipt")).toBeNull();
     expect(screen.queryByText("Attempts")).toBeNull();
+    // The time basis only changes how the delivery list is windowed.
+    expect(screen.queryByText("Time basis")).toBeNull();
   });
 
   it("shows every filter on the deliveries page", () => {
@@ -72,6 +74,7 @@ describe("operation filters by page scope", () => {
     expect(screen.getByText("Receipt")).toBeTruthy();
     expect(screen.getByText("Attempts")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
+    expect(screen.getByText("Time basis")).toBeTruthy();
   });
 
   it("names the attempt-count chip and keeps it off the events page", () => {
@@ -142,6 +145,7 @@ describe("operation filters by page scope", () => {
       deliveryState: "",
       minAttempts: 0,
       range: "",
+      timeField: "",
       rangeAnchor: "",
       q: "",
     });
@@ -185,6 +189,17 @@ describe("operation filters by page scope", () => {
     renderFilters("deliveries", { routeId: "route-1" }, "toolbar");
 
     expect(screen.getByTitle("Clear Route")).toBeTruthy();
+  });
+
+  it("names the last-activity basis chip and keeps it off the events page", () => {
+    renderFilters("deliveries", { timeField: "updated" }, "toolbar");
+
+    expect(screen.getByTitle("Clear Time basis")).toBeTruthy();
+    expect(screen.getByText("Last activity")).toBeTruthy();
+
+    cleanup();
+    renderFilters("events", { timeField: "updated" }, "toolbar");
+    expect(screen.queryByTitle("Clear Time basis")).toBeNull();
   });
 
   it("names the receipt chip on the deliveries page", () => {

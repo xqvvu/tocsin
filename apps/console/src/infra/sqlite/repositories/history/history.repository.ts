@@ -3,6 +3,7 @@ import { sql } from "kysely";
 import type {
   DeliveryListItem,
   DeliveryReceiptFilter,
+  DeliveryTimeField,
   DestinationKind,
   EventDeliveryOutcome,
   EventDetail,
@@ -326,6 +327,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
     const pageCount = Math.max(Math.ceil(total / pageSize), 1);
     const page = Math.min(Math.max(query.page ?? 1, 1), pageCount);
     const offset = (page - 1) * pageSize;
+    const timeColumn = deliveryTimeColumn(query.timeField);
     let builder = this.context.db
       .selectFrom("deliveries")
       .innerJoin("events", "events.id", "deliveries.event_id")
@@ -351,7 +353,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
         "deliveries.created_at as created_at",
         "deliveries.updated_at as updated_at",
       ])
-      .orderBy("deliveries.created_at", "desc")
+      .orderBy(timeColumn, "desc")
       .orderBy("deliveries.id", "desc")
       .limit(pageSize)
       .offset(offset);
@@ -397,7 +399,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
     }
 
     if (query.since) {
-      builder = builder.where("deliveries.created_at", ">=", query.since);
+      builder = builder.where(timeColumn, ">=", query.since);
     }
 
     if (query.q) {
@@ -474,6 +476,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
    * a join the count does not need.
    */
   private async countDeliveries(query: DeliveryListQuery): Promise<number> {
+    const timeColumn = deliveryTimeColumn(query.timeField);
     let builder = this.context.db
       .selectFrom("deliveries")
       .innerJoin("events", "events.id", "deliveries.event_id")
@@ -520,7 +523,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
     }
 
     if (query.since) {
-      builder = builder.where("deliveries.created_at", ">=", query.since);
+      builder = builder.where(timeColumn, ">=", query.since);
     }
 
     if (query.q) {
@@ -676,6 +679,19 @@ function eventDeliveryOutcomePredicate(outcome: EventDeliveryOutcome) {
     WHERE outcome_deliveries.event_id = events.id
       AND outcome_deliveries.state = ${outcome}
   )`;
+}
+
+/**
+ * The delivery column the list window and order are measured against.
+ *
+ * `updated_at` is the visible 更新时间 and moves on every retry or state
+ * change, so the window and the ordered column must agree with what the table
+ * shows. `created` keeps the historical behavior for callers that do not ask.
+ */
+function deliveryTimeColumn(
+  timeField: DeliveryTimeField | undefined,
+): "deliveries.created_at" | "deliveries.updated_at" {
+  return timeField === "updated" ? "deliveries.updated_at" : "deliveries.created_at";
 }
 
 /**
