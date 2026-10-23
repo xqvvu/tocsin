@@ -2,6 +2,62 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 100 轮）
+
+- 时间：2026-10-23 20:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `b948625`（第 99 轮记录）；main CI success；无 open PR。
+- 类型：**UI 评审切片 + 4 车道**（非 full-audit）——`requirements`、`ui-triage`、`docs-drift`，
+  以及 `ui-triage` 判定 `review_now` 后启动的 `ui-review`。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有 ≥27 候选，
+  按第 1.5 步继续，不重跑全量审计。
+- 车道轮转位置：**`quality`**（本轮已跑 `docs-drift`）。
+- `ui-triage`：**`review_now`** —— 距 `last_ui_review_at` 2026-10-23 17:40 仅 2h48m，但
+  17:40 后已有 3 条 UI 合并（`2b20007`、`ecb209d`、`30692a0`），其中后两条无浏览器验证；
+  25 条 UI candidate、最高 26、0 条 ≥27。强信号「≥3 个 UI 合并」成立。
+- `last_ui_review_at`：**2026-10-23 20:41 CST**（本轮）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建在会话工作树
+  `epic-varahamihira-cef8d1`。
+- 顺带维护：`origin/main` 的 E2E run `39952209374`（12:17 UTC 起）在 `playwright · chromium`
+  停留 2 小时，按既有处置 `gh run cancel` + `gh run rerun`，attempt 2 启动。
+
+### 本轮交付
+
+- **PR #428 `fix(console): keep the operations filter popover inside the viewport`
+  （UI-48 / UI-49 / UI-50）**：
+  - 共享 `Popover` 增加 `max-h-(--available-height)` + 内部纵向滚动 + `overscroll-contain`，
+    与 Select / DropdownMenu / Combobox 一致。
+  - 筛选 chip 增加 `aria-label`（复用 `operations.filters.clearChip`），保留 `title`。
+  - `hasOperationFilters` 只把 `timeField === "updated"` 视为活跃筛选；`pruneSearch`
+    归一化手改的 `timeField=created`，不再渲染 chip 或触发「无匹配」空态。
+  - PRD `docs/prd/operations-filter-popover-mobile.md`；新增
+    `apps/console/src/components/ui/popover.test.tsx`。
+  - 验证：`vp check` 0 errors（22 条既有 warning）；`vp run -r test` 4/4（console 1011）；
+    `vp run -r build` 通过。
+  - 浏览器实测（隔离实例 `localhost:6197`，视口 500×806）：修前浮层 783px / bottom 1075 /
+    `overflow: visible`；修后 509px / bottom 801 / `overflow-y: auto`，内部滚动后
+    Time basis 可见；`timeField=updated` chip 可访问名称 `Clear Time basis`；
+    `timeField=created` 无 chip 且空态为默认文案。截图 `/tmp/tocsin-ui-r100-after-500.png`。
+
+### 专家发现
+
+- `requirements`：**无 ≥27 新候选**。核查 post-MVP 方向 4、Events/Deliveries 列表与详情摩擦、
+  列表/详情/设置表达不一致三类，实际摩擦均命中既有条目
+  （REQ-40/192/35/74/10/112/67/226/227/58/261/144/12/235/245/2/91 等）。
+- `ui-review`：4 条发现 —— UI-48（浮层溢出，浏览器实测）、UI-49（chip 可访问名，代码核实）、
+  UI-50（默认口径被当成筛选，代码核实）、UI-51（390 下粘性操作列吃掉约 1/4 宽度，
+  浏览器实测，未实现）。确认无问题：重置行为、空态文案、1280×900 下 9 列全部在视口内。
+- `docs-drift`：DOC-73..82 **10 条全部仍成立**；另 `release-checklist.md:76` 的 tag 上限
+  仍写 `beta.75`（`:21` 版本快照已更新为 beta.76）。建议下一轮按价值修
+  DOC-78/80/73/74/75/76/82/81/79。
+
+### 下一轮优先项
+
+1. **DOC-73..82 批次**（docs-drift 已全部复核，纯文档 AUTO_FIX）。
+2. **UI-51**：390 下操作列宽度/列可见性（与 UI-30 一并评估）。
+3. **`quality` 车道**（轮转）。
+4. **REL-2 / REL-24 第一批 provider fixtures**（继续顺延）。
+5. **REQ-239**（28 分，多关键词 AND 搜索，仓储单文件 + 测试）。
+
 ## 2026-10-23（第 99 轮）
 
 - 时间：2026-10-23 19:14 CST 起。
