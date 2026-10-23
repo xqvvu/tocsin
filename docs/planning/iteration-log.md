@@ -2,6 +2,82 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 90 轮）
+
+- 时间：2026-10-23 09:38 CST 起。
+- 基线：本轮开始时 `origin/main` @ `255d494`；main CI 最近一次 success；无 open PR；
+  `v0.1.0-beta.67` 的 tag 与 GitHub Release 均已存在。
+- 类型：**`full-audit`（3 条车道）** —— `requirements`、`ui-triage`（→ `defer`）、`release-infra`。
+  `security-exposure`、`architecture`、`quality`、`docs-drift` 顺延。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**——仍未覆盖全部车道。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— 距上次真实评审 1.8h（`last_ui_review_at` 2026-10-23 07:50）；
+  自评审后 UI 路径合并 1 条（`02478f3`，UI-22 修复本身）；22 条 `candidate` UI 发现中 0 条未解决 HIGH。
+  下次触发：满 48h（2026-10-25 07:50）、UI 路径合并 ≥3、或新增 HIGH 可复现缺陷。
+- `last_ui_review_at`：**2026-10-23 07:50 CST**（未变；本轮只做了新筛选项的针对性浏览器复验，不是深度评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建都在会话工作树
+  `happy-shtern-094490`（写入隔离 hook 禁止跨工作树写入）。工作树清理见文末。
+
+### 本轮交付
+
+- **PR #395 `feat(console): filter events by delivery outcome`（REQ-21，29 分）**：
+  Events 列表新增 URL `deliveryOutcome`：`none`（该事件没有任何投递行）∪ 五种 `DeliveryState`
+  （至少一条投递处于该状态）。仓储用相关 `EXISTS`/`NOT EXISTS`，`listEvents` 与 `countEvents`
+  共用同一谓词，复用 `idx_deliveries_event_id`；服务层只把该字段传给事件查询，投递列表保留精确
+  `deliveryState` 维度。chip、内联/页面级重置、`hasOperationFilters` 全部覆盖。PRD
+  `docs/prd/event-delivery-outcome-filter.md`，并同步 `operation-filter-scope.md` 的「另行决策」。
+  验证：`vp check` 0 errors / 18 warnings（基线）；`vp run -r test` 4/4 包通过；`vp run -r build` 通过；
+  PR 的 `check · test · build` 与 `playwright · chromium` 均 pass。
+  **浏览器验证**（隔离实例 6180 + `/tmp/tocsin-ui395.sqlite`）：`/events` 出现「Delivery outcome」，
+  选 `No delivery` 后 URL 变为 `?deliveryOutcome=none`、空态显示 `No events match`、chip 出现且可清除；
+  `/deliveries?deliveryOutcome=none` 不渲染该控件也不显示 chip；390×844 下下拉在弹层内可见
+  （x=34.2, y=561.9, 315×31）。截图 `/tmp/ui395-events-outcome-1280.png`、`/tmp/ui395-events-outcome-390.png`、
+  `/tmp/ui395-deliveries-1280.png`。
+- **PR #396 `fix(console): clear every filter from the page-level reset`（FIX-16）**：
+  `deliveries-page.tsx` 的手写重置列表漏了 `minAttempts`，重置后仍按尝试次数过滤。改为三处 Reset
+  共用 `operation-search.ts` 的 `clearedOperationSearch`，单测固定键集合并在新增筛选键忘加清空值时失败。
+  验证同上（check / 4 包测试 / build 均通过；PR 两项 check pass）。
+
+### 专家发现
+
+- `requirements`（6 条新候选，均带代码证据，已写入 backlog）：
+  - **REQ-244（28）** 自托管 secret 文件注入 `*_FILE`：`env.ts:10-13`、`config-portability.service.ts:93-110`、
+    `docker-entrypoint.sh:1-36` 均不支持；部署文档已列为已知缺口（`docker-production-deployment.md:17,140`）。
+  - **REQ-243（27）** 投递按严重级别优先领取：`claimNext` 不 join `events`（`delivery.repository.ts:229-247`），
+    worker 10 条/5s（`env.ts:39-40`），积压时 critical 排在 info 后。
+  - **REQ-247（27）** Adapter `lifecycle`/`configVersion` 在控制台不可见：ADR 0002 承诺（`:90-94`）、
+    catalog DTO 已有（`adapter-manifest.ts:149-156`、`registry.ts:73-86`、destinations `:68-81`），
+    console 零消费、导入不检查（`config-portability.service.ts:93-110`）。
+  - **REQ-242（26）** 静默规则缺路由维度：`suppression.ts:32-49,156-160`、`delivery.repository.ts:144-152,261-269`；
+    路由行静默只能复制 rule+destinations（`suppression-form.ts:285-312`）。
+  - **REQ-246（23）** 单事件敏感载荷清除：`event-raw-tab.tsx:6-28` 无动作，仓储只有按保留期的批清理
+    （`intake.repository.ts:105-156`）。
+  - **REQ-245（21）** Settings 维护动作（`quick_check` / VACUUM）：`store.ts:66-72` 承认缺 gated entry，
+    全仓无实现；需重开 `settings-storage-prd:44-48` 的非目标。
+- `release-infra`：
+  - E2E 已由 `.github/workflows/e2e.yml`（#372）接入 CI，但仓库 **无 ruleset / main 无 branch protection**
+    （`gh api repos/xqvvu/tocsin/rulesets` → `[]`），`playwright · chromium` 与 `check · test · build`
+    都只是建议门禁；`playwright test --list` 仍只有 1 个用例（`alert-flow.spec.ts:27`）。
+  - `scripts/artifact-smoke.sh` 仍不存在；`ci.yml:43-50` 只 build 不启动产物，E2E 跑 `vp dev`
+    （`playwright.config.ts:33`）→ REL-5/8 成立。
+  - `packages/providers` 无 fixture 目录，6 个 adapter 测试仍内联 19 处 payload → REL-2/24 成立。
+  - `migrate.test.ts` 6 处仍全 `:memory:`（`:36,134,419,478,488,519`）；`connection.ts:29-32` 开 WAL 但无断言；
+    `schema_migrations` 无 checksum 列（`runner.ts:102-109`）→ REL-9 成立，checksum 属 schema 变更。
+  - `docker-smoke.sh` 无 restart 断言（`:67-129`）→ REL-6 成立；`.github/**` 仍被 fmt/lint 排除（`vite.config.ts:10`）→ REL-11 成立。
+- `ui-triage`：`defer`（理由见上）。
+
+### 发布决策
+
+- 见本轮「发布评估」小节（若发布成功会记录版本、tag、镜像与回滚镜像）。
+
+### 下一轮优先项
+
+1. **REQ-243（27）** 投递按严重级别优先领取——值班时延，纯查询改动、无迁移。
+2. **REQ-244（28）** `*_FILE` secret 注入——自托管部署安全，独立切片。
+3. **REQ-242（26）** 静默规则路由维度——需同步旧 PRD 的非目标措辞。
+4. `security-exposure`（轮转车道）+ UI-22 在 `/suppressions` 的针对性几何复验。
+5. REL-9 的文件库 migration + WAL 断言（低成本 AUTO_FIX，checksum 需单独裁决）。
+
 ## 2026-10-23（第 89 轮）
 
 - 时间：2026-10-23 08:26 CST 起。
