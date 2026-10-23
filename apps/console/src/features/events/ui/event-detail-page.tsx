@@ -24,8 +24,15 @@ export function EventDetailPage({ eventId }: { eventId: string }) {
       main={
         <>
           <EventDetailPageToolbar eventId={eventId} detail={detail} />
+          {/*
+            Narrow viewports stack the summary and tabs at natural height and
+            scroll here: the summary alone can exceed the remaining viewport,
+            and a `flex-1 overflow-hidden` section then squeezed every tab panel
+            down to a few pixels. Desktop keeps the full-height layout with
+            per-panel internal scrolling.
+          */}
           {detail ? (
-            <section className="min-h-0 flex-1 overflow-hidden">
+            <section className="min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
               <EventDetailView detail={detail} />
             </section>
           ) : (
