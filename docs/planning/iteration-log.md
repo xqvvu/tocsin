@@ -2,6 +2,77 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 99 轮）
+
+- 时间：2026-10-23 19:14 CST 起。
+- 基线：本轮开始时 `origin/main` @ `0709f9e`（beta.75 发布记录）；main CI success；无 open PR。
+- 类型：**需求切片 + 3 车道**（非 full-audit）——`requirements`、`ui-triage`、`architecture`（轮转车道）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；本轮未覆盖全部车道。
+- 车道轮转位置：**`docs-drift`**（本轮已跑 `architecture`）。
+- `ui-triage`：**`defer`** —— 距 `last_ui_review_at` 2026-10-23 17:40 仅 95 分钟；此后真实 UI 合并 1 条
+  （`2b20007`，PR #419，是 17:40 评审的直接产物且已浏览器实测）；25 条 UI candidate、0 条 ≥27；
+  三个强信号（48h / 3 条合并 / ≥2 条未决高分）均未成立。
+- `last_ui_review_at`：**2026-10-23 17:40 CST**（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建在会话工作树
+  `objective-lichterman-2950f7`。该工作树 `node_modules` 处于上次清理残留的半删状态
+  （pnpm 状态文件在、包体缺失，`vp install` 误报 up to date），已删除全部 workspace
+  `node_modules` 后 `vp install --frozen-lockfile` 重建（805 包，2.7s）。
+
+### 本轮交付
+
+- **PR #425 `feat(console): filter and order deliveries by last activity`（REQ-8，28 分）**，
+  rebase 合并 `ecb209d` → `e65e956`：
+  - `packages/core` 新增 `DeliveryTimeFieldSchema`（`created` / `updated`）；`operations.list`
+    输入新增 `timeField`。
+  - 仓储 `deliveryTimeColumn` 统一窗口谓词与 `ORDER BY` 的列，列表与 `total` 共用；默认仍为
+    `created_at`，行为与 beta.75 一致。
+  - 投递页筛选面板「时间口径」选择器 + chip；仅 `timeField=updated` 写入 URL，未知值回退默认；
+    切换口径把两个列表重置到第 1 页。
+  - PRD `docs/prd/delivery-time-basis.md`。
+  - 验证：`vp check` 0 errors（22 条既有 warning）；`vp run -r typecheck` 2/2；
+    `vp run -r test` 4/4（console 1007）；`vp run -r build` 通过；CI 双 check 绿。
+
+### 专家发现
+
+- `requirements`：**本轮无 ≥27 新候选**。核查 `docs/prd/post-mvp-planning.md:31-241` 六个方向与
+  437 条 candidate；唯一接近的「沉默告警源巡检」仅 25 分，建议并入 REQ-9（已在 backlog 备注），
+  不新开条目。
+- `ui-triage`：`defer`，理由见上。
+- `architecture`：核心分层规则全部通过（16 个 service 无 `ORPCError` / oRPC 引用、无模块级单例 /
+  DI 框架、container 无请求级数据、`features/**` 与 `routes/**` 无 `#/server|#/infra` 越界、
+  17 个 server-only 标记均有实际用途、`components/common` 无业务规则或查询依赖）。3 条 LOW 已入
+  backlog：ARCH-52（feature model 测试反向 import `#/infra`，`urgent-ping-explanation.test.ts:6-7`）、
+  ARCH-53（`route-match-gaps.ts` 为 history 仓储第四个文件）、ARCH-54（`runDeliveryWorker` 编排落在
+  oRPC 入口层，`operations/router.ts:73-87`）。
+
+### 发布评估与发布记录
+
+- **发布经理**：`v0.1.0-beta.75..origin/main` 仅 1 个用户可见变更（#425），其余为 docs / 测试 /
+  文案；建议 `0.1.0-beta.76`。
+- **阻断审计**：6 项门禁全部 PASS —— `e65e956` 的 CI 与 E2E 均 success、无 open PR、3 项
+  `blocked-autonomous` 均 <27 分且不影响运行时、迁移目录零 diff、版本号未占用、上一版 release
+  body 非空。
+- **运维/回滚**：READY。Dockerfile / compose / entrypoint / scripts / lockfile / 迁移零 diff；
+  回滚 `0.1.0-beta.75` 即可，SQLite 数据直接沿用；回滚后「时间口径」能力消失，属行为退化而非数据问题。
+- 决策：合并 #426（`chore(release): v0.1.0-beta.76`，`ffef70c`）→ 打 tag / GitHub Release →
+  构建并推送双平台镜像。
+- **已发布 `v0.1.0-beta.76`**：
+  - tag 指向 `ffef70c`；GitHub Release 为 prerelease，body 非空；
+  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.76`
+    （amd64+arm64，index digest `sha256:9503c5eb…`，amd64 `sha256:d5fa3c90…`，
+    arm64 `sha256:27e81545…`）；
+  - 回滚 `0.1.0-beta.75`；无迁移、无镜像 / entrypoint / 配置变化。
+
+### 下一轮优先项
+
+1. **REL-24 / REL-2 第一批 provider fixtures**（5 文件 / 10 payload，路径 `../../fixtures/…`）。
+2. **UI-30**：`w-24` 修复 `table-fixed` 下失效的最小宽（XS）。
+3. **`docs-drift` 车道**（轮转，本轮顺延）。
+4. **REQ-9**：并入沉默告警源巡检（最近事件时间 + 可配阈值），先与 REQ-12 共用
+   `ConfigurationActivitySummary` DTO。
+5. **ARCH-54**：把 `runDeliveryWorker` 编排收进 operations service（LOW，入口层偏厚）。
+6. **REL-23**：token 已有 admin，仍待 EXPERT_PANEL 决定是否启用 main required checks。
+
 ## 2026-10-23（第 98 轮）
 
 - 时间：2026-10-23 18:22 CST 起。
