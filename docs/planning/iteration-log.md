@@ -52,9 +52,24 @@
   一个 `docs:` PR。
 - 未跑 `security-exposure` 车道（轮转位置轮到下一轮）；SEC-36/SEC-35 仍为 candidate。
 
-### 发布评估
+### 发布评估（3 专家小组）与发布记录
 
-（合并后补充）
+- 发布经理：自 `v0.1.0-beta.71` 起唯一用户可见变更是 #412（投递列表回执列 +
+  「回执缺失」筛选），建议 **`0.1.0-beta.72`**。
+- 阻断审计员：**放行** —— #412/#413 CI success；无 open PR；beta.71 以来无
+  migration/schema 改动；3 条 `blocked-autonomous` 评分均 <27；`v0.1.0-beta.72` 未占用。
+- 运维/回滚专家：**低风险** —— Dockerfile / compose / entrypoint / env / 锁文件零 diff；
+  `provider_ref_*` 列在 beta.71 已存在；升级只需换镜像，回滚换回 `0.1.0-beta.71`，
+  无需恢复数据库。
+- 决策：合并 #412（`6e2c396`）→ 合并 #413（版本递增，`8c1947b`）→ 打 tag / GitHub Release →
+  构建并推送双平台镜像。
+- **已发布 `v0.1.0-beta.72`**：
+  - tag 指向 `8c1947b`；GitHub Release 为 prerelease，body 非空；
+  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.72`
+    （`linux/amd64` + `linux/arm64`，index digest `sha256:8f7cdedb…`，
+    amd64 `sha256:41ffe08b…`，arm64 `sha256:494fe14e…`）；
+  - 回滚镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.71`；
+  - 无迁移、无配置/环境变量/启动参数变化。
 
 ### 下一轮优先项
 
