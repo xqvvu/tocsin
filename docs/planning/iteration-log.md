@@ -16,7 +16,8 @@
   25 条 UI candidate、最高 26、0 条 ≥27。强信号「≥3 个 UI 合并」成立。
 - `last_ui_review_at`：**2026-10-23 20:41 CST**（本轮）。
 - 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建在会话工作树
-  `epic-varahamihira-cef8d1`。
+  `epic-varahamihira-cef8d1`。本轮结束前已删除 `.agent-run.lock` 与 `agent-iteration`
+  工作树，并清理会话工作树的 `node_modules`。
 - 顺带维护：`origin/main` 的 E2E run `39952209374`（12:17 UTC 起）在 `playwright · chromium`
   停留 2 小时，按既有处置 `gh run cancel` + `gh run rerun`，attempt 2 启动。
 
