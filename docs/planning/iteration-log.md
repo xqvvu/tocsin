@@ -2,6 +2,71 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 101 轮）
+
+- 时间：2026-10-23 21:35 CST 起。
+- 基线：本轮开始时 `origin/main` @ `661e464`（第 100 轮记录）；main CI success；无 open PR。
+- 类型：**需求切片 + 2 车道 + 发布**（非 full-audit）——`requirements`、`ui-triage`、`quality`（轮转）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有 28 分 candidate，
+  按第 1.5 步继续，不重跑全量审计。
+- 车道轮转位置：**`quality`**（本轮已尝试但超时未返回；下一轮重试 `quality`，再转 `docs-drift`）。
+- `ui-triage`：**`defer`** —— 距 `last_ui_review_at` 2026-10-23 20:41 仅 65 分钟；期间唯一 UI 合并
+  `8d5ba8a` 是上次评审的直接产物且已浏览器实测；26 条 UI candidate、最高 26、无 ≥27；三个强信号均未成立。
+- `last_ui_review_at`：**2026-10-23 20:41 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、构建在会话工作树 `inspiring-shaw-2ce35c`。
+- `requirements` 与 `quality` 两个车道在 75 分钟预算内未返回结论，按时间预算终止（无发现写入）；
+  本轮需求来自 backlog 既有 28 分项 REQ-239。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #431 `feat(console): match space-separated search terms with AND`（REQ-239，28 分）**：
+  - `splitSearchTerms` 按空白拆分最多 8 个词，`eventTermPredicate` / `deliveryTermPredicate`
+    逐词复用跨字段 LIKE，词间 AND；列表与 `total` 共用。
+  - 逐词转义 `%` / `_` / `\`；空白串等同无筛选；单关键词行为不变。
+  - 中英文 placeholder 增加「空格分隔多词需全部命中」提示；PRD
+    `docs/prd/operations-search-multi-keyword.md`。
+  - 验证：`vp check` 0 errors（22 条既有 warning）；`vp run -r test` 4/4（console 1017）；
+    `vp run -r build` 通过；CI 双 check 绿。
+- **PR #432 `docs: correct stale architecture and feature-state claims`**：
+  - 修复 DOC-73..81：路径/命令、`withDashboardService` 声明方式、features/server 目录树、
+    `runtime/store.ts` 标注、模板引擎状态头、模板编辑器评审状态头、路由行静默与路由命中证据状态头、
+    发布剩余项、`alert-suppression` 三条 Open Question 决策化；DOC-38 一并标记 shipped。
+  - DOC-82（回执 PRD 历史行号）仍未处理，保留 candidate。
+  - 验证：`vp fmt --check` 通过；CI 绿。
+
+### 专家发现
+
+- `ui-triage`：`defer`，见上。
+- `requirements`：超时终止，无结论。
+- `quality`：超时终止，无结论。
+- 发布阻断审计：6 项门禁全部 PASS —— `3022831` 的 CI 与 E2E success、无 open PR、迁移零 diff、
+  `v0.1.0-beta.78` 未占用、3 项 `blocked-autonomous` 不影响运行时。
+
+### 发布评估与发布记录
+
+- **发布经理**：`v0.1.0-beta.77..origin/main` 仅 1 个用户可见变更（#431 多关键词 AND 搜索），
+  建议 `0.1.0-beta.78`。
+- **运维/回滚**：READY。Dockerfile / compose / entrypoint / lockfile / 迁移零 diff；
+  回滚只需换回 `0.1.0-beta.77`。
+- 决策：合并 #433（`chore(release): v0.1.0-beta.78`，`3022831`）→ 打 tag / GitHub Release →
+  构建并推送双平台镜像。
+- **已发布 `v0.1.0-beta.78`**：
+  - tag 指向 `3022831`；GitHub Release 为 prerelease，body 非空；
+  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.78`
+    （amd64 + arm64，index digest `sha256:f4dd7540…`，amd64 `sha256:e806ff9c…`，
+    arm64 `sha256:d1d5fbe4…`）；
+  - 回滚镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.77`；
+  - 无迁移、无镜像 / entrypoint / 配置变化。
+
+### 下一轮优先项
+
+1. **`quality` 车道**（本轮超时，重试；限制单车道输出规模）。
+2. **`requirements` 车道**（本轮超时；下一轮给更窄的调研范围）。
+3. **UI-51 + UI-30**：390 下粘性操作列与 `table-fixed` 列宽（同一布局问题）。
+4. **DOC-82**：`event-delivery-receipts.md` 历史行号引用。
+5. **REL-2 / REL-24 第一批 provider fixtures**。
+
 ## 2026-10-23（第 100 轮）
 
 - 时间：2026-10-23 20:26 CST 起。
