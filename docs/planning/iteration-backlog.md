@@ -685,6 +685,7 @@
 | REL-38 | 发布 `0.1.0-beta.74` | release panel（第 97 轮） | — | shipped | #420 | tag `v0.1.0-beta.74` @ `5fa59f0`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.74`（amd64+arm64，index digest `sha256:a8b47c3d…`，amd64 `sha256:de62229c…`，arm64 `sha256:988c4873…`）；回滚 `0.1.0-beta.73`；用户可见变更 #419（路由通知缺口徽标警告色）；无迁移、无配置变化 |
 | REQ-260 | 自托管结构化日志文件 sink 与轮转（默认关闭） | requirements lane（第 98 轮） | 25 | candidate | — | `docs/release/mvp-rc-checklist.md:112-115` 把外部 observability sink 列为未设计项；backlog NEW-AY 证明 LogTape 目前只有 console sink。实现前必须确认 LogTape 文件 sink **是否需要新依赖**（charter 禁止新运行时依赖），否则改用单进程内手写 JSONL + 轮转。默认关闭、写失败降级、复用现有脱敏 |
 | REQ-261 | 投递列表失败原因可读、可复制与一键同类筛选 | requirements lane（第 98 轮） | 24 | candidate | — | `deliveries-table.tsx:112-118` 把 `lastError` 截断后只放在原生 `title`，而同页 toolbar 已写明原生 `title` 对触摸/读屏不可靠（`deliveries-page-toolbar.tsx:20-21`）。复用现有 search 参数做「同类失败」下钻；不新增 contract、不改详情页（NEW-BQ） |
+| REL-39 | 发布 `0.1.0-beta.75` | release panel（第 98 轮） | — | shipped | #423 | tag `v0.1.0-beta.75` @ `caa6dfa`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.75`（amd64+arm64，index digest `sha256:3e7b6681…`，amd64 `sha256:1148873b…`，arm64 `sha256:ff474455…`）；回滚 `0.1.0-beta.74`（已用 `_FILE` 的部署需先内联 secret）；用户可见变更 #422（`BETTER_AUTH_SECRET_FILE`）；无迁移 |
 
 ## 发布记录
 
