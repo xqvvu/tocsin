@@ -47,7 +47,8 @@
 - 执行偏差（如实记录）：打 tag 时 `f412689` 的 **CI（check·test·build）为 success**，
   但 **E2E workflow 仍停在 "Install Chromium" 步骤逾 15 分钟未结束**（外部依赖下载慢，非代码失败）；
   其父提交 `02478f3` 的 CI 与 E2E 均 success，且 `f412689` 相对 `02478f3` 只改 `package.json` 版本与
-  3 行 release 文档。据此按「CI 绿 + 变更面为零风险」放行打 tag，并在下一轮开头补记 E2E 最终结论。
+  3 行 release 文档。据此按「CI 绿 + 变更面为零风险」放行打 tag。
+  **补记**：本轮收尾前 E2E 已完成，`f412689` 的 **CI 与 E2E 均为 success**，发布 gate 事后完整满足。
 
 ### 专家发现
 
