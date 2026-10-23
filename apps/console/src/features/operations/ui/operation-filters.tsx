@@ -177,6 +177,7 @@ export function OperationFilters({
                 "border-border bg-muted/50 text-foreground hover:bg-muted inline-flex h-6 max-w-full items-center gap-1 border px-1.5 text-[11px]",
                 pending ? "pointer-events-none opacity-60" : null,
               )}
+              aria-label={t("operations.filters.clearChip", { label: chip.label })}
               title={t("operations.filters.clearChip", { label: chip.label })}
             >
               <span className="text-muted-foreground shrink-0">{chip.label}</span>
@@ -761,7 +762,7 @@ function activeFilterChips(
     });
   }
 
-  if (scope === "deliveries" && search.timeField) {
+  if (scope === "deliveries" && search.timeField === "updated") {
     chips.push({
       key: "timeField",
       label: t("operations.filters.timeField"),
