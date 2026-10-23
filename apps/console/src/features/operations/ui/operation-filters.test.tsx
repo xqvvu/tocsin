@@ -202,6 +202,22 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByTitle("Clear Time basis")).toBeNull();
   });
 
+  it("does not render a chip for the default time basis", () => {
+    // A hand-edited `timeField=created` narrows nothing; a chip would claim the
+    // list is filtered and send the operator looking for a filter that is off.
+    renderFilters("deliveries", { timeField: "created" }, "toolbar");
+
+    expect(screen.queryByTitle("Clear Time basis")).toBeNull();
+  });
+
+  it("tells screen readers that a chip removes its filter", () => {
+    renderFilters("deliveries", { timeField: "updated" }, "toolbar");
+
+    // The visible text is "Time basis Updated"; the accessible name must name
+    // the action, not just repeat the value.
+    expect(screen.getByRole("button", { name: "Clear Time basis" })).toBeTruthy();
+  });
+
   it("names the receipt chip on the deliveries page", () => {
     renderFilters("deliveries", { receipt: "missing" }, "toolbar");
 

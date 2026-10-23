@@ -163,7 +163,10 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.deliveryState ||
     search.minAttempts ||
     search.range ||
-    search.timeField ||
+    // `created` is the default basis, so only "last activity" narrows the list.
+    // Counting the default made a hand-edited `timeField=created` claim the
+    // list was filtered when every row was still eligible.
+    search.timeField === "updated" ||
     search.q?.trim(),
   );
 }
@@ -193,6 +196,10 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
       // 0 is the schema's "any" sentinel, so it stays out of the URL the same
       // way an empty string filter does.
       minAttempts: search.minAttempts && search.minAttempts > 0 ? search.minAttempts : undefined,
+      // `created` is the default and the UI writes it as an empty value, so a
+      // hand-edited `timeField=created` is pruned instead of lingering in the
+      // URL as a phantom filter.
+      timeField: search.timeField === "updated" ? "updated" : undefined,
       // Both page counters follow the same rule: page 1 is the default, so it
       // stays out of the URL rather than making every link carry `=1`.
       eventPage: search.eventPage && search.eventPage > 1 ? search.eventPage : undefined,

@@ -341,6 +341,15 @@ describe("delivery time basis in the operation search", () => {
     expect(pruneSearch({ timeField: "updated" }).timeField).toBe("updated");
   });
 
+  it("treats enqueue time written by hand as the default, not an active filter", () => {
+    // `created` narrows nothing: the default basis already selects the same
+    // rows. Counting it as an active filter made a hand-edited
+    // `timeField=created` claim "nothing matched" and leave a phantom chip.
+    expect(hasOperationFilters({ timeField: "created" })).toBe(false);
+    expect(hasOperationFilters({ timeField: "" })).toBe(false);
+    expect(pruneSearch({ timeField: "created" }).timeField).toBeUndefined();
+  });
+
   it("passes the basis to the server filter and counts it as an active filter", () => {
     expect(operationFiltersFromSearch({ timeField: "updated" }).timeField).toBe("updated");
     expect(hasOperationFilters({ timeField: "updated" })).toBe(true);
