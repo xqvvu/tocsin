@@ -2,6 +2,90 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 97 轮）
+
+- 时间：2026-10-23 17:25 CST 起。
+- 基线：本轮开始时 `origin/main` @ `ac2bb82`（v0.1.0-beta.73）；main CI success。遗留 open PR #417
+  （第 96 轮发布记录，纯文档）的 `playwright · chromium` job 卡在 `in_progress` 约 38 分钟，
+  取消后原地 rerun（1m16s 通过），再 `--rebase` 合入（`a2facdd`）。
+- 类型：**`full-audit`（4 条车道，并发 ≤3）** —— `requirements`、`ui-triage`（→ `review_now`）、
+  `release-infra`（轮转车道，先启动）、`ui-review`（triage 返回后占用第三个并发槽）。
+- 全量审计时间戳：**2026-10-23 17:25 CST（本轮）**。
+- 车道轮转位置：**`architecture`**（下一轮非必跑车道；`release-infra` 已在本轮跑过）。
+- `ui-triage`：**`review_now`** —— 自 `last_ui_review_at` 2026-10-23 14:16 起真实 UI 合并 3 条
+  （`4fcd056`、`aa35f2a`、`663cdbc`），达到 ≥3 强信号；其中两条新改动无浏览器验证记录；
+  25 条 UI candidate、0 条 HIGH。
+- `last_ui_review_at`：**2026-10-23 17:40 CST**（隔离实例 `localhost:6197` 真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建都在会话工作树
+  `exciting-cannon-ab991d`。
+
+### 本轮交付
+
+- **PR #418 `test(console): cover destination read and test-send redaction for every kind`
+  （SEC-35，24 分）**，rebase 合并 `20cbed5`：
+  - `destination.helpers.test.ts` 新增按 `DestinationKindSchema.options` 参数化的读投影用例
+    （`Record<DestinationKind, …>` 保证新增 kind 时类型检查失败）：列表行与投递元数据不得含
+    URL 密码、签名 secret、header 值；编辑草稿保留存储 URL（含密码），避免编辑保存抹掉凭据。
+  - `configuration.integration.test.ts` 新增按 kind 参数化的 `testDestination` 用例：四类目标
+    各发送一次，断言 DTO 不回显模板 marker 与上游响应中的 token/password，并打到正确
+    endpoint（Slack 需精确 `ok` 响应）。
+  - 纯测试改动；验证 `vp check` 0 errors、`vp run -r test` 4/4（console 986 tests）、
+    `vp run -r build` 通过，CI 双 check 绿。
+- **PR #419 `fix(console): emphasize the route notification-gap badge`（UI-47，浏览器实测）**：
+  - 状态范围徽标从与条件 chip 同质的 `outline` 改为 `SeverityBadge` 同款 amber 警告色调
+    （`routes-section.tsx:410-420`），保留图标与 `title`；测试固定警告类名。
+  - 浏览器实测 zh-Hans/en-US、1280×900 与 390×844；截图
+    `/tmp/tocsin-ui-r97-routes-1280-zh.png`、`/tmp/tocsin-ui-r97-routes-1280-en.png`。
+
+### 专家发现
+
+- `requirements`：**运行约 40 分钟仍停在读取阶段（仅输出「我先建立计划并快速定位文档与代码证据」），
+  已终止，连续第 3 轮无产出**。下一轮必须把该车道缩成「只读 2 个指定文件 + 10 分钟返回」的硬边界，
+  或暂时停跑、改由编排者按 backlog 选题。
+- `release-infra`（代码/CI 核实）：
+  - **历史缺口已关闭**：`.github/workflows/e2e.yml` 已存在并覆盖 `push main` + `pull_request`，
+    失败上传 `apps/console/test-results`；main 最近 run success。`justfile:80-95` 有
+    `e2e`/`e2e-ui`/`docker-smoke`。
+  - **REL-22 仍成立**：`apps/console/e2e/alert-flow.spec.ts:27` 只有 1 个用例，未覆盖
+    Route/Delivery/retry/过滤；Destination 指向不可连通的 `http://localhost:9/e2e-sink`（`:90`）
+    且未被 Route 引用；扩展属 60–90 分钟，本轮不做。
+  - **REL-24/REL-2 仍成立**：`packages/providers/src` 无 fixture 目录；6 个 adapter 测试共
+    19 个内联 payload。第一批 5 文件/10 payload 约 20–25 分钟；import 路径应为
+    `../../fixtures/…`（旧 backlog 的 `../../../` 会指到 `packages/fixtures`）。
+  - **REL-23 证据更新**：main 无 branch protection/ruleset（404 + `[]`），但当前 token
+    `permissions.admin=true`，历史「无 admin」阻塞解除；属仓库设置变更，下一轮交 EXPERT_PANEL。
+  - `health`/`ready`/worker health 与 D:169 勾选一致；`docker-smoke.sh` 卷隔离与 `down -v`
+    守卫有效（本轮实跑 `docker compose config` 复核）。
+- `ui-review`（真实浏览器，隔离实例 `localhost:6197` + `/tmp/tocsin-ui-r97.sqlite`，zh/en，1280/390）：
+  - **UI-47（已交付）**：Routes 状态范围徽标与条件 chip 视觉同质，读起来像第三个匹配条件
+    （`routes-section.tsx:410-415`）。截图 `/tmp/tocsin-ui-r97-routes-1280-zh.png`、`-en.png`。
+  - **UI-30 复核（浏览器实测）**：`table-fixed` 下 actions 列实测 88px，`min-w-24` 不参与列宽
+    算法；当前两个 `icon-xs` 按钮合计约 76px 未裁切，第三个动作才会裁切。最小修复 `w-24`
+    （XS），留待下一轮。
+  - **Deliveries 列表无需改动**：1280 九列 982px 无溢出，长回执 `truncate` 生效
+    （clientWidth 56 / scrollWidth 537），复制按钮完整可见；390 横向滚动合理、操作列 sticky 正常。
+  - Routes 表单三条 Alert 互斥、全宽渲染，密度正常；规则列 1280 已贴容量边界（330px），
+    改用警告色后折行仍可识别，暂不调整。
+
+### EXPERT_PANEL
+
+本轮无裁决事项。SEC-36（删除 `EventFingerprintContext.fingerprint`）因会改变 oRPC 输出形状，
+从 AUTO_FIX 上调为 EXPERT_PANEL，下一轮交三人小组。
+
+### 发布评估
+
+本轮唯一用户可见变更是 PR #419 的警告色调；在 `#419` CI 绿、main 无其他 open PR 后，
+由发布经理 / 阻断审计员 / 运维回滚专家三人小组评估，结果见后续发布记录。
+
+### 下一轮优先项
+
+1. **SEC-36**：三人小组裁决删除未消费的 fingerprint 字段（API 形状变更）。
+2. **REL-24/REL-2 第一批 provider fixtures**：5 文件/10 payload，20–25 分钟。
+3. **UI-30**：`w-24` 修复 `table-fixed` 下失效的最小宽（XS）。
+4. **architecture 车道**（轮转）。
+5. **requirements 车道重做**：改用 10 分钟硬边界 + 指定文件清单。
+6. **REL-23**：EXPERT_PANEL 决定是否启用 main required checks（token 已有 admin）。
+
 ## 2026-10-23（第 96 轮）
 
 - 时间：2026-10-23 16:16 CST 起。
