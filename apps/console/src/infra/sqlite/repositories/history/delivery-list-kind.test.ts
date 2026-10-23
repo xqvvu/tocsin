@@ -227,6 +227,7 @@ describe("delivery schemas expose destinationKind", () => {
     sourceName: "Prometheus",
     destinationName: "Pager",
     routeName: null,
+    providerReference: null,
     state: "pending" as const,
     attemptCount: 0,
     nextAttemptAt: null,

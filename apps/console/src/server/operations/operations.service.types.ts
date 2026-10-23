@@ -1,5 +1,6 @@
 import type {
   DeliveryListItem,
+  DeliveryReceiptFilter,
   DeliveryState,
   DestinationKind,
   EventDeliveryOutcome,
@@ -38,6 +39,8 @@ export interface ListOperationsInput {
   /** Delivery-only: one destination adapter kind. */
   destinationKind?: DestinationKind;
   routeId?: string;
+  /** Delivery-only: target message reference present or missing. */
+  receipt?: DeliveryReceiptFilter;
   deliveryState?: DeliveryState;
   /** Delivery-only: keep jobs attempted at least this many times. */
   minAttempts?: number;

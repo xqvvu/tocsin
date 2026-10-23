@@ -42,6 +42,19 @@ export const EventDeliveryOutcomeSchema = z.union([z.literal("none"), DeliverySt
 export type EventDeliveryOutcome = z.infer<typeof EventDeliveryOutcomeSchema>;
 
 /**
+ * Narrows the deliveries list by whether the target returned a message
+ * reference.
+ *
+ * `present` means the target accepted the alert and identified the message, so
+ * the operator can find it in the target system. `missing` covers everything
+ * else: never attempted, attempted without a reference, silenced, or a legacy
+ * row with only half of the reference written.
+ */
+export const DeliveryReceiptFilterSchema = z.enum(["present", "missing"]);
+
+export type DeliveryReceiptFilter = z.infer<typeof DeliveryReceiptFilterSchema>;
+
+/**
  * Upper bound for the free-text operations search.
  *
  * The oRPC contract and the console URL normalizer share this value so a
@@ -203,6 +216,13 @@ export interface DeliveryListItem {
    */
   destinationKind?: DestinationKind;
   routeName: string | null;
+  /**
+   * Target-system handle for the delivered message, for example a Feishu
+   * `message_id`. The list shows it so an operator can prove the target
+   * accepted the alert without opening each job; `null` means no reference has
+   * been recorded (yet, or at all).
+   */
+  providerReference: ProviderReference | null;
   state: DeliveryState;
   attemptCount: number;
   nextAttemptAt: IsoDateTimeString | null;

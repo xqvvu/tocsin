@@ -118,6 +118,16 @@ describe("operations service", () => {
     expect(retried.deliveries.total).toBe(0);
     expect(retried.events.total).toBe(1);
 
+    // The failed job never recorded a provider reference, so it is the only
+    // row in the missing bucket and neither list has a present receipt.
+    const missingReceipt = await service.listOperations({ limit: 10, receipt: "missing" });
+    expect(missingReceipt.deliveries.items.map((item) => item.id)).toEqual([delivery.id]);
+    expect(missingReceipt.deliveries.total).toBe(1);
+    expect(missingReceipt.events.total).toBe(1);
+    const presentReceipt = await service.listOperations({ limit: 10, receipt: "present" });
+    expect(presentReceipt.deliveries.total).toBe(0);
+    expect(presentReceipt.events.total).toBe(1);
+
     // The fan-out outcome narrows events only. The delivery list keeps its own
     // exact `deliveryState` dimension, so the same URL value cannot silently
     // filter two lists with different meanings.

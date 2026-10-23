@@ -12,6 +12,7 @@ import {
 } from "#/features/deliveries/ui/deliveries-table-layout";
 import { DeliveryActions } from "#/features/deliveries/ui/delivery-actions";
 import { DeliveryEventCell } from "#/features/deliveries/ui/delivery-event-cell";
+import { DeliveryReceiptCell } from "#/features/deliveries/ui/delivery-receipt-cell";
 import { DeliveryStateBadge } from "#/features/deliveries/ui/delivery-state-badge";
 import {
   DeliveryTargetCell,
@@ -93,6 +94,13 @@ export function DeliveriesTable({
         id: "attempts",
         header: t("deliveries.table.headers.attempts"),
         cell: ({ row }) => <span className="font-medium">{row.original.attemptCount}</span>,
+      },
+      {
+        id: "receipt",
+        header: t("deliveries.table.headers.receipt"),
+        cell: ({ row }) => (
+          <DeliveryReceiptCell providerReference={row.original.providerReference} />
+        ),
       },
       {
         id: "next",

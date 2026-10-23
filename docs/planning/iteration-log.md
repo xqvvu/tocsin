@@ -2,6 +2,68 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 95 轮）
+
+- 时间：2026-10-23 15:08 CST 起。
+- 基线：本轮开始时 `origin/main` @ `41c81a7`；main CI success；无遗留 open PR。
+- 类型：**`full-audit`（3 条车道）** —— `requirements`、`ui-triage`（→ `defer`）、`docs-drift`。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**。
+- 车道轮转位置：**`security-exposure`**（下一轮非必跑车道）。
+- `ui-triage`：**`defer`** —— `last_ui_review_at` 2026-10-23 14:16 距今 0.9h；自评审后 UI 路径
+  合并 1 条（`4fcd056`，正是 UI-42 的修复且已有 390/1280 定向实测）；25 条 UI candidate、
+  0 条 HIGH。下次自然触发：2026-10-25 14:16、UI 路径合并 ≥3、或新增可复现 HIGH。
+- `last_ui_review_at`：**2026-10-23 14:16 CST**（未变；本轮未做深度 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建都在会话工作树
+  `festive-kilby-57f59f`（写入隔离 hook 禁止跨工作树写入）。收尾时并发锁已删除。
+
+### 本轮交付
+
+- **PR #TBD `feat(console): show delivery receipts in the deliveries list`（REQ-252，28 分）**：
+  - `DeliveryListItem` 新增 `providerReference`（core 类型 + oRPC schema + 仓储映射复用
+    `providerReferenceFromRow`），列表 select 增取 `deliveries.provider_ref_*`。
+  - URL 新增 `receipt=present|missing`：`DashboardOperationSearchSchema`、服务端
+    `ListOperationsInputSchema`、`ListOperationsInput` 与服务层透传；SQL 谓词要求两半
+    `provider_ref_*` 均非空才算 present，列表与 `total` 共用（半写历史行归 missing）。
+  - 投递表新增可复制「回执」列（空值 `—`），列宽重分配保持 1280 密度；筛选面板新增
+    「送达回执」下拉与可清除 chip，重置筛选一并清除。
+  - 新增 PRD `docs/prd/delivery-list-receipt.md`；测试覆盖仓储 present/missing/半写行、
+    服务透传、URL 模型、筛选面板与表格回执列。
+  - 验证：`vp run -r test` 4/4 包通过（console 972 tests）；`vp run -r build` 通过。
+    本地 `vp check` 仅剩 `route-match-gaps.test.ts:155` 的 `require-array-sort-compare`
+    （本 PR 未触碰该文件，`origin/main` 同文件同样内容且 CI success，判断为本地工具链
+    版本漂移；其余 18 条为基线 warning）。
+
+### 专家发现
+
+- `requirements`：新增 6 条候选 —— REQ-256 恢复后收敛过期 firing 投递（23，**触及投递
+  语义/状态枚举/迁移，需 EXPERT_PANEL**）；REQ-257 尊重上游 `Retry-After`（27）；
+  REQ-258 路由只匹配 firing 时提示恢复不会送达（27）；REQ-259 TLS 失败诊断与内部 CA
+  （24）；REQ-260 路由标签键值建议（23）；REQ-261 尝试级出站请求快照（20，
+  迁移 + secret 边界，需 EXPERT_PANEL）。已写入 backlog。
+- `ui-triage`：`defer`（理由见上）；建议下一轮优先处理已定级的 UI-43/44/46，而不是重复发现。
+- `docs-drift`：DOC-73..82 **10 条全部仍成立**（`console-server-restructure-plan.md:49,80`、
+  `frontend-architecture.md:344-346`、`self-hosted-alert-hub-mvp.md:19-22` 等）；新增 MEDIUM：
+  `release-checklist.md:4,21` 版本快照停在 beta.68（实际 beta.71 / 63 tags）、
+  `route-row-silence.md:5-17` 缺「已实现」头（REQ-238/#389）、
+  `adapter-contribution-experience.md:209-212` 称 destination audit 未落地（实际
+  `packages/destinations/src/registry.ts:83`）、`mvp-rc-checklist.md:101-102` compose secret
+  措辞过期；LOW：`route-authoring-current-state.md:3` 旧本机路径、
+  `alert-suppression.md:318-322` 残留「请拍板」。全部为纯文档 AUTO_FIX，下一轮合并为
+  一个 `docs:` PR。
+- 未跑 `security-exposure` 车道（轮转位置轮到下一轮）；SEC-36/SEC-35 仍为 candidate。
+
+### 发布评估
+
+（合并后补充）
+
+### 下一轮优先项
+
+1. **REQ-257（27）/ REQ-258（27）**：两个低成本垂直切片，优先实现其一。
+2. **DOC-73..82 + 第 95 轮新增 MEDIUM/LOW**：合并为一个 `docs:` PR。
+3. **SEC-36（25）** 删除未使用的 fingerprint 字段；**SEC-35** 补按 kind 参数化的脱敏断言。
+4. **REQ-256（23）**：启动 EXPERT_PANEL（投递语义/状态枚举/迁移），与 REQ-243 一并评审。
+5. **UI-43 / UI-44 / UI-46**：1280 时间截断、同指纹表窄屏滚动、投递详情窄屏复核。
+
 ## 2026-10-23（第 94 轮）
 
 - 时间：2026-10-23 13:55 CST 起。

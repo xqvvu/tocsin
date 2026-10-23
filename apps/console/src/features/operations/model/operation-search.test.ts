@@ -299,6 +299,34 @@ describe("delivery outcome filter in the operation search", () => {
   });
 });
 
+describe("delivery receipt filter in the operation search", () => {
+  it("parses the receipt state from the URL and falls back on garbage", () => {
+    expect(DashboardOperationSearchSchema.parse({ receipt: "present" }).receipt).toBe("present");
+    expect(DashboardOperationSearchSchema.parse({ receipt: "missing" }).receipt).toBe("missing");
+    // A hand-edited URL must not break the deliveries page.
+    expect(DashboardOperationSearchSchema.parse({ receipt: "maybe" }).receipt).toBe("");
+  });
+
+  it("keeps the receipt out of the URL when cleared but sends a real value", () => {
+    expect(pruneSearch({ receipt: "" }).receipt).toBeUndefined();
+    expect(pruneSearch({ receipt: "present" }).receipt).toBe("present");
+    expect(operationFiltersFromSearch({ receipt: "" }).receipt).toBeUndefined();
+    expect(operationFiltersFromSearch({ receipt: "missing" }).receipt).toBe("missing");
+  });
+
+  it("counts as an active filter so the empty state can explain itself", () => {
+    expect(hasOperationFilters({ receipt: "missing" })).toBe(true);
+  });
+
+  it("resets both lists to their first page when the receipt changes", () => {
+    const merged = mergeOperationSearch({ eventPage: 4, deliveryPage: 3 }, { receipt: "present" });
+
+    expect(merged.receipt).toBe("present");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+});
+
 describe("clearing the operation search", () => {
   it("clears every filter the toolbar can write", () => {
     // One shared list feeds the inline reset and both page-level resets. If a
@@ -313,6 +341,7 @@ describe("clearing the operation search", () => {
       "q",
       "range",
       "rangeAnchor",
+      "receipt",
       "routeId",
       "severity",
       "sourceId",

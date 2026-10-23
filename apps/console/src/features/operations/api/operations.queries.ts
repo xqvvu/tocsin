@@ -179,6 +179,7 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.destinationId ? { destinationId: filters.destinationId } : {}),
     ...(filters.destinationKind ? { destinationKind: filters.destinationKind } : {}),
     ...(filters.routeId ? { routeId: filters.routeId } : {}),
+    ...(filters.receipt ? { receipt: filters.receipt } : {}),
     ...(filters.deliveryState ? { deliveryState: filters.deliveryState } : {}),
     ...(filters.minAttempts && filters.minAttempts > 0 ? { minAttempts: filters.minAttempts } : {}),
     ...(filters.range ? { range: filters.range } : {}),
