@@ -62,7 +62,15 @@
 
 ### 发布评估
 
-（合并后补充）
+3 位专家一致同意发布 `0.1.0-beta.73`：
+
+- **发布经理**：自 `v0.1.0-beta.72` 以来 4 个提交，仅 `663cdbc`（#415 路由状态范围提示）用户可见；
+  建议 `0.1.0-beta.73`。
+- **发布阻断审计员**：`ca80a48` 的 `check · test · build` 与 `playwright · chromium` 均 success；
+  无 open PR；3 条 `blocked-autonomous`（LICENSE 法律决策、main 无 required checks）均非阻塞；
+  `migrate/` 零提交；无 `v0.1.0-beta.73` tag 冲突。
+- **运维/回滚专家**：`infra/sqlite/migrate`、`server/runtime`、`lib`、`docker-compose.yml`、`Dockerfile`
+  零 diff，无迁移/配置/环境变量变化；回滚换回 `0.1.0-beta.72` 镜像即可，SQLite 数据双版本兼容。
 
 ### 下一轮优先项
 
