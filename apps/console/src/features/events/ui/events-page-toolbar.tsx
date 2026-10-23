@@ -38,6 +38,9 @@ export function EventsPageToolbar({
             size="sm"
             disabled={pending}
             onClick={onResetFilters}
+            // The visible label is shared with the chip row and the empty
+            // state, so name this one by its page-level scope.
+            aria-label={t("events.page.resetTitle")}
             title={t("events.page.resetTitle")}
           >
             <RiFilterOffLine data-icon="inline-start" aria-hidden />

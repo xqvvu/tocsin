@@ -37,6 +37,17 @@ describe("deliveries page toolbar", () => {
     expect(button.getAttribute("aria-describedby")).toBe(hint.id);
   });
 
+  it("names the page-level reset distinctly from the filter bar and empty state", () => {
+    renderToolbar();
+
+    // All three resets clear the same filters. The visible label is shared, so
+    // the accessible name carries the scope instead.
+    const reset = screen.getByRole("button", { name: "Reset delivery filters" });
+
+    expect(reset.textContent).toContain("Reset filters");
+    expect(reset.getAttribute("title")).toBe("Reset delivery filters");
+  });
+
   it("disables the worker while another action is pending", () => {
     renderToolbar({ pending: true });
 

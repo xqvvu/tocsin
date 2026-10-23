@@ -191,7 +191,7 @@ export function OperationFilters({
             className="h-6 px-1.5 text-[11px]"
             onClick={() => handleFilterChange(clearedOperationSearch)}
           >
-            {t("common.actions.resetFilters")}
+            {t("common.actions.clearAllFilters")}
           </Button>
         </div>
       ) : null}
