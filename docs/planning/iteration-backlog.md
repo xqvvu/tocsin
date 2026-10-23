@@ -665,6 +665,8 @@
 | REQ-255 | 按告警源的接入限流与超限可观测 | requirements lane（第 93 轮） | 23 | candidate | — | Webhook 入口有 body 上限与鉴权但无限流（`routes/api/sources/$sourceId/webhook.ts:39-72`、`server/intake/intake.service.ts:61-76`），单进程运行时一个失控上游可拖慢全部告警；全仓无入站 429。切片：进程内按 `sourceId` 固定窗口，env `TOCSIN_INTAKE_RATE_LIMIT_PER_MINUTE`（0=关闭），超限 429 + `Retry-After` 且不写库；鉴权失败不消耗限额。**改接入拒绝语义，实施前交 EXPERT_PANEL** |
 | DOC-73..82 | docs-drift 第 93 轮批次 | docs-drift lane（第 93 轮） | — | candidate | — | 均为文档更正（AUTO_FIX），无代码漂移：DOC-73 路径/命令过期（`console-server-restructure-plan.md:49,80`、`tanstack-start-import-boundaries.md:159`）；DOC-74 `requireDashboard()` 描述过期（`frontend-architecture.md:344-346`）；DOC-75 发布硬化剩余项已交付（`self-hosted-alert-hub-mvp.md:19-22`）；DOC-76 目录树与 features/server 实际不符（`frontend-architecture.md:74-77,94-97`）；DOC-77 无 importer 的 `server/runtime/store.ts` 仍写作兼容 accessor（`application-container.md:56`）；DOC-78 模板能力描述过期（`destination-template-engine.md:7`）；DOC-79 模板编辑器评审缺状态头（`template-editor-ux-review.md:1-7`）；DOC-80 验收项已实现未勾选（`destination-template-engine-issues.md:138`）；DOC-81 投递路由证据缺「已实现」头（`delivery-route-match-evidence.md:1-3`）；DOC-82 回执 PRD 行号引用已失效（`event-delivery-receipts.md:11,14-16`） |
 
+| REL-34 | 发布 `0.1.0-beta.70` | release panel（第 93 轮） | — | shipped | #407 | tag `v0.1.0-beta.70` @ `be11de5`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.70`（amd64+arm64，index digest `sha256:fa232575…`）；回滚 `0.1.0-beta.69`；用户可见变更 #406（事件详情同指纹历史）；无迁移、无配置/环境变量/启动参数变化 |
+
 ## 发布记录
 
 | 版本 | tag 指向 | 镜像 | 说明 |
