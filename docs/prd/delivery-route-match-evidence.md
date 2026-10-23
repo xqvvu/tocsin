@@ -1,5 +1,7 @@
 # 投递详情的路由命中依据
 
+状态：已实现（REQ-80，PR #146）
+
 ## 问题
 
 投递详情只显示「路由」名称（`apps/console/src/features/deliveries/ui/delivery-summary-tab.tsx`

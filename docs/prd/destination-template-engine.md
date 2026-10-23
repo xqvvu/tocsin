@@ -1,5 +1,9 @@
 # PRD: Destination 结构化模板引擎
 
+> 状态（2026-10-23 复核）：已实现。模板引擎当前支持 `text`、`feishu_card`、`slack_blocks` 与
+> `json_payload` 四种模式（`packages/destinations/src/template.ts`）；Email HTML 仍不在范围内。
+> 正文保留为设计背景，落地情况与后续项见 `destination-template-engine-issues.md`。
+
 Labels: `ready-for-agent`
 
 ## Problem Statement

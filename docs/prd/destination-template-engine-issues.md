@@ -135,6 +135,6 @@ Decide and implement follow-up modes for Slack blocks, Email HTML, and generic w
 
 ### Acceptance criteria
 
-- [ ] Slack blocks, Email HTML, and generic JSON requirements are reviewed against the Feishu implementation.
+- [x] Slack blocks, Email HTML, and generic JSON requirements are reviewed against the Feishu implementation（见 `destination-template-follow-up-review.md`，2026-10-10 评审完成）。
 - [x] Follow-up PRD or issue split is created before code changes.
 - [x] No additional destination modes are implemented without explicit scope approval.

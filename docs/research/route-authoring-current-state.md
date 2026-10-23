@@ -1,6 +1,6 @@
 # Route 路由能力现状盘点（Route Authoring 与 Explain）
 
-- 调研基线（历史）：commit `73d84d3`；当时的工作树 `/Users/chuanhu9/devs/vane/.wt/a` 已不存在，
+- 调研基线（历史）：commit `73d84d3`；当时的本地工作树路径已失效，
   续做前以当前 `origin/main` 为准
 - 方法：只读代码侦察，范围限定 `packages/core/src/route/`、`apps/console/src/server/`、`apps/console/src/features/routes/` 及直接相邻的 event/delivery/UI 路径
 - 对应上游文档：`docs/prd/post-mvp-planning.md:88`「### 2. Route Authoring 与 Explain」（第 203 行给出第二优先级理由）

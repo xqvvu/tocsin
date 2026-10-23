@@ -73,7 +73,7 @@ git push origin "v<version>"
 约定与限制，逐条说清：
 
 - tag 名采用 `v<根 package.json 的 version>`。截至 2026-10-23 的 annotated tag 覆盖
-  `v0.1.0-beta.9` … `v0.1.0-beta.76`，最新数量以 `git tag --list` 为准；后续沿用同一约定；如果要换命名，
+  `v0.1.0-beta.9` … `v0.1.0-beta.77`，最新数量以 `git tag --list` 为准；后续沿用同一约定；如果要换命名，
   改这里和 Release 说明即可。
 - 用 annotated tag（`-a`）以便携带一条发布说明；这是建议，仓库没有任何工具强制 tag 类型。
 - 版本号只存在于根 `package.json`，没有工具会替你递增。要发新版本时先改 `package.json`、提交、通过 CI，

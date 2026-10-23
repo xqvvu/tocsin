@@ -53,7 +53,7 @@ apps/console/src/server/
     worker-health.service.ts     # 投递/加急 worker 最近运行状态投影
     health.types.ts              # readiness/health 共享类型
     domain-errors.ts             # 运行时侧领域错误辅助
-    store.ts                     # 兼容窄 accessor，委托 application container
+    store.ts                     # 兼容窄 accessor，委托 application container（无生产 importer，仅 store.test.ts）
   orpc/
     os.ts                        # implement(contract) + request-id middleware
     router.ts                    # root router，组合各 feature router
