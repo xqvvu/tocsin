@@ -4,6 +4,7 @@ import { OPERATION_SEARCH_MAX_LENGTH } from "@tocsin/core";
 
 import {
   DashboardOperationSearchSchema,
+  hasOperationFilters,
   mergeOperationSearch,
   operationFiltersFromSearch,
   pruneSearch,
@@ -252,5 +253,47 @@ describe("time range anchor in the operation search", () => {
     );
 
     expect(reopened.rangeAnchor).toBe("2026-10-23T05:00:00.000Z");
+  });
+});
+
+describe("delivery outcome filter in the operation search", () => {
+  it("accepts every delivery state plus the no-delivery outcome", () => {
+    // `none` is the only value that is not a DeliveryState: it is how a
+    // silently dropped alert ("no route matched") becomes findable.
+    for (const outcome of ["none", "pending", "running", "succeeded", "failed", "suppressed"]) {
+      expect(
+        DashboardOperationSearchSchema.parse({ deliveryOutcome: outcome }).deliveryOutcome,
+      ).toBe(outcome);
+    }
+  });
+
+  it("falls back to no filter for a hand-edited unknown value", () => {
+    expect(
+      DashboardOperationSearchSchema.parse({ deliveryOutcome: "bounced" }).deliveryOutcome,
+    ).toBe("");
+  });
+
+  it("keeps the outcome out of the URL when it is cleared", () => {
+    expect(pruneSearch({ deliveryOutcome: "" }).deliveryOutcome).toBeUndefined();
+    expect(pruneSearch({ deliveryOutcome: "none" }).deliveryOutcome).toBe("none");
+    expect(operationFiltersFromSearch({ deliveryOutcome: "none" }).deliveryOutcome).toBe("none");
+  });
+
+  it("counts as an active filter so the empty state can explain itself", () => {
+    // Without this the table would say "nothing has happened yet" while the
+    // outcome filter is hiding every event.
+    expect(hasOperationFilters({ deliveryOutcome: "none" })).toBe(true);
+    expect(hasOperationFilters({})).toBe(false);
+  });
+
+  it("resets both lists to their first page when the outcome changes", () => {
+    const merged = mergeOperationSearch(
+      { eventPage: 4, deliveryPage: 3 },
+      { deliveryOutcome: "failed" },
+    );
+
+    expect(merged.deliveryOutcome).toBe("failed");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
   });
 });

@@ -53,6 +53,9 @@ Events 和 Deliveries 两个页面复用同一个筛选面板
 
 - 让 Events 页支持按目标或投递状态过滤（需要 join 投递表或子查询，
   会改变事件列表的语义与成本，另行决策）。
+  **后续**：事件侧的「投递结果」维度已由
+  `docs/prd/event-delivery-outcome-filter.md`（REQ-21）单独交付；
+  按通知目标过滤仍未做。
 - 在 Events 页按路由过滤。
 - 保存筛选预设、跨页面共享筛选状态、筛选条件收藏。
 - 为 `deliveries.route_id` 新增索引或迁移（MVP 数据量下先不加）。

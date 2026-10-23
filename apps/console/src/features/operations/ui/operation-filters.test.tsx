@@ -48,6 +48,9 @@ describe("operation filters by page scope", () => {
     expect(screen.getByText("Source")).toBeTruthy();
     expect(screen.getByText("Severity")).toBeTruthy();
     expect(screen.getByText("Status")).toBeTruthy();
+    // The fan-out outcome ("did this alert reach anyone") belongs to the event
+    // list; the delivery list has the exact per-job state instead.
+    expect(screen.getByText("Delivery outcome")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
     expect(screen.queryByText("Destination")).toBeNull();
     expect(screen.queryByText("Destination kind")).toBeNull();
@@ -64,6 +67,7 @@ describe("operation filters by page scope", () => {
     expect(screen.getByText("Destination kind")).toBeTruthy();
     expect(screen.getByText("Route")).toBeTruthy();
     expect(screen.getByText("Delivery state")).toBeTruthy();
+    expect(screen.queryByText("Delivery outcome")).toBeNull();
     expect(screen.getByText("Attempts")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
   });
@@ -75,6 +79,16 @@ describe("operation filters by page scope", () => {
     cleanup();
     renderFilters("events", { minAttempts: 2 }, "toolbar");
     expect(screen.queryByTitle("Clear Attempts")).toBeNull();
+  });
+
+  it("names the delivery outcome chip and keeps it off the deliveries page", () => {
+    renderFilters("events", { deliveryOutcome: "none" }, "toolbar");
+    expect(screen.getByTitle("Clear Delivery outcome")).toBeTruthy();
+    expect(screen.getByText("No delivery")).toBeTruthy();
+
+    cleanup();
+    renderFilters("deliveries", { deliveryOutcome: "none" }, "toolbar");
+    expect(screen.queryByTitle("Clear Delivery outcome")).toBeNull();
   });
 
   it("names the destination kind chip and keeps it off the events page", () => {
@@ -117,6 +131,7 @@ describe("operation filters by page scope", () => {
       sourceId: "",
       severity: "",
       status: "",
+      deliveryOutcome: "",
       destinationId: "",
       destinationKind: "",
       routeId: "",

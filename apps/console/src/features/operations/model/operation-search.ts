@@ -6,6 +6,7 @@ import type {
   AlertStatus,
   DeliveryState,
   DestinationKind,
+  EventDeliveryOutcome,
   OperationTimeRange,
 } from "@tocsin/core";
 import {
@@ -13,6 +14,7 @@ import {
   AlertStatusSchema,
   DeliveryStateSchema,
   DestinationKindSchema,
+  EventDeliveryOutcomeSchema,
   OperationTimeRangeSchema,
   OPERATION_SEARCH_MAX_LENGTH,
 } from "@tocsin/core";
@@ -25,6 +27,12 @@ export const DashboardOperationSearchSchema = z.object({
     .optional(),
   status: z
     .union([AlertStatusSchema, z.literal("")])
+    .catch("")
+    .optional(),
+  // Events-only fan-out outcome: `none` is "produced no delivery at all",
+  // every other value is "has at least one delivery in that state".
+  deliveryOutcome: z
+    .union([EventDeliveryOutcomeSchema, z.literal("")])
     .catch("")
     .optional(),
   destinationId: z.string().catch("").optional(),
@@ -62,6 +70,7 @@ export interface DashboardOperationSearch {
   sourceId?: string;
   severity?: AlertSeverity | "";
   status?: AlertStatus | "";
+  deliveryOutcome?: EventDeliveryOutcome | "";
   destinationId?: string;
   destinationKind?: DestinationKind | "";
   routeId?: string;
@@ -78,6 +87,7 @@ export type OperationFilterData = {
   sourceId?: string;
   severity?: AlertSeverity;
   status?: AlertStatus;
+  deliveryOutcome?: EventDeliveryOutcome;
   destinationId?: string;
   destinationKind?: DestinationKind;
   routeId?: string;
@@ -100,6 +110,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.sourceId ||
     search.severity ||
     search.status ||
+    search.deliveryOutcome ||
     search.destinationId ||
     search.destinationKind ||
     search.routeId ||
@@ -155,6 +166,7 @@ export function mergeOperationSearch(
     "sourceId",
     "severity",
     "status",
+    "deliveryOutcome",
     "destinationId",
     "destinationKind",
     "routeId",

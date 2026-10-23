@@ -3,6 +3,7 @@ import * as React from "react";
 
 import {
   type DestinationSummary,
+  DeliveryStateSchema,
   DestinationKindSchema,
   OPERATION_SEARCH_MAX_LENGTH,
   type RouteDefinition,
@@ -190,6 +191,7 @@ export function OperationFilters({
                 sourceId: "",
                 severity: "",
                 status: "",
+                deliveryOutcome: "",
                 destinationId: "",
                 destinationKind: "",
                 routeId: "",
@@ -248,6 +250,17 @@ function OperationFiltersPanel({
   const routeItems = [
     { value: null, label: t("operations.filters.anyRoute") },
     ...(configuration.routes ?? []).map((route) => ({ value: route.id, label: route.name })),
+  ];
+  // `none` first: "which alerts never reached anyone" is the question on-call
+  // opens the events list with. The rest mirror DeliveryStateSchema so a new
+  // state cannot be silently missing from the filter.
+  const deliveryOutcomeItems = [
+    { value: null, label: t("operations.filters.anyOutcome") },
+    { value: "none", label: t("operations.filters.deliveryOutcomeOptions.none") },
+    ...DeliveryStateSchema.options.map((state) => ({
+      value: state,
+      label: t(`operations.filters.deliveryOutcomeOptions.${state}`),
+    })),
   ];
 
   return (
@@ -344,6 +357,37 @@ function OperationFiltersPanel({
           </SelectContent>
         </Select>
       </UiField>
+      {scope === "events" ? (
+        <UiField>
+          <FieldLabel htmlFor="operation-delivery-outcome">
+            {t("operations.filters.deliveryOutcome")}
+          </FieldLabel>
+          <Select
+            id="operation-delivery-outcome"
+            items={deliveryOutcomeItems}
+            value={search.deliveryOutcome || null}
+            disabled={pending}
+            onValueChange={(value) =>
+              onChange({
+                deliveryOutcome: (value ?? "") as DashboardOperationSearch["deliveryOutcome"],
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("operations.filters.anyOutcome")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {deliveryOutcomeItems.map((item) => (
+                  <SelectItem key={item.value ?? "any"} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </UiField>
+      ) : null}
       {scope === "deliveries" ? (
         <>
           <UiField>
@@ -591,6 +635,15 @@ function activeFilterChips(
       label: t("operations.filters.status"),
       valueLabel: t(`common.alertStatus.${search.status}`),
       clear: { status: "" },
+    });
+  }
+
+  if (scope === "events" && search.deliveryOutcome) {
+    chips.push({
+      key: "deliveryOutcome",
+      label: t("operations.filters.deliveryOutcome"),
+      valueLabel: t(`operations.filters.deliveryOutcomeOptions.${search.deliveryOutcome}`),
+      clear: { deliveryOutcome: "" },
     });
   }
 

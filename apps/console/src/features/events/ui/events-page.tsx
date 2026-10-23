@@ -56,6 +56,7 @@ export function EventsPage({ search, filters, onSearchChange }: EventsPageProps)
       sourceId: "",
       severity: "",
       status: "",
+      deliveryOutcome: "",
       destinationId: "",
       destinationKind: "",
       routeId: "",

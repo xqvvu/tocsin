@@ -3,6 +3,7 @@ import { sql } from "kysely";
 import type {
   DeliveryListItem,
   DestinationKind,
+  EventDeliveryOutcome,
   EventDetail,
   EventListItem,
   NumberedPage,
@@ -105,6 +106,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.status) {
       builder = builder.where("events.status", "=", query.status);
+    }
+
+    if (query.deliveryOutcome) {
+      builder = builder.where(eventDeliveryOutcomePredicate(query.deliveryOutcome));
     }
 
     if (query.since) {
@@ -350,6 +355,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("events.status", "=", query.status);
     }
 
+    if (query.deliveryOutcome) {
+      builder = builder.where(eventDeliveryOutcomePredicate(query.deliveryOutcome));
+    }
+
     if (query.since) {
       builder = builder.where("events.received_at", ">=", query.since);
     }
@@ -508,6 +517,30 @@ function deliverySearchPredicate(term: string) {
       WHERE searched_routes.id = deliveries.route_id
         AND searched_routes.name LIKE ${pattern} ESCAPE '\\'
     )
+  )`;
+}
+
+/**
+ * Restricts events to those whose fan-out produced a matching delivery.
+ *
+ * `none` is `NOT EXISTS`, so it covers both halves of a silently dropped alert:
+ * no route matched, and a matched route that carried no destination. The other
+ * values are "at least one delivery in this state". A correlated `EXISTS`
+ * keyed on `idx_deliveries_event_id` keeps the count query's shape unchanged and
+ * cannot duplicate an event row the way a second join would.
+ */
+function eventDeliveryOutcomePredicate(outcome: EventDeliveryOutcome) {
+  if (outcome === "none") {
+    return sql<boolean>`NOT EXISTS (
+      SELECT 1 FROM deliveries AS outcome_deliveries
+      WHERE outcome_deliveries.event_id = events.id
+    )`;
+  }
+
+  return sql<boolean>`EXISTS (
+    SELECT 1 FROM deliveries AS outcome_deliveries
+    WHERE outcome_deliveries.event_id = events.id
+      AND outcome_deliveries.state = ${outcome}
   )`;
 }
 

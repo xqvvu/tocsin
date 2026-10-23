@@ -40,6 +40,9 @@ export class OperationsService {
         sourceId: input.sourceId,
         severity: input.severity,
         status: input.status,
+        // Events-only: answers "did this alert reach anyone". The delivery
+        // list keeps its exact `deliveryState` dimension instead.
+        deliveryOutcome: input.deliveryOutcome,
         q: input.q,
         since,
         page: input.eventPage ?? 1,
