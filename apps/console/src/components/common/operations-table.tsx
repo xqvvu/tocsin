@@ -103,7 +103,11 @@ export function OperationsTable<TData extends RowData>({
       : Math.max(pageStart, Math.min(data.length, pageStart + visibleRows.length - 1));
 
   return (
-    <section className="bg-background flex min-h-0 flex-1 flex-col">
+    // A sibling panel (an inline edit form) competes for the same column. With
+    // flex-1 and min-h-0 alone the table collapsed to 0px and its pagination
+    // bar painted over the panel header. Keep a floor so the column scrolls
+    // instead of squashing the table.
+    <section className="bg-background flex min-h-72 flex-1 flex-col">
       <div
         className={cn(
           "border-border min-h-0 flex-1 overflow-auto border",

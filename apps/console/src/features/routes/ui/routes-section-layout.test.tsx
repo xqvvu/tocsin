@@ -83,11 +83,11 @@ describe("routes section table layout", () => {
     const tableRegion = table?.parentElement?.parentElement;
     const section = table?.closest("section");
 
-    // OperationsTable itself is flex-1. The feature wrapper must also be flex-1
-    // or it shrink-wraps around the table and leaves a blank block underneath —
-    // the height mismatch the routes page had.
+    // OperationsTable fills the column (flex-1) but keeps a height floor: the
+    // inline edit form is a flex sibling, and an unfloored table collapsed to
+    // 0px and painted its pagination bar over the form header.
     expect(section?.className).toContain("flex-1");
-    expect(section?.className).toContain("min-h-0");
+    expect(section?.className).toContain("min-h-72");
     expect(tableRegion?.className).toContain("flex-1");
     expect(tableRegion?.className).toContain("min-h-0");
   });

@@ -51,6 +51,17 @@ describe("operations table", () => {
     expect(screen.getByText("Nothing here")).toBeTruthy();
   });
 
+  it("keeps a minimum height so a sibling panel cannot collapse it", () => {
+    const { container } = renderTable([{ id: "row-1", name: "First" }]);
+    const section = container.querySelector("section");
+
+    // Routes and suppressions render an inline edit form as the next flex
+    // sibling of this table. Without a floor the table shrank to 0px and its
+    // pagination bar painted over the form header.
+    expect(section?.className).toContain("min-h-72");
+    expect(section?.className).not.toContain("min-h-0");
+  });
+
   it("hides the pagination bar when there are no rows", () => {
     renderTable([]);
 
