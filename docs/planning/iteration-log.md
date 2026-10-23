@@ -2,6 +2,88 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 94 轮）
+
+- 时间：2026-10-23 13:55 CST 起。
+- 基线：本轮开始时 `origin/main` @ `be11de5`；main CI success；遗留 open PR #408
+  （第 93 轮发布记录，docs-only）已在本轮合入（`6fd6777`）。
+- 类型：**`full-audit`（3 条车道并发）** —— `requirements`（44 分钟后仍在读取阶段，已终止）、
+  `ui-triage`（→ `review_now`）、`ui-review`；`ui-review` 触发后按规则取代 requirements
+  成为主交付；`security-exposure` 作为轮转车道并行执行。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**。
+- 车道轮转位置：**`docs-drift`**（下一轮非必跑车道）。
+- `ui-triage`：**`review_now`** —— `last_ui_review_at` 2026-10-23 11:10 起 UI 路径合并 3 条
+  （`d9d22ef`、`4dde523`、`b93f57e`），达到 ≥3 强信号；21 条 candidate、0 条 HIGH；
+  三条改动均有定向浏览器验证，但没有全站深度复查。
+- `last_ui_review_at`：**2026-10-23 14:16 CST**（本轮在隔离实例 `localhost:6194` 完成真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建都在会话工作树
+  `sweet-hermann-436b02`（写入隔离 hook 禁止跨工作树写入）。收尾时并发锁已删除。
+
+### 本轮交付
+
+- **PR #409 `fix(console): keep event detail usable on narrow viewports`（UI-42，28 分）**：
+  - 390×844 实测：摘要卡 `shrink-0` 占约 680px，`event-detail-page.tsx:26` 的
+    `min-h-0 flex-1 overflow-hidden` + `event-detail-view.tsx:19` 的 `h-full` 把 Tabs
+    压到 40px，内部滚动容器 16/263px，五个标签页都只露一条内容，页面也不能纵向滚动。
+  - 修复：`<lg` 内容区改为纵向滚动（`event-detail-page.tsx:35`）、详情视图自然高度
+    （`event-detail-view.tsx:19`）、TabList `<lg` 换行（`:41`）；`components/ui/tabs.tsx:20`
+    的 `h-8` → `min-h-8`、`:55` 的 trigger 增加 `min-h-7`，单行高度与点击区域不变，
+    换行时列表随两行撑高；`zh-Hans.json:694` 的 `Raw debug` → 「原始调试」。
+  - 新增 `event-detail-view.test.tsx` 守卫五个标签、中文文案与窄屏布局类；
+    PRD `docs/prd/event-detail-narrow-layout.md`。
+  - 验证：`vp check` 0 errors / 18 warnings（基线）；`vp run -r test` 4/4 包通过
+    （console 962 tests）；`vp run -r build` 通过。
+  - **浏览器验证**（`localhost:6194` + `/tmp/tocsin-ui-r94.sqlite`）：
+    390×844 zh-Hans 与 en-US 各 Tab 面板 287–881px（修复前 40px）；
+    `body.scrollWidth == innerWidth`（390）；内容区 575/822–1442 可滚动到底，投递表可见；
+    en-US 390 TabList 换行为两行（56px）、`scrollWidth == clientWidth == 322`，五个标签全部可见；
+    zh-Hans 保持单行（30px）；1280×800 面板仍 378px、无页面级滚动。
+    截图 `/tmp/tocsin-ui-r94-fixed/zh-390-*.png`、`en-390-*.png`、`zh-1280-*.png`。
+
+### 专家发现
+
+- `requirements`：车道运行 44 分钟仍停在读取阶段（唯一输出为「我先阅读规划文档与现有候选」），
+  按 30 分钟上限终止，**留待下一轮**；本轮需求候选不再新增。
+- `ui-triage`：`review_now`（理由见上）。
+- `ui-review`（真实浏览器，6194）：
+  - **HIGH（已修）** 390×844 事件详情 tabpanel 仅 40px，覆盖全部 5 个标签；
+    根因见 PR #409。
+  - **MEDIUM（已修）** 默认 `en-US` 下 TabList `scrollWidth=440 / clientWidth=322`，
+    `Fingerprint`、`Raw debug` 完全在视口外且无滚动提示（中文下不成立）。
+  - **MEDIUM（已修）** 中文界面残留 `Raw debug`（`zh-Hans.json:694`）。
+  - **LOW** 1280 事件详情「下次重试」显示为 `2026/10/21 04:…` 且无 `title`（UI-43）；
+    同指纹历史表 `min-w-140` 在 390 需横向滚动（UI-44）；静默单元格 `space-y-0.5`
+    偏离 shadcn 约定（UI-45）；投递详情页复用同一窄屏塌陷模式（UI-46）。
+  - 回执列本身 PASS（`PD-88421` + 复制 + `HTTP 200/502` + 时间）；
+    同指纹空态、骨架 `aria-busy` 正确；UI-41 未复现。
+  - 工具链：本工作树 `vp -C apps/console dev` 报 `@rolldown/plugin-babel` 缺失
+    （根 `node_modules/.vite-temp` 解析不到只链接在 `apps/console` 的包）；
+    用根 `node_modules/@rolldown` 符号链接绕过并已删除，`vp install --force` 无法自愈。
+- `security-exposure`：
+  - **SEC-36（MEDIUM，新）** 新 DTO `EventFingerprintContext.fingerprint` 暴露 UI 未使用的
+    原始 fingerprint（`packages/core/src/operations.ts:176`、`packages/api/src/schemas/operations.ts:109`、
+    `history/history.repository.ts:311`），进入 oRPC 响应与 Query 缓存；删除字段零语义变更（AUTO_FIX）。
+  - 比较值脱敏覆盖足够：diff 前对两侧事件都调用 `redactNormalizedEvent`
+    （`history.helpers.ts:82-102`），标签 token 用例已断言 `REDACTED_VALUE`，无新增泄漏。
+  - **SEC-25 已由 `f5d7aa1` 修复**（`destination.service.ts:205,317,329,343` 四处均套
+    `redactJsonText`），backlog 的「第 82 轮仍未投影」为过期注释，已更正。
+  - **SEC-35 仍开放**：`testDestination` 的脱敏断言仍只覆盖 `generic_webhook`
+    （`configuration.integration.test.ts:900-1024`），`destination.helpers.test.ts` 无 email kind。
+  - SEC-22（编辑草稿 userinfo 密码）与 SEC-26（完整 webhook URL 可见性）仍开放，需 EXPERT_PANEL。
+  - import protection 无确证缺口；`xqvvu/vane` 仅命中 ACR 镜像坐标；无 secret 进入浏览器状态。
+
+### 发布评估
+
+见下方「发布评估（第 94 轮）」小节。
+
+### 下一轮优先项
+
+1. **REQ-252（28）**：投递列表回执列 + `receipt=present|missing` 筛选（连续两轮最高分）。
+2. **SEC-36（25）** 删除未使用的 fingerprint 字段；**SEC-35** 补按 kind 参数化的脱敏测试。
+3. **DOC-73..82** 文档更正批次（中优先级三条先做）。
+4. **UI-43 / UI-44 / UI-46**：1280 时间截断、同指纹表窄屏滚动、投递详情窄屏复核。
+5. 重跑 `requirements` 车道（本轮超时未产出）。
+
 ## 2026-10-23（第 93 轮）
 
 - 时间：2026-10-23 12:35 CST 起。
