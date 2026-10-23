@@ -682,11 +682,13 @@
 | REL-35 | 发布 `0.1.0-beta.71` | release panel（第 94 轮） | — | shipped | #410 | tag `v0.1.0-beta.71` @ `8d7145b`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.71`（amd64+arm64，index digest `sha256:0de27c17…`，amd64 `sha256:e088ca87…`，arm64 `sha256:14ef2cb8…`）；回滚 `0.1.0-beta.70`；用户可见变更 #409（窄屏事件详情布局）；无迁移、无配置变化 |
 | REL-36 | 发布 `0.1.0-beta.72` | release panel（第 95 轮） | — | shipped | #413 | tag `v0.1.0-beta.72` @ `8c1947b`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.72`（amd64+arm64，index digest `sha256:8f7cdedb…`，amd64 `sha256:41ffe08b…`，arm64 `sha256:494fe14e…`）；回滚 `0.1.0-beta.71`；用户可见变更 #412（投递列表回执列 + 回执缺失筛选）；无迁移、无配置变化 |
 | REL-37 | 发布 `0.1.0-beta.73` | release panel（第 96 轮） | — | shipped | #416 | tag `v0.1.0-beta.73` @ `ac2bb82`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.73`（amd64+arm64，index digest `sha256:43fc1144…`，amd64 `sha256:ad42d135…`，arm64 `sha256:4b2b8af2…`）；回滚 `0.1.0-beta.72`；用户可见变更 #415（路由状态范围提示）；无迁移、无配置变化 |
+| REL-38 | 发布 `0.1.0-beta.74` | release panel（第 97 轮） | — | shipped | #420 | tag `v0.1.0-beta.74` @ `5fa59f0`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.74`（amd64+arm64，index digest `sha256:a8b47c3d…`，amd64 `sha256:de62229c…`，arm64 `sha256:988c4873…`）；回滚 `0.1.0-beta.73`；用户可见变更 #419（路由通知缺口徽标警告色）；无迁移、无配置变化 |
 
 ## 发布记录
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.74` | `5fa59f0` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.74`（linux/amd64 + linux/arm64，index digest `sha256:a8b47c3d…`） | 路由通知缺口徽标改为警告色（#419）；按 destination kind 参数化脱敏测试（#418，无行为变化）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.73` |
 | `0.1.0-beta.73` | `ac2bb82` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.73`（linux/amd64 + linux/arm64，index digest `sha256:43fc1144…`） | 路由状态范围提示：表单内联提示 + 路由列表徽标（#415，REQ-258）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.72` |
 | `0.1.0-beta.72` | `8c1947b` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.72`（linux/amd64 + linux/arm64，index digest `sha256:8f7cdedb…`） | 投递列表回执列 + 「回执缺失」筛选（#412，REQ-252）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.71` |
 | `0.1.0-beta.67` | `f412689` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.67`（linux/amd64 + linux/arm64，index digest `sha256:d0f47b83…`） | 路由行一键临时静默（#389，REQ-238）+ 内联编辑表格塌陷修复（#392，UI-22）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.66` |

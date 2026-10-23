@@ -72,10 +72,23 @@
 本轮无裁决事项。SEC-36（删除 `EventFingerprintContext.fingerprint`）因会改变 oRPC 输出形状，
 从 AUTO_FIX 上调为 EXPERT_PANEL，下一轮交三人小组。
 
-### 发布评估
+### 发布评估（3 专家小组）与发布记录
 
-本轮唯一用户可见变更是 PR #419 的警告色调；在 `#419` CI 绿、main 无其他 open PR 后，
-由发布经理 / 阻断审计员 / 运维回滚专家三人小组评估，结果见后续发布记录。
+- **发布经理**：自 `v0.1.0-beta.73` 起 4 个提交，唯一用户可见变更是 #419（路由通知缺口徽标
+  改为警告色）；建议 `0.1.0-beta.74`。
+- **阻断审计员**：首次核对时目标 commit 的 CI/E2E 仍在 `in_progress`（卡在 runner 的
+  `Install system deps` 步骤），判「阻断」；待 `e195d8d` 两套 workflow 转 success 后复核通过：
+  无 open PR、无 migration、3 条 `blocked-autonomous` 均 <27、版本未占用。
+- **运维/回滚专家**：Dockerfile / compose / entrypoint / runtime / migrate / 锁文件零 diff；
+  无迁移、无配置变化；升级与回滚都只需换镜像 tag；回滚镜像 `0.1.0-beta.73` 双平台存在。
+- 决策：合并 #420（版本递增，`5fa59f0`）→ 打 tag / GitHub Release → 构建并推送双平台镜像。
+- **已发布 `v0.1.0-beta.74`**：
+  - tag 指向 `5fa59f0`；GitHub Release 为 prerelease，body 非空；
+  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.74`
+    （`linux/amd64` + `linux/arm64`，index digest `sha256:a8b47c3d…`，
+    amd64 `sha256:de62229c…`，arm64 `sha256:988c4873…`）；
+  - 回滚镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.73`；
+  - 无迁移、无配置/环境变量/启动参数变化。
 
 ### 下一轮优先项
 
