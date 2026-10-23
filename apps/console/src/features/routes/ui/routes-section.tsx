@@ -1,6 +1,7 @@
 import {
   RiDeleteBinLine,
   RiEditLine,
+  RiErrorWarningLine,
   RiRefreshLine,
   RiRouteLine,
   RiShutDownLine,
@@ -37,6 +38,7 @@ import {
   EmptyTitle,
 } from "#/components/ui/empty";
 import { QueuedDeliveriesNotice } from "#/features/operations/ui/queued-deliveries-notice";
+import { routeStatusScope } from "#/features/routes/model/route-form";
 import {
   buildRouteRuleGroups,
   describeRouteRule,
@@ -350,6 +352,26 @@ function RouteRuleCell({ route, sources }: { route: RouteSummary; sources: Sourc
     (sourceId) => sourceNameForId(sourceId, sources),
     copy,
   );
+  // The rule chips show the states that are matched, never the ones that are
+  // not. Surface the missing notification class next to them so a route that
+  // pages on trigger but never on recovery is visible from the list.
+  const statusScope = routeStatusScope(route.rule.statuses);
+  const statusScopeBadge = !statusScope.deliversFiring
+    ? !statusScope.deliversResolved
+      ? {
+          label: t("routing.table.statusScopeNeither"),
+          hint: t("routing.table.statusScopeNeitherHint"),
+        }
+      : {
+          label: t("routing.table.statusScopeNoFiring"),
+          hint: t("routing.table.statusScopeNoFiringHint"),
+        }
+    : !statusScope.deliversResolved
+      ? {
+          label: t("routing.table.statusScopeNoResolved"),
+          hint: t("routing.table.statusScopeNoResolvedHint"),
+        }
+      : null;
 
   if (groups.length === 0) {
     return (
@@ -368,6 +390,7 @@ function RouteRuleCell({ route, sources }: { route: RouteSummary; sources: Sourc
         <Badge
           key={group.kind}
           variant="outline"
+          data-rule-chip=""
           className="max-w-full min-w-0 justify-start gap-1.5 font-normal"
         >
           <span className="text-muted-foreground shrink-0 text-[10px] font-medium">
@@ -384,6 +407,12 @@ function RouteRuleCell({ route, sources }: { route: RouteSummary; sources: Sourc
           </span>
         </Badge>
       ))}
+      {statusScopeBadge ? (
+        <Badge variant="outline" className="gap-1" title={statusScopeBadge.hint}>
+          <RiErrorWarningLine aria-hidden />
+          {statusScopeBadge.label}
+        </Badge>
+      ) : null}
     </div>
   );
 }

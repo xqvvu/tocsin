@@ -104,7 +104,9 @@ describe("routes section table layout", () => {
     expect(rule!.className).not.toContain("flex-nowrap");
     expect(rule!.className).not.toContain("overflow-hidden");
     expect(rule!.getAttribute("title")).toContain("Message contains: timeout, volume");
-    expect(rule!.querySelectorAll("[data-slot=badge]").length).toBe(6);
+    // Count the condition chips only: the status-scope badge shares the cell
+    // but is not a dimension chip.
+    expect(rule!.querySelectorAll("[data-rule-chip]").length).toBe(6);
 
     // Every value stays visible: grouped by dimension, joined in the locale's
     // list separator rather than split into one badge per value.

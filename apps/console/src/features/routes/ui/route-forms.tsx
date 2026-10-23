@@ -3,6 +3,7 @@ import {
   RiArrowDownSLine,
   RiCloseLine,
   RiEditLine,
+  RiErrorWarningLine,
   RiGitBranchLine,
 } from "@remixicon/react";
 import { useForm } from "@tanstack/react-form";
@@ -11,6 +12,7 @@ import * as React from "react";
 import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { FormPanel } from "#/components/common/content-panel";
+import { Alert, AlertDescription } from "#/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +49,7 @@ import {
   routeFormDefaultsFromRule,
   routeRuleFromValues,
   routeRuleIsEmpty,
+  routeStatusScope,
   type RouteLabelCondition,
   type RouteRuleFormValues,
   type RouteSeverityCondition,
@@ -437,56 +440,79 @@ function RouteForm({
         {(field) => {
           const selectedStatuses = field.state.value;
           const nextStatus = routeStatusValues.find((status) => !selectedStatuses.includes(status));
+          const statusScope = routeStatusScope(selectedStatuses);
+          // Picking some states silently drops the rest. Say which notification
+          // class that removes instead of letting the operator discover it on
+          // the next incident review.
+          const statusScopeNotice = !statusScope.deliversFiring
+            ? !statusScope.deliversResolved
+              ? t("routing.form.statusScopeNeither")
+              : t("routing.form.statusScopeNoFiring")
+            : !statusScope.deliversResolved
+              ? t("routing.form.statusScopeNoResolved")
+              : null;
 
           return (
-            <ConditionList
-              label={t("routing.form.statusLabel")}
-              description={t("routing.form.statusDescription")}
-              addDisabled={nextStatus === undefined}
-              onAdd={() => {
-                if (nextStatus !== undefined) {
-                  field.handleChange([...selectedStatuses, nextStatus]);
-                }
-              }}
-            >
-              {selectedStatuses.map((status, index) => (
-                <ConditionRow
-                  key={index}
-                  label={t("routing.form.statusLabel")}
-                  index={index}
-                  onRemove={() => field.handleChange(removeConditionAt(selectedStatuses, index))}
-                >
-                  <Select
-                    id={`${field.name}-${index}`}
-                    name={`${field.name}-${index}`}
-                    items={routeStatusItems}
-                    value={status}
-                    onValueChange={(value) =>
-                      field.handleChange(
-                        replaceConditionAt(selectedStatuses, index, value as RouteStatusCondition),
-                      )
-                    }
+            <>
+              <ConditionList
+                label={t("routing.form.statusLabel")}
+                description={t("routing.form.statusDescription")}
+                addDisabled={nextStatus === undefined}
+                onAdd={() => {
+                  if (nextStatus !== undefined) {
+                    field.handleChange([...selectedStatuses, nextStatus]);
+                  }
+                }}
+              >
+                {selectedStatuses.map((status, index) => (
+                  <ConditionRow
+                    key={index}
+                    label={t("routing.form.statusLabel")}
+                    index={index}
+                    onRemove={() => field.handleChange(removeConditionAt(selectedStatuses, index))}
                   >
-                    <SelectTrigger
-                      className="w-full"
-                      onBlur={field.handleBlur}
-                      aria-label={`${t("routing.form.statusLabel")} ${index + 1}`}
+                    <Select
+                      id={`${field.name}-${index}`}
+                      name={`${field.name}-${index}`}
+                      items={routeStatusItems}
+                      value={status}
+                      onValueChange={(value) =>
+                        field.handleChange(
+                          replaceConditionAt(
+                            selectedStatuses,
+                            index,
+                            value as RouteStatusCondition,
+                          ),
+                        )
+                      }
                     >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {routeStatusItems.map((item) => (
-                          <SelectItem key={item.value} value={item.value}>
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </ConditionRow>
-              ))}
-            </ConditionList>
+                      <SelectTrigger
+                        className="w-full"
+                        onBlur={field.handleBlur}
+                        aria-label={`${t("routing.form.statusLabel")} ${index + 1}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {routeStatusItems.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </ConditionRow>
+                ))}
+              </ConditionList>
+              {statusScopeNotice ? (
+                <Alert>
+                  <RiErrorWarningLine aria-hidden />
+                  <AlertDescription>{statusScopeNotice}</AlertDescription>
+                </Alert>
+              ) : null}
+            </>
           );
         }}
       </form.Field>

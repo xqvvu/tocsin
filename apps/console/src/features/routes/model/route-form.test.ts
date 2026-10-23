@@ -7,6 +7,7 @@ import {
   routeFormDefaultsFromRule,
   routeRuleFromValues,
   routeRuleIsEmpty,
+  routeStatusScope,
   type RouteRuleFormValues,
 } from "#/features/routes/model/route-form";
 
@@ -159,6 +160,33 @@ describe("route form helpers", () => {
       false,
     );
     expect(isIncompleteLabelCondition(createEmptyLabelCondition())).toBe(false);
+  });
+
+  it("treats a missing status condition as delivering both firing and resolved", () => {
+    expect(routeStatusScope([])).toEqual({ deliversFiring: true, deliversResolved: true });
+    expect(routeStatusScope(["firing", "resolved"])).toEqual({
+      deliversFiring: true,
+      deliversResolved: true,
+    });
+    expect(routeStatusScope(["resolved", "unknown"])).toEqual({
+      deliversFiring: false,
+      deliversResolved: true,
+    });
+  });
+
+  it("reports the notification class a partial status condition drops", () => {
+    expect(routeStatusScope(["firing"])).toEqual({
+      deliversFiring: true,
+      deliversResolved: false,
+    });
+    expect(routeStatusScope(["firing", "unknown"])).toEqual({
+      deliversFiring: true,
+      deliversResolved: false,
+    });
+    expect(routeStatusScope(["unknown"])).toEqual({
+      deliversFiring: false,
+      deliversResolved: false,
+    });
   });
 
   it("reports stored source conditions the source picker cannot offer", () => {
