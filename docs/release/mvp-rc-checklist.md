@@ -97,9 +97,9 @@ https://github.com/xqvvu/tocsin/issues/47 已在 `xqvvu/tocsin` 关闭，清单�
 （2026-10-13 校正）发布文档已经补齐：
 
 - `docs/release/release-checklist.md`：切第一个 tag 的人工流程，含“仓库没有任何 release 自动化”的事实。
-- `docs/release/docker-production-deployment.md`：反向代理/TLS、环境变量、数据卷、secret、健康检查，
-  并把“没有 TLS 终止、没有 Docker secret 注入”写成已知缺口；compose 公开默认 `BETTER_AUTH_SECRET`
-  已移除，缺失或沿用历史公开值会让生产进程启动失败。
+- `docs/release/docker-production-deployment.md`：反向代理/TLS、环境变量、数据卷、secret、健康检查；
+  “没有 TLS 终止”仍是已知缺口。`BETTER_AUTH_SECRET` 支持 `_FILE`（Compose file secret / Swarm secret /
+  K8s Secret 卷），compose 不再内置默认值，缺失或沿用历史公开值会让生产进程启动失败。
 - `docs/release/backup-restore-upgrade.md`：SQLite 冷备份/恢复、升级、回滚，以及 baseline + forward
   repair migration（0001–0003）的升级约束。
 
@@ -143,7 +143,8 @@ post-MVP 中继续设计。dedupe cleanup 已改为有界批（见下方 D 节�
       （2026-10-13 完成，保留“不是稳定发布版”的诚实表述；顺带修正 README 里过时的 pnpm 版本号与缺失的
       `packages/api` 结构说明。）
 - [x] 补充 Docker 生产部署文档：反向代理/TLS、环境变量、数据卷、secret、健康检查。
-      `docs/release/docker-production-deployment.md`（缺失的 TLS 终止与 secret 注入按已知缺口写明，没有编造流程）。
+      `docs/release/docker-production-deployment.md`（TLS 终止仍按已知缺口写明；`BETTER_AUTH_SECRET_FILE`
+      已实现并写明权限模型，没有编造未经验证的流程）。
 - [x] 补充备份/恢复/升级/回滚文档。`docs/release/backup-restore-upgrade.md`。
 - [x] 增加 provider/destination contributor guide 或 README 贡献切片：destination 侧已完成
       （`docs/contributing/destination-adapter.md`，commit `b2173f2`，README「贡献方向」也已链接）；provider 侧

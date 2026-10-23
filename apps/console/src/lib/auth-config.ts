@@ -70,7 +70,9 @@ export function requireBetterAuthSecret(
   }
 
   if (!trimmed) {
-    throw new Error("BETTER_AUTH_SECRET is required in production");
+    throw new Error(
+      "BETTER_AUTH_SECRET is required in production (set BETTER_AUTH_SECRET or BETTER_AUTH_SECRET_FILE)",
+    );
   }
 
   if (trimmed.length < 32) {

@@ -127,6 +127,7 @@ vp run -r build     # 构建全部包
 | --- | --- |
 | `BETTER_AUTH_URL` | Better Auth 对外 URL，本地通常是 dev server URL。 |
 | `BETTER_AUTH_SECRET` | Better Auth secret，生产必须使用 32+ 字符随机值。 |
+| `BETTER_AUTH_SECRET_FILE` | 可选：从单行文件读取 `BETTER_AUTH_SECRET`（Docker secret / Kubernetes Secret 卷）。内联值优先，文件须对 uid 1000 可读。 |
 | `BETTER_AUTH_ALLOWED_HOSTS` | 可选，逗号或换行分隔的 Better Auth 动态 base URL Host 白名单，例如 `localhost:6180,tocsin.example.com`。通过 PVC、反向代理或预览域名访问时需要加入外部 Host。 |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | 可选，逗号或换行分隔的额外可信 Origin，例如 `http://localhost:6180,https://tocsin.example.com`，用于通过 Better Auth 的 CSRF/origin 检查。 |
 | `SERVER_URL` | Tocsin 对外访问 URL，用于生成 webhook URL 等。 |
@@ -176,8 +177,9 @@ BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 
 默认服务会暴露在 `http://localhost:3000`，SQLite 数据放在 `tocsin-data` volume 中。
 
-这份 compose 文件是本机试运行形态，不是生产方案：未显式提供 `BETTER_AUTH_SECRET` 时，它只会回落到一个
-公开占位值，应用在 production 模式下会拒绝提供服务（含健康检查）；它也没有 TLS 与 secret 注入。生产部署、反向代理、环境变量与健康检查见
+这份 compose 文件是本机试运行形态，不是生产方案：未显式提供 `BETTER_AUTH_SECRET`（或
+`BETTER_AUTH_SECRET_FILE`）时，应用在 production 模式下会拒绝提供服务（含健康检查）；它也没有 TLS。
+生产部署、反向代理、secret 注入方式、环境变量与健康检查见
 `docs/release/docker-production-deployment.md`；备份、恢复、升级与回滚见
 `docs/release/backup-restore-upgrade.md`；切 tag 的流程见 `docs/release/release-checklist.md`。
 

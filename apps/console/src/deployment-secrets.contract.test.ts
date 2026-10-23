@@ -21,19 +21,31 @@ const HISTORICAL_COMPOSE_SECRET =
 describe("deployment secret contract", () => {
   it("never ships a usable BETTER_AUTH_SECRET default in compose", () => {
     const compose = readFileSync(composePath, "utf8");
-    const line = compose.split("\n").find((candidate) => candidate.includes("BETTER_AUTH_SECRET:"));
+    const lines = compose.split("\n");
+    // Anchor the match so the adjacent `BETTER_AUTH_SECRET_FILE:` line and any
+    // comment mentioning the variable cannot be picked up as the value line.
+    const line = lines.find((candidate) => /^\s+BETTER_AUTH_SECRET:/.test(candidate));
 
     expect(line).toBeDefined();
     expect(line).not.toContain(HISTORICAL_COMPOSE_SECRET);
 
+    // The fallback is empty rather than a placeholder: a non-empty fallback
+    // would shadow `BETTER_AUTH_SECRET_FILE` (an inline value always wins), and
+    // an empty value still fails closed in production.
     const fallback = /\$\{BETTER_AUTH_SECRET:-([^}]*)\}/.exec(line ?? "")?.[1];
-
-    // A non-empty fallback has to be a value production rejects; an empty one
-    // would fail the env schema with a less actionable error.
-    expect(fallback).toBe(PUBLISHED_PLACEHOLDER);
+    expect(fallback).toBe("");
     expect(() => requireBetterAuthSecret(fallback, { NODE_ENV: "production" })).toThrow(
-      "BETTER_AUTH_SECRET must be replaced with a deployment-specific secret",
+      "BETTER_AUTH_SECRET is required in production",
     );
+    // The published placeholder stays rejected even though compose no longer
+    // ships it: an install that already copied it must still fail closed.
+    expect(() =>
+      requireBetterAuthSecret(PUBLISHED_PLACEHOLDER, { NODE_ENV: "production" }),
+    ).toThrow("BETTER_AUTH_SECRET must be replaced with a deployment-specific secret");
+
+    const fileLine = lines.find((candidate) => /^\s+BETTER_AUTH_SECRET_FILE:/.test(candidate));
+    expect(fileLine).toBeDefined();
+    expect(fileLine).toContain("${BETTER_AUTH_SECRET_FILE:-}");
   });
 
   it("does not publish a production-acceptable secret in the example env file", () => {
