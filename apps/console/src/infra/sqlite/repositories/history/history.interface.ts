@@ -43,7 +43,11 @@ export interface EventListQuery {
   deliveryOutcome?: EventDeliveryOutcome;
   /** Inclusive lower bound on `events.received_at`, as an ISO timestamp. */
   since?: string;
-  /** Literal substring over title, message, fingerprint, and event/delivery ids. */
+  /**
+   * Literal substring over title, message, fingerprint, and event/delivery ids.
+   * Whitespace-separated terms are ANDed (at most 8): each must match
+   * somewhere in the row.
+   */
   q?: string;
   page?: number;
   limit?: number;
@@ -78,7 +82,8 @@ export interface DeliveryListQuery {
   since?: string;
   /**
    * Literal substring over the event fields, event/delivery ids, the latest
-   * delivery error, and the destination or route name.
+   * delivery error, and the destination or route name. Whitespace-separated
+   * terms are ANDed (at most 8): each must match somewhere in the row.
    */
   q?: string;
   page?: number;

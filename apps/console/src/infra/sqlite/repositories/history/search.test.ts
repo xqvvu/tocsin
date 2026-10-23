@@ -414,6 +414,72 @@ describe("history search", () => {
     expect(page.total).toBe(1);
     expect(detail?.event.normalized.labels.authorization).toBe("[REDACTED]");
   });
+
+  it("requires every whitespace-separated term to match the same event", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const both = await repository.listEvents({ q: "disk root" });
+    // "oom" matches another event, so a phrase-only match would return it too.
+    const acrossRows = await repository.listEvents({ q: "disk oom" });
+
+    expect(ids(both.items)).toEqual(["event-fingerprint"]);
+    expect(both.total).toBe(1);
+    expect(acrossRows.total).toBe(0);
+  });
+
+  it("matches terms across different searchable fields in either order", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const titleThenLabel = await repository.listEvents({ q: "latency prod" });
+    const labelThenTitle = await repository.listEvents({ q: "prod latency" });
+
+    expect(ids(titleThenLabel.items)).toEqual(["event-labels"]);
+    expect(titleThenLabel.total).toBe(1);
+    expect(ids(labelThenTitle.items)).toEqual(["event-labels"]);
+    expect(labelThenTitle.total).toBe(1);
+  });
+
+  it("escapes wildcards per term", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const literal = await repository.listEvents({ q: "100% loss" });
+    const noMatch = await repository.listEvents({ q: "100% oom" });
+
+    expect(ids(literal.items)).toEqual(["event-percent"]);
+    expect(literal.total).toBe(1);
+    expect(noMatch.total).toBe(0);
+  });
+
+  it("ANDs terms on the deliveries list too", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const page = await repository.listDeliveries({ q: "signature feishu" });
+
+    // "signature" comes from last_error, "feishu" from the destination name.
+    expect(ids(page.items)).toEqual(["dlv-manual-feishu"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("caps the term list so a pasted line cannot expand the query without bound", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    // The ninth term would match nothing; only the first eight are searched.
+    const page = await repository.listEvents({
+      q: "disk disk disk disk disk disk disk disk zzz",
+    });
+
+    expect(ids(page.items)).toEqual(["event-fingerprint"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("treats a whitespace-only query as no filter", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const all = await repository.listEvents();
+    const blank = await repository.listEvents({ q: "   " });
+
+    expect(blank.total).toBe(all.total);
+  });
 });
 
 describe("delivery receipt filter", () => {

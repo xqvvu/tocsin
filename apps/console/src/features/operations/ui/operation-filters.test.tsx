@@ -12,6 +12,11 @@ import {
 } from "#/features/operations/ui/operation-filters";
 import { AppIntlProvider } from "#/i18n/provider";
 
+const EVENT_SEARCH_PLACEHOLDER =
+  "title, message, fingerprint, idempotency key, label, upstream metadata, or ID (space-separated terms must all match)";
+const DELIVERY_SEARCH_PLACEHOLDER =
+  "title, message, fingerprint, idempotency key, label, upstream metadata, ID, error, destination, route, or external reference (space-separated terms must all match)";
+
 const configuration = {
   sources: [{ id: "source-1", name: "Grafana", provider: "grafana" as const, enabled: true }],
   destinations: [
@@ -232,29 +237,19 @@ describe("operation filters by page scope", () => {
   it("advertises the extra delivery search fields on the deliveries page", () => {
     renderFilters("deliveries", {}, "toolbar");
 
-    expect(
-      screen.getByPlaceholderText(
-        "title, message, fingerprint, idempotency key, label, upstream metadata, ID, error, destination, route, or external reference",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByPlaceholderText(DELIVERY_SEARCH_PLACEHOLDER)).toBeTruthy();
   });
 
   it("keeps the event search placeholder scoped to event fields", () => {
     renderFilters("events", {}, "toolbar");
 
-    expect(
-      screen.getByPlaceholderText(
-        "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
-      ),
-    ).toBeTruthy();
+    expect(screen.getByPlaceholderText(EVENT_SEARCH_PLACEHOLDER)).toBeTruthy();
   });
 
   it("caps the search input at the contract limit", () => {
     renderFilters("events", {}, "toolbar");
 
-    const input = screen.getByPlaceholderText(
-      "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
-    );
+    const input = screen.getByPlaceholderText(EVENT_SEARCH_PLACEHOLDER);
 
     expect((input as HTMLInputElement).maxLength).toBe(OPERATION_SEARCH_MAX_LENGTH);
   });
@@ -268,9 +263,7 @@ describe("operation search input", () => {
   it("keeps a burst of typing local and commits it once", async () => {
     const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
     renderFilters("events", {}, "toolbar", onChange);
-    const input = screen.getByPlaceholderText(
-      "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
-    ) as HTMLInputElement;
+    const input = screen.getByPlaceholderText(EVENT_SEARCH_PLACEHOLDER) as HTMLInputElement;
 
     // Each change is one keystroke as React sees it. The old input wrote every
     // key to the URL, which both re-trimmed the value and queried per key.
@@ -288,9 +281,7 @@ describe("operation search input", () => {
   it("clears an uncommitted draft when the active query chip is removed", async () => {
     const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
     renderFilters("events", { q: "checkout" }, "toolbar", onChange);
-    const input = screen.getByPlaceholderText(
-      "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
-    ) as HTMLInputElement;
+    const input = screen.getByPlaceholderText(EVENT_SEARCH_PLACEHOLDER) as HTMLInputElement;
 
     // Still inside the debounce window: the URL does not know about "now" yet.
     fireEvent.change(input, { target: { value: "checkout now" } });
@@ -305,9 +296,7 @@ describe("operation search input", () => {
   it("adopts an external reset instead of the uncommitted draft", async () => {
     const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
     const { rerender } = renderFilters("events", { q: "checkout" }, "toolbar", onChange);
-    const input = screen.getByPlaceholderText(
-      "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
-    ) as HTMLInputElement;
+    const input = screen.getByPlaceholderText(EVENT_SEARCH_PLACEHOLDER) as HTMLInputElement;
 
     fireEvent.change(input, { target: { value: "checkout now" } });
     expect(input.value).toBe("checkout now");
@@ -315,9 +304,7 @@ describe("operation search input", () => {
     // Reset filters clears the URL value before the debounce fires.
     rerender(filtersTree("events", {}, "toolbar", onChange));
 
-    const reset = screen.getByPlaceholderText(
-      "title, message, fingerprint, idempotency key, label, upstream metadata, or ID",
-    ) as HTMLInputElement;
+    const reset = screen.getByPlaceholderText(EVENT_SEARCH_PLACEHOLDER) as HTMLInputElement;
     expect(reset.value).toBe("");
 
     await new Promise((resolve) => setTimeout(resolve, 350));

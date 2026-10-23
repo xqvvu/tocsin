@@ -600,8 +600,23 @@ function countMatchedRoutes(routeMatchesJson: string | null): number {
  * are uncurated upstream documents that are only ever displayed as redacted
  * projections, so matching them would widen that existence check without
  * helping on-call find an alert by its identity fields.
+ *
+ * Whitespace separates terms. Every term must match somewhere inside the
+ * event's searchable fields, so `disk prod` finds the critical disk alert
+ * without the operator knowing which field holds which word. Terms are ANDed;
+ * a single term keeps the historical substring behavior.
  */
-function eventSearchPredicate(term: string) {
+function eventSearchPredicate(query: string) {
+  const terms = splitSearchTerms(query);
+
+  if (terms.length === 0) {
+    return sql<boolean>`1 = 1`;
+  }
+
+  return sql<boolean>`${sql.join(terms.map(eventTermPredicate), sql` AND `)}`;
+}
+
+function eventTermPredicate(term: string) {
   const pattern = escapeLikeTerm(term);
 
   return sql<boolean>`(
@@ -628,9 +643,20 @@ function eventSearchPredicate(term: string) {
  * route name, and the external message reference returned by the destination
  * provider. Destination and route are matched through correlated `EXISTS`
  * subqueries so the count query keeps its existing joins and cannot count
- * duplicated rows. Like the event predicate, list and count queries share it.
+ * duplicated rows. Like the event predicate, list and count queries share it,
+ * and whitespace-separated terms are ANDed across the same field groups.
  */
-function deliverySearchPredicate(term: string) {
+function deliverySearchPredicate(query: string) {
+  const terms = splitSearchTerms(query);
+
+  if (terms.length === 0) {
+    return sql<boolean>`1 = 1`;
+  }
+
+  return sql<boolean>`${sql.join(terms.map(deliveryTermPredicate), sql` AND `)}`;
+}
+
+function deliveryTermPredicate(term: string) {
   const pattern = escapeLikeTerm(term);
 
   return sql<boolean>`(
@@ -724,6 +750,22 @@ function deliveryReceiptPredicate(receipt: DeliveryReceiptFilter) {
   )`;
 
   return receipt === "present" ? present : sql<boolean>`NOT ${present}`;
+}
+
+/**
+ * The search box is one field for titles, ids, labels, and errors. Splitting on
+ * whitespace lets an operator combine an identity token with a text token
+ * (`node prod`) without remembering which column each belongs to. The cap keeps
+ * a pasted log line from expanding into an unbounded number of LIKE predicates.
+ */
+const MAX_SEARCH_TERMS = 8;
+
+function splitSearchTerms(query: string): string[] {
+  return query
+    .trim()
+    .split(/\s+/)
+    .filter((term) => term.length > 0)
+    .slice(0, MAX_SEARCH_TERMS);
 }
 
 /**
