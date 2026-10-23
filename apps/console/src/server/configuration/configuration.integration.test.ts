@@ -159,6 +159,38 @@ const destinationRenderedPayloadSecretCases: Record<
   },
 };
 
+/**
+ * One persisted destination per kind for the test-send redaction suite. The
+ * configs reuse the rendered-payload markers above, so the assertion covers
+ * the DTO boundary rather than the adapter's template shape. Slack only treats
+ * an exact `ok` body as success; the other senders accept any 2xx.
+ */
+const destinationTestTransportCases: Record<
+  DestinationKind,
+  { config: JsonObject; expectedUrl: string; responseBody: string }
+> = {
+  generic_webhook: {
+    config: destinationRenderedPayloadSecretCases.generic_webhook.config,
+    expectedUrl: "https://example.test/webhook",
+    responseBody: "accepted token=downstream-token password: downstream-password",
+  },
+  feishu: {
+    config: destinationRenderedPayloadSecretCases.feishu.config,
+    expectedUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/example",
+    responseBody: "accepted token=downstream-token password: downstream-password",
+  },
+  slack: {
+    config: destinationRenderedPayloadSecretCases.slack.config,
+    expectedUrl: "https://hooks.slack.com/services/example",
+    responseBody: "ok",
+  },
+  email: {
+    config: destinationRenderedPayloadSecretCases.email.config,
+    expectedUrl: "https://mail-gateway.example.test/send",
+    responseBody: "accepted token=downstream-token password: downstream-password",
+  },
+};
+
 async function createStore() {
   return openSqliteStore({
     databasePath: ":memory:",
@@ -945,6 +977,58 @@ describe("configuration capabilities", () => {
     });
 
     await store.close();
+  });
+
+  it("redacts test-send DTOs for every destination kind", async () => {
+    for (const kind of DestinationKindSchema.options) {
+      const fixture = destinationTestTransportCases[kind];
+      const calls: Array<{ url: string; init: RequestInit }> = [];
+      const { store, services } = await createTestContextWithDestinationFetch(async (url, init) => {
+        calls.push({ url, init });
+        return {
+          ok: true,
+          status: 202,
+          text: async () => fixture.responseBody,
+        };
+      });
+      const destination = await services.destinations.createDestination({
+        name: `${kind} test destination`,
+        kind,
+        config: fixture.config,
+      });
+
+      const result = await services.destinations.testDestination({ id: destination.id });
+
+      expect({
+        kind,
+        success: result.success,
+        statusCode: result.statusCode,
+        calledUrl: calls[0]?.url,
+      }).toEqual({
+        kind,
+        success: true,
+        statusCode: 202,
+        calledUrl: fixture.expectedUrl,
+      });
+
+      // Both the rendered payload and the upstream reply cross the dashboard
+      // DTO boundary, so neither the template marker nor a credential echoed
+      // by the target may survive.
+      const serialized = JSON.stringify(result);
+      expect({
+        kind,
+        markerLeaked: serialized.includes(destinationRenderedPayloadSecretCases[kind].marker),
+        tokenLeaked: serialized.includes("downstream-token"),
+        passwordLeaked: serialized.includes("downstream-password"),
+      }).toEqual({
+        kind,
+        markerLeaked: false,
+        tokenLeaked: false,
+        passwordLeaked: false,
+      });
+
+      await store.close();
+    }
   });
 
   it("tests destinations with a historical Event sample, redaction, and console presentation", async () => {
