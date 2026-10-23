@@ -34,8 +34,8 @@
 | REQ-23 | Raw payload 保留策略清理的显式状态 | requirements lane | 28 | shipped | #118 | `EventDetail.rawPayloadPruned` 派生字段 + Raw 标签页清理说明；PRD `docs/prd/raw-payload-pruned-state.md` |
 | REQ-24 | 抑制窗口汇总（影响面复盘） | requirements lane | 28 | candidate | — | 新增只读 summary procedure；`suppression-detail-page.tsx:35-43` 只有 hits.total |
 | REQ-7 | 停用目标造成投递静默滞留 | requirements lane | 29 | shipped | #111 | 投递详情滞留警示 + 路由列表停用目标徽标；`DeliveryRetentionNotice`；PRD `docs/prd/delivery-retention-notice.md` |
-| REQ-8 | Deliveries 按最后活动过滤与排序 | requirements lane | 28 | candidate | — | 列表按 `created_at`（`history.repository.ts:240,269-271`），表格展示 `updated_at` |
-| REQ-9 | 告警源最近接收时间 | requirements lane | 27 | candidate | — | `SourceSummary` 无时间字段；聚合 `MAX(events.received_at)`。建议与 REQ-12、Route 最近活动共用 `ConfigurationActivitySummary` DTO，避免三个并行 endpoint |
+| REQ-8 | Deliveries 按最后活动过滤与排序 | requirements lane | 28 | in-progress | #425 | 第 99 轮实现：URL `timeField=created|updated`（默认 `created` 不入 URL），窗口谓词与 `ORDER BY` 同步切换，列表与 `total` 共用 `deliveryTimeColumn`（`history.repository.ts:330,356,402,479,526,684`）；投递页「时间口径」选择器与 chip；PRD `docs/prd/delivery-time-basis.md`。原证据：列表按 `created_at`，表格展示 `updated_at` |
+| REQ-9 | 告警源最近接收时间 | requirements lane | 27 | candidate | — | `SourceSummary` 无时间字段；聚合 `MAX(events.received_at)`。建议与 REQ-12、Route 最近活动共用 `ConfigurationActivitySummary` DTO，避免三个并行 endpoint。第 99 轮 requirements：沉默告警源巡检（超阈值未上报）建议并入本条（最近事件时间 + 可配阈值），不新开条目 |
 | REQ-10 | Event/Delivery 详情互链 | requirements lane | 27 | candidate | — | 三个入口目前是纯文本：投递详情、事件投递表、投递列表事件列 |
 | REQ-11 | Worker/队列健康只读投影 | requirements lane | 25 | candidate | — | health 仅出现在手动 `runDeliveryWorker` 响应；RC checklist `:160` 声称已有。第 76 轮 #355 已交付 worker 侧（两队列状态/时间/错误），仅剩队列深度（待投递/待呼叫条数；加急需新仓储聚合） |
 | REQ-12 | Destination 列表最近投递健康 | requirements lane | 28 | candidate | — | 需新 summary DTO；`destination.ts:64-66`、`destinations-section.tsx:56-104`；AGENTS.md 要求先有 DTO |
