@@ -31,7 +31,10 @@ import {
   SelectValue,
 } from "#/components/ui/select";
 import { useOperationDateFormatter } from "#/features/operations/model/operation-format";
-import type { DashboardOperationSearch } from "#/features/operations/model/operation-search";
+import {
+  clearedOperationSearch,
+  type DashboardOperationSearch,
+} from "#/features/operations/model/operation-search";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
 
@@ -186,22 +189,7 @@ export function OperationFilters({
             size="xs"
             disabled={pending}
             className="h-6 px-1.5 text-[11px]"
-            onClick={() =>
-              handleFilterChange({
-                sourceId: "",
-                severity: "",
-                status: "",
-                deliveryOutcome: "",
-                destinationId: "",
-                destinationKind: "",
-                routeId: "",
-                deliveryState: "",
-                minAttempts: 0,
-                range: "",
-                rangeAnchor: "",
-                q: "",
-              })
-            }
+            onClick={() => handleFilterChange(clearedOperationSearch)}
           >
             {t("common.actions.resetFilters")}
           </Button>

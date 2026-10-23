@@ -9,6 +9,7 @@ import { EventsTable } from "#/features/events/ui/events-table";
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import { operationsQueryOptions } from "#/features/operations/api/operations.queries";
 import {
+  clearedOperationSearch,
   hasOperationFilters,
   type DashboardOperationSearch,
   type OperationFilterData,
@@ -52,18 +53,7 @@ export function EventsPage({ search, filters, onSearchChange }: EventsPageProps)
   }
 
   function resetFilters() {
-    onSearchChange({
-      sourceId: "",
-      severity: "",
-      status: "",
-      deliveryOutcome: "",
-      destinationId: "",
-      destinationKind: "",
-      routeId: "",
-      deliveryState: "",
-      range: "",
-      q: "",
-    });
+    onSearchChange(clearedOperationSearch);
   }
 
   return (
