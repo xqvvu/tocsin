@@ -658,6 +658,8 @@
 | REQ-250 | 投递详情排障上下文：目标近期健康 + 队列位置 | requirements lane（第 92 轮） | 26 | candidate | — | 详情能回答「等了多久、发了多久」（`delivery-summary-tab.tsx:76-99`）但不能回答「是目标整体挂了，还是它排在积压后面」：`DeliveryDetailSchema` 无目标健康/队列字段（`packages/api/src/schemas/operations.ts:112-131`），唯一队列投影是全局 `claimable`（`operations.service.ts:81-86`、`delivery.repository.ts:350-378`），领取顺序 `coalesce(next_attempt_at, created_at)`（`:221-247`）不可见。切片：只读 `operations.getDeliveryContext(deliveryId)`，最近 24h 该目标 ≤20 条按状态计数/最近成功失败/连续失败 + 与 `claimNext` 同谓词的队列位置；不改 worker 领取与重试语义 |
 | REQ-251 | 证据包补齐派生排障证据 | requirements lane（第 92 轮） | 25 | candidate | — | 证据包只含 event/delivery 详情 DTO（`features/operations/model/evidence-bundle.ts:27-34`），而页面关键结论是客户端再计算的：静默逐项检查（`delivery-suppression-checks.tsx:22-40`）与路由快照/当前对照（`delivery-route-evidence.tsx:16-30`），导出文件无法复现「为什么不发/为什么命中」。需显式重开 `evidence-bundle-download.md:45` 的非目标：只读 `DeliveryDetail` 加脱敏 rule 摘要 + `derived` 段（复用 `evaluateSuppressionMatch`）、`schemaVersion: 2`、规则缺失写 `ruleUnavailable`；不导 secret、不做历史时点重算 |
 
+| REL-33 | 发布 `0.1.0-beta.69` | release panel（第 92 轮） | — | shipped | #404 | tag `v0.1.0-beta.69` @ `3a7b33a`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.69`（amd64+arm64，index digest `sha256:d70f52b5…`）；回滚 `0.1.0-beta.68`；用户可见变更 #402/#403/`d9d22ef`；无迁移、无配置/环境变量/启动参数变化 |
+
 ## 发布记录
 
 | 版本 | tag 指向 | 镜像 | 说明 |

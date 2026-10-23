@@ -76,6 +76,11 @@
   零 diff，升级=换镜像；回滚换回 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.68`
   即可，新版本未写旧版本读不了的数据。
 - 决策：合入 #403 → 新 main CI 绿 → 打 `v0.1.0-beta.69` / GitHub Release / 多平台镜像。
+- **执行结果**：发布 PR #404 `chore(release): v0.1.0-beta.69` 合入 `3a7b33a`；该 commit 的
+  `CI` 与 `E2E` 均为 success；annotated tag `v0.1.0-beta.69` 指向 `3a7b33a`；GitHub Release
+  已创建（prerelease，body 非空）；镜像
+  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.69` 已推送（linux/amd64 + linux/arm64，
+  index digest `sha256:d70f52b5…`，无 `latest`）；回滚镜像 `0.1.0-beta.68`。
 
 ### 下一轮优先项
 
