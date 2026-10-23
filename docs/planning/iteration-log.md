@@ -18,7 +18,7 @@
 
 ### 本轮交付
 
-- **PR #TBD `feat(console): show delivery receipts in the deliveries list`（REQ-252，28 分）**：
+- **PR #412 `feat(console): show delivery receipts in the deliveries list`（REQ-252，28 分）**：
   - `DeliveryListItem` 新增 `providerReference`（core 类型 + oRPC schema + 仓储映射复用
     `providerReferenceFromRow`），列表 select 增取 `deliveries.provider_ref_*`。
   - URL 新增 `receipt=present|missing`：`DashboardOperationSearchSchema`、服务端
