@@ -72,6 +72,15 @@
 - **运维/回滚专家**：`infra/sqlite/migrate`、`server/runtime`、`lib`、`docker-compose.yml`、`Dockerfile`
   零 diff，无迁移/配置/环境变量变化；回滚换回 `0.1.0-beta.72` 镜像即可，SQLite 数据双版本兼容。
 
+发布结果：
+
+- PR #416 `chore(release): v0.1.0-beta.73` 合入 `ac2bb82`，main CI success。
+- annotated tag `v0.1.0-beta.73` → `ac2bb82`；GitHub Release
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.73 （prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.73` 推送成功：
+  linux/amd64 `sha256:ad42d135…`、linux/arm64 `sha256:4b2b8af2…`，
+  index digest `sha256:43fc1144…`；回滚镜像 `0.1.0-beta.72`。
+
 ### 下一轮优先项
 
 1. **SEC-36 + SEC-35**：合并为一个小 `test:`/`refactor:` PR（均 AUTO_FIX，零语义变更）。
