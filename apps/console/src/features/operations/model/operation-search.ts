@@ -4,6 +4,7 @@ import { z } from "zod";
 import type {
   AlertSeverity,
   AlertStatus,
+  DeliveryReceiptFilter,
   DeliveryState,
   DestinationKind,
   EventDeliveryOutcome,
@@ -12,6 +13,7 @@ import type {
 import {
   AlertSeveritySchema,
   AlertStatusSchema,
+  DeliveryReceiptFilterSchema,
   DeliveryStateSchema,
   DestinationKindSchema,
   EventDeliveryOutcomeSchema,
@@ -41,6 +43,12 @@ export const DashboardOperationSearchSchema = z.object({
     .catch("")
     .optional(),
   routeId: z.string().catch("").optional(),
+  // Delivery-only: whether the target returned a message reference. The URL is
+  // user-editable, so an unknown value means "any receipt" instead of an error.
+  receipt: z
+    .union([DeliveryReceiptFilterSchema, z.literal("")])
+    .catch("")
+    .optional(),
   deliveryState: z
     .union([DeliveryStateSchema, z.literal("")])
     .catch("")
@@ -74,6 +82,7 @@ export interface DashboardOperationSearch {
   destinationId?: string;
   destinationKind?: DestinationKind | "";
   routeId?: string;
+  receipt?: DeliveryReceiptFilter | "";
   deliveryState?: DeliveryState | "";
   minAttempts?: number;
   range?: OperationTimeRange | "";
@@ -91,6 +100,7 @@ export type OperationFilterData = {
   destinationId?: string;
   destinationKind?: DestinationKind;
   routeId?: string;
+  receipt?: DeliveryReceiptFilter;
   deliveryState?: DeliveryState;
   minAttempts?: number;
   range?: OperationTimeRange;
@@ -116,6 +126,7 @@ export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
   destinationId: "",
   destinationKind: "",
   routeId: "",
+  receipt: "",
   deliveryState: "",
   minAttempts: 0,
   range: "",
@@ -137,6 +148,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.destinationId ||
     search.destinationKind ||
     search.routeId ||
+    search.receipt ||
     search.deliveryState ||
     search.minAttempts ||
     search.range ||
@@ -193,6 +205,7 @@ export function mergeOperationSearch(
     "destinationId",
     "destinationKind",
     "routeId",
+    "receipt",
     "deliveryState",
     "minAttempts",
     "range",

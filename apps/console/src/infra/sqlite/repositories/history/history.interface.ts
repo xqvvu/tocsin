@@ -1,5 +1,6 @@
 import type {
   DeliveryListItem,
+  DeliveryReceiptFilter,
   DeliveryState,
   DestinationKind,
   EventDeliveryOutcome,
@@ -58,6 +59,11 @@ export interface DeliveryListQuery {
   routeId?: string;
   /** Only the deliveries silenced by one rule ("what did this rule hit?"). */
   suppressionId?: string;
+  /**
+   * Only deliveries whose target returned a message reference (`present`), or
+   * every delivery without a complete reference (`missing`).
+   */
+  receipt?: DeliveryReceiptFilter;
   state?: DeliveryState;
   /** Inclusive lower bound on `deliveries.attempt_count`; 0 is "any". */
   minAttempts?: number;

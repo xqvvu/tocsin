@@ -2,6 +2,7 @@ import {
   AlertSeveritySchema,
   AlertStatusSchema,
   DeliveryJobSchema,
+  DeliveryReceiptFilterSchema,
   DeliveryStateSchema,
   DestinationKindSchema,
   EventDeliveryOutcomeSchema,
@@ -128,6 +129,9 @@ export const DeliveryListItemSchema = z.object({
   // snapshots written before this field existed must still parse.
   destinationKind: DestinationKindSchema.optional(),
   routeName: z.string().min(1).nullable(),
+  // An operational identifier, never a secret: the same value the delivery
+  // detail page exposes.
+  providerReference: ProviderReferenceSchema.nullable(),
   state: DeliveryStateSchema,
   attemptCount: z.number().int().min(0),
   nextAttemptAt: IsoDateTimeSchema.nullable(),
@@ -269,6 +273,11 @@ export const ListOperationsInputSchema = z
     destinationKind: DestinationKindSchema.optional(),
     /** Restricts the delivery list to one route; manual deliveries have none. */
     routeId: z.string().min(1).optional(),
+    /**
+     * Delivery-only: only jobs whose target returned (or did not return) a
+     * message reference.
+     */
+    receipt: DeliveryReceiptFilterSchema.optional(),
     deliveryState: DeliveryStateSchema.optional(),
     /**
      * Delivery-only lower bound on `attempt_count`. Lets an operator isolate

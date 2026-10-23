@@ -2,6 +2,7 @@ import { sql } from "kysely";
 
 import type {
   DeliveryListItem,
+  DeliveryReceiptFilter,
   DestinationKind,
   EventDeliveryOutcome,
   EventDetail,
@@ -20,7 +21,10 @@ import {
 import type { RouteMatchProvenance } from "@tocsin/core";
 
 import type { SqliteRepositoryContext } from "#/infra/sqlite/context";
-import { redactNullableText } from "#/infra/sqlite/repositories/delivery/delivery.helpers";
+import {
+  providerReferenceFromRow,
+  redactNullableText,
+} from "#/infra/sqlite/repositories/delivery/delivery.helpers";
 import type { SqliteDeliveryRepository } from "#/infra/sqlite/repositories/delivery/delivery.repository";
 import type { DestinationRepository } from "#/infra/sqlite/repositories/destination/destination.interface";
 import {
@@ -338,6 +342,8 @@ export class SqliteHistoryRepository implements HistoryRepository {
         "destinations.name as destination_name",
         "destinations.kind as destination_kind",
         "routes.name as route_name",
+        "deliveries.provider_ref_type as provider_ref_type",
+        "deliveries.provider_ref_value as provider_ref_value",
         "deliveries.state as state",
         "deliveries.attempt_count as attempt_count",
         "deliveries.next_attempt_at as next_attempt_at",
@@ -378,6 +384,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("deliveries.suppression_id", "=", query.suppressionId);
     }
 
+    if (query.receipt) {
+      builder = builder.where(deliveryReceiptPredicate(query.receipt));
+    }
+
     if (query.state) {
       builder = builder.where("deliveries.state", "=", query.state);
     }
@@ -407,6 +417,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
         destinationName: row.destination_name,
         destinationKind: row.destination_kind ?? undefined,
         routeName: row.route_name,
+        providerReference: providerReferenceFromRow(row),
         state: row.state,
         attemptCount: row.attempt_count,
         nextAttemptAt: row.next_attempt_at,
@@ -494,6 +505,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.suppressionId) {
       builder = builder.where("deliveries.suppression_id", "=", query.suppressionId);
+    }
+
+    if (query.receipt) {
+      builder = builder.where(deliveryReceiptPredicate(query.receipt));
     }
 
     if (query.state) {
@@ -677,6 +692,22 @@ function deliveryDestinationKindPredicate(kind: DestinationKind) {
     WHERE filtered_destinations.id = deliveries.destination_id
       AND filtered_destinations.kind = ${kind}
   )`;
+}
+
+/**
+ * Restricts deliveries by whether the target returned a message reference.
+ *
+ * A reference needs both halves, so a half-written legacy row counts as
+ * missing. The page and its `total` share this predicate, which is what keeps
+ * the count from claiming rows the list does not show.
+ */
+function deliveryReceiptPredicate(receipt: DeliveryReceiptFilter) {
+  const present = sql<boolean>`(
+    deliveries.provider_ref_type IS NOT NULL
+    AND deliveries.provider_ref_value IS NOT NULL
+  )`;
+
+  return receipt === "present" ? present : sql<boolean>`NOT ${present}`;
 }
 
 /**

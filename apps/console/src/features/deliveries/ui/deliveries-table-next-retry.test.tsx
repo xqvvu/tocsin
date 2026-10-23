@@ -38,7 +38,9 @@ describe("deliveries table next retry", () => {
     renderTable([deliveryRow({ nextAttemptAt: null })]);
 
     expect(screen.queryByText("Next retry")).toBeTruthy();
-    expect(screen.getByText("—")).toBeTruthy();
+    // The receipt column also renders a dash for an empty value, so target the
+    // retry cell by position instead of the first dash on the page.
+    expect(screen.getAllByRole("cell")[5]?.textContent).toBe("—");
   });
 
   it("clips a cross-day timestamp inside its fixed-width column", () => {
@@ -86,6 +88,7 @@ function deliveryRow(
     destinationName: "Ops group",
     destinationKind: "feishu",
     routeName: "Primary route",
+    providerReference: null,
     state: "failed",
     attemptCount: 2,
     nextAttemptAt: null,

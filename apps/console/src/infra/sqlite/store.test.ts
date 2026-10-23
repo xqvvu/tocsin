@@ -536,6 +536,15 @@ describe("sqlite store", () => {
     expect(detail?.renderedPayload).toEqual({ ok: true });
     expect(detail?.rawPayloadPruned).toBe(false);
     expect(detail?.providerReference).toEqual({ type: "feishu_message_id", value: "om_abc123" });
+    // The list projection carries the same handle, and the receipt filter
+    // agrees with it: the succeeded job is present, not missing.
+    const withReceipt = await store.history.listDeliveries({ receipt: "present" });
+    expect(withReceipt.items.map((delivery) => delivery.id)).toEqual([updated.id]);
+    expect(withReceipt.items[0]?.providerReference).toEqual({
+      type: "feishu_message_id",
+      value: "om_abc123",
+    });
+    expect((await store.history.listDeliveries({ receipt: "missing" })).total).toBe(0);
     expect(detail?.attempts).toMatchObject([
       {
         attemptNumber: 1,

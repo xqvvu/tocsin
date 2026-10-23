@@ -182,6 +182,17 @@ async function repositoryWithSearchFixtures(): Promise<
         created_at: NOW,
         updated_at: NOW,
       },
+      {
+        // Half of a legacy reference: not enough to find the message, so the
+        // receipt filter must count it as missing.
+        id: "dlv-provider-ref-partial",
+        event_id: "event-feishu",
+        destination_id: "dest-1",
+        state: "succeeded" as const,
+        provider_ref_type: "feishu_message_id",
+        created_at: NOW,
+        updated_at: NOW,
+      },
       ...[
         ["event-labels", "dlv-event-labels"],
         ["event-upstream", "dlv-event-upstream"],
@@ -402,5 +413,35 @@ describe("history search", () => {
     expect(ids(page.items)).toEqual(["event-secret-label"]);
     expect(page.total).toBe(1);
     expect(detail?.event.normalized.labels.authorization).toBe("[REDACTED]");
+  });
+});
+
+describe("delivery receipt filter", () => {
+  it("keeps only deliveries with a complete external message reference", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const page = await repository.listDeliveries({ receipt: "present" });
+
+    expect(ids(page.items)).toEqual(["dlv-provider-ref"]);
+    expect(page.total).toBe(1);
+    // The list carries the same handle the detail page exposes, so the row can
+    // prove delivery without a second request.
+    expect(page.items[0]?.providerReference).toEqual({
+      type: "feishu_message_id",
+      value: "om_ref_5d2f",
+    });
+  });
+
+  it("treats a half-written reference as missing", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const all = await repository.listDeliveries({ limit: 100 });
+    const missing = await repository.listDeliveries({ receipt: "missing", limit: 100 });
+
+    expect(ids(missing.items)).toContain("dlv-provider-ref-partial");
+    expect(ids(missing.items)).not.toContain("dlv-provider-ref");
+    // Page and total share the predicate: exactly the one complete reference
+    // is excluded from the missing bucket.
+    expect(missing.total).toBe(all.total - 1);
   });
 });

@@ -3,6 +3,7 @@ import * as React from "react";
 
 import {
   type DestinationSummary,
+  DeliveryReceiptFilterSchema,
   DeliveryStateSchema,
   DestinationKindSchema,
   OPERATION_SEARCH_MAX_LENGTH,
@@ -250,6 +251,15 @@ function OperationFiltersPanel({
       label: t(`operations.filters.deliveryOutcomeOptions.${state}`),
     })),
   ];
+  // Receipts belong to the delivery list: the event list cannot answer "did
+  // the target return a message id" without opening each job.
+  const receiptItems = [
+    { value: null, label: t("operations.filters.anyReceipt") },
+    ...DeliveryReceiptFilterSchema.options.map((receipt) => ({
+      value: receipt,
+      label: t(`operations.filters.receiptOptions.${receipt}`),
+    })),
+  ];
 
   return (
     <FieldGroup
@@ -452,6 +462,33 @@ function OperationFiltersPanel({
                   {(configuration.routes ?? []).map((route) => (
                     <SelectItem key={route.id} value={route.id}>
                       {route.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </UiField>
+          <UiField>
+            <FieldLabel htmlFor="operation-receipt">{t("operations.filters.receipt")}</FieldLabel>
+            <Select
+              id="operation-receipt"
+              items={receiptItems}
+              value={search.receipt || null}
+              disabled={pending}
+              onValueChange={(value) =>
+                onChange({
+                  receipt: (value ?? "") as DashboardOperationSearch["receipt"],
+                })
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t("operations.filters.anyReceipt")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {receiptItems.map((item) => (
+                    <SelectItem key={item.value ?? "any"} value={item.value}>
+                      {item.label}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -661,6 +698,15 @@ function activeFilterChips(
       label: t("operations.filters.route"),
       valueLabel: route?.name ?? search.routeId,
       clear: { routeId: "" },
+    });
+  }
+
+  if (scope === "deliveries" && search.receipt) {
+    chips.push({
+      key: "receipt",
+      label: t("operations.filters.receipt"),
+      valueLabel: t(`operations.filters.receiptOptions.${search.receipt}`),
+      clear: { receipt: "" },
     });
   }
 

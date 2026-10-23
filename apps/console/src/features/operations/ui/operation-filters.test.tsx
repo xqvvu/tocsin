@@ -56,6 +56,7 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByText("Destination kind")).toBeNull();
     expect(screen.queryByText("Route")).toBeNull();
     expect(screen.queryByText("Delivery state")).toBeNull();
+    expect(screen.queryByText("Receipt")).toBeNull();
     expect(screen.queryByText("Attempts")).toBeNull();
   });
 
@@ -68,6 +69,7 @@ describe("operation filters by page scope", () => {
     expect(screen.getByText("Route")).toBeTruthy();
     expect(screen.getByText("Delivery state")).toBeTruthy();
     expect(screen.queryByText("Delivery outcome")).toBeNull();
+    expect(screen.getByText("Receipt")).toBeTruthy();
     expect(screen.getByText("Attempts")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
   });
@@ -114,6 +116,7 @@ describe("operation filters by page scope", () => {
         destinationId: "destination-1",
         destinationKind: "feishu",
         routeId: "route-1",
+        receipt: "present",
         deliveryState: "failed",
         minAttempts: 2,
         range: "1h",
@@ -135,6 +138,7 @@ describe("operation filters by page scope", () => {
       destinationId: "",
       destinationKind: "",
       routeId: "",
+      receipt: "",
       deliveryState: "",
       minAttempts: 0,
       range: "",
@@ -181,6 +185,17 @@ describe("operation filters by page scope", () => {
     renderFilters("deliveries", { routeId: "route-1" }, "toolbar");
 
     expect(screen.getByTitle("Clear Route")).toBeTruthy();
+  });
+
+  it("names the receipt chip on the deliveries page", () => {
+    renderFilters("deliveries", { receipt: "missing" }, "toolbar");
+
+    expect(screen.getByTitle("Clear Receipt")).toBeTruthy();
+    expect(screen.getByText("No receipt")).toBeTruthy();
+
+    cleanup();
+    renderFilters("events", { receipt: "missing" }, "toolbar");
+    expect(screen.queryByTitle("Clear Receipt")).toBeNull();
   });
 
   it("advertises the extra delivery search fields on the deliveries page", () => {
