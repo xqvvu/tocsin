@@ -1,13 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 
-import {
-  appSettingsQueryKeys,
-  runtimeInformationQueryKeys,
-  workerHealthQueryKeys,
-} from "#/features/configuration/api/configuration.queries";
-import { destinationQueryKeys } from "#/features/destinations/api/destination.queries";
-import { routeQueryKeys } from "#/features/routes/api/route.queries";
-import { sourceQueryKeys } from "#/features/sources/api/source.queries";
+import { configurationReadOnlyQueryKeys } from "#/features/configuration/api/configuration-invalidation";
 import { orpc } from "#/lib/orpc";
 
 export function useConfigurationMutations() {
@@ -19,13 +12,10 @@ export function useConfigurationMutations() {
     importConfigurationJson: orpc.portability.importJson.call,
     importConfigurationToml: orpc.portability.importToml.call,
     invalidateConfiguration: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: appSettingsQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: runtimeInformationQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: workerHealthQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: sourceQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: destinationQueryKeys.all }),
-        queryClient.invalidateQueries({ queryKey: routeQueryKeys.all }),
-      ]),
+      Promise.all(
+        configurationReadOnlyQueryKeys.map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      ),
   };
 }

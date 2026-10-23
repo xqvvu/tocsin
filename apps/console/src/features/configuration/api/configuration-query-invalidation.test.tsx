@@ -3,10 +3,18 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
+import { configurationReadOnlyQueryKeys } from "#/features/configuration/api/configuration-invalidation";
 import { useConfigurationMutations } from "#/features/configuration/api/configuration.mutations";
+import * as configurationQueries from "#/features/configuration/api/configuration.queries";
 import { useDestinationMutations } from "#/features/destinations/api/destination.mutations";
 import { useRouteMutations } from "#/features/routes/api/route.mutations";
 import { useSourceMutations } from "#/features/sources/api/source.mutations";
+
+type QueryKeyDefinition = { all: readonly string[] };
+
+function isQueryKeyDefinition(value: unknown): value is QueryKeyDefinition {
+  return typeof value === "object" && value !== null && "all" in value && Array.isArray(value.all);
+}
 
 const testState = vi.hoisted(() => ({
   invalidateQueries: vi.fn<(input: { queryKey: readonly string[] }) => Promise<void>>(),
@@ -60,11 +68,28 @@ describe("configuration query invalidation", () => {
     expect(testState.invalidateQueries.mock.calls).toEqual([
       [{ queryKey: ["app-settings"] }],
       [{ queryKey: ["runtime-information"] }],
+      [{ queryKey: ["storage-health"] }],
       [{ queryKey: ["worker-health"] }],
       [{ queryKey: ["sources"] }],
       [{ queryKey: ["destinations"] }],
       [{ queryKey: ["routes"] }],
     ]);
+  });
+
+  it("registers every configuration read-only projection for invalidation", () => {
+    const queryKeyExports = Object.entries(configurationQueries).filter(([exportName]) =>
+      exportName.endsWith("QueryKeys"),
+    );
+
+    expect(queryKeyExports.length).toBeGreaterThan(0);
+
+    for (const [exportName, queryKeys] of queryKeyExports) {
+      expect(isQueryKeyDefinition(queryKeys), `${exportName} exposes an "all" key`).toBe(true);
+      if (!isQueryKeyDefinition(queryKeys)) {
+        continue;
+      }
+      expect(configurationReadOnlyQueryKeys).toContainEqual(queryKeys.all);
+    }
   });
 
   it("invalidates source summaries and affected route references", async () => {
