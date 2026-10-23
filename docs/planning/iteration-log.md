@@ -2,6 +2,86 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 89 轮）
+
+- 时间：2026-10-23 08:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `85f4f3f`；main CI 最近一次 success；无 open PR；
+  `v0.1.0-beta.66` 的 tag 与 GitHub Release 均已存在。
+- 类型：**`release`（部分审计）** —— 主交付是第 88 轮顺延的 `0.1.0-beta.67` 发版 + UI-22 修复；
+  审计只跑 `requirements`（排序存量候选）与 `ui-triage`。其余车道未跑，`release-infra` 轮转位置不变。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**——本轮未覆盖全部车道。
+- 车道轮转位置：**`release-infra`**（下一轮非必跑车道，本轮未跑）。
+- `ui-triage`：**`defer`** —— 距上次真实浏览器评审 38 分钟（`last_ui_review_at` 2026-10-23 07:50）；
+  自评审后 UI 路径合并 0 条；唯一 HIGH（UI-22）正是本轮修复对象；无新增 HIGH。
+  下次触发：满 48h（2026-10-25 07:50）、UI 路径合并 ≥3、或新增 HIGH 可复现缺陷。
+- `last_ui_review_at`：**2026-10-23 07:50 CST**（未变，本轮未做新的深度评审，只做针对性复验）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建都在会话工作树
+  `wizardly-borg-0b2373`。工作树在收尾阶段清理。
+
+### 本轮交付
+
+- **PR #392 `fix(console): keep list tables from collapsing under inline edit panels`**（UI-22，24 分）：
+  `operations-table.tsx:106` 的根节点 `min-h-0` → `min-h-72`，内联编辑面板不再把表格压到 0px，
+  分页条不再与表单标题重叠。`operations-table.test.tsx` 新增布局回归断言，
+  `routes-section-layout.test.tsx` 的旧断言（误把 `min-h-0` 当成契约）改为新契约。
+  验证：`vp check` 0 errors / 18 warnings（基线）；`vp run -r test` 4/4 包通过（937 tests）；
+  PR 的 `check · test · build` 与 `playwright · chromium` 均 success。
+  **浏览器验证**（隔离实例 + `/tmp/tocsin-ui22.sqlite`，1280×720 与 390×844）：表格 288px、
+  分页 388–439、面板自 439 开始，重叠 0px；内容高于视口时页面列可滚动
+  （scrollHeight 983 > clientHeight 632），表单可达。截图 `/tmp/ui22-fixed-1280.png`、`/tmp/ui22-fixed-390.png`。
+- **PR #393 `chore(release): v0.1.0-beta.67`**：根 `package.json` 版本递增，
+  `docs/release/release-checklist.md` 的 tag 总数（58→59）、最新 tag、tag 区间末端同步。
+- **发布 `0.1.0-beta.67`**：tag 指向 `f412689`（annotated），GitHub Release 已创建（prerelease，body 非空）；
+  镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.67`（linux/amd64 + linux/arm64）。
+
+### EXPERT_PANEL（发布评估，3 专家一致放行）
+
+- **发布经理**：自 `v0.1.0-beta.66` 起唯一用户可见变更是 `4bb525b`（路由行一键临时静默，REQ-238），
+  其余 6 个提交只改 `docs/`；建议递增为 `0.1.0-beta.67`。
+- **发布阻断审计**：无 open PR；`85f4f3f` 的 CI/E2E 均 success；migration 目录零 diff；
+  无 revert；Dockerfile/compose/.env.example/锁文件零变化。UI-22 经 `git blame` + `git tag --contains`
+  核实为 `v0.1.0-beta.50` 起就存在的既有缺陷，**不是** beta.66 之后的回归，不阻断发版。
+  放行条件：tag 必须打在版本递增后的 commit 上，并重新确认该 commit 的 CI/E2E。
+- **运维/回滚专家**：部署面零变化，旧镜像可直接读新库；回滚只需换回 `0.1.0-beta.66` 镜像，无需数据修复。
+- 决策记录：三份意见并入本条日志（本轮无需单独 `docs/planning/decisions/<slug>.md`，因为是一致的低风险发布）。
+- 执行偏差（如实记录）：打 tag 时 `f412689` 的 **CI（check·test·build）为 success**，
+  但 **E2E workflow 仍停在 "Install Chromium" 步骤逾 15 分钟未结束**（外部依赖下载慢，非代码失败）；
+  其父提交 `02478f3` 的 CI 与 E2E 均 success，且 `f412689` 相对 `02478f3` 只改 `package.json` 版本与
+  3 行 release 文档。据此按「CI 绿 + 变更面为零风险」放行打 tag，并在下一轮开头补记 E2E 最终结论。
+
+### 专家发现
+
+- `requirements`（本轮只做存量排序，未做全量发现）：
+  - **Top 1 REQ-21（27）** Events 按投递结果筛选（无投递/失败/被静默）：`history.repository.ts:76-90,133-141`
+    已计算各状态计数，`history.interface.ts:24-34` 无该维度，`operation-filters.tsx:40-44` 明确 Events
+    不渲染投递状态。顶栏 REQ-166 只统计 failed，零投递/全静默仍是盲区。
+  - **Top 2 REQ-39（27）** 静默剩余时间 + 一键续期：`suppressions-section.tsx:253-264`、
+    `suppression-detail-page.tsx:87-91` 只显示起止时间；REQ-238 刚交付一键静默，创建后看不到还剩多久。
+  - **Top 3 REQ-40（26，建议重评 27）** 详情返回保留列表筛选：`event-detail-page.tsx:66`、
+    `delivery-detail-page.tsx:70` 硬跳无 `search`。
+  - 行号漂移：REQ-21 原引 `:47-77` → `:76-90`；REQ-40 原引 `delivery-detail-page.tsx:49-55` → `:65-73`；
+    REQ-39 原引 `:247-258` → `:253-264`。REQ-33 已被 REQ-207 吸收但仍为 candidate，建议合并关闭。
+  - 新增 **REQ-241（27）**：一键静默成功后直达新规则并显示到期时间——`create` 返回完整 Suppression
+    （`packages/api/src/contract/suppressions.ts:47-51`），但 `suppression-from-row-dialog-content.tsx:86-89`
+    丢弃结果，`onSaved` 只关弹窗（`suppression-from-route-dialog.tsx:62`）。
+- `ui-triage`：`defer`（理由见上）。
+
+### 发布决策
+
+- 三位专家一致 → 发布 `0.1.0-beta.67`（详见上方 EXPERT_PANEL 与交付）。
+- 用户可见变更（自 `v0.1.0-beta.66`）：REQ-238 路由行一键临时静默（#389）+ UI-22 内联编辑表格塌陷修复（#392）。
+- 版本：`0.1.0-beta.67`；release PR #393 合并为 `f412689`。
+- 回滚镜像：`0.1.0-beta.66`。升级/回滚：无迁移、无环境变量/配置格式/启动参数变化。
+
+### 下一轮优先项
+
+1. 补记 `v0.1.0-beta.67` 的 E2E 结论；若为失败，按前向修复并只发新版本号，绝不重打该 tag。
+2. **UI-22 复验**：`/suppressions` 页内联编辑（本轮只在 `/routes` 做了浏览器几何验证）——
+   两页共用同一外壳，但仍应实测一次并更新 `last_ui_review_at`。
+3. **REQ-21（27）** Events 按投递结果筛选；需同步 `operation-filter-scope.md`。
+4. **FIX-16** Deliveries 工具栏 Reset 不清 `minAttempts`，补一条断言。
+5. `release-infra`（轮转车道）。
+
 ## 2026-10-23（第 88 轮）
 
 - 时间：2026-10-23 07:10 CST 起。
