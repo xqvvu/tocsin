@@ -2,6 +2,84 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 102 轮）
+
+- 时间：2026-10-23 23:15 CST 起（跨至 10-24 约 01:00）。
+- 基线：本轮开始时 `origin/main` @ `b980032`（第 101 轮记录）；main CI success；无 open PR。
+- 类型：**需求切片 + 三车道 + 发布**（非 full-audit）——`requirements`、`ui-triage`、`quality`（轮转）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 28 分 candidate，
+  按第 1.5 步继续，不重跑全量审计。
+- 车道轮转位置：**`docs-drift`**（本轮已跑 `quality`）。
+- `ui-triage`：**`defer`** —— 距 `last_ui_review_at` 2026-10-23 20:41 仅 2.7 小时；此后仅 1 条 UI
+  合并（`8d5ba8a`，上次评审直接产物且已浏览器实测）；26 条 UI candidate、最高 26、无 ≥27；
+  三个强信号（48h / 3 条合并 / ≥2 条未决高分）均未成立。
+- `last_ui_review_at`：**2026-10-23 20:41 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建在会话工作树
+  `eager-mendeleev-dec91a`。本轮结束前已删除 `.agent-run.lock` 与 `agent-iteration` 工作树，
+  并清理会话工作树的 `node_modules`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #435 `feat(console): flag routes whose sources are all disabled`（REQ-165，28 分）**：
+  - `routeSourceReachability` 纯函数：全量规则看全部告警源，显式 `sourceIds` 只看被引用的源；
+    `all-disabled` / `no-source` / `reachable` 三态。
+  - `RouteSourceReachabilityBadge` 在规则单元格展示（仅路由自身启用时），catch-all 行的
+    「所有事件」旁同样展示；中英文案键 `routing.table.sourceReachability.*`。
+  - PRD `docs/prd/route-source-reachability.md`；5 条模型单测。
+  - 验证：`vp check` 0 errors（22 条既有 warning）；`vp run -r test` 4/4（console 1022）；
+    `vp run -r build` 通过；CI check + E2E 绿。
+  - 浏览器实测：隔离实例 `localhost:6198` + 临时 SQLite；真实 UI 完成首启 → 目标 → 告警源 →
+    全量路由（经「This route matches everything」确认）→ 停用告警源；Routes 页出现
+    `Sources disabled`，tooltip 为 `All 1 matched sources are disabled, so this route receives no
+    new alerts`，路由状态仍为 `Enabled`；重新启用告警源后徽标消失。截图
+    `/tmp/tocsin-r102-routes-badge.png`（未提交仓库）。
+
+### 专家发现
+
+- `requirements`：3 条新候选（已写 backlog）——REQ-262 Settings 刷新漏 `storage-health`（29）、
+  REQ-263 投递列表时间列跟随时间口径（27）、REQ-264 搜索 >8 词截断提示（28）。
+- `quality`：多关键词 AND 搜索与投递时间口径均 PASS（列表/计数共用谓词、逐词转义、offset 分页
+  无第二排序路径）。新发现：
+  - Q-225 MEDIUM 成功发送后 `markSucceeded` 失败被记为失败并重试
+    （`delivery-execution.ts:105-117,158-178`）。
+  - Q-226 MEDIUM 单条记账错误中断整批认领，其余行停在 running 直到 stale 回收
+    （`delivery-worker.service.ts:99-125`；`delivery-worker.service.test.ts:825-866` 未覆盖）。
+  - Q-227 MEDIUM 手动 run worker 绕过 runner 单飞，stale 阈值小于批次耗时时可能重复发送
+    （`orpc/features/operations/router.ts:72-86`、`delivery-runner.ts:65-68`、
+    `delivery-worker.service.ts:79-82`）。
+  - Q-228 LOW webhook body 流错误被误判为无效 JSON（`webhook-request.ts:29-37`、
+    `webhook.ts:48-52`）。
+  - Q-229 LOW 搜索测试缺口：无 `\` 用例；投递侧空白 `q` 未断言（`search.test.ts:341,353,475`）。
+- 浏览器复核澄清：Sources 停用确认框与覆盖率列已正确计入 catch-all 路由
+  （`source-route-coverage.ts` 的 `routeCoversSource`），早前「忽略全量路由」的怀疑不成立。
+
+### 发布评估与发布记录
+
+- **发布经理**：RELEASE —— `v0.1.0-beta.78..origin/main` 仅 1 个用户可见变更（#435），
+  建议 `0.1.0-beta.79`。
+- **阻断审计**：GO —— `f82b97a` 的 CI（`39987222682`）与 E2E（`39987222749`）均 success、
+  无 open PR、迁移零 diff、3 项 `blocked-autonomous`（LICENSE、branch protection）不影响运行时。
+- **运维/回滚**：READY —— Dockerfile / compose / scripts / lockfile / env / migrate 零 diff；
+  无迁移、无新持久化状态；回滚只需换回 `0.1.0-beta.78` 镜像。
+- 决策：合并 #436（`chore(release): v0.1.0-beta.79`，`547c361`）→ 打 tag / GitHub Release →
+  构建并推送双平台镜像。
+- **已发布 `v0.1.0-beta.79`**：
+  - tag 指向 `547c361`；GitHub Release 为 prerelease，body 非空；
+  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.79`
+    （linux/amd64 + linux/arm64，index digest `sha256:67de837d…`，
+    amd64 `sha256:3c896104…`，arm64 `sha256:3e1b7419…`）；
+  - 回滚镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.78`；
+  - 无迁移、无镜像 / entrypoint / 配置变化。
+
+### 下一轮优先项
+
+1. **REQ-262（29）**：Settings 刷新的只读投影失效契约。
+2. **REQ-264（28）**：搜索超过 8 个关键词的截断提示。
+3. **Q-227 / Q-225 / Q-226**：投递可靠性修复（保守方案，优先 Q-227 的单飞收敛）。
+4. **`docs-drift` 车道**（轮转）。
+5. **REQ-263（27）**：投递列表时间列与排序口径一致。
+
 ## 2026-10-23（第 101 轮）
 
 - 时间：2026-10-23 21:35 CST 起。
