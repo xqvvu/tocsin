@@ -44,7 +44,9 @@ import {
   describeRouteRule,
 } from "#/features/routes/model/route-rule-summary";
 import { routeRuleSummaryCopy } from "#/features/routes/model/route-rule-summary-copy";
+import { routeSourceReachability } from "#/features/routes/model/route-source-reachability";
 import { EditRouteForm } from "#/features/routes/ui/route-forms";
+import { RouteSourceReachabilityBadge } from "#/features/routes/ui/route-source-reachability-badge";
 import { SuppressionFromRouteDialog } from "#/features/suppressions/ui/suppression-from-route-dialog";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
@@ -372,11 +374,19 @@ function RouteRuleCell({ route, sources }: { route: RouteSummary; sources: Sourc
           hint: t("routing.table.statusScopeNoResolvedHint"),
         }
       : null;
+  // An enabled route whose sources are all off still reads as "enabled" in the
+  // state column, so say why it cannot receive events next to the rule.
+  const sourceReachability = routeSourceReachability(route.rule, sources);
+  const sourceReachabilityBadge =
+    route.enabled && sourceReachability.kind !== "reachable" ? (
+      <RouteSourceReachabilityBadge reachability={sourceReachability} />
+    ) : null;
 
   if (groups.length === 0) {
     return (
-      <div className="flex min-w-0 items-center text-left">
+      <div className="flex min-w-0 flex-wrap items-center gap-1 text-left">
         <span className="text-muted-foreground text-xs italic">{t("routing.table.allEvents")}</span>
+        {sourceReachabilityBadge}
       </div>
     );
   }
@@ -421,6 +431,7 @@ function RouteRuleCell({ route, sources }: { route: RouteSummary; sources: Sourc
           {statusScopeBadge.label}
         </Badge>
       ) : null}
+      {sourceReachabilityBadge}
     </div>
   );
 }
