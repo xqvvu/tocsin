@@ -50,6 +50,26 @@
   （`events-table.tsx:57`）正常展示，删除 `EventFingerprintContext.fingerprint` 不会减少任何暴露面，
   只是删除重复投影。降级为低价值 chore，继续留在 backlog，不再占用 EXPERT_PANEL。
 
+### 发布评估（3 专家小组）与发布记录
+
+- **发布经理**：自 `v0.1.0-beta.74` 起 3 个提交，唯一用户可见变更是 #422（`BETTER_AUTH_SECRET_FILE`）；
+  其余两个为 docs(planning)。建议 `0.1.0-beta.75`。
+- **阻断审计员**：6 项门禁全部 PASS —— 目标 commit 的 CI/E2E 均 success、无 open PR、无已知回归、
+  3 条 `blocked-autonomous` 均 <27 分且不影响本版本、迁移目录零 diff、版本号未占用。
+  首次查询时 E2E 仍 `in_progress`，90 秒后复核通过。
+- **运维/回滚专家**：READY。`Dockerfile`、entrypoint、迁移、锁文件零 diff；升级只需换镜像 tag。
+  回滚镜像 `0.1.0-beta.74`；**已采用 `_FILE` 的部署回滚前必须先把同一值内联为 `BETTER_AUTH_SECRET`**，
+  因为 beta.74 不认识该变量。
+- 决策：合并 #423（`chore(release): v0.1.0-beta.75`，`caa6dfa`）→ 打 tag / GitHub Release → 构建并推送双平台镜像。
+- **已发布 `v0.1.0-beta.75`**：
+  - tag 指向 `caa6dfa`；GitHub Release 为 prerelease，body 非空；
+  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.75`
+    （`linux/amd64` + `linux/arm64`，index digest `sha256:3e7b6681…`，
+    amd64 `sha256:1148873b…`，arm64 `sha256:ff474455…`）；
+  - 回滚镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.74`；
+  - 无迁移、无镜像/entrypoint 变化；配置变化只有 compose 的 `BETTER_AUTH_SECRET` 兜底改为空并新增
+    `BETTER_AUTH_SECRET_FILE`。
+
 ### 下一轮优先项
 
 1. **REL-24/REL-2 第一批 provider fixtures**：5 文件 / 10 payload，20–25 分钟，路径 `../../fixtures/…`。
