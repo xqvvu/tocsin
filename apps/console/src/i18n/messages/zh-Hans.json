@@ -691,7 +691,7 @@
   "events.detail.tabs.fingerprint": "同指纹",
   "events.detail.tabs.matches": "路由匹配",
   "events.detail.tabs.normalized": "标准化字段",
-  "events.detail.tabs.raw": "Raw debug",
+  "events.detail.tabs.raw": "原始调试",
   "events.detail.terms.deliveries": "通知投递",
   "events.detail.terms.eventId": "事件 ID",
   "events.detail.terms.fingerprint": "Fingerprint",

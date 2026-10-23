@@ -16,7 +16,7 @@ export function EventDetailView({ detail }: { detail: EventDetailData }) {
   const deliveryStats = getEventDeliveryStats(detail.deliveries);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
+    <div className="flex min-h-0 flex-col gap-4 overflow-hidden lg:h-full">
       <EventDetailSummary
         detail={detail}
         matchedRouteCount={matchedRouteCount}
@@ -28,9 +28,17 @@ export function EventDetailView({ detail }: { detail: EventDetailData }) {
         className="border-border bg-card min-h-0 flex-1 overflow-hidden border"
       >
         <div className="border-border shrink-0 border-b p-3">
+          {/*
+            Below `lg` the five labels no longer fit the default English locale
+            (they need ~440px at a 390px viewport), and horizontal scrolling hid
+            the last tabs with no affordance. Wrapping keeps every tab visible;
+            the zh-Hans labels already fit on one row, so it is a no-op there.
+            `TabsList` grows with the wrapped rows because its height is a
+            minimum rather than a fixed h-8.
+          */}
           <TabsList
             variant="bordered"
-            className="w-full justify-start overflow-x-auto overflow-y-hidden"
+            className="w-full justify-start overflow-x-auto overflow-y-hidden max-lg:flex-wrap max-lg:overflow-visible"
           >
             <TabsTrigger value="normalized">{t("events.detail.tabs.normalized")}</TabsTrigger>
             <TabsTrigger value="matches">{t("events.detail.tabs.matches")}</TabsTrigger>
