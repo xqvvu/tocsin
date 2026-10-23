@@ -70,6 +70,11 @@ describe("route status scope badge", () => {
     expect(badge.getAttribute("title")).toBe(
       "This route does not include Resolved, so recovery notifications are not delivered",
     );
+    // Warning tone, not another outline condition chip: the badge states that
+    // a notification class is dropped, not a matcher on the rule.
+    expect(badge.className).toContain("border-amber-600/30");
+    expect(badge.className).toContain("bg-amber-50");
+    expect(badge.className).toContain("text-amber-700");
   });
 
   it("marks a resolved-only route as dropping trigger notifications", () => {

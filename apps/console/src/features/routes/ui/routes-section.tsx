@@ -408,7 +408,15 @@ function RouteRuleCell({ route, sources }: { route: RouteSummary; sources: Sourc
         </Badge>
       ))}
       {statusScopeBadge ? (
-        <Badge variant="outline" className="gap-1" title={statusScopeBadge.hint}>
+        // Warning styling rather than another outline chip: side by side with
+        // the severity/status conditions an outline badge reads as one more
+        // matcher, which hides the fact that this route drops a whole class of
+        // notification. The amber palette matches SeverityBadge's warning tone.
+        <Badge
+          variant="outline"
+          className="gap-1 border-amber-600/30 bg-amber-50 text-amber-700"
+          title={statusScopeBadge.hint}
+        >
           <RiErrorWarningLine aria-hidden />
           {statusScopeBadge.label}
         </Badge>
