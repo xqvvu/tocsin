@@ -2,6 +2,85 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-23（第 91 轮）
+
+- 时间：2026-10-23 10:57 CST 起。
+- 基线：本轮开始时 `origin/main` @ `53eaf42`；main CI 最近一次 success；无 open PR；
+  `v0.1.0-beta.68` 的 tag 与 GitHub Release 均已存在。
+- 类型：**`full-audit`（3 条车道）** —— `requirements`（超时终止）、`ui-triage`→`ui-review`、
+  `security-exposure`。`docs-drift`、`release-infra`、`architecture`、`quality` 顺延。
+- 全量审计时间戳：**第 1 轮（2026-10-18 13:30 CST，未变）**——仍未覆盖全部车道。
+- 车道轮转位置：**`architecture`**（下一轮非必跑车道）。
+- `ui-triage`：**`review_now`** —— 距上次真实评审 3h10m；自评审后 UI 路径合并 3 条
+  （`02478f3`、`66c391d`、`5cf9c59`）；22 条 candidate UI 发现、无 HIGH；但 `/suppressions`
+  的 UI-22 几何复验连续两轮顺延，且 #392 改的是 8 个消费者共用的表格外壳，值得一次深度复核。
+- `last_ui_review_at`：**2026-10-23 11:10 CST**（本轮已更新）。
+- 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建都在会话工作树
+  `bold-golick-59a3cd`（写入隔离 hook 禁止跨工作树写入）。收尾时 `agent-iteration` 及其
+  `node_modules` 已清理，并发锁已删除。
+- 车道超时：`requirements` 运行约 52 分钟未返回，按时间盒终止；本轮无新需求候选，下一轮重跑。
+
+### 本轮交付
+
+- **PR #400 `fix(console): name each filter reset for its scope`（UI-31）**：
+  Events/Deliveries 在筛选无结果时同时出现三个同名「重置筛选」。chip 行与空态改用
+  「清除全部筛选 / Clear all filters」，空态按钮另有独立 `aria-label`
+  （「清除筛选并显示全部投递/事件」），工具栏保留可见「重置筛选」并以既有 `resetTitle`
+  作为 `aria-label`（「重置投递筛选/重置事件筛选」）。新增 3 个 i18n key（中英文同步），
+  更新 4 个测试文件并新增工具栏可访问名称用例。
+  验证：`vp check` 0 errors / 18 warnings（基线）；`vp run -r test` 4/4 包通过（console 949 tests）；
+  `vp run -r build` 通过。
+  **浏览器验证**（隔离实例 6192 + `/tmp/ui31-verify.sqlite`，390×844 与 500 宽）：
+  - `/deliveries?q=zzz` 三个重置入口的可访问名称分别为「重置投递筛选」「清除全部筛选」「清除筛选并显示全部投递」；
+  - `/events?q=zzz&deliveryOutcome=failed` 分别为「重置事件筛选」「清除全部筛选」「清除筛选并显示全部事件」；
+  - 控件尺寸保持 84×28 / 80×24 / 108×28，`scrollWidth == 390`，无新增换行或横向溢出。
+  - 截图 `/tmp/ui31-deliveries-390.png`、`/tmp/ui31-events-390.png`。
+
+### 专家发现
+
+- `ui-review`（浏览器实测，read-only）：
+  - UI-31 复现并确认：`operation-filters.tsx:194`、`deliveries-page-toolbar.tsx:40`、
+    `deliveries-empty-state.tsx:42`、`events-page-toolbar.tsx:44`、`events-empty-state.tsx:40`；
+    `/deliveries?q=zzz` 390×844 三按钮均读作「重置筛选」，事件页同样存在。
+  - **#392 的 `min-h-72` 修复成立**：1280×900 `/suppressions` 打开内联编辑后表格区 288px、
+    分页 400–426、面板 top=439，间隙 13px，无压塌/重叠；390×844 同样 13px 间隙。
+  - **紧凑 hits 表无实质空白**：1280 详情页空态由父级 `flex-1` 撑满（490px），390 下限仅比
+    `flex-1` 多 2.5px；不构成缺陷，未改 `OperationsTable`。
+  - 其他消费者（`/sources`、`/destinations`、feishu-apps、routes）无回归；无新增 UI 编号
+    （下一可用 UI-42）。
+- `security-exposure`：
+  - **SEC-33（MEDIUM）**：`isSensitiveKey` 漏掉复数/限定词/带前缀形态；实测 `secrets`、
+    `passwords`、`appSecrets`、`aws_secret_key`、`awsSecretKey`、`clientSecretKey`、
+    `appSigningKey`、`secretValue`、`SecretString`、`credentialsJson`、`privateKeyData` 均为
+    false；`redactText("aws_secret_key=abc123")` 原样返回（`redaction.ts:82-83`、
+    `config-portability.ts:459-489`、契约 `packages/api/src/contract/portability.ts:22`）。
+    改 secret 判定规则 → EXPERT_PANEL。
+  - **SEC-34（MEDIUM）**：空用户名 URL userinfo 密码不脱敏（`redaction.ts:188`，
+    `redaction.scan.test.ts:348` 冻结），`redis://:hunter2@…`、`postgres://:hunter2@…`、
+    `https://:hunter2@…` 原样返回。删一行条件即可，AUTO_FIX。
+  - **SEC-35（LOW）**：按 `DestinationKindSchema.options` 参数化的脱敏覆盖仍缺
+    `testDestination`、`listDestinations`/`getDestinationTemplateDraft`、
+    `destinationMetadataFromRuntime`/`destinationEditorFormDraftFromRuntime` 的 generic/email 断言。
+  - 纠偏：**SEC-25 已随 #373 落地**（`destination.service.ts:205,317,329,343` 均 `redactJsonText`），
+    backlog 行已改为 shipped；**SEC-31** 的 `X-Amz-Signature`/`X-Amz-Credential`/`X-Goog-Credential`
+    现已命中，真正剩余是 `X-Goog-Signature` 与 Azure SAS `sig`。
+  - import protection 无新增缺口；`xqvvu/vane` 失效引用全仓 clean（仅 ACR 镜像坐标与历史日志）。
+- `requirements`：超时终止，无输出。
+- `ui-triage`：`review_now`（理由见上）。
+
+### 本轮未做 / 限制
+
+- 需求车道未产出，backlog 无新增 REQ 候选。
+- 未发版评估前先交付 PR；发布决策见下方（若 CI 与时间允许）。
+
+### 下一轮优先项
+
+1. **SEC-34（27）**：空用户名 userinfo 脱敏，AUTO_FIX（一行条件 + oracle/用例）。
+2. **SEC-33（23）**：交 EXPERT_PANEL 决定后缀规则扩展与 oracle 更新。
+3. **requirements 车道重跑**（本轮超时），并续做 REQ-243（27）/REQ-244（28，需 EXPERT_PANEL）。
+4. `architecture`（轮转车道）+ SEC-35 参数化测试补齐。
+5. `docs-drift`：复核 SEC-25/SEC-31 相关文档与 backlog 纠偏。
+
 ## 2026-10-23（第 90 轮）
 
 - 时间：2026-10-23 09:38 CST 起。
