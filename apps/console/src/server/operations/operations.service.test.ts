@@ -118,6 +118,17 @@ describe("operations service", () => {
     expect(retried.deliveries.total).toBe(0);
     expect(retried.events.total).toBe(1);
 
+    // The fan-out outcome narrows events only. The delivery list keeps its own
+    // exact `deliveryState` dimension, so the same URL value cannot silently
+    // filter two lists with different meanings.
+    const failedFanOut = await service.listOperations({ limit: 10, deliveryOutcome: "failed" });
+    expect(failedFanOut.events.items.map((item) => item.id)).toEqual([event.id]);
+    expect(failedFanOut.events.total).toBe(1);
+    expect(failedFanOut.deliveries.total).toBe(1);
+    const neverSent = await service.listOperations({ limit: 10, deliveryOutcome: "none" });
+    expect(neverSent.events.total).toBe(0);
+    expect(neverSent.deliveries.total).toBe(1);
+
     await expect(service.getEventDetail(event.id)).resolves.toMatchObject({
       event: { id: event.id },
     });
