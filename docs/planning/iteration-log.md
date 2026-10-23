@@ -16,7 +16,8 @@
   下次触发：满 48h（2026-10-25 07:50）、UI 路径合并 ≥3、或新增 HIGH 可复现缺陷。
 - `last_ui_review_at`：**2026-10-23 07:50 CST**（未变；本轮只做了新筛选项的针对性浏览器复验，不是深度评审）。
 - 工作树：`agent-iteration` 仅用于并发锁与干净基线；实现、验证、构建都在会话工作树
-  `happy-shtern-094490`（写入隔离 hook 禁止跨工作树写入）。工作树清理见文末。
+  `happy-shtern-094490`（写入隔离 hook 禁止跨工作树写入）。本轮结束时 `agent-iteration`
+  工作树与其 `node_modules` 已清理，并发锁已删除。
 
 ### 本轮交付
 
@@ -66,9 +67,20 @@
   - `docker-smoke.sh` 无 restart 断言（`:67-129`）→ REL-6 成立；`.github/**` 仍被 fmt/lint 排除（`vite.config.ts:10`）→ REL-11 成立。
 - `ui-triage`：`defer`（理由见上）。
 
-### 发布决策
+### 发布决策（EXPERT_PANEL，3 专家一致放行）
 
-- 见本轮「发布评估」小节（若发布成功会记录版本、tag、镜像与回滚镜像）。
+- **发布经理**：`v0.1.0-beta.67..origin/main` 共 7 个提交，用户可见 2 个（#395 投递结果筛选、
+  #396 重置筛选修复），其余 docs/test；建议 `0.1.0-beta.68`。
+- **发布阻断审计**：目标 SHA 的 CI 与 E2E 全绿；无开放 PR（除发布 PR 本身）；无回归、无 revert；
+  `migrate/` 零 diff；`blocked-autonomous` 三项（LICENSE、无 branch protection）为长期存量，不阻断；
+  `v0.1.0-beta.68` 无重名 tag。
+- **运维/回滚专家**：部署面零变化（Dockerfile/compose/entrypoint/env/锁文件零 diff）、无迁移；
+  完全可逆，回滚只需把镜像换回 `0.1.0-beta.67`，无需数据修复。
+- 执行：PR #398 合并为 `628af89`（其 `check · test · build` 与 `playwright · chromium` 均 success）→
+  annotated tag `v0.1.0-beta.68` 指向 `628af89` → GitHub Release 已创建（prerelease，body 非空）→
+  镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.68` 已推送，
+  digest `sha256:60198b43…`，`imagetools inspect` 确认 `linux/amd64` + `linux/arm64`。
+- 回滚镜像：`0.1.0-beta.67`（`v0.1.0-beta.66` 仍保留）。
 
 ### 下一轮优先项
 
