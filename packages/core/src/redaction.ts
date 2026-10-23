@@ -164,9 +164,11 @@ function hasUrlSchemeStart(value: string, marker: number): boolean {
 }
 
 /**
- * `\b([a-z][a-z0-9+.-]*:\/\/)([^\s/@:]+):([^\s/@]+)@` rewritten as a linear
+ * `\b([a-z][a-z0-9+.-]*:\/\/)([^\s/@:]*):([^\s/@]+)@` rewritten as a linear
  * scan. Only the password span is replaced, so the scheme, user, and host stay
- * readable for operators.
+ * readable for operators. The username may be empty: connection-string URLs
+ * such as `redis://:secret@host` carry the whole credential in the password
+ * span, so requiring a username would leave the secret in plain text.
  */
 function redactUrlUserinfo(value: string): string {
   const length = value.length;
@@ -183,9 +185,10 @@ function redactUrlUserinfo(value: string): string {
     if (!hasUrlSchemeStart(value, marker)) continue;
 
     let index = marker + 3;
-    const userStart = index;
     while (index < length && isUrlUserCharacter(value[index])) index += 1;
-    if (index === userStart || value[index] !== ":") continue;
+    // An empty username is still a credential: `redis://:pass@host` and
+    // `postgres://:pass@host` put the whole secret in the password span.
+    if (value[index] !== ":") continue;
 
     index += 1;
     const passwordStart = index;
