@@ -35,9 +35,15 @@ export function EventsEmptyState({
       </EmptyHeader>
       {hasActiveFilters ? (
         <EmptyContent>
-          <Button type="button" variant="outline" size="sm" onClick={onResetFilters}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onResetFilters}
+            aria-label={t("events.table.clearFiltersLabel")}
+          >
             <RiFilterOffLine data-icon="inline-start" aria-hidden />
-            {t("common.actions.resetFilters")}
+            {t("common.actions.clearAllFilters")}
           </Button>
         </EmptyContent>
       ) : null}

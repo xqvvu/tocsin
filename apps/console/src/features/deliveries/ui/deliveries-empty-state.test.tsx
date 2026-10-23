@@ -19,7 +19,9 @@ describe("deliveries empty state", () => {
     );
 
     expect(screen.getByText("No deliveries yet")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Reset filters" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Clear filters and show all deliveries" }),
+    ).toBeNull();
   });
 
   it("says the filters matched nothing and offers a reset when they are active", () => {
@@ -34,7 +36,7 @@ describe("deliveries empty state", () => {
     expect(screen.getByText("No deliveries match")).toBeTruthy();
     expect(screen.queryByText("No deliveries yet")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters and show all deliveries" }));
 
     expect(onResetFilters).toHaveBeenCalledTimes(1);
   });

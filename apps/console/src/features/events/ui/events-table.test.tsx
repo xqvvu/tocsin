@@ -116,7 +116,7 @@ describe("events table", () => {
     );
 
     expect(screen.getByText("No events yet")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Reset filters" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear filters and show all events" })).toBeNull();
 
     rerender(
       <AppIntlProvider locale="en-US">
@@ -137,7 +137,7 @@ describe("events table", () => {
     expect(screen.getByText("No events match")).toBeTruthy();
     expect(screen.queryByText("No events yet")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters and show all events" }));
 
     expect(onResetFilters).toHaveBeenCalledTimes(1);
   });

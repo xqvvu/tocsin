@@ -34,6 +34,9 @@ export function DeliveriesPageToolbar({
               size="sm"
               disabled={pending}
               onClick={onResetFilters}
+              // The visible label is shared with the chip row and the empty
+              // state, so name this one by its page-level scope.
+              aria-label={t("deliveries.page.resetTitle")}
               title={t("deliveries.page.resetTitle")}
             >
               <RiFilterOffLine data-icon="inline-start" aria-hidden />
