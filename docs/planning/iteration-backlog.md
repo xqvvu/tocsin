@@ -672,6 +672,7 @@
 | DOC-73..82 | docs-drift 第 93 轮批次 | docs-drift lane（第 93 轮） | — | candidate | — | 均为文档更正（AUTO_FIX），无代码漂移：DOC-73 路径/命令过期（`console-server-restructure-plan.md:49,80`、`tanstack-start-import-boundaries.md:159`）；DOC-74 `requireDashboard()` 描述过期（`frontend-architecture.md:344-346`）；DOC-75 发布硬化剩余项已交付（`self-hosted-alert-hub-mvp.md:19-22`）；DOC-76 目录树与 features/server 实际不符（`frontend-architecture.md:74-77,94-97`）；DOC-77 无 importer 的 `server/runtime/store.ts` 仍写作兼容 accessor（`application-container.md:56`）；DOC-78 模板能力描述过期（`destination-template-engine.md:7`）；DOC-79 模板编辑器评审缺状态头（`template-editor-ux-review.md:1-7`）；DOC-80 验收项已实现未勾选（`destination-template-engine-issues.md:138`）；DOC-81 投递路由证据缺「已实现」头（`delivery-route-match-evidence.md:1-3`）；DOC-82 回执 PRD 行号引用已失效（`event-delivery-receipts.md:11,14-16`） |
 
 | REL-34 | 发布 `0.1.0-beta.70` | release panel（第 93 轮） | — | shipped | #407 | tag `v0.1.0-beta.70` @ `be11de5`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.70`（amd64+arm64，index digest `sha256:fa232575…`）；回滚 `0.1.0-beta.69`；用户可见变更 #406（事件详情同指纹历史）；无迁移、无配置/环境变量/启动参数变化 |
+| REL-35 | 发布 `0.1.0-beta.71` | release panel（第 94 轮） | — | shipped | #410 | tag `v0.1.0-beta.71` @ `8d7145b`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.71`（amd64+arm64，index digest `sha256:0de27c17…`，amd64 `sha256:e088ca87…`，arm64 `sha256:14ef2cb8…`）；回滚 `0.1.0-beta.70`；用户可见变更 #409（窄屏事件详情布局）；无迁移、无配置变化 |
 
 ## 发布记录
 
