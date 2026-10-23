@@ -10,6 +10,7 @@ import {
   EventReplayPreviewSchema,
   EventReplayResultSchema,
   EventDetailSchema,
+  EventFingerprintContextSchema,
   ListOperationsInputSchema,
   OperationDetailInputSchema,
   OperationsOutputSchema,
@@ -41,6 +42,16 @@ export const operations = {
     .input(OperationDetailInputSchema)
     .errors(dashboardErrors)
     .output(EventDetailSchema.nullable()),
+
+  /**
+   * Earlier occurrences of the same fingerprint on the same source, plus what
+   * changed since the most recent one. Read-only and scoped to one event: the
+   * aggregate view stays a separate concern.
+   */
+  getEventFingerprintContext: oc
+    .input(OperationDetailInputSchema)
+    .errors(dashboardErrors)
+    .output(EventFingerprintContextSchema.nullable()),
 
   getDeliveryDetail: oc
     .input(OperationDetailInputSchema)

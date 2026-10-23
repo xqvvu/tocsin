@@ -4,6 +4,7 @@ import type {
   DestinationKind,
   EventDeliveryOutcome,
   EventDetail,
+  EventFingerprintContext,
   EventListItem,
   NumberedPage,
   NormalizedEvent,
@@ -19,6 +20,12 @@ export type {
 export interface HistoryRepository {
   listEvents(query?: EventListQuery): Promise<NumberedPage<EventListItem>>;
   getEventDetail(eventId: string): Promise<EventDetail | null>;
+  /**
+   * Earlier occurrences of one event's fingerprint on the same source, with
+   * the change set against the most recent one. `null` when the event itself
+   * no longer exists.
+   */
+  getEventFingerprintContext(eventId: string): Promise<EventFingerprintContext | null>;
   listDeliveries(query?: DeliveryListQuery): Promise<NumberedPage<DeliveryListItem>>;
 }
 

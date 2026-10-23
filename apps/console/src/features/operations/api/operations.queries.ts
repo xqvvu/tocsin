@@ -6,6 +6,12 @@ export const operationsQueryKeys = {
   list: (filters: OperationFilterData) =>
     [...operationsQueryKeys.all, "list", normalizeOperationFilters(filters)] as const,
   eventDetail: (eventId: string) => [...operationsQueryKeys.all, "events", "detail", eventId],
+  eventFingerprintContext: (eventId: string) => [
+    ...operationsQueryKeys.all,
+    "events",
+    "fingerprint-context",
+    eventId,
+  ],
   eventReplayPreview: (eventId: string) => [
     ...operationsQueryKeys.all,
     "events",
@@ -90,6 +96,23 @@ export function eventDetailQueryOptions(eventId: string) {
   return orpc.operations.getEventDetail.queryOptions({
     input: { id: eventId },
     queryKey: operationsQueryKeys.eventDetail(eventId),
+  });
+}
+
+/**
+ * Recurrence context for one event: earlier occurrences of the same
+ * fingerprint and what changed since the latest one.
+ *
+ * Loaded only when its tab is opened, so the default detail view keeps its
+ * current query count. Histories are append-only, but a new occurrence of the
+ * same fingerprint changes this projection, hence the short stale time rather
+ * than a permanent cache.
+ */
+export function eventFingerprintContextQueryOptions(eventId: string) {
+  return orpc.operations.getEventFingerprintContext.queryOptions({
+    input: { id: eventId },
+    queryKey: operationsQueryKeys.eventFingerprintContext(eventId),
+    staleTime: 30_000,
   });
 }
 

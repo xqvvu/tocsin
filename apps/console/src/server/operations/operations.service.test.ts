@@ -132,6 +132,13 @@ describe("operations service", () => {
     await expect(service.getEventDetail(event.id)).resolves.toMatchObject({
       event: { id: event.id },
     });
+    // No earlier event shares this fingerprint, so recurrence is an explicit
+    // empty context rather than a missing projection.
+    await expect(service.getEventFingerprintContext(event.id)).resolves.toMatchObject({
+      fingerprint: event.normalized.fingerprint,
+      earlierCount: 0,
+      previous: null,
+    });
     await expect(service.getDeliveryDetail(delivery.id)).resolves.toMatchObject({
       job: { id: delivery.id },
     });

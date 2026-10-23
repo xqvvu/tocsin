@@ -3,6 +3,7 @@ import type {
   DeliveryDetail,
   DeliveryJob,
   DeliveryPingsResult,
+  EventFingerprintContext,
   OperationTimeRange,
 } from "@tocsin/core";
 
@@ -68,6 +69,15 @@ export class OperationsService {
 
   async getEventDetail(eventId: string) {
     return this.store.history.getEventDetail(eventId);
+  }
+
+  /**
+   * Read-only recurrence context for one event. Delegated whole: the same
+   * source+fingerprint predicate and the redaction rules belong in the
+   * projection, not in the transport layer.
+   */
+  async getEventFingerprintContext(eventId: string): Promise<EventFingerprintContext | null> {
+    return this.store.history.getEventFingerprintContext(eventId);
   }
 
   async getDeliveryDetail(deliveryId: string): Promise<DeliveryDetail | null> {
