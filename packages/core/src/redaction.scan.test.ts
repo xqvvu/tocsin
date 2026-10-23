@@ -110,6 +110,19 @@ function legacyRedactText(value: string): string {
   return legacyRedactCredentialText(legacyRedactSensitiveAssignments(value));
 }
 
+/**
+ * The live scanner must match the frozen oracle except for the one documented
+ * divergence added by SEC-34: the frozen pattern requires a non-empty
+ * username, so `redis://:secret@host` used to stay visible. This pass restates
+ * that single rule on top of the oracle; any other drift still fails.
+ */
+function expectedRedactText(value: string): string {
+  return legacyRedactText(value).replace(
+    /\b([a-z][a-z0-9+.-]*:\/\/):([^\s/@]+)@/gi,
+    `$1:${REDACTED_VALUE}@`,
+  );
+}
+
 function createRandom(seed: number): () => number {
   let state = seed >>> 0;
 
@@ -345,7 +358,16 @@ describe("redaction assignment scan", () => {
     expect(redactText("1https://u:p@h")).toBe("1https://u:p@h");
     expect(redactText("a.https://u:p@h")).toBe("a.https://u:[REDACTED]@h");
     expect(redactText("https://u:p@ss@h")).toBe("https://u:[REDACTED]@ss@h");
-    expect(redactText("https://:pass@h")).toBe("https://:pass@h");
+    // An empty username still carries the secret: connection strings such as
+    // `redis://:hunter2@cache.local` put the whole credential in the password.
+    expect(redactText("https://:pass@h")).toBe("https://:[REDACTED]@h");
+    expect(redactText("redis://:hunter2@cache.local")).toBe("redis://:[REDACTED]@cache.local");
+    expect(redactText("postgres://:hunter2@db.local")).toBe("postgres://:[REDACTED]@db.local");
+    expect(redactText("postgresql://:hunter2@db.local/tocsin")).toBe(
+      "postgresql://:[REDACTED]@db.local/tocsin",
+    );
+    expect(redactText("https://:8080/path")).toBe("https://:8080/path");
+    expect(redactText("https://:@h")).toBe("https://:@h");
     expect(redactText("https://user:@h")).toBe("https://user:@h");
     expect(redactText("ssh://git@github.com")).toBe("ssh://git@github.com");
     expect(redactText("Basic https://u:p@h")).toBe("Basic https://u:[REDACTED]@h");
@@ -358,7 +380,7 @@ describe("redaction assignment scan", () => {
 
     for (let index = 0; index < 5_000; index += 1) {
       const input = buildStructuredInput(random);
-      expect(redactText(input), JSON.stringify(input)).toBe(legacyRedactText(input));
+      expect(redactText(input), JSON.stringify(input)).toBe(expectedRedactText(input));
     }
   });
 
@@ -367,7 +389,7 @@ describe("redaction assignment scan", () => {
 
     for (let index = 0; index < 5_000; index += 1) {
       const input = buildRandomInput(random);
-      expect(redactText(input), JSON.stringify(input)).toBe(legacyRedactText(input));
+      expect(redactText(input), JSON.stringify(input)).toBe(expectedRedactText(input));
     }
   });
 });
