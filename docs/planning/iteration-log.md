@@ -2,6 +2,51 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-24（第 103 轮）
+
+- 时间：2026-10-24 02:54 CST 起（受本机高负载影响显著延长）。
+- 基线：本轮开始时 `origin/main` @ `23a74fb`；main CI success；无 open PR。
+- 类型：**需求切片 + 发布**（非 full-audit）——`requirements`（API 错误未返回）、`ui-triage`、`docs-drift`（轮转）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有 27–29 分 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道轮转位置：**`quality`**（本轮已跑 `docs-drift`；`requirements` 下轮重跑）。
+- `ui-triage`：**`defer`** —— 距 `last_ui_review_at` 2026-10-23 20:41 仅 6.7h；真实 UI 合并 1 条（`f82b97a`）且已浏览器实测；26 条 UI candidate、最高 26、无 ≥27；三个强信号均未成立。
+- `last_ui_review_at`：**2026-10-23 20:41 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、构建在会话工作树 `inspiring-mestorf-96354a`。
+- Obsidian 同步：`obsidian-vault` skill 不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #438 `fix(console): invalidate storage health on settings refresh`（REQ-262，29 分，rebase 合并 `cb36b4c`）**：
+  - 新增 `configurationReadOnlyQueryKeys` 可枚举失效契约（7 组），`invalidateConfiguration` 遍历契约，补上遗漏的 `storage-health`。
+  - 契约测试：`configuration.queries.ts` 导出的每个 `*QueryKeys` 未登记即失败；行为测试覆盖 storage-health。
+  - PRD `docs/prd/settings-readonly-invalidation.md`。
+  - 验证：目标测试 5/5；`vp check` 0 error（22 条既有 warning）；`vp run -r build` 通过；全量测试 175/177 文件、987 tests 通过，2 个文件因本机 load≈15 导致 forks worker 启动超时，单独复跑全部通过。PR CI（check/test/build + playwright）全绿。
+- **发布 `v0.1.0-beta.80`**：
+  - 发布评估三人小组一致 GO：发布经理（用户可见修复 #438，建议 beta.80）、阻断审计（`cb36b4c` 的 CI 与 E2E success、无 open PR、迁移零 diff、blocked-autonomous 不影响运行时）、运维/回滚（部署面零变化，回滚仅换镜像）。
+  - 版本 PR #439 `chore(release): v0.1.0-beta.80`（rebase 合并 `19c0240`）；tag `v0.1.0-beta.80` 指向 `19c0240`；GitHub Release 为 prerelease 且 body 非空。
+  - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.80`（linux/amd64 + linux/arm64，index digest `sha256:c2088aea…`，amd64 `sha256:3c85d43b…`，arm64 `sha256:e6341f57…`）；回滚 `0.1.0-beta.79`。
+  - 无迁移、无镜像 / entrypoint / 配置变化。
+
+### 专家发现
+
+- `docs-drift`：8 条文档漂移，已合并为 **DOC-83（24 分）** candidate。最高优先级：`docs/prd/self-hosted-alert-hub-mvp.md:19-22` 仍把 Docker smoke 接入 CI 写成待办，与 `docs/release/mvp-rc-checklist.md:21,133` 的「不计划接入 CI」冲突；`docs/prd/route-source-reachability.md:3-7`、`docs/prd/delivery-time-basis.md:3-7` 与 5 个已交付 mini-PRD 缺状态头；`docs/architecture/frontend-architecture.md:18` feature 清单过期；`docs/release/backup-restore-upgrade.md:120,147` 版本示例冻结。
+- `requirements`：车道因 API 错误（computer sleep mid-response）未返回结论，未写入新候选；下轮重跑。
+- `ui-triage`：defer；低成本线索：`route-source-reachability-badge.tsx` 使用裸 amber 色，可评估统一为语义 token（UI-47 已跟踪同类）。
+
+### 发布评估与发布记录
+
+- 决策记录：本轮无 EXPERT_PANEL 事项。
+- 发布依据：自 `v0.1.0-beta.79` 起唯一用户可见变更 #438（REQ-262）；`cb36b4c` 与 `19c0240` 的 main CI/E2E 均 success；无 open PR。
+- 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.79`；SQLite 数据可直接沿用。
+
+### 下一轮优先项
+
+1. REQ-264（28）：搜索超过 8 个关键词的截断提示。
+2. DOC-83（24）：文档状态头与 Docker smoke 断言更正（AUTO_FIX）。
+3. REQ-263（27）：投递列表时间列与排序口径一致。
+4. Q-227 / Q-225 / Q-226：投递可靠性修复（Q-227 需 EXPERT_PANEL）。
+5. `requirements` 重跑 + `quality` 车道（轮转）。
+
 ## 2026-10-23（第 102 轮）
 
 - 时间：2026-10-23 23:15 CST 起（跨至 10-24 约 01:00）。
