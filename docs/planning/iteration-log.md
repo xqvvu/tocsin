@@ -2,6 +2,75 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 106 轮）
+
+- 时间：2026-10-26 01:01 CST 起。本机负载极高（load 峰值 ≈34），全量测试耗时 32 分钟、工作区构建约 40 分钟，单轮时间预算被动超出。
+- 基线：本轮开始时 `origin/main` @ `ca567ab`；main CI success（`40213995347`、`40213995461`）；无 open PR。
+- 类型：**需求切片（UI-52）+ 两车道验证**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 ≥27 分 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道：`requirements`（窄化 brief：只读 2 个文档 + 10 分钟硬上限 + 最多 2 条候选，已按时返回 1 条）、`quality`（轮转，复核 Q-226/228/229/230）。
+- `ui-triage`：**`defer`（编排者判定）**——`last_ui_review_at` 为 2026-10-26 01:15 CST（第 105 轮写入，距本轮开始仅十余分钟；该时间戳晚于第 105 轮开始时间，疑为 00:15 的笔误，但无论取哪个都远小于 48h）；此后无 UI 合并；未解决的高分 UI 发现正是第 105 轮评审刚产出的 UI-52/UI-53，本轮直接实现 UI-52，重复评审只会复读同一批结论。
+- `last_ui_review_at`：**2026-10-26 01:15 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `vigorous-zhukovsky-dd4509`。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #448 `fix(console): protect the one-time source token notice`（UI-52，28 分）**：
+  - 一次性 Token 提示条把「复制 Token」改为默认（主）按钮，「复制 URL」改为 `outline`（次）；
+    移除右上角无确认的关闭图标，只保留底部显式「我已保存」作为唯一关闭动作。
+  - 删除不再使用的 `sources.notice.dismiss` 中英文案；组件测试新增主/次按钮断言，
+    关闭用例改为断言「不存在关闭提示按钮」且只有「我已保存」触发一次 `onDismiss`。
+  - PRD `docs/prd/source-token-notice-safety.md`。
+  - 验证：改动文件单测 6/6；`vp check` 0 error（22 条既有 warning）；`vp fmt --check` 通过；
+    `vp run -r test` 176/177 文件、1009/1010 tests（唯一失败为 `source-route-coverage-cell.test.tsx`
+    的 forks worker 启动超时，属本机 load ≈34 的环境问题，单文件复跑 2/2 通过）；
+    `vp run -r build` exit 0。
+  - 未做浏览器实测：本机无运行中的 Tocsin console dev server，且负载过高；变更仅为主导按钮
+    强调与移除一个图标按钮，已由组件测试覆盖。
+
+### 专家发现
+
+- `requirements`（窄化后首次稳定返回）：
+  - **REQ-265（27）**：投递详情的 `destinationMetadata` 在读取时用目标**当前**运行配置现算
+    （`delivery.repository.ts:502-504,528` → `destination.helpers.ts:155`），旧投递会显示今天的
+    endpoint/收件人（`delivery-detail-view.tsx:59-60`），且无「读取时配置」标注；建议复用
+    `destinations.updated_at`（无迁移），元数据块标注「当前配置，非投递时快照」并在
+    `updatedAt > createdAt` 时提示「投递后已修改」。
+- `quality`（轮转）：四条全部 **CONFIRMED**，已把复核证据回写 backlog。
+  - Q-228：`webhook-request.ts:29-37` 单一 try 同时包住读取与解析，读取 rejection 在 `:36`
+    变 `InvalidWebhookJsonError`，路由 `webhook.ts:48-52` 返回 400 并丢弃真实原因；无失败流用例。
+  - Q-229：转义实现正确（`history.repository.ts:763-765`），但 fixture 无反斜杠；
+    「whitespace-only」只断言 `listEvents`，投递空词分支（`:652-658`）无覆盖。
+  - Q-230：`suppression.service.ts:117-120` 未传 `timeField`，仓储默认 `created_at`
+    （`history.repository.ts:719-723,357-358`），表格却渲染 `updatedAt`（`suppression-hits-table.tsx:78-80`）；
+    最小修法是 service 传 `timeField: "updated"`。
+  - Q-226：`delivery-worker.service.ts:99-106` 无逐条 guard，`execute` 内 `markSucceeded`/`markFailed`
+    （`delivery-execution.ts:108,149,160,171` → `:195`）落库失败会逃出并放弃整批；
+    `delivery-worker.service.test.ts:825-866` 在 claim 前失败，未覆盖。
+
+### EXPERT_PANEL
+
+- 本轮无新裁决。
+- Q-225（= Q-8）仍待下轮专家小组裁决「发送成功后落库失败」的终态，再实现。
+
+### 发布评估
+
+- **本轮不发布**：单轮时间预算已严重超出（高负载导致全量测试与构建合计约 70 分钟），
+  未启动版本递增、打 tag 与多平台镜像构建。#448 是自 `v0.1.0-beta.82` 起唯一的用户可见修复，
+  下轮按第 9.5 步评估并发布 `0.1.0-beta.83`（回滚 `0.1.0-beta.82`）。
+- 本轮无迁移、无镜像 / entrypoint / 配置变化。
+
+### 下一轮优先项
+
+1. **发布评估 `0.1.0-beta.83`**（唯一用户可见变更 #448；无迁移）。
+2. Q-228（小修复）+ Q-229（同批测试）：webhook 流错误分类与搜索测试缺口。
+3. Q-230（24）：抑制命中表时间列跟随排序口径（service 传 `timeField: "updated"`）。
+4. UI-53（27）：路由新建弹窗失败时保持表单。
+5. REQ-265（27）：投递详情目标配置的「读取时」语义。
+6. Q-226：批次逐条隔离（需决定 `errored` 计数口径）。
+7. Q-225：EXPERT_PANEL 裁决后实现。
+
 ## 2026-10-26（第 105 轮）
 
 - 时间：2026-10-26 00:17 CST 起。
