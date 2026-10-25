@@ -59,6 +59,13 @@ describe("source token notice panel", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
+  it("makes copying the one-time token the primary action", () => {
+    renderPanel();
+
+    expect(screen.getByRole("button", { name: "Copy Token" }).className).toContain("bg-primary");
+    expect(screen.getByRole("button", { name: "Copy URL" }).className).toContain("bg-background");
+  });
+
   it("shows a success toast after copying the token", async () => {
     mocks.copyText.mockResolvedValue(undefined);
     renderPanel();
@@ -98,12 +105,13 @@ describe("source token notice panel", () => {
     expect(mocks.toastSuccess).not.toHaveBeenCalled();
   });
 
-  it("dismisses from the close control and the explicit saved control", () => {
+  it("dismisses only from the explicit saved control", () => {
     const onDismiss = renderPanel();
 
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss notice" }));
+    expect(screen.queryByRole("button", { name: "Dismiss notice" })).toBeNull();
+
     fireEvent.click(screen.getByRole("button", { name: "I saved it" }));
 
-    expect(onDismiss).toHaveBeenCalledTimes(2);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });

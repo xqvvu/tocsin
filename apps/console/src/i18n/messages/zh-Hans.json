@@ -1107,7 +1107,6 @@
   "sources.notice.copyUrl": "复制 URL",
   "sources.notice.createdDescription": "请复制 {sourceName} 的 Webhook URL 和接入 Token，关闭提示后将不再显示",
   "sources.notice.createdTitle": "告警源创建成功",
-  "sources.notice.dismiss": "关闭提示",
   "sources.notice.dismissSaved": "我已保存",
   "sources.notice.tokenLabel": "接入 Token",
   "sources.notice.tokenOnceHint": "仅在此处显示，关闭提示后将无法再次查看",

@@ -1107,7 +1107,6 @@
   "sources.notice.copyUrl": "Copy URL",
   "sources.notice.createdDescription": "Copy the webhook URL and access token for {sourceName} — they are no longer shown after you dismiss this notice",
   "sources.notice.createdTitle": "Source created successfully",
-  "sources.notice.dismiss": "Dismiss notice",
   "sources.notice.dismissSaved": "I saved it",
   "sources.notice.tokenLabel": "Access token",
   "sources.notice.tokenOnceHint": "Shown only here and cannot be viewed again after dismissal",
