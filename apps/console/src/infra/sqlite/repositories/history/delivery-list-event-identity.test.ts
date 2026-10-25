@@ -120,6 +120,7 @@ describe("delivery list event identity", () => {
       attemptCount: 0,
       nextAttemptAt: null,
       lastError: null,
+      createdAt: NOW,
       updatedAt: NOW,
     };
 
@@ -144,6 +145,7 @@ describe("delivery list event identity", () => {
       attemptCount: 0,
       nextAttemptAt: null,
       lastError: null,
+      createdAt: NOW,
       updatedAt: NOW,
     };
 

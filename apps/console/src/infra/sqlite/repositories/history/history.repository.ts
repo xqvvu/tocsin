@@ -426,6 +426,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
         nextAttemptAt: row.next_attempt_at,
         // Legacy rows may predate value-shape redaction, so re-check on read.
         lastError: redactNullableText(row.last_error),
+        createdAt: row.created_at,
         updatedAt: row.updated_at,
       })),
       total,

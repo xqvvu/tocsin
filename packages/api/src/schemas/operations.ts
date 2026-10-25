@@ -137,6 +137,9 @@ export const DeliveryListItemSchema = z.object({
   attemptCount: z.number().int().min(0),
   nextAttemptAt: IsoDateTimeSchema.nullable(),
   lastError: z.string().nullable(),
+  // The default list basis. Without it the table can only show `updatedAt`
+  // while the rows are ordered by `createdAt`.
+  createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
 });
 

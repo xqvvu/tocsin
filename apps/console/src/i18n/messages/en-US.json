@@ -342,6 +342,7 @@
   "deliveries.table.emptyRange": "No deliveries",
   "deliveries.table.headers.actions": "Actions",
   "deliveries.table.headers.attempts": "Attempts",
+  "deliveries.table.headers.created": "Created",
   "deliveries.table.headers.event": "Event",
   "deliveries.table.headers.lastError": "Last error",
   "deliveries.table.headers.next": "Next retry",

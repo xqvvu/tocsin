@@ -2,6 +2,7 @@ export type {
   DeliveryAttempt,
   DeliveryDetail,
   DeliveryListItem,
+  DeliveryTimeField,
   EventDetail,
   EventDetailDelivery,
   EventListItem,

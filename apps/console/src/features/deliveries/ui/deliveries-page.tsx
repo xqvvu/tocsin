@@ -137,6 +137,7 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
             page={operations.deliveries.page}
             pageSize={operations.deliveries.pageSize}
             total={operations.deliveries.total}
+            timeField={search.timeField === "updated" ? "updated" : "created"}
             onPageChange={(page) => onSearchChange({ deliveryPage: page })}
           />
         </>

@@ -275,6 +275,12 @@ export interface DeliveryListItem {
   attemptCount: number;
   nextAttemptAt: IsoDateTimeString | null;
   lastError: string | null;
+  /**
+   * When the delivery was enqueued. The list sorts and filters on this column
+   * by default, so the table must be able to show the same basis instead of
+   * only the last activity time.
+   */
+  createdAt: IsoDateTimeString;
   updatedAt: IsoDateTimeString;
 }
 

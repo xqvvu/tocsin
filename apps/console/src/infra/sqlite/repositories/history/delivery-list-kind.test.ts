@@ -232,6 +232,7 @@ describe("delivery schemas expose destinationKind", () => {
     attemptCount: 0,
     nextAttemptAt: null,
     lastError: null,
+    createdAt: NOW,
     updatedAt: NOW,
   };
 

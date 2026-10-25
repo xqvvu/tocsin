@@ -100,6 +100,7 @@ describe("DeliveriesTable pagination", () => {
           total={45}
           pending={false}
           hasActiveFilters={false}
+          timeField="created"
           onInspect={() => {}}
           onRetry={() => {}}
           onPageChange={() => {}}
@@ -133,6 +134,7 @@ describe("DeliveriesTable pagination", () => {
           total={45}
           pending={false}
           hasActiveFilters={false}
+          timeField="created"
           onInspect={() => {}}
           onRetry={() => {}}
           onPageChange={() => {}}

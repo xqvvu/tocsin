@@ -28,7 +28,7 @@ export function deliveriesColumnClassName(columnId: string): string | null {
       return "w-[10%] truncate";
     case "lastError":
       return "w-[15%]";
-    case "updated":
+    case "time":
       return "w-[11%]";
     case "actions":
       return `${stickyActionsColumnClassName} w-[9%] min-w-24`;
