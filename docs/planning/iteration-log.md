@@ -16,7 +16,7 @@
 
 ### 本轮交付
 
-- **PR #448 `fix(console): protect the one-time source token notice`（UI-52，28 分）**：
+- **PR #448 `fix(console): protect the one-time source token notice`（UI-52，28 分；rebase 合并 `8c54133`，main CI success `40238983630` / `40238983682`）**：
   - 一次性 Token 提示条把「复制 Token」改为默认（主）按钮，「复制 URL」改为 `outline`（次）；
     移除右上角无确认的关闭图标，只保留底部显式「我已保存」作为唯一关闭动作。
   - 删除不再使用的 `sources.notice.dismiss` 中英文案；组件测试新增主/次按钮断言，
