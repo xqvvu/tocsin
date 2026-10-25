@@ -278,6 +278,27 @@ describe("operation search input", () => {
     expect(onChange).toHaveBeenCalledWith({ q: "Disk usage" });
   });
 
+  it("warns when a pasted query exceeds the applied term cap", () => {
+    renderFilters("events", {}, "toolbar");
+    const input = screen.getByPlaceholderText(EVENT_SEARCH_PLACEHOLDER) as HTMLInputElement;
+    const applied = "a b c d e f g h";
+
+    // At the cap every term still applies, so there is nothing to warn about.
+    fireEvent.change(input, { target: { value: applied } });
+    expect(screen.queryByText(/ignores/)).toBeNull();
+
+    fireEvent.change(input, { target: { value: `${applied} i j` } });
+    expect(
+      screen.getByText(
+        "Search applies the first 8 terms and ignores 2 more, so remove extra terms for precise results",
+      ),
+    ).toBeTruthy();
+
+    // Trimming back into the cap removes the warning again.
+    fireEvent.change(input, { target: { value: applied } });
+    expect(screen.queryByText(/ignores/)).toBeNull();
+  });
+
   it("clears an uncommitted draft when the active query chip is removed", async () => {
     const onChange = vi.fn<(next: Partial<DashboardOperationSearch>) => void>();
     renderFilters("events", { q: "checkout" }, "toolbar", onChange);

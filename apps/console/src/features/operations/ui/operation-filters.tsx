@@ -7,8 +7,10 @@ import {
   DeliveryStateSchema,
   DestinationKindSchema,
   OPERATION_SEARCH_MAX_LENGTH,
+  OPERATION_SEARCH_MAX_TERMS,
   type RouteDefinition,
   type SourceSummary,
+  splitOperationSearchTerms,
 } from "@tocsin/core";
 
 import { Badge } from "#/components/ui/badge";
@@ -83,6 +85,10 @@ export function OperationFilters({
   const activeCount = chips.length;
   const resolvedLayout = layout === "grid" ? "toolbar" : layout;
   const searchDraft = useOperationSearchDraft(search.q ?? "", (q) => onChange({ q }));
+  // Follow the draft, not the committed query: the operator sees the warning
+  // while still typing, before the debounce writes the truncated query to the
+  // URL and the list comes back broader than the text suggests.
+  const ignoredSearchTerms = splitOperationSearchTerms(searchDraft.draft).ignoredCount;
 
   // Clearing the query must also cancel an uncommitted draft; otherwise the
   // debounce would put the text back into the URL right after the reset.
@@ -164,6 +170,15 @@ export function OperationFilters({
           </PopoverContent>
         </Popover>
       </div>
+
+      {ignoredSearchTerms > 0 ? (
+        <p className="text-muted-foreground text-[11px]">
+          {t("operations.filters.searchTermLimit", {
+            max: OPERATION_SEARCH_MAX_TERMS,
+            ignored: ignoredSearchTerms,
+          })}
+        </p>
+      ) : null}
 
       {chips.length > 0 ? (
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
