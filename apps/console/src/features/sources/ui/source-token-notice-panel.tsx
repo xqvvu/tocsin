@@ -1,4 +1,4 @@
-import { RiCloseLine, RiShieldCheckLine } from "@remixicon/react";
+import { RiShieldCheckLine } from "@remixicon/react";
 import { toast } from "sonner";
 
 import { IconTooltip } from "#/components/common/icon-tooltip";
@@ -24,7 +24,6 @@ export function SourceTokenNoticePanel({
   const webhookUrl = sourceWebhookUrlFromPath(notice.webhookPath);
   const copyTokenLabel = t("sources.notice.copyToken");
   const copyUrlLabel = t("sources.notice.copyUrl");
-  const dismissLabel = t("sources.notice.dismiss");
 
   async function copy(value: string): Promise<void> {
     try {
@@ -53,7 +52,6 @@ export function SourceTokenNoticePanel({
           <IconTooltip label={copyTokenLabel}>
             <Button
               type="button"
-              variant="outline"
               size="sm"
               aria-label={copyTokenLabel}
               onClick={() => void copy(notice.token)}
@@ -64,22 +62,12 @@ export function SourceTokenNoticePanel({
           <IconTooltip label={copyUrlLabel}>
             <Button
               type="button"
+              variant="outline"
               size="sm"
               aria-label={copyUrlLabel}
               onClick={() => void copy(webhookUrl)}
             >
               {copyUrlLabel}
-            </Button>
-          </IconTooltip>
-          <IconTooltip label={dismissLabel}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={dismissLabel}
-              onClick={onDismiss}
-            >
-              <RiCloseLine aria-hidden />
             </Button>
           </IconTooltip>
         </div>
