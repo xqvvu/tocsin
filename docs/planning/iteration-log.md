@@ -2,6 +2,63 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 105 轮）
+
+- 时间：2026-10-26 00:17 CST 起。
+- 基线：本轮开始时 `origin/main` @ `25806b3`；main CI success（`40210777300`、`40210777207`）；无 open PR。
+- 类型：**需求切片 + 文档修正 + UI 评审**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 27–29 分 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道：`ui-review`（触发）、`quality`（轮转）、`docs-drift`（轮转）；`requirements` 未单独 spawn——第 102 轮已有 REQ-262/263/264，本轮续做未交付的 REQ-263，配额优先给 UI 浏览器评审。
+- `ui-triage`：**`review_now`** —— 距 `last_ui_review_at` 2026-10-23 20:41 约 52 小时（≥48h 强信号成立）；自上次评审真实 UI 合并 1 条（#435，已浏览器实测）；未解决 UI candidate 26 条、最高 26（<27）。按「任一强信号成立即倾向评审」执行。
+- `last_ui_review_at`：**2026-10-26 01:15 CST**（本轮；隔离实例 `localhost:6199` + 临时 SQLite，Chromium 1440×900 与 390×844，截图在 `/tmp/tocsin-ui-*.png`，未提交仓库）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、镜像构建在会话工作树 `heuristic-shaw-7155c5`。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #444 `feat(console): show the delivery time column the list is ordered by`（REQ-263，27 分，rebase 合并 `3e2db01`）**：
+  - `DeliveryListItem` 增加 `createdAt`（`packages/core/src/operations.ts`、`packages/api/src/schemas/operations.ts`、`history.repository.ts` 映射既有的 `deliveries.created_at`）。
+  - 投递表格按 `timeField` 切换「创建时间 / 更新时间」表头与值；默认 `created`；`deliveries-page.tsx` 传入口径。
+  - PRD `docs/prd/delivery-time-column.md`；仓储测试断言同一行同时带两个时间戳，表格测试覆盖双口径。
+  - 验证：`vp check` 0 error（22 条既有 warning）；`vp run -r test` 184 文件 / 1026 tests；`vp run -r build` 通过；PR CI check/test/build + playwright 全绿。
+- **PR #445 `docs(planning): correct stale release and feature assertions`（DOC-83，24 分，rebase 合并 `ee27f87`）**：
+  - MVP PRD 的 Docker smoke 表述改为本地人工 gate；6 个近期已交付 PRD 补状态头。
+  - 备份/升级文档改用 `VERSION`/`<previous-version>` 占位，forward-only 校验改为现在时；发布 checklist 补 `e2e.yml`、刷新版本与 tag 范围；前端架构补全 feature 清单。
+  - 验证：`vp fmt --check` 通过；纯文档改动。
+
+### 专家发现
+
+- `quality`（轮转）：
+  - Q-225 **NEEDS-PANEL**，且与 Q-8 重复：`delivery-execution.ts:105-117` 的 `markSucceeded` 仍在发送主 try 内，catch（`:158-177`）默认 retryable；`delivery-execution.test.ts:475-481` 的 fake `markSucceeded` 永不抛错。
+  - Q-226 **CONFIRMED，可 AUTO_FIX**：`delivery-worker.service.ts:99-109` 无逐条 catch；触发条件比原记录更窄（只有 `markFailed` 自身抛错才会冒出）。
+  - Q-228 **CONFIRMED，可 AUTO_FIX**：`webhook-request.ts:29-37` 把流读取 rejection 也包成 `InvalidWebhookJsonError`，路由映射为 400（`$sourceId/webhook.ts:43-53`）。
+  - Q-229 **CONFIRMED，仅测试缺口**：转义实现正确，缺 `\` fixture 与 deliveries 空白 q 断言。
+  - 新候选 **Q-230（24）**：抑制命中表按 `created_at` 排序却显示 `updatedAt`（`suppression-hits-table.tsx:78-80`、`suppression.service.ts:117-121`）。
+- `docs-drift`（轮转）：DOC-83 8 条中 7 条成立，旧仓库名引用已无失效 GitHub 链接（ACR 镜像坐标保持）；另发现 `docs/release/release-checklist.md:3` 与同文件 `:16,18` 自相矛盾、`backup-restore-upgrade.md:155` 把已实现的 migration 校验写成未来事项。已随 #445 修复。
+- `ui-review`：8 条发现（已写入 backlog UI-52…UI-59），最高为 **UI-52（28，HIGH）**：一次性 Source Token 提示条的 `Copy URL` 是主按钮而不可恢复的 `Copy Token` 是次按钮，右上角 X 无确认即永久丢弃 Token（`source-token-notice-panel.tsx:54-72,74-84,97-99`）。其余：路由新建弹窗请求成功前关闭（UI-53）、空态仍引用已不存在的「右侧栏」（UI-54）、Events/Deliveries 空态无下一步引导（UI-55）、移动端表格无横向滚动提示（UI-56）、分页文案不一致（UI-57）、假 Trace ID（UI-58）、表头/首列对齐（UI-59）。浏览器实测覆盖首启、Source/Destination/Route 创建、全部列表页、设置 TOML 页与 390×844；未创建真实 Event/Delivery，详情页填充态与错误边界未实测。
+
+### EXPERT_PANEL
+
+- 本轮无新裁决。
+- Q-225（= Q-8）下轮交专家小组：按 `docs/planning/decisions/oncall-fired-persistence-failure.md` 的既有口径，裁决「发送成功后落库失败」的终态（漏呼 vs 重复），并决定 `triggerPings` 的执行顺序。不做未裁决实现。
+
+### 发布评估与发布记录
+
+- 发布依据：自 `v0.1.0-beta.81` 起唯一用户可见变更是 #444（REQ-263）；#445 为纯文档。main `faca6f6` CI success（`40213288319`、`40213288334`）；无 open PR；无阻塞性回归；迁移零 diff。
+- 版本 PR #446 `chore(release): v0.1.0-beta.82`（rebase 合并 `faca6f6`）；tag `v0.1.0-beta.82` 指向 `faca6f6`；GitHub Release 为 prerelease 且 body 非空。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.82`（linux/amd64 + linux/arm64）；回滚 `0.1.0-beta.81`。
+- 无迁移、无镜像 / entrypoint / 配置变化。
+
+### 下一轮优先项
+
+1. **UI-52（28）**：一次性 Token 提示条主次操作与 X 无确认丢弃（单组件、浏览器已实测）。
+2. UI-53（27）：路由新建弹窗失败保持表单。
+3. Q-228（小修复）+ Q-229（同批测试）：webhook 流错误分类 + 搜索测试缺口。
+4. Q-226：批次逐条隔离（需决定是否新增 `errored` 计数）。
+5. Q-225：EXPERT_PANEL 裁决后实现。
+6. Q-230：抑制命中表时间列（复用 REQ-263 的 `createdAt`）。
+7. `security-exposure` 车道轮转；`requirements` 仅在配额充足时重试。
+
 ## 2026-10-25（第 104 轮，跨至 10-26 凌晨）
 
 - 时间：2026-10-25 23:40 CST 起。
