@@ -2,6 +2,46 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-25（第 104 轮，跨至 10-26 凌晨）
+
+- 时间：2026-10-25 23:40 CST 起。
+- 基线：本轮开始时 `origin/main` @ `3bfb26b`；main CI success（`40096598821`、`40096598840`）；无 open PR。
+- 类型：**需求切片 + 发布**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 27–29 分 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道轮转位置：本轮**未 spawn requirements**——该车道第 95–97、102–103 轮连续 30–40 分钟无产出，按记忆改为编排者直接从 backlog 选题；下轮优先 `quality`（Q-225/Q-226）或 `docs-drift`（DOC-83）。
+- `ui-triage`：**`defer`**（编排者判定）——距 `last_ui_review_at` 2026-10-23 20:41 约 27 小时（< 48h）；此后 UI 合并 1 条（#435，已浏览器实测）且 #438/#441 均无视觉层改动；26 条 UI candidate、最高 26、无 ≥27；三个强信号均未成立。
+- `last_ui_review_at`：**2026-10-23 20:41 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、镜像构建在会话工作树 `festive-ishizaka-44c7d5`。轮末已删除锁、`agent-iteration` 目录与会话工作树的 `node_modules`（工作树已清理）。
+- Obsidian 同步：`obsidian-vault` skill 不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #441 `feat(console): warn when the operations search drops terms past the cap`（REQ-264，28 分，rebase 合并 `29074ca`）**：
+  - `@tocsin/core` 新增 `OPERATION_SEARCH_MAX_TERMS` 与 `splitOperationSearchTerms(query)`，返回生效 `terms` 与被丢弃的 `ignoredCount`。
+  - 仓储事件/投递搜索删除本地副本，改调共享函数；过滤语义不变。
+  - 筛选工具栏跟随输入草稿显示「搜索只匹配前 8 个关键词，已忽略 N 个」；中英文案成对。
+  - PRD `docs/prd/operation-search-term-limit.md`；core 单测 4 条 + UI 测试 1 条。
+  - 验证：`vp check` 0 error（22 条既有 warning）；`vp run -r test` 183 文件 / 1024 tests；`vp run -r build` 通过；PR CI check/test/build + playwright 全绿。
+- **发布 `v0.1.0-beta.81`**：
+  - 发布评估：发布经理（唯一用户可见变更 #441，建议 beta.81）、阻断审计（`29074ca` 的 main CI success `40209268649`/`40209268608`、无 open PR、迁移零 diff）、运维/回滚（部署面零 diff，回滚仅换镜像）三项均为 GO；编排者合并为一次评估记录。
+  - 版本 PR #442 `chore(release): v0.1.0-beta.81`（rebase 合并 `94206c6`）；tag 指向 `94206c6`；GitHub Release 为 prerelease 且 body 非空。
+  - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.81`（linux/amd64 + linux/arm64）；回滚 `0.1.0-beta.80`。
+  - 无迁移、无镜像 / entrypoint / 配置变化。
+
+### 专家发现
+
+- 本轮未启动新的审计车道（配额与时间预算），沿用第 102 轮 `quality` 的未决发现：
+  Q-225 成功发送后落库失败被记为失败并重试、Q-226 单条记账错误中断整批认领、Q-227 手动 worker 绕过单飞。
+- `Q-227` 涉及投递语义，需 EXPERT_PANEL；下轮优先处理 Q-225/Q-226 两个可逆切片。
+
+### 下一轮优先项
+
+1. Q-225 / Q-226：投递记账可靠性（各有 file:line 证据，补回归测试）。
+2. DOC-83（24）：文档状态头与 Docker smoke 断言更正（AUTO_FIX）。
+3. REQ-263（27）：投递列表时间列跟随时间口径（DTO 增加 `createdAt`）。
+4. Q-227：EXPERT_PANEL 裁决手动 run worker 的单飞语义。
+5. `quality` 或 `docs-drift` 车道轮转；`requirements` 仅在配额充足时重试。
+
 ## 2026-10-24（第 103 轮）
 
 - 时间：2026-10-24 02:54 CST 起（受本机高负载影响显著延长）。
