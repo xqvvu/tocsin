@@ -116,7 +116,7 @@ docker compose logs --tail=50 console
 ```bash
 # 1) 冷备份（见第 3 节）
 # 2) 取得/构建目标版本镜像，并显式打版本 tag
-VERSION=<目标版本，例如 0.1.0-beta.81>
+VERSION=<目标版本，例如 0.1.0-beta.82>
 #    仓库没有自动发布流程：可以本机构建，也可以用 `just docker-buildx <image> <tag>` 推到自己的 registry
 docker build -t "tocsin:$VERSION" .
 
