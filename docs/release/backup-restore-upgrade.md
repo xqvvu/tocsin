@@ -116,8 +116,9 @@ docker compose logs --tail=50 console
 ```bash
 # 1) 冷备份（见第 3 节）
 # 2) 取得/构建目标版本镜像，并显式打版本 tag
+VERSION=<目标版本，例如 0.1.0-beta.81>
 #    仓库没有自动发布流程：可以本机构建，也可以用 `just docker-buildx <image> <tag>` 推到自己的 registry
-docker build -t tocsin:0.1.0-beta.35 .
+docker build -t "tocsin:$VERSION" .
 
 # 3) 让 compose 使用新镜像：改 compose 的 image 字段，或就地重建本地 tag
 #    不要用 `up -d --build`：它会从源码重建并覆盖 tocsin:local，绕过刚打的版本 tag
@@ -144,7 +145,7 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 
    ```bash
    # 把 compose 的 image 指回上一个版本 tag（例如
-   # registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.10）
+   # registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:<previous-version>）
    docker compose up -d
    until curl -fsS --connect-timeout 5 --max-time 10 http://127.0.0.1:3000/api/ready; do sleep 2; done
    ```
@@ -152,8 +153,9 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
    什么时候可行：新旧版本读写的数据形状一致。什么时候会失败：
    - 新版写入了旧版不认识的字段/状态值（例如 `suppressed` 这样的新 delivery 状态、suppressions 表），
      旧版在运行时会报错或读到无法解释的数据；
-   - 未来切到 forward-only migration 之后，如果数据库里已经记录了旧构建没有的 migration version，
-     旧构建**启动就会失败**，报 `SQLite database has applied migrations not present in this build: …`。
+   - 构建启动时会校验已应用的 migration：如果数据库里已经记录了旧构建没有的 migration version，
+     旧构建**启动就会失败**，报 `SQLite database has applied migrations not present in this build: …`
+     （`apps/console/src/infra/sqlite/migrate/runner.ts` 的 `assertNoUnknownAppliedMigrations`）。
 
 2. **恢复备份**（数据回滚，唯一可靠方式）：按第 4 节恢复升级前的冷备份。代价是丢掉备份之后写入的全部
    数据（Event、Delivery、配置改动、session）。

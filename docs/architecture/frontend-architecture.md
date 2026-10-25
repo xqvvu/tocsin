@@ -20,8 +20,8 @@ Suppressions / Integrations / Settings 的页面路由；`login` 与 `setup` 是
 代码应继续沿用 route-first 形状：
 
 1. `routes` 决定 URL、layout、search params、loader、beforeLoad 和薄渲染入口。
-2. `features` 按业务对象纵切 Sources、Routes、Destinations、Events、Deliveries。
-3. `features/operations` 仍暂时承载 Events/Deliveries 共享 query、filter、DTO re-export 和 worker mutation；Events/Deliveries 的页面 UI 正在向各自 feature 收敛。
+2. `features` 按业务对象纵切 Sources、Routes、Destinations、Events、Deliveries、Suppressions、Integrations、Configuration 与 Auth。
+3. `features/operations` 仍承载 Events/Deliveries 共享的 query keys、filter/search model、DTO re-export 与 worker mutation；Events/Deliveries 的页面 UI 已收敛到各自 feature。
 4. `server` 是 server-only 的分层后端：`server/orpc/` 提供 oRPC implementer 和按能力拆分的 procedure router，`*.service.ts` 承载业务逻辑；跨 client/server 的共享契约（oRPC contract、命令 schema、DTO）放在 `@tocsin/api` 与 `@tocsin/core` 包，浏览器统一通过 `#/lib/orpc` 调用 procedure。
 5. `components/ui` 只保留 shadcn primitives，不知道 Tocsin 的领域。
 6. `components/common` 承载跨 feature 复用的 console UI 组合，但不拥有业务规则。

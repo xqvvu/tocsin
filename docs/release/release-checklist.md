@@ -1,8 +1,8 @@
 # 发布 Checklist（人工 tagged release）
 
-> 一句话结论：Tocsin 目前**没有任何发布自动化** —— 仓库只有 `ci.yml`（`check · test · build`），没有
-> release workflow、没有 changelog 工具；tag 已由人工创建（完整列表与最新版本以 `git tag --list` 为准），
-> 并且 tag 本身不会触发任何东西。
+> 一句话结论：Tocsin 目前**没有任何发布自动化** —— 仓库只有 `ci.yml`（`check · test · build`）与
+> `e2e.yml`（浏览器 E2E），没有 release workflow、没有 changelog 工具；tag 已由人工创建（完整列表与
+> 最新版本以 `git tag --list` 为准），并且 tag 本身不会触发任何东西。
 
 核实时间 2026-10-22，核实基线 `origin/main` @ `63c8931`；2026-10-23 在 `origin/main` @ `3ff8ef5`
 复核 tag 数量与当前版本号。本文只回答“怎么切一个 tag”；发布前的产品验收
@@ -18,7 +18,7 @@
 | Release / publish workflow | 不存在                                                         | `.github/` 下只有 `ci.yml` 与 `e2e.yml`                                   |
 | Changelog 与版本递增工具 | 不存在                                                           | 没有 `.changeset/`、没有 `CHANGELOG.md`、根 `package.json` 没有 `release` script |
 | git tag                  | 首个 tag 为 `v0.1.0-beta.9`（2026-10-19）                        | 此前的 `0.1.0-beta.8` 没有对应 tag，版本追溯以发布记录为准                |
-| 版本号来源               | 只有根 `package.json`（当前为 `0.1.0-beta.77`，以下次发布时的值为准） | 启动日志的 `tocsin.runtime` 版本来自根 `package.json`（`apps/console/src/server/runtime/system-information.ts`） |
+| 版本号来源               | 只有根 `package.json`（当前为 `0.1.0-beta.81`，以下次发布时的值为准） | 启动日志的 `tocsin.runtime` 版本来自根 `package.json`（`apps/console/src/server/runtime/system-information.ts`） |
 | 容器镜像发布             | 没有自动化，只有手工 recipe                                       | 没有 CI 构建/推送步骤；`Justfile` 提供 `just docker-buildx <image> <tag>`（多平台构建并 `--push`）、`just docker-tag`、`just docker-push`，registry 与 tag 约定见第 4 节。`docker-compose.yml` 默认用本机构建的 `image: tocsin:local` |
 | E2E / Docker smoke 自动化 | E2E 已接入 CI，Docker smoke 仍为本地 gate                      | `apps/console/e2e/alert-flow.spec.ts` + `apps/console/playwright.config.ts`，由 `.github/workflows/e2e.yml` 在 push 到 main 与 PR 上运行；`scripts/docker-smoke.sh` 与 `just docker-smoke` 保留为本地人工 gate |
 
@@ -73,7 +73,7 @@ git push origin "v<version>"
 约定与限制，逐条说清：
 
 - tag 名采用 `v<根 package.json 的 version>`。截至 2026-10-23 的 annotated tag 覆盖
-  `v0.1.0-beta.9` … `v0.1.0-beta.77`，最新数量以 `git tag --list` 为准；后续沿用同一约定；如果要换命名，
+  `v0.1.0-beta.9` … `v0.1.0-beta.81`，最新数量以 `git tag --list` 为准；后续沿用同一约定；如果要换命名，
   改这里和 Release 说明即可。
 - 用 annotated tag（`-a`）以便携带一条发布说明；这是建议，仓库没有任何工具强制 tag 类型。
 - 版本号只存在于根 `package.json`，没有工具会替你递增。要发新版本时先改 `package.json`、提交、通过 CI，
@@ -98,8 +98,8 @@ git push origin "v<version>"
   `git log` 归纳本版本的主要变化，并在 GitHub 上创建 Release（这一步是人工操作，未在本仓库中固化）。
 - **保留回滚材料。** 上一个可用镜像标签 + 发布前的数据卷备份；步骤见
   `docs/release/backup-restore-upgrade.md`。
-- **记录本次的已知空白。** 至少包括：没有 release 自动化、Docker smoke 脚本尚未接入 CI（E2E 已接入）、
-  没有稳定 public management REST API。
+- **记录本次的已知空白。** 至少包括：没有 release 自动化、Docker smoke 脚本保持本地人工 gate
+  且不接入 CI（E2E 已接入）、没有稳定 public management REST API。
 
 ## 6. 已知空白（不要假装存在）
 

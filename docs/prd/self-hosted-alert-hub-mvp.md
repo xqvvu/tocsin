@@ -17,9 +17,10 @@ work should be discussed in a post-MVP PRD before being split into issues.
 
 The MVP baseline being complete does not mean every release-hardening item is
 finished. Remaining release and production-readiness work is tracked in
-`docs/release/mvp-rc-checklist.md`: provider payload fixtures, the
-backup/restore drill, and wiring the Docker smoke gate into CI. E2E and the
-release documentation are already in place.
+`docs/release/mvp-rc-checklist.md`: provider payload fixtures, the provider
+contributor guide, E2E spec coverage, and a backup/restore drill on a real
+deployment. Docker smoke stays a local manual gate and is not planned for CI;
+E2E and the release documentation are already in place.
 
 ## Problem Statement
 
