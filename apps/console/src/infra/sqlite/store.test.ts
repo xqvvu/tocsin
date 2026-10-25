@@ -458,6 +458,10 @@ describe("sqlite store", () => {
     });
     expect(byActivity.items.map((delivery) => delivery.id)).toEqual([oldDelivery.id]);
     expect(byActivity.total).toBe(1);
+    // The list projection must carry both timestamps: the default basis sorts
+    // and filters on `createdAt`, while the table used to have only `updatedAt`.
+    expect(byActivity.items[0]?.createdAt).toBe("2026-06-07T00:00:00.000Z");
+    expect(byActivity.items[0]?.updatedAt).toBe("2026-06-07T02:00:00.000Z");
 
     // Unfiltered, the same basis leads with the job touched most recently.
     const ordered = await store.history.listDeliveries({ timeField: "updated" });

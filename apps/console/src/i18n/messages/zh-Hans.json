@@ -342,6 +342,7 @@
   "deliveries.table.emptyRange": "暂无投递",
   "deliveries.table.headers.actions": "操作",
   "deliveries.table.headers.attempts": "尝试",
+  "deliveries.table.headers.created": "创建时间",
   "deliveries.table.headers.event": "事件",
   "deliveries.table.headers.lastError": "最近错误",
   "deliveries.table.headers.next": "下次重试",

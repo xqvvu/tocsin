@@ -18,7 +18,7 @@ import {
   DeliveryTargetCell,
   type DeliveryDestinationIconName,
 } from "#/features/deliveries/ui/delivery-target-cell";
-import type { Operations } from "#/features/operations/model/operation-types";
+import type { DeliveryTimeField, Operations } from "#/features/operations/model/operation-types";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
 import { RetryTimestamp } from "#/features/operations/ui/retry-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -31,6 +31,7 @@ export function DeliveriesTable({
   total,
   pending,
   hasActiveFilters,
+  timeField,
   onInspect,
   onRetry,
   onPageChange,
@@ -44,6 +45,8 @@ export function DeliveriesTable({
   total: number;
   pending: boolean;
   hasActiveFilters: boolean;
+  /** Which timestamp the list is ordered and filtered by. */
+  timeField: DeliveryTimeField;
   onInspect: (deliveryId: string) => void;
   onRetry: (deliveryId: string) => void;
   onPageChange: (page: number) => void;
@@ -118,9 +121,17 @@ export function DeliveriesTable({
         ),
       },
       {
-        id: "updated",
-        header: t("deliveries.table.headers.updated"),
-        cell: ({ row }) => <OperationTimestamp format="dateTime" value={row.original.updatedAt} />,
+        id: "time",
+        header:
+          timeField === "updated"
+            ? t("deliveries.table.headers.updated")
+            : t("deliveries.table.headers.created"),
+        cell: ({ row }) => (
+          <OperationTimestamp
+            format="dateTime"
+            value={timeField === "updated" ? row.original.updatedAt : row.original.createdAt}
+          />
+        ),
       },
       {
         id: "actions",
@@ -135,7 +146,7 @@ export function DeliveriesTable({
         ),
       },
     ],
-    [destinationIconNames, onInspect, onRetry, pending, t],
+    [destinationIconNames, onInspect, onRetry, pending, t, timeField],
   );
 
   return (

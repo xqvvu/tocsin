@@ -66,6 +66,7 @@ function renderTable(deliveries: Operations["deliveries"]["items"]): void {
         total={deliveries.length}
         pending={false}
         hasActiveFilters={false}
+        timeField="created"
         onInspect={() => {}}
         onRetry={() => {}}
         onPageChange={() => {}}
@@ -93,6 +94,7 @@ function deliveryRow(
     attemptCount: 2,
     nextAttemptAt: null,
     lastError: "connection reset",
+    createdAt: "2026-10-21T09:55:00.000Z",
     updatedAt: "2026-10-21T10:00:00.000Z",
     ...overrides,
   };

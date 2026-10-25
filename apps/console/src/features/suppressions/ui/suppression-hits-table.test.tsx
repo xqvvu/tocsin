@@ -80,6 +80,7 @@ function hitsFixture(): NumberedPage<DeliveryListItem> {
         attemptCount: 0,
         nextAttemptAt: null,
         lastError: null,
+        createdAt: "2026-10-12T10:00:00.000Z",
         updatedAt: "2026-10-12T10:00:00.000Z",
       },
     ],
