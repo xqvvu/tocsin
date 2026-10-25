@@ -864,6 +864,7 @@
   "operations.filters.search": "Search",
   "operations.filters.searchPlaceholder": "title, message, fingerprint, idempotency key, label, upstream metadata, or ID (space-separated terms must all match)",
   "operations.filters.searchPlaceholderDeliveries": "title, message, fingerprint, idempotency key, label, upstream metadata, ID, error, destination, route, or external reference (space-separated terms must all match)",
+  "operations.filters.searchTermLimit": "Search applies the first {max} terms and ignores {ignored} more, so remove extra terms for precise results",
   "operations.filters.severity": "Severity",
   "operations.filters.source": "Source",
   "operations.filters.status": "Status",

@@ -18,6 +18,7 @@ import {
   redactRouteMatchResults,
   redactText,
   RouteMatchResultsSchema,
+  splitOperationSearchTerms,
 } from "@tocsin/core";
 import type { RouteMatchProvenance } from "@tocsin/core";
 
@@ -607,7 +608,7 @@ function countMatchedRoutes(routeMatchesJson: string | null): number {
  * a single term keeps the historical substring behavior.
  */
 function eventSearchPredicate(query: string) {
-  const terms = splitSearchTerms(query);
+  const terms = splitOperationSearchTerms(query).terms;
 
   if (terms.length === 0) {
     return sql<boolean>`1 = 1`;
@@ -647,7 +648,7 @@ function eventTermPredicate(term: string) {
  * and whitespace-separated terms are ANDed across the same field groups.
  */
 function deliverySearchPredicate(query: string) {
-  const terms = splitSearchTerms(query);
+  const terms = splitOperationSearchTerms(query).terms;
 
   if (terms.length === 0) {
     return sql<boolean>`1 = 1`;
@@ -750,22 +751,6 @@ function deliveryReceiptPredicate(receipt: DeliveryReceiptFilter) {
   )`;
 
   return receipt === "present" ? present : sql<boolean>`NOT ${present}`;
-}
-
-/**
- * The search box is one field for titles, ids, labels, and errors. Splitting on
- * whitespace lets an operator combine an identity token with a text token
- * (`node prod`) without remembering which column each belongs to. The cap keeps
- * a pasted log line from expanding into an unbounded number of LIKE predicates.
- */
-const MAX_SEARCH_TERMS = 8;
-
-function splitSearchTerms(query: string): string[] {
-  return query
-    .trim()
-    .split(/\s+/)
-    .filter((term) => term.length > 0)
-    .slice(0, MAX_SEARCH_TERMS);
 }
 
 /**

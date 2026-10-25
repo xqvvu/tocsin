@@ -74,6 +74,42 @@ export type DeliveryTimeField = z.infer<typeof DeliveryTimeFieldSchema>;
  */
 export const OPERATION_SEARCH_MAX_LENGTH = 120;
 
+/**
+ * How many whitespace-separated terms the operations search actually applies.
+ *
+ * The search box is one field for titles, ids, labels, errors, and the other
+ * columns each list searches. Splitting on whitespace lets an operator combine
+ * an identity token with a text token (`node prod`) without remembering which
+ * column each belongs to; the cap keeps a pasted log line from expanding into
+ * an unbounded number of `LIKE` predicates. Terms past the cap are dropped, so
+ * the console must say the results are broader than the query suggests.
+ */
+export const OPERATION_SEARCH_MAX_TERMS = 8;
+
+export interface OperationSearchTerms {
+  /** Terms that narrow the query, in the order the operator typed them. */
+  terms: string[];
+  /** Trailing terms the cap dropped; zero when every term applies. */
+  ignoredCount: number;
+}
+
+/**
+ * Splits the free-text operations search into the terms the query applies.
+ *
+ * Shared by the SQLite repository (which builds the predicates) and the
+ * console (which warns when the cap drops terms), so the two cannot disagree
+ * about how many terms are in effect.
+ */
+export function splitOperationSearchTerms(query: string): OperationSearchTerms {
+  const terms = query
+    .trim()
+    .split(/\s+/)
+    .filter((term) => term.length > 0);
+  const applied = terms.slice(0, OPERATION_SEARCH_MAX_TERMS);
+
+  return { terms: applied, ignoredCount: terms.length - applied.length };
+}
+
 export interface NumberedPage<T> {
   items: T[];
   total: number;
