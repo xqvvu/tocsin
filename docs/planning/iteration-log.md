@@ -2,6 +2,76 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 125 轮）
+
+- 时间：2026-10-27 03:48 CST 起。
+- 基线：本轮开始时 `origin/main` @ `b40586e`（v0.1.0-beta.97 后的日志提交），其 CI 为 success；无 open PR。
+- 类型：**需求垂直切片 + 限定范围 UI 评审 + 文档漂移纠偏**（非 full-audit）。
+- 全量审计时间戳：**2026-10-26 21:45 CST（未变，第 120 轮）**；距本轮约 6 小时，但 backlog 有 `REQ-58`（27）等达门槛候选，按第 1.5 步规则继续，不重跑全量审计。
+- 车道（3 并发，未超上限）：`requirements`（必跑，10 分钟窄化 brief）、`ui-triage`（必跑，read-only）、`docs-drift`（轮转；`security-exposure` 第 124 轮已跑）。`ui-triage` 判定 `review_now` 后，串行启动 `ui-review`（第 4 个，不在 3 并发窗口内）。
+- `ui-triage` 决策：**`review_now`（限定范围）** —— 自上次评审（2026-10-26 23:09）已有 4 个触及 UI 路径的合并（`a62262a`、`b7c4d31`、`a1d0127`、`04a9ef4`），超过 ≥3 阈值；新的账号安全面板只做过功能型验证；第 124 轮本身就在设置布局上发现并修复了真实回归。距离 ≥48h 信号不成立，因此不做全站重扫。
+- `last_ui_review_at`：**2026-10-27 04:05 CST**（真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与只读专家；实现、验证、PR 在会话工作树 `confident-aryabhata-db31b1`。
+- 浏览器验证：隔离实例 `localhost:6196` + `/tmp/tocsin-r125-ui.sqlite`（临时），1440×900 与 390×844，截图在 `/tmp/tocsin-r125-ui/`；dev server 已停止。
+
+### 专家发现
+
+**requirements（必跑）**
+
+- **REQ-277（27）加急呼叫独立全局暂停**：出站投递暂停只作用于 delivery worker（`delivery-worker.service.ts:60`），on-call worker 的 `runOnce` 直接 `claimNext` 并执行 ping（`oncall-worker.service.ts:52-67`），全仓无 `oncallPaused`；settings 只有三个投递暂停键（`settings.helpers.ts:8-10`）；UI 文案明确写「加急呼叫不受暂停影响」（`zh-Hans.json:106`），`docs/prd/delivery-pause.md:46-47` 把该语义列为有意非目标。达到 27 门槛。
+- **REQ-278（26）接入端点原生 HMAC 签名校验**：`intake.service.ts:392-404` 只做常量时间字符串比较；`webhook-request.ts:15-31` 解析 JSON 后丢弃原始字节；manifest 只有两个认证能力位（`packages/providers/src/types.ts:59-64`）；`docs/adr/0002:50` 把 HMAC 列为未来形态。低于门槛，登记待后续。
+- 其余方向（fingerprint、绝对时间窗、CSV 导出、抑制试跑、E2E、fixtures 等）逐项核对后均已有 backlog 条目；多告警 fan-out 与目标级重试策略因架构/门槛原因未列候选。
+
+**docs-drift（轮转，5 条全部对代码核实）**
+
+- `application-container.md` 的 service factory 清单与 `server/` 目录树缺 `createSessionSecurityService` / `server/security/`（`container.ts:132,288`，第 124 轮 #503 新增能力未回写）。
+- `sqlite-store.md`、`frontend-architecture.md` 的仓储树缺 `repositories/session/`。
+- `history-retention-and-snapshots.md` 的 migration 清单停在 0003（`migrate/plan.ts:4,7-12` 已含 0004）；同文 `history.repository.ts:176` 引用漂移到 `:194-196`。
+- `backup-restore-upgrade.md:203` 称坏 `BETTER_AUTH_SECRET` 会让进程「退出」，实际是所有请求 500 + 容器 unhealthy、不会重启（`server.ts:11-27`，无 `process.exit`）。
+- `mvp-rc-checklist.md:140-141` 仍称「仓库没有既有 tag」，实际已有 89 个 tag。
+
+**ui-review（浏览器实测）**
+
+- **UI-77（26）账号安全面板被埋在最底部**：`settings-page.tsx:37-43` 把 Security 放在运行时限/worker/存储三块只读诊断之后；1440×900 需滚 528px、390×844 需滚 1942px 才能看到「退出其他设备」。
+- **UI-78（23）390px 会话来表只露出客户端列**：表格宽约 820px、容器 348px，状态徽标在 x=719-841 完全不可见；仓储按 `updated_at desc` 排序（`session.repository.ts:19`），当前会话不保证在首行；滚动容器无 `tabIndex`/`aria-label`。
+- **UI-79（26）撤销确认框不显示影响数量**：`settings-security-panel.tsx:86,136-153` 只写 “other devices”；零其他会话时按钮禁用但描述仍写 “Read-only · sessions of this account”。
+- **UI-76 证据刷新**：`source-form.tsx:196` 已无 `required`；`route-forms.tsx:719`、`feishu-app-dialog.tsx:93` 已加 `noValidate`；仍命中 `settings-preferences-panel.tsx:73,180-182`、`destination-form.tsx:1052,1100`、`suppression-forms.tsx:293,343,356,454`、登录/初始化表单。
+- **UI-57 证据补充**：page 句式已被 UI-74 统一；仍不一致的是中文 range 前缀（「共 12 个告警源」vs「12 条路由」），英文五页一致。
+- 已核实无问题：设置页滚动归属在 1440/390 都正确；未知 IP/客户端兜底正确；空态不会出现（当前会话始终返回）；加载预取可接受。
+
+### 本轮交付
+
+- **PR #506 `feat(console): show retry budget and exhausted state in deliveries list`**（REQ-58，垂直切片）：
+  - `DeliveryListItem`（core 接口 + `@tocsin/api` schema）增加 `maxAttempts`；`history.repository.ts:354,429` 投影 `deliveries.max_attempts`，无新增查询。
+  - 列表「尝试」列渲染 `attemptCount/maxAttempts`；「下次重试」列在 `failed` 且预算用尽时显示「重试耗尽 / Retries exhausted」（`deliveries-table.tsx:215` 的 `deliveryRetriesExhausted`），有排期的 `pending` 行仍显示时间戳，非可重试但有余量的 `failed` 行保持 `—`。
+  - i18n 中英键 `deliveries.table.retriesExhausted`；回归测试 5 条（仓储投影 1、表格 4）；PRD `docs/prd/delivery-retry-visibility.md`。
+  - 验证：`vp check` 0 error / 23 条既有 warning；`vp run -r test` 195 文件 / **1095** 测试；`vp run -r build` 通过；rebase 合并。
+- **PR #507 `docs(architecture): correct drift in container, repository, and release docs`**（DOC-86，docs-drift 5 条更正 + backlog 行）；`vp fmt --check` 通过；rebase 合并。
+- backlog：REQ-58 → shipped #506；DOC-86 → shipped #507；新增 REQ-277/278、UI-77/78/79；刷新 UI-76、UI-57 证据。
+
+### EXPERT_PANEL
+
+- 本轮无新裁决事项。REQ-58 为纯展示 + DTO 增量，无 schema/迁移/投递语义变化，不需要专家小组。
+
+### 发布评估与发布记录
+
+- 三位发布专家一致放行（`v0.1.0-beta.97..origin/main`）：
+  - **发布经理**：唯一用户可见变更是 #506（`51e8fc3`，投递列表重试预算/重试耗尽），其余 3 个提交均为 docs/planning；建议 `0.1.0-beta.98`，不值得为凑批量拖延。
+  - **阻断审计**：`origin/main` @ `d619969` 的 CI 与 E2E 均 success；0 open PR；迁移目录零 diff；`v0.1.0-beta.98` 未被占用；`blocked-autonomous` 仅 REL-13/16/23（仓库设置/法务项），不阻断；最近两轮无未修复回归。
+  - **运维/回滚**：`Dockerfile`、compose、`env.ts`、`package.json`、lockfile、迁移目录自 beta.97 起零 diff；`max_attempts` 自 `0001` 即为 `INTEGER NOT NULL DEFAULT 3` + CHECK，旧库读新 DTO 必然满足 `min(1)`；回滚只需换回 `0.1.0-beta.97` 镜像，**无需数据库操作**。
+- 版本 PR **#508 `chore(release): v0.1.0-beta.98`**（rebase 合并 `3bfe441`）；`check · test · build` 2m42s pass；E2E 1m17s pass；main 上 `3bfe441` 的 CI 与 E2E 均 success。
+- tag **`v0.1.0-beta.98`** → `3bfe441`；GitHub Release 为 prerelease，body 非空（`/tmp/tocsin-release-notes-v0.1.0-beta.98.md`）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.98`（linux/amd64 + linux/arm64，index digest `sha256:fd3301afea06245071af810f92ecd700b002dcefa587c93a0720fad010637433`；`--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.97`，无需数据库操作。
+
+### 下一轮优先项
+
+1. **UI-77 + UI-79（均 26，成本 S）**：ui-review 明确建议的切片 —— 账号安全面板前移、撤销确认框显示 `otherSessions.length`、零会话禁用原因，只动 `settings-page.tsx`、`settings-security-panel.tsx` 与两条 i18n。本轮因 PR 上限（1 需求切片 + 1 小修复）未实现。
+2. **UI-78（23，成本 M）**：390px 会话表改堆叠定义列表或状态/最近活动前置。
+3. **REQ-277（27）**：加急呼叫全局暂停，无迁移，是本轮最高分未做候选。
+4. **SEC-30（25）**：签名族脱敏精确键，交 EXPERT_PANEL 定后缀策略；SEC-33 可同批。
+5. **REQ-267（27）**：投递名称快照迁移（需 EXPERT_PANEL，forward-only 加法迁移）。
+6. 车道轮转：`release-infra` 或 `architecture`（`docs-drift` 本轮已跑）。
+
 ## 2026-10-27（第 124 轮）
 
 - 时间：2026-10-27 02:44 CST 起。
