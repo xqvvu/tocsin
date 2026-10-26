@@ -94,6 +94,10 @@ async function repositoryWithSearchFixtures(): Promise<
       event("event-underscore", "fp-underscore", "cpu_high", "usage"),
       event("event-hyphen", "fp-hyphen", "cpu-high", "usage"),
       event("event-percent", "fp-percent", "100% packet loss", "loss"),
+      // `\` is the LIKE escape character itself. Left unescaped, the query
+      // term `C:\temp` would mean `C:temp` and hit the decoy row as well.
+      event("event-backslash", "fp-backslash", "C:\\temp full", "path"),
+      event("event-backslash-decoy", "fp-backslash-decoy", "C:temp full", "path"),
       event("event-message", "fp-message", "Memory", "oom"),
       // Opaque ids that are not substrings of each other, so an identifier
       // lookup can only hit through the intended branch.
@@ -139,6 +143,8 @@ async function repositoryWithSearchFixtures(): Promise<
         "event-underscore",
         "event-hyphen",
         "event-percent",
+        "event-backslash",
+        "event-backslash-decoy",
         "event-message",
         "event-idempotency",
         "event-idempotency-underscore",
@@ -359,6 +365,26 @@ describe("history search", () => {
     expect(events.total).toBe(1);
   });
 
+  it("treats a backslash as a literal character instead of an escape prefix", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    // `C:\temp` and `C:temp` are different paths. Because the predicates use
+    // `ESCAPE '\'`, a term that skips backslash escaping would collapse the
+    // first into the second and return both rows.
+    const events = await repository.listEvents({ q: "C:\\temp" });
+    const deliveries = await repository.listDeliveries({ q: "C:\\temp" });
+
+    expect(ids(events.items)).toEqual(["event-backslash"]);
+    expect(events.total).toBe(1);
+    expect(ids(deliveries.items)).toEqual(["delivery-event-backslash"]);
+    expect(deliveries.total).toBe(1);
+
+    const decoy = await repository.listEvents({ q: "C:temp" });
+
+    expect(ids(decoy.items)).toEqual(["event-backslash-decoy"]);
+    expect(decoy.total).toBe(1);
+  });
+
   it("matches a label value on both lists", async () => {
     const repository = await repositoryWithSearchFixtures();
 
@@ -475,10 +501,19 @@ describe("history search", () => {
   it("treats a whitespace-only query as no filter", async () => {
     const repository = await repositoryWithSearchFixtures();
 
-    const all = await repository.listEvents();
-    const blank = await repository.listEvents({ q: "   " });
+    const allEvents = await repository.listEvents();
+    const blankEvents = await repository.listEvents({ q: "   " });
 
-    expect(blank.total).toBe(all.total);
+    expect(ids(blankEvents.items)).toEqual(ids(allEvents.items));
+    expect(blankEvents.total).toBe(allEvents.total);
+
+    // The delivery predicate has its own empty-term branch; both lists must
+    // ignore a blank term rather than fall back to `%` or match nothing.
+    const allDeliveries = await repository.listDeliveries();
+    const blankDeliveries = await repository.listDeliveries({ q: "   " });
+
+    expect(ids(blankDeliveries.items)).toEqual(ids(allDeliveries.items));
+    expect(blankDeliveries.total).toBe(allDeliveries.total);
   });
 });
 
