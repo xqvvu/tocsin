@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { NormalizedEventSchema } from "#core/event/normalized-event";
+import { IsoDateTimeSchema, NormalizedEventSchema } from "#core/event/normalized-event";
 import { JsonObjectSchema, JsonValueSchema } from "#core/json";
 import { SourceSummarySchema } from "#core/source/source";
 
@@ -61,8 +61,39 @@ export const DestinationSafeConfigSchema = DestinationOperationalConfigSchema;
 /** @deprecated Use DestinationOperationalConfig */
 export type DestinationSafeConfig = DestinationOperationalConfig;
 
+/**
+ * Window the delivery-health failure counter covers. Exported so the server
+ * aggregate and the console label cannot drift apart.
+ */
+export const DESTINATION_HEALTH_RECENT_FAILURE_HOURS = 24;
+
+/**
+ * Recent delivery outcomes for one destination, derived from the deliveries
+ * table rather than stored on the destination row.
+ *
+ * `lastSucceededAt` / `lastFailedAt` are finish times of the latest delivery in
+ * that terminal state; they answer "is this target still working?" without
+ * opening the deliveries list. `queuedCount` covers queued and in-flight jobs
+ * so a backed-up queue is visible too.
+ */
+export const DestinationDeliveryHealthSchema = z.object({
+  lastSucceededAt: IsoDateTimeSchema.nullable(),
+  lastFailedAt: IsoDateTimeSchema.nullable(),
+  /** Deliveries waiting or in flight right now. */
+  queuedCount: z.number().int().min(0),
+  /** Failed deliveries created within {@link DESTINATION_HEALTH_RECENT_FAILURE_HOURS}. */
+  recentFailureCount: z.number().int().min(0),
+});
+
+export type DestinationDeliveryHealth = z.infer<typeof DestinationDeliveryHealthSchema>;
+
 export const DestinationListItemSchema = DestinationSummarySchema.extend({
   operationalConfig: DestinationOperationalConfigSchema,
+  /**
+   * Present on list responses only. Create/update responses omit it because the
+   * destinations list query is the delivery-health surface.
+   */
+  deliveryHealth: DestinationDeliveryHealthSchema.optional(),
 });
 
 export type DestinationListItem = z.infer<typeof DestinationListItemSchema>;

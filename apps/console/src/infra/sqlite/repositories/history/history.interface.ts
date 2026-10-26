@@ -31,6 +31,14 @@ export interface HistoryRepository {
   getEventFingerprintContext(eventId: string): Promise<EventFingerprintContext | null>;
   listDeliveries(query?: DeliveryListQuery): Promise<NumberedPage<DeliveryListItem>>;
   /**
+   * Delivery outcomes grouped by destination for the destinations list: one
+   * aggregate pass instead of a query per row. Destinations with no deliveries
+   * are absent, so the caller keeps its own "no history" fallback.
+   */
+  destinationDeliveryHealth(
+    query: DestinationDeliveryHealthQuery,
+  ): Promise<DestinationDeliveryHealthRow[]>;
+  /**
    * History rows one source, route, or destination delete would remove through
    * the database's cascade. Counts the foreign keys SQLite acts on, so the
    * preview cannot drift from what the delete actually destroys.
@@ -43,6 +51,21 @@ export type DeletionImpactTarget =
   | { sourceId: string }
   | { routeId: string }
   | { destinationId: string };
+
+export interface DestinationDeliveryHealthQuery {
+  /** Inclusive lower bound on `deliveries.created_at` for the failure count. */
+  since: string;
+}
+
+export interface DestinationDeliveryHealthRow {
+  destinationId: string;
+  lastSucceededAt: string | null;
+  lastFailedAt: string | null;
+  /** Queued or in-flight deliveries right now. */
+  queuedCount: number;
+  /** Failed deliveries created at or after `since`. */
+  recentFailureCount: number;
+}
 
 export interface EventListQuery {
   sourceId?: string;

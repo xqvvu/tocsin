@@ -4,6 +4,7 @@ import {
   DestinationOperationalConfigSchema,
 } from "@tocsin/core";
 import type {
+  DestinationDeliveryHealth,
   DestinationEditorFormDraft,
   DestinationKind,
   DestinationListItem,
@@ -47,12 +48,18 @@ export function destinationSummaryFromRuntime(
   };
 }
 
+/**
+ * `deliveryHealth` is passed only by the list projection. Create and update
+ * responses omit it because the list query is the health surface.
+ */
 export function destinationListItemFromRuntime(
   destination: DestinationRuntimeConfig,
+  deliveryHealth?: DestinationDeliveryHealth,
 ): DestinationListItem {
   return {
     ...destinationSummaryFromRuntime(destination),
     operationalConfig: destinationOperationalConfigFromRuntime(destination),
+    ...(deliveryHealth === undefined ? {} : { deliveryHealth }),
   };
 }
 

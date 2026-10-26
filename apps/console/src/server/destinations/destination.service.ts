@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   CreateDestinationCommandSchema,
+  DESTINATION_HEALTH_RECENT_FAILURE_HOURS,
   DeleteDestinationCommandSchema,
   GetDestinationTemplateDraftCommandSchema,
   JsonObjectSchema,
@@ -57,12 +58,14 @@ export class DestinationService {
   private readonly destinations: DestinationServiceOptions["destinations"];
   private readonly destinationSendContext: DestinationServiceOptions["destinationSendContext"];
   private readonly resolveDestinationConfig: DestinationServiceOptions["resolveDestinationConfig"];
+  private readonly now: () => string;
 
   constructor(options: DestinationServiceOptions) {
     this.store = options.store;
     this.destinations = options.destinations;
     this.destinationSendContext = options.destinationSendContext;
     this.resolveDestinationConfig = options.resolveDestinationConfig;
+    this.now = options.now ?? (() => new Date().toISOString());
   }
 
   listDestinationCatalog(): DestinationCatalogItem[] {
@@ -70,9 +73,18 @@ export class DestinationService {
   }
 
   async listDestinations(): Promise<DestinationListItem[]> {
-    const destinations = await this.store.destinations.list();
+    const since = new Date(
+      Date.parse(this.now()) - DESTINATION_HEALTH_RECENT_FAILURE_HOURS * 60 * 60 * 1000,
+    ).toISOString();
+    const [destinations, healthRows] = await Promise.all([
+      this.store.destinations.list(),
+      this.store.history.destinationDeliveryHealth({ since }),
+    ]);
+    const healthByDestination = new Map(healthRows.map((row) => [row.destinationId, row] as const));
 
-    return destinations.map((destination) => destinationListItemFromRuntime(destination));
+    return destinations.map((destination) =>
+      destinationListItemFromRuntime(destination, healthByDestination.get(destination.id)),
+    );
   }
 
   async createDestination(command: CreateDestinationCommand): Promise<DestinationListItem> {
