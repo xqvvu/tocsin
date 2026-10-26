@@ -1184,6 +1184,9 @@ describe("sqlite store", () => {
       kind: "generic_webhook",
     });
     expect(deliveryDetail?.destination).not.toHaveProperty("config");
+    // Metadata is projected at read time, so the detail must carry the target's
+    // last write; without it the UI cannot flag a post-delivery config change.
+    expect(deliveryDetail?.destinationUpdatedAt).toBe(now);
     expect(deliveryDetail?.destinationMetadata).toEqual({
       endpoint: "https://example.test/webhook",
       host: "example.test",
@@ -1205,6 +1208,66 @@ describe("sqlite store", () => {
         error: "destination unavailable token=[REDACTED]",
       },
     ]);
+
+    await store.close();
+  });
+
+  it("reads the destination timestamp when the detail is loaded, not when it was sent", async () => {
+    let currentNow = "2026-06-07T00:00:00.000Z";
+    const store = await openSqliteStore({
+      databasePath: ":memory:",
+      now: () => currentNow,
+    });
+
+    await store.sources.create({
+      id: "source-1",
+      name: "Grafana",
+      provider: "grafana",
+      tokenHash: "token-hash",
+    });
+    await store.destinations.create({
+      id: "destination-1",
+      name: "Ops webhook",
+      kind: "generic_webhook",
+      config: { url: "https://example.test/webhook" },
+    });
+    const route = await store.routes.create({
+      id: "route-1",
+      name: "Critical route",
+      rule: { severities: ["critical"] },
+      destinationIds: ["destination-1"],
+    });
+    const event = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: "request-1",
+      normalized: {
+        title: "CPU high",
+        message: "CPU is above threshold",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "cpu:api",
+        labels: { service: "api" },
+        occurredAt: currentNow,
+      },
+      rawPayload: { title: "CPU high" },
+    });
+    const delivery = (
+      await store.deliveries.enqueueForEvent({
+        event,
+        matches: [{ routeId: route.id, destinationIds: ["destination-1"] }],
+        dedupeWindowStartsAt: "2026-06-06T23:55:00.000Z",
+      })
+    ).created[0]!;
+
+    currentNow = "2026-06-07T01:00:00.000Z";
+    await store.destinations.update("destination-1", { name: "Ops webhook (renamed)" });
+
+    const detail = await store.deliveries.get(delivery.id);
+
+    expect(detail?.job.createdAt).toBe("2026-06-07T00:00:00.000Z");
+    // The config block is projected today, so the timestamp must move with it;
+    // a send-time snapshot would have kept the original enqueue timestamp.
+    expect(detail?.destinationUpdatedAt).toBe("2026-06-07T01:00:00.000Z");
 
     await store.close();
   });

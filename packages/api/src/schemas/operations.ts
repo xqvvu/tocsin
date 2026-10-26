@@ -163,6 +163,9 @@ export const DeliveryDetailSchema = z.object({
   rawPayloadPruned: z.boolean(),
   source: SourceSummarySchema,
   destination: DestinationSummarySchema,
+  // Last write to the target's stored config. The metadata below is projected
+  // at read time, so this is how the UI spots a target changed after the send.
+  destinationUpdatedAt: IsoDateTimeSchema,
   // Operational destination facts only: template mode, endpoint, method, and
   // header names. Signing secrets never reach this projection.
   destinationMetadata: JsonObjectSchema,
