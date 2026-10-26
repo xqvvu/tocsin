@@ -510,7 +510,7 @@ describe("delivery execution", () => {
     const triggered: unknown[] = [];
     const execution = new DeliveryExecution({
       store,
-      destinations: sendOkWithReference(),
+      destinations: sendOkWithEvidence(),
       triggerPings: async (input) => {
         triggered.push(input);
       },
@@ -528,6 +528,9 @@ describe("delivery execution", () => {
         // The same constant the retry guard reads; a copy that drifts would
         // turn this terminal state back into a retryable one.
         error: DELIVERY_ACCEPTED_UNRECORDED_ERROR,
+        // The target accepted the send, so keep its response as evidence.
+        responseStatus: 202,
+        responseBody: '{"code":0}',
       }),
     ]);
     expect(triggered).toHaveLength(1);
@@ -565,6 +568,20 @@ function sendOkWithReference(): Pick<DestinationRegistry, "send"> {
         ok: true,
         statusCode: 200,
         responseBody: null,
+        renderedPayload: {},
+        providerReference: { type: "feishu_message_id", value: "om_abc123" },
+      };
+    },
+  };
+}
+
+function sendOkWithEvidence(): Pick<DestinationRegistry, "send"> {
+  return {
+    async send() {
+      return {
+        ok: true,
+        statusCode: 202,
+        responseBody: '{"code":0}',
         renderedPayload: {},
         providerReference: { type: "feishu_message_id", value: "om_abc123" },
       };

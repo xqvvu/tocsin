@@ -204,6 +204,10 @@ export class DeliveryExecution {
     try {
       await this.markFailed(delivery, {
         error: DELIVERY_ACCEPTED_UNRECORDED_ERROR,
+        // Keep the target's success response on the failure row: an operator
+        // debugging this state needs the evidence that the send itself worked.
+        responseStatus: sendResult.statusCode ?? undefined,
+        responseBody: redactOptionalText(sendResult.responseBody),
         errorKind: "unknown_error",
         retryHint: "not_retryable",
         startedAt,
