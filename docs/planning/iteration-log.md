@@ -48,6 +48,7 @@
 - 运维/回滚：**WARN**（非阻断，已修文档）。发现 PRD/决策记录「代码回滚即可」的说法对**镜像回滚**不成立：旧镜像的计划只到 `0003`，会被 `assertNoUnknownAppliedMigrations` 挡住导致 `/api/ready` 永久 503；必须先 `DELETE FROM schema_migrations WHERE version = '0004'`。已在合入前修正 `docs/prd/oncall-dispatch-intent.md` 与决策记录。
 - 版本 PR #476 `chore(release): v0.1.0-beta.90`（rebase 合并 `64fd7dc`）；目标 commit 的 CI 与 E2E 均 success。
 - tag `v0.1.0-beta.90` 指向 `64fd7dc`（= `origin/main`）；GitHub Release 为 prerelease，body 非空。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.90`（linux/amd64 + linux/arm64，index digest `sha256:0a2985f7480a5e26e6cf76159442a4975d3f95d7e8f1ad3e8ff7b65926553ad2`）；回滚 `0.1.0-beta.89`（回滚前需删 `schema_migrations` 的 `0004` 行）。构建在 `/tmp/tocsin-beta90-build`（tag 对应的干净检出）中进行，`--provenance=false --sbom=false`；`imagetools inspect` 确认两个平台都在。
 - 观察：`ddf5def` 的 main-branch E2E 单 job 卡住 >15 分钟（`40289903177`），同一棵树的 PR 级 playwright 1m23s 通过，随后被新 commit supersede；判定为 Actions 基础设施抖动，不是代码问题，已记录。
 
 ### 下一轮优先项
