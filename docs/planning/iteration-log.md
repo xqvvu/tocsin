@@ -2,6 +2,89 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 108 轮）
+
+- 时间：2026-10-26 09:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `ce5a499`；main CI success（`40252248817`、`40252248824`）；无 open PR。
+- 类型：**需求切片 + P0 语义修复 + EXPERT_PANEL + 发布**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 ≥27 分 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道：`requirements`（窄化 brief）、`ui-triage`（必跑）、`release-infra`（轮转）。
+- `ui-triage`：**`defer`** —— `last_ui_review_at` 2026-10-26 01:15 CST（距本轮约 8.2h，<48h）；自上次评审 UI 合并 2 条（#448、#450），未达 ≥3；32 条未解决 UI candidate，其中 UI-54…UI-59 是第 105 轮刚产出的结论，重复评审只会复读。建议本轮实现 UI-55。
+- `last_ui_review_at`：**2026-10-26 01:15 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、镜像构建在会话工作树 `keen-blackwell-0efd84`。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #453 `fix(console): never resend an alert the target already accepted`（Q-225，P0；rebase 合并 `37ed76e`）**：
+  - 发送与「发送成功后的记账」分离到不同 `try`；目标受理后不再进入通用重试路径。
+  - 受理后先 `triggerPings`（呼叫不依赖本地写入，ping 入队已按 fingerprint/destination/receiver 去重），
+    再 `markSucceeded` 最多 2 次；两次失败落终态 `failed` 且文案写明「已送达，勿重发」；
+    兜底写入失败只记日志、不中断整批。
+  - 新增 3 个用例（写失败一次后成功 / 连续两次失败 / 兜底写也失败），并断言 pings 恰好一次。
+  - 决策记录 `docs/planning/decisions/delivery-success-persistence-failure.md`。
+  - 验证：`vp check` 0 error；`vp run -r test` 4/4；`vp run -r build` 通过；PR CI 全绿。
+- **PR #454 `fix(console): label delivery destination metadata as the current config`（REQ-265，27 分；rebase 合并 `74340af`）**：
+  - `DeliveryDetail` / API schema 增加 `destinationUpdatedAt`，由仓储以单列投影查询读取
+    （不改共享的 `DestinationRuntimeConfig`，避免类型扩散）。
+  - 元数据块标题写明「当前配置」；目标在本投递后被修改时渲染警示条
+    `deliveries.configNotice.*`（含目标修改时间与投递完成时间）。
+  - 新增 PRD `docs/prd/delivery-destination-config-readtime.md`；仓储用例证明「读取时投影而非发送时快照」；
+    组件用例 3 条覆盖修改/未修改/pending 回退 `createdAt`。
+  - 验证：`vp check` 0 error；`vp run -r test` 4/4；`vp run -r build` 通过；PR CI 全绿。
+  - 未做浏览器实测：本机无运行中的 console dev server，变更由组件测试覆盖。
+
+### 专家发现
+
+- `requirements`（窄化 brief，12 分钟内返回「no new candidates」）：backlog 450 条候选已覆盖
+  post-MVP 方向 4、RC checklist 未勾 gate 与常见运维摩擦；建议后续换未开采来源
+  （`docs/adr/` 未产品化决策、Integrations 面），否则大概率继续空集。
+- `ui-triage`：见上，`defer`。
+- `release-infra`（轮转）：
+  - **更正**：E2E **已接入 CI**（`.github/workflows/e2e.yml`，playwright chromium），
+    backlog `REL-1` 长期记为「CI 未接入 E2E」属过期结论，已标 shipped；
+    双入口漂移仍在（`e2e.yml` 直接跑 `playwright test`，绕过 `just e2e`，= REL-28）。
+  - RC 未勾 gate 4 条：E2E 覆盖缺 Route/Deliveries/retry（REL-22）、provider 贡献指南缺失（新）、
+    provider fixtures 缺失（REL-24）、多版本 payload 需上游输入（外部阻塞）。
+  - `REL-13`：仍无 LICENSE 与 `license` 字段（公开仓库），属法律决策；
+    `REL-16/23`：rulesets 仍为空、main 无保护，token 已具 admin，但属仓库设置变更，下一轮交 EXPERT_PANEL。
+  - 发布卫生：75 个 tag 与 75 个 Release 一一对应，无缺失；`release-checklist.md:75-76` 版本区间漂移（beta.82）。
+
+### EXPERT_PANEL
+
+- **Q-225（= 旧 Q-8）**：三位专家独立评审，一致同意核心方案（发送独立 `try`、写成功重试一次、
+  两次失败落终态、兜底不外抛、pings 不受记账影响）。
+  - 分歧：`triggerPings` 与 `markSucceeded` 先后。安全专家主张先呼叫（崩溃窗口内不丢呼叫），
+    产品专家主张先记账。按「有分歧 → 选最保守且可逆」，采纳**先呼叫**：
+    已核实 `oncall_pings` 按 (fingerprint, destination, receiver) 去重（`oncall.repository.ts:43-55`），
+    重复呼叫在窗口内被吸收。
+  - 决策记录：`docs/planning/decisions/delivery-success-persistence-failure.md`。
+  - 残留风险：两次写 + 兜底写全失败或崩溃时 `reclaimStaleRunning` 仍可能重排；终态 `failed`
+    仍可人工 retry，目前只靠错误文案提示（新候选 Q-231）。
+
+### 发布评估与发布记录
+
+- 发布依据：自 `v0.1.0-beta.83` 起两个用户可见修复 #453（Q-225）与 #454（REQ-265）；
+  发布三专家（发布经理 / 阻断审计 / 运维回滚）一致放行。
+- 版本 PR #455 `chore(release): v0.1.0-beta.84`（rebase 合并 `1a050e0`）；main CI success。
+- tag `v0.1.0-beta.84` 指向 `1a050e0`；GitHub Release 为 prerelease 且 body 非空（1217 chars）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.84`（linux/amd64 + linux/arm64，
+  index digest `sha256:776dd42070cd7991ce26bc08bf935f4b04ae2a3e1f88251fe24394c7f40a724a`）；
+  回滚 `0.1.0-beta.83`。无迁移、无镜像 / entrypoint / 配置变化。
+- 运维注意（已写入发布说明）：升级窗口内遗留 `running` 投递仍可能被回收重发一次；
+  「已送达但记账失败」的 `failed` 投递禁止手动 retry。
+
+### 下一轮优先项
+
+1. Q-231（新，P0 配套）：终态「已送达」的 `failed` 投递禁止手动 retry（`retryNow` 只校验 state）。
+2. Q-228：webhook body 流错误被误判为无效 JSON（400 → 应 5xx）；Q-229 同批补搜索测试缺口。
+3. Q-230（24）：抑制命中表时间列跟随排序口径（service 传 `timeField: "updated"`）。
+4. Q-226：批次逐条隔离（需决定是否新增 `errored` 计数）。
+5. REL-22：扩展 E2E 覆盖 Route → Deliveries → 失败 → retry（本轮已确认 e2e.yml 已接线）。
+6. REL-16/23：交 EXPERT_PANEL 裁决是否启用 required checks（token 已具 admin）。
+7. SEC-30（25）+ SEC-26 列表投影 `redactText` 子项：纯增量脱敏。
+8. UI-55/54/57：空态与分页文案一致性。
+
 ## 2026-10-26（第 107 轮）
 
 - 时间：2026-10-26 08:48 CST 起。
