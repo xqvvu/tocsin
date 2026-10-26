@@ -34,21 +34,25 @@ export function useDeletionImpact(load: DeletionImpactLoader) {
       setConfirmed(false);
       setState("loading");
 
-      void load(id).then(
-        (result) => {
-          if (requestId.current !== current) {
-            return;
-          }
-          setImpact(result);
-          setState("ready");
-        },
-        () => {
-          if (requestId.current !== current) {
-            return;
-          }
-          setState("error");
-        },
-      );
+      // Defer the call so a loader that throws synchronously still lands in the
+      // error state instead of escaping the dialog's open handler.
+      void Promise.resolve()
+        .then(() => load(id))
+        .then(
+          (result) => {
+            if (requestId.current !== current) {
+              return;
+            }
+            setImpact(result);
+            setState("ready");
+          },
+          () => {
+            if (requestId.current !== current) {
+              return;
+            }
+            setState("error");
+          },
+        );
     },
     [load],
   );
@@ -69,6 +73,6 @@ export function deletionImpactBlocksConfirm(
   return state === "ready" && impact !== null && deletionImpactTotal(impact) > 0 && !confirmed;
 }
 
-export function deletionImpactTotal(impact: DeletionImpact): number {
+function deletionImpactTotal(impact: DeletionImpact): number {
   return impact.eventCount + impact.deliveryCount + impact.attemptCount + impact.oncallPingCount;
 }
