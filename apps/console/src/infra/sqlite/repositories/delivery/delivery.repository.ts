@@ -12,6 +12,7 @@ import type {
   DeliveryAttempt,
   DeliveryDetail,
   DeliveryJob,
+  IsoDateTimeString,
   Suppression,
   SuppressionMatchInput,
 } from "@tocsin/core";
@@ -501,6 +502,9 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
     const source = sourceSummaryFromRuntime(requireSource(await this.sources.get(event.sourceId)));
     const destinationRuntime = requireDestination(await this.destinations.get(job.destinationId));
     const destination = destinationSummaryFromRuntime(destinationRuntime);
+    // The metadata below is projected at read time, so pair it with the
+    // target's last write; the UI warns when that is later than this delivery.
+    const destinationUpdatedAt = await this.destinationUpdatedAt(job.destinationId, job.createdAt);
     const destinationMetadata = destinationMetadataFromRuntime(destinationRuntime);
     const route = job.routeId ? await this.routes.get(job.routeId) : null;
     const attempts = (
@@ -525,6 +529,7 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
       rawPayloadPruned: isPrunedRawPayload(event.rawPayload),
       source,
       destination,
+      destinationUpdatedAt,
       destinationMetadata,
       route,
       renderedPayload: row ? decodeRenderedPayload(row.rendered_payload_json) : null,
@@ -532,6 +537,28 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
       attempts,
       pings: await this.oncall.listForDelivery(job.id),
     };
+  }
+
+  /**
+   * Last write to the target's stored config, read alongside the detail.
+   *
+   * `DestinationRuntimeConfig` carries no timestamps and the detail needs this
+   * one fact only, so it is read as a projected column instead of widening the
+   * shared runtime type. When the row is gone (deleted between the two reads)
+   * the enqueue time is returned, which suppresses the notice rather than
+   * raising a false "changed" warning.
+   */
+  private async destinationUpdatedAt(
+    destinationId: string,
+    fallback: IsoDateTimeString,
+  ): Promise<IsoDateTimeString> {
+    const row = await this.context.db
+      .selectFrom("destinations")
+      .select("updated_at")
+      .where("id", "=", destinationId)
+      .executeTakeFirst();
+
+    return row?.updated_at ?? fallback;
   }
 
   async getJob(id: string): Promise<DeliveryJob | null> {

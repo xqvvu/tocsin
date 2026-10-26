@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
 import { DeliveryAttemptsTable } from "#/features/deliveries/ui/delivery-attempts-table";
+import { DeliveryDestinationConfigNotice } from "#/features/deliveries/ui/delivery-destination-config-notice";
 import { DeliveryDetailSummary } from "#/features/deliveries/ui/delivery-detail-summary";
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
 import { DeliveryJsonBlock } from "#/features/deliveries/ui/delivery-json-block";
@@ -54,11 +55,14 @@ export function DeliveryDetailView({ detail }: { detail: DeliveryDetailData }) {
           <DeliveryPingsTable detail={detail} />
         </TabsContent>
 
-        <TabsContent value="metadata" className="min-h-0 overflow-hidden p-3">
-          <DeliveryJsonBlock
-            title={t("deliveries.detail.json.destinationMetadata")}
-            value={detail.destinationMetadata}
-          />
+        <TabsContent value="metadata" className="min-h-0 overflow-auto p-3">
+          <div className="flex flex-col gap-3">
+            <DeliveryDestinationConfigNotice detail={detail} />
+            <DeliveryJsonBlock
+              title={t("deliveries.detail.json.destinationMetadata")}
+              value={detail.destinationMetadata}
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

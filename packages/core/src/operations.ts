@@ -308,6 +308,13 @@ export interface DeliveryDetail {
   rawPayloadPruned: boolean;
   source: SourceSummary;
   destination: DestinationSummary;
+  /**
+   * `destinationMetadata` is projected from the destination as it exists at
+   * read time, not from a snapshot taken at send time. This carries the
+   * destination's last-write timestamp so the detail page can tell "this is
+   * what the send used" apart from "this is what the target looks like today".
+   */
+  destinationUpdatedAt: IsoDateTimeString;
   destinationMetadata: JsonObject;
   route: RouteDefinition | null;
   renderedPayload: JsonValue | null;
