@@ -2,6 +2,64 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 124 轮）
+
+- 时间：2026-10-27 02:44 CST 起。
+- 基线：本轮开始时 `origin/main` @ `c8596ba`（v0.1.0-beta.96 后的日志提交），其 CI 为 success；无 open PR。
+- 类型：**需求垂直切片**（非 full-audit）。
+- 全量审计时间戳：**2026-10-26 21:45 CST（未变，第 120 轮）**；距本轮约 5 小时，< 6 小时，且 backlog 有 `planned` 的 REQ-274（28），按第 1.5 步继续，不重跑全量审计。
+- 车道（3 并发，未超上限）：`requirements`（10 分钟窄化 brief）、`ui-triage`（必跑，read-only）、`security-exposure`（轮转，自第 109 轮未跑）。
+- `ui-triage` 决策：**`defer`** —— 距上次评审 3h35m（`last_ui_review_at` 2026-10-26 23:09）；自上次评审 2 个 UI 路径合并（`b7c4d31`、`a62262a`），两者都有浏览器复看记录；40 个未解决 UI candidate 属队列存量；0 个未做浏览器验证的 UI 改动。建议把下一次浏览器评审绑定到 REQ-274 落地轮。
+- `last_ui_review_at`：**2026-10-26 23:09 CST（未变）**。本轮新增的账号安全面板已做浏览器实测（见下），但不构成完整 ui-review。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `vigorous-dirac-7c920b`。
+- 浏览器验证：隔离实例 `localhost:6198` + `/tmp/tocsin-r124.sqlite`（临时），截图 `/tmp/tocsin-r124-settings-1440.png`、`-settings-390.png`、`-confirm-1440.png`；实例已停止。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 专家发现
+
+**requirements（必跑，10 分钟窄化 brief）**
+
+- 新候选 1 条：**REQ-276（26）抑制窗口结束回顾（只读半边）** —— `docs/release/mvp-rc-checklist.md:62,201-202` 明确「窗口结束后的通知型汇总不做」，也没有按窗口聚合的只读回顾；建议 suppression 详情增加计数/分布/样本，不改变投递语义。低于 27 门槛，登记待与 REQ-110/REQ-272 合并评估。
+- 其余方向（fixture、E2E、fingerprint、绝对时间窗、抑制试跑、硬删除策略等）逐项核对后均已有 backlog 条目，未重复报。
+
+**security-exposure（轮转，代码核实）**
+
+- **LOW-1 → SEC-30 复核仍成立**：`packages/core/src/redaction.ts:13-66,82-83,343-354` 仍不覆盖 `sig`/`hmac`/`xhubsignature`/`ticket`，但 `appSecret`/`clientSecret`/`apiSecret`/`privateKey`/`X-Auth-Token` 已覆盖且有测试（`redaction.test.ts:90-153`）。当前仓库无生产者使用这些键名，属纵深防御。
+- **LOW-2 → 新候选 SEC-33（20）**：`config-portability.ts:319-321,459-466,471-491` 对 source `config` 只按键名删除，不清洗值内嵌凭据（如 `https://user:pass@host`）；destination 侧有穷尽白名单，source 侧没有。当前 provider config schema 为空，无现实泄露链。
+- **LOW-3**：`hooks/use-mobile.ts`、`components/ui/sidebar.tsx` 直接使用浏览器全局但无 `client-only` 标记；均为 SSR 安全写法，加标记反而会触发 import protection 构建失败 —— 建议改文档措辞，不改代码。
+- 已核实为 clean：17 个 `server-only` 标记覆盖全部真实服务端边界；9 个 `client-only`；`auth.server`/`auth.client` 配对正确；脱敏调用点覆盖入站/出站/证据包；destination kind 表驱动测试齐备；旧仓库名 `xqvvu/vane` 在代码/配置/CI 中零残留。
+
+**ui-triage**
+
+- `defer`（理由见上）。附带更正：第 122/123 轮日志称 `a62262a`「只改了测试」，实际改了 `en-US.json` 16 行（UI-72 复数文案），该提交已有浏览器复看记录，不影响本次决策。
+
+### 本轮交付
+
+- **PR #503 `feat(console): expose account sessions and sign out other devices`**（REQ-274 最小切片）：
+  - 契约 `packages/api/src/contract/session.ts` + `schemas/auth.ts`：`listActiveSessions` / `revokeOtherSessions`，输出显式投影（无 token）。
+  - 仓储 `infra/sqlite/repositories/session/`：显式列投影、`expires_at > now`、按 `updated_at desc`；测试覆盖不含 `token` 键、过期与他人会话过滤、排序。
+  - service `server/security/session-security.service.ts`（+ `.types.ts`）：self-only；撤销委托 `auth.api.revokeOtherSessions({ headers })`；容器 `createSessionSecurityService`，`AuthServer.api` 增加撤销方法。
+  - UI `features/configuration/ui/settings-security-panel.tsx`：会话表（客户端/IP/最近活动/有效期/状态）、未知 IP 与客户端兜底、确认对话框、成功/失败 toast；`use-session-mutations.ts`；i18n 中英键。
+  - 布局修复：`settings-layout.ts` 的 UI 标签页改为所有断点自身滚动。新增面板后 1440×900 的偏好表单被 `sm:overflow-hidden` 压成一条缝（浏览器实测），改为滚动 + 偏好表单自然高度，并更新回归测试。
+  - 测试：仓储 3、service 3、面板 4、oRPC 清单/未认证断言与 i18n 键同步；`vp check` 0 error / 23 条既有 warning；`vp run -r test` 195 文件 / **1090** 测试；`vp run -r build` 通过。
+  - 浏览器实测：4 个会话时按钮可用 → 确认框出现 → 撤销后仅剩当前会话且按钮禁用；390×844 面板宽 350px 无裁切；桌面偏好表单完整。
+- backlog：REQ-274 → shipped #503；新增 REQ-276（26）、SEC-33（20）；SEC-30 追加第 124 轮复核证据。
+
+### EXPERT_PANEL
+
+- 本轮无新裁决事项；执行第 123 轮已落盘的 `docs/planning/decisions/req-274-session-surface.md` 结论（最小切片、直接查 SQLite、self-only、不用 BA `listSessions`）。
+
+### 下一轮优先项
+
+1. **REQ-58（27）**：失败投递区分「等待重试」与「重试耗尽」，纯展示 + DTO 字段。
+2. **SEC-30（25）**：签名族脱敏精确键（`sig`/`hmac`/`xhubsignature`/`ticket`），交 EXPERT_PANEL 定后缀策略；SEC-33 可同批。
+3. **REQ-267（27）**：投递名称快照迁移，需 EXPERT_PANEL（forward-only 加法迁移）。
+4. **REL-22 剩余**：E2E 补历史过滤与失败 retry（需要可控 sink）。
+5. 车道轮转：`release-infra` 或 `docs-drift`（`security-exposure` 本轮已跑）。
+6. 下一次 UI 评审建议绑定 REQ-58 落地轮，顺带覆盖 UI-76 的 `noValidate` 逐页验证。
+
+## 2026-10-27（第 123 轮）
+
 ## 2026-10-27（第 123 轮）
 
 - 时间：2026-10-27 01:55 CST 起。
