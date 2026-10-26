@@ -2,6 +2,45 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 110 轮）
+
+- 时间：2026-10-26 11:25 CST 起。
+- 基线：本轮开始时 `origin/main` @ `d87e3b4`；main CI success（`40263483036`、`40263482975`）；无 open PR。
+- 类型：**P0 语义修复 + EXPERT_PANEL**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 ≥24 分 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道：本轮 3 个并发名额全部给 **Q-231 的 EXPERT_PANEL**（安全与可靠性 / 产品与运维 / 独立评估者）。
+  - `requirements` 未单独启动：第 109 轮窄化 brief 刚跑过且无新候选，backlog 仍有 100+ 项；本轮把配额留给最高优先的阻断项。下一轮恢复。
+  - `ui-triage` 由编排者按日志事实裁决：**`defer`**。`last_ui_review_at` 2026-10-26 10:35 CST（距本轮约 0.9h），自上次评审仅 1 个 UI 合并（#457）；未解决 UI candidate 均为第 109 轮 10:35 刚产出的结论，再评只会复读。无 ≥48h / ≥3 合并的强信号。
+- `last_ui_review_at`：**2026-10-26 10:35 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `zealous-kalam-7306fc`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #460 `fix(console): refuse retry for a delivery the destination already accepted`（Q-231，P0）**：
+  - 根因：目标受理告警后连续两次 `markSucceeded` 失败会把投递落终态 `failed`，`last_error` 写「已送达、勿重发」；但 `retryNow` 只校验 `state = failed`，手动重试会重复发送（`delivery.repository.ts:462-470`）。
+  - 修法：`@tocsin/core` 新增 `DELIVERY_ACCEPTED_UNRECORDED_ERROR` 与 `isDeliveryAcceptedUnrecorded`；写入端、仓储、UI 共用。`retryNow` 在事务内、UPDATE 之前抛 `DeliveryAlreadyAcceptedError`；`server/orpc/errors.ts` 映射 `CONFLICT`。详情页显示「目标已受理，禁止重试」，列表行与事件详情投递表不再渲染重试动作。
+  - 无迁移：存量行的 `last_error` 正是同一文案，自动受保护；core 测试锁定字面量与 `redactText` 不变性。
+  - 验证：`vp check` 0 error、`vp run -r test` 188 文件 / 1044 测试、`vp run -r build` 全部通过。
+  - PRD `docs/prd/delivery-accepted-retry-guard.md`；同时更新 `docs/planning/decisions/delivery-success-persistence-failure.md` 的残留风险。
+
+### EXPERT_PANEL
+
+三位专家一致选择 **方案 A（共享哨兵常量 + 仓储 `retryNow` 硬拦截 + CONFLICT 映射 + UI 收口）**：
+
+- 安全与可靠性：唯一 `failed → pending` 写入口是 `retryNow`（`delivery.repository.ts:472-488`），校验放仓储可覆盖所有调用方；`retryHint` 未落库，方案 B（新列）仍需按同一文案回填存量行，迁移成本换不到额外保护；新终态需重建表并波及全部状态消费方，否决。
+- 产品与运维：服务端拒绝与 UI 同切片交付，避免留下「永远报错的可见按钮」；值班语义改为「到目标系统核实后再决定是否上游重放」，「强制重发」逃生通道拆后续（REQ-266）。
+- 独立评估者：A 可测性最高，一次 `retryNow` 即可断言拒绝与整行不变；必须新增（a）哨兵拒绝且行不变、（b）普通 failed 仍可重试、（c）常量经脱敏不变且写入端严格等于常量、（d）两个 UI 入口不渲染重试。
+- 分歧处理：列表入口「隐藏 vs 禁用+徽标」存在分歧，按「最保守且可逆」选隐藏（`last_error` 列仍保留完整原因），徽标本地化另开 UI-66。
+
+### 下一轮优先项
+
+1. 发布评估与发布（三专家通过后执行，记录见本节末尾）。
+2. UI-61/62（第 109 轮遗留）：禁用原因首屏可见 + Token 提示条 Alert 化与读屏播报。
+3. Q-233：补兜底 `markFailed` 的响应状态/响应体证据（纯加法）。
+4. Q-232：`running` 重领重复发送的重领策略裁决（EXPERT_PANEL）。
+5. 恢复 `requirements` 车道（窄化 brief，10 分钟上限）。
+
 ## 2026-10-26（第 109 轮）
 
 - 时间：2026-10-26 10:25 CST 起。
