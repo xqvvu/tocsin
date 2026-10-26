@@ -2,6 +2,60 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 111 轮）
+
+- 时间：2026-10-26 12:25 CST 起。
+- 基线：本轮开始时 `origin/main` @ `3193dc8`；main CI success（`40266806472`、`40266806604`）；无 open PR。
+- 类型：**UI 切片 + 小修复 + 三车道**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 ≥24 分 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道：`requirements`（窄化 brief：方向 4 + 事件列表，10 分钟上限）、`ui-triage`（必跑）、`quality`（轮转，定向核 Q-233 / Q-232 / Q-228 / Q-229）。
+- `ui-triage`：**`defer`** —— `last_ui_review_at` 2026-10-26 10:35 CST（约 1.8h）；自上次评审仅 2 个 UI 合并（#457 10:45、#460 11:45）；38 条 UI candidate 属长期常态，只作弱加权。两项主强信号（≥48h、≥3 个 UI 合并）均未达成。
+- `last_ui_review_at`：**2026-10-26 10:35 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器复看在会话工作树 `eloquent-roentgen-1680f5`。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #463 `fix(console): announce the one-time source token notice politely`（UI-62，25 分）**：
+  - 问题：一次性接入 Token 提示条是保存凭证的唯一机会，却用自建 `section` 渲染，无 `role="status"`/`aria-live`，读屏用户不会被播报；`tokenOnceHint` 与描述语义重复，两个带文字按钮又各包了一层 Tooltip。
+  - 修法：改用 `Alert/AlertTitle/AlertDescription`，加 `role="status"` + `aria-live="polite"`；删除重复的 `sources.notice.tokenOnceHint`（两个 locale 同步）与两个 `IconTooltip`；按钮可见文字即可访问名称。
+  - 测试：新增 `status` 角色 + `aria-live="polite"`、无 `role="alert"`、一次性提示仅一次三条断言。
+  - PRD `docs/prd/source-token-notice-alert.md`；隔离实例 `localhost:6199` + 临时 SQLite，Chromium 1440×900 与 390×844 实测无障碍树为 `status atomic live=polite`（截图 `/tmp/tocsin-ui-112-token-notice-1440.png`、`-390.png`，未提交仓库）。
+  - 验证：`vp check`（0 error）、`vp run -r test`（188 文件 / 1046 测试）、`vp run -r build` 通过；PR CI 双绿（check 2m49s、playwright 4m51s）。
+- **PR #464 `fix(console): keep the target response on the unrecorded-delivery failure`（Q-233，24 分）**：
+  - 问题：目标已受理但两次成功写库失败时，兜底 `markFailed` 只写哨兵文案，没有目标实际状态码与响应体，运维无法核对「目标确实回了 202」。
+  - 修法：兜底路径补 `responseStatus` 与经 `redactOptionalText` 投影的 `responseBody`，与正常失败路径一致；仓储/契约本就支持，无迁移。兜底测试改用 202 + `{"code":0}` 并断言失败行保留证据。
+  - 验证：`vp check`（0 error）、`vp run -r test`（4/4 package）、`vp run -r build` 通过；PR CI 双绿（check 2m49s、playwright 1m12s）。
+
+### 专家发现
+
+- `requirements`（方向 4 + 事件列表，10 分钟）：**无新候选**。`docs/prd/post-mvp-planning.md:229-237` 的剩余三项（fingerprint 聚合、绝对时间窗、筛选导出）已分别由 REQ-6 / REQ-207（吸收 REQ-33）/ REQ-34 挂号；事件列表缺失的入口（自动刷新、数据新鲜度、导出、路由/目标筛选、零投递解释）均已由 REQ-35 / REQ-91 / REQ-34 / REQ-240 / REQ-142 / REQ-67 覆盖。核销两处疑似新问题：筛选变更会统一重置 `eventPage/deliveryPage`（`operation-search.ts:219-248`，不是 bug）；`routeMatchCount` 与「未匹配路由」徽标已存在（`packages/core/src/operations.ts:134`、`event-delivery-counts-cell.tsx:35-45`）。
+- `ui-triage`：`defer`（见上）。
+- `quality`（定向）：
+  - Q-233 **CONFIRMED**：兜底路径 `delivery-execution.ts:205-211` 未传响应证据，正常失败路径 `:138-146` 有；`MarkDeliveryFailedInput` 已支持（`infra/sqlite/repositories/delivery/delivery.interface.ts:162-163`），仓储写 `delivery_attempts.response_status/response_body`（`delivery.repository.ts:440-441`），无需改契约或迁移。
+  - Q-232 **CONFIRMED 且升级**：兜底 `markFailed` 抛错只记日志（`delivery-execution.ts:212-219`），投递与 attempt 停在 `running`；`reclaimStaleRunning` 在 5 分钟后（`delivery-worker.service.ts:40,129-130`）按 `attemptCount < maxAttempts` 自动置 `pending` 重发（`delivery.repository.ts:196-226`）。新增证据：`attemptCount >= maxAttempts` 时 reclaim 用通用超时错误覆盖 `last_error`（`:219,455`），抹掉 `DELIVERY_ACCEPTED_UNRECORDED_ERROR` 哨兵，使 Q-231 的 `retryNow` 防重守卫（`:479-481`）失效；reclaim 不读 `last_error`/`retryHint`，兜底的 `not_retryable` 意图完全丢失。
+  - Q-228/Q-229 测试缺口仍在：`webhook-request.ts:29-37` 的单一 try 把读取失败变成 `InvalidWebhookJsonError`，无 reader 失败用例（`webhook-request.test.ts:36-54`）；`search.test.ts:475-479` 只断言 `listEvents`，未断言 `listDeliveries({ q: "   " })`。
+
+### EXPERT_PANEL
+
+- 本轮无高风险事项，未启动专家小组。
+- **Q-232 升级为下一轮第一优先**：需在「reclaim 判定哨兵/`retryHint` 并跳过重排」与「新增显式状态列（forward-only 加法迁移）」之间裁决；质量车道新增的「覆盖哨兵」路径必须纳入验收。
+
+### 发布评估与发布记录
+
+- 发布经理：RELEASE。`v0.1.0-beta.86..9fb5ace` 共 3 个提交，其中 2 个用户可见修复（#463 无障碍/提示条、#464 失败行证据），1 个纯 docs；建议 `0.1.0-beta.87`。
+- 阻断审计：见下（待回填）。
+- 运维/回滚：APPROVE_DEPLOY。无迁移、无环境变量/配置格式/启动参数/Dockerfile/compose 变化；升级直接换镜像；回滚只需换回 `0.1.0-beta.86`（`sha256:d03ba112…`），无 DB 操作。
+- 门禁：`origin/main` @ `9fb5ace` CI 双绿（`40270137526` check、`40270137556` playwright）；无 open PR；`v0.1.0-beta.87` 无冲突。
+
+### 下一轮优先项
+
+1. Q-232：EXPERT_PANEL 裁决重领策略，必须覆盖「reclaim 覆盖哨兵」路径。
+2. UI-61：无通知目标时「创建路由」禁用原因首屏可见；UI-63：路由名称原生校验绕过 `FieldError`。
+3. Q-228/Q-229：webhook 读取失败分类与搜索空白 q 测试补齐。
+4. REL-16/23：required checks（token 已具 admin，属仓库设置，交 EXPERT_PANEL）。
+5. 恢复 `requirements` 车道的下一个方向（第 112 轮按轮转选新方向，避免重复方向 4）。
+
 ## 2026-10-26（第 110 轮）
 
 - 时间：2026-10-26 11:25 CST 起。

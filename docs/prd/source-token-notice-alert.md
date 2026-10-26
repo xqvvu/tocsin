@@ -1,6 +1,6 @@
 # 一次性接入 Token 提示条改用 Alert 并支持读屏播报
 
-- 状态：已实现（第 112 轮）
+- 状态：已实现（第 111 轮）
 - 来源：UI 评审发现（第 109 轮浏览器实测，backlog `UI-62`）
 - 关联：`apps/console/src/features/sources/ui/source-token-notice-panel.tsx`
 
