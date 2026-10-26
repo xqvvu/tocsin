@@ -2,6 +2,56 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 113 轮）
+
+- 时间：2026-10-26 14:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `de02af6`；main CI success（`40278820154`、`40278820197`）；无 open PR。
+- 类型：**P0 呼叫语义修复 + EXPERT_PANEL + 发布**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 ≥22 分 candidate 且 Q-234 为第 112 轮指定第一优先，按第 1.5 步继续，不重跑全量审计。
+- 车道：3 个并发名额全部给 **Q-234 的 EXPERT_PANEL**（安全与可靠性 / 产品与运维 / 独立评估者）。
+  - `requirements` 未单独启动：第 111 轮窄化 brief 刚跑过、第 112 轮为配额让路，backlog 仍有 100+ 项；本轮配额留给最高优先的阻断项。下一轮恢复。
+  - `ui-triage` 由编排者按日志事实裁决：**`defer`**。`last_ui_review_at` 2026-10-26 10:35 CST（距本轮约 3.9h），自上次评审仅 1 个 UI 合并（#463）；未解决 UI candidate 均为第 109 轮刚产出的结论。无 ≥48h / ≥3 合并的强信号。
+- `last_ui_review_at`：**2026-10-26 10:35 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `ecstatic-blackburn-8b92ad`。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #471 `fix(console): pin urgent paging to the delivery across card resends`（Q-234，P0）**：
+  - 事实：`staleRunningTimeoutMs` 默认 5 分钟（`delivery-worker.service.ts:42`）与 ping 去重窗口 5 分钟（`oncall.service.ts:18`、`oncall.helpers.ts:74-89`）相等；首条 ping 的 `created_at` 是首次发送完成时刻，第二次发送更晚时窗口失效，同一 receiver 被重复呼叫，违反 ADR 0009:61。
+  - 修法：`EnqueueOncallPingInput` 新增 `dedupeByDelivery`；`enqueueForDelivery` 在同一事务内按 `delivery_id + receiver` 查 `oncall_pings`，命中即返回 `null`；仅自动路径开启。手工 buzz 保留窗口语义。
+  - `failed` 同样抑制：`oncall-execution.ts:181-186` 的 `markDispatchedButUnrecorded` 会把「电话已拨出但状态未落库」记为 `failed`，无法与「确实没拨出」区分；重拨不可逆，按最保守方向处理，操作员可手工补呼。
+  - 测试（+4）：同 delivery 越窗不重呼且 `providerReference`/`created_at` 不变、同 fingerprint 不同 delivery 越窗仍重呼、`failed` 仍抑制、手工 buzz 越窗可重呼。既有窗口内抑制与卡片重试用例保留。
+  - PRD `docs/prd/oncall-card-resend-dedupe.md`；决策记录 `docs/planning/decisions/oncall-card-resend-dedupe.md`；ADR 0009 决定 6 补实现说明。
+  - 验证：`vp fmt --write`、`vp check` 0 error（22 条既有 warning）、`vp run -r test`（188 文件 / 1052 测试）、`vp run -r build` 通过。CI 结果与合并 commit 见下。
+
+### EXPERT_PANEL
+
+三位专家独立评审，全部推荐「自动路径按 delivery + receiver 判重、不调整墙钟窗口」；唯一分歧是终态 `failed` 是否应阻止自动重呼：
+
+- 安全与可靠性：`failed` 应放行，让「首次在入 ping 前崩溃」由重试补发；漏呼代价高于重复呼叫。延长窗口（B）会压住同 fingerprint 的真实复燃，漏呼面更大。
+- 产品与运维：与安全专家一致（A′）；手工 buzz 保持窗口语义，作为显式、可审计的补呼入口。
+- 独立评估者：问题在真实崩溃路径下基本必现（`W−T ≥ δ+s2−s1`，默认 W=T=5min、δ 通常为正）；`failed` 应抑制，因为 `failed` 可能是「已拨出但未落库」，重拨不可逆。
+- 裁决：按「有分歧选最保守且可逆」执行**评估者方案**（存在即抑制）。理由：`failed` 证据歧义；重复电话是对外、不可撤销的副作用；自动不补呼的漏呼是可见且可恢复的（ping 行与 `last_error` 在投递详情可见，可手工 buzz），而重复呼叫没有可见信号；ADR 0009 的「绝不重复」是绝对表述。决策记录 `docs/planning/decisions/oncall-card-resend-dedupe.md`。
+- 附带发现：ping 级 stale 重领同样可能在「已接通、`markFired`/兜底 `markFailed` 都失败」时重拨（`oncall.repository.ts:116-149`），与 Q-232 同构，已登记 backlog **Q-235** 留待下一轮 EXPERT_PANEL。
+
+### 发布评估与发布记录
+
+- 发布经理：RELEASE。`v0.1.0-beta.88..origin/main` 共 3 个提交；#471 为唯一用户可见变更（Q-234 呼叫去重修复），其余为测试与纯 docs；建议 `0.1.0-beta.89`。
+- 阻断审计：APPROVE_RELEASE。5 项门禁全 PASS —— 目标 main `0713206` CI 双绿（`40282559525`、`40282559528`）、无 open PR、`blocked-autonomous` 仅 REL-13 / REL-16 / REL-23（法律与仓库设置）、migrate 目录零 diff、`v0.1.0-beta.89` 无冲突。
+- 运维/回滚：APPROVE_DEPLOY。零 migration、零环境变量/配置格式/启动参数/Dockerfile/compose/锁文件变更；升级直接换镜像；回滚换回 `0.1.0-beta.88`，无需数据库操作。
+- 版本 PR #472 `chore(release): v0.1.0-beta.89`（rebase 合并 `6ba2c63`）；main CI 双绿（`40283538944`、`40283539043`）。
+- tag `v0.1.0-beta.89` 指向 `6ba2c63`（= `origin/main`）；GitHub Release 为 prerelease（body 819 chars）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.89`（linux/amd64 + linux/arm64）；回滚 `0.1.0-beta.88`。
+
+### 下一轮优先项
+
+1. Q-235：ping 级 stale 重领在「已接通但未记录」时的重拨（EXPERT_PANEL）。
+2. UI-67：「结果未知」终态徽标与重试确认框。
+3. UI-61 / UI-63：创建路由的禁用原因首屏可见、路由名称原生校验绕过 `FieldError`。
+4. Q-228 / Q-229：webhook 读取失败分类与搜索测试补齐（均已 CONFIRMED，可 AUTO_FIX）。
+5. 恢复 `requirements` 车道（轮转方向，避免重复方向 4）。
+
 ## 2026-10-26（第 112 轮）
 
 - 时间：2026-10-26 13:26 CST 起。
