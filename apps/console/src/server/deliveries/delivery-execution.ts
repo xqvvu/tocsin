@@ -7,6 +7,7 @@ import type {
   DestinationSendContext,
   DestinationRegistry,
   DestinationPresentation,
+  DestinationSendResult,
 } from "@tocsin/destinations";
 
 import type {
@@ -78,6 +79,11 @@ export class DeliveryExecution {
   ): Promise<DeliveryExecutionOutcome> {
     const startedAt = clock();
 
+    // The send gets its own try. Once the target has accepted the alert the
+    // delivery must never fall back into the generic "unknown error, retry"
+    // path below, because a retry would deliver the same alert twice.
+    let sendResult: DestinationSendResult;
+
     try {
       const config = this.resolveDestinationConfig
         ? await this.resolveDestinationConfig({
@@ -85,7 +91,7 @@ export class DeliveryExecution {
             config: delivery.destination.config,
           })
         : delivery.destination.config;
-      const sendResult = await this.destinations.send(
+      sendResult = await this.destinations.send(
         delivery.destination.kind,
         {
           eventId: delivery.event.id,
@@ -101,60 +107,6 @@ export class DeliveryExecution {
         },
         this.sendContext,
       );
-
-      if (sendResult.ok) {
-        const finishedAt = clock();
-
-        await this.store.deliveries.markSucceeded({
-          deliveryId: delivery.job.id,
-          attemptId: delivery.attempt.id,
-          renderedPayload: sendResult.renderedPayload,
-          providerReference: sendResult.providerReference,
-          responseStatus: sendResult.statusCode ?? undefined,
-          responseBody: redactOptionalText(sendResult.responseBody),
-          startedAt,
-          finishedAt,
-        });
-
-        if (this.triggerPings && sendResult.providerReference) {
-          try {
-            await this.triggerPings({
-              delivery,
-              providerReference: sendResult.providerReference,
-              now: finishedAt,
-            });
-          } catch (error) {
-            deliveryLogger.warn("Urgent paging trigger failed for {deliveryId}", {
-              deliveryId: delivery.job.id,
-              destinationId: delivery.destination.id,
-              ...safeErrorProperties(error),
-            });
-          }
-        }
-
-        deliveryLogger.info("Delivery {deliveryId} succeeded via {destinationKind}", {
-          deliveryId: delivery.job.id,
-          attemptId: delivery.attempt.id,
-          attemptNumber: delivery.attempt.attemptNumber,
-          eventId: delivery.event.id,
-          sourceId: delivery.source.id,
-          destinationId: delivery.destination.id,
-          destinationKind: delivery.destination.kind,
-          responseStatus: sendResult.statusCode,
-        });
-
-        return "succeeded";
-      }
-
-      return await this.markFailed(delivery, {
-        error: sendResult.errorMessage,
-        responseStatus: sendResult.statusCode ?? undefined,
-        responseBody: redactOptionalText(sendResult.responseBody),
-        errorKind: sendResult.errorKind,
-        retryHint: sendResult.retryHint,
-        startedAt,
-        finishedAt: clock(),
-      });
     } catch (error) {
       if (error instanceof DomainValidationError) {
         return await this.markFailed(delivery, {
@@ -176,6 +128,133 @@ export class DeliveryExecution {
         finishedAt: clock(),
       });
     }
+
+    if (!sendResult.ok) {
+      return await this.markFailed(delivery, {
+        error: sendResult.errorMessage,
+        responseStatus: sendResult.statusCode ?? undefined,
+        responseBody: redactOptionalText(sendResult.responseBody),
+        errorKind: sendResult.errorKind,
+        retryHint: sendResult.retryHint,
+        startedAt,
+        finishedAt: clock(),
+      });
+    }
+
+    return await this.recordSuccess(delivery, sendResult, startedAt, clock);
+  }
+
+  /**
+   * Records a send the target has already accepted.
+   *
+   * Order matters: the urgent page goes out first, because a phone call is the
+   * irreversible half of a delivery and must never depend on a local write.
+   * Ping enqueue dedupes on (fingerprint, destination, receiver), so replaying
+   * the same alert does not call anyone twice inside the dedupe window.
+   */
+  private async recordSuccess(
+    delivery: ClaimedDelivery,
+    sendResult: Extract<DestinationSendResult, { ok: true }>,
+    startedAt: string,
+    clock: () => string,
+  ): Promise<DeliveryExecutionOutcome> {
+    const finishedAt = clock();
+
+    if (this.triggerPings && sendResult.providerReference) {
+      try {
+        await this.triggerPings({
+          delivery,
+          providerReference: sendResult.providerReference,
+          now: finishedAt,
+        });
+      } catch (error) {
+        deliveryLogger.warn("Urgent paging trigger failed for {deliveryId}", {
+          deliveryId: delivery.job.id,
+          destinationId: delivery.destination.id,
+          ...safeErrorProperties(error),
+        });
+      }
+    }
+
+    const recorded = await this.recordSucceeded(delivery, sendResult, startedAt, finishedAt);
+
+    if (recorded) {
+      deliveryLogger.info("Delivery {deliveryId} succeeded via {destinationKind}", {
+        deliveryId: delivery.job.id,
+        attemptId: delivery.attempt.id,
+        attemptNumber: delivery.attempt.attemptNumber,
+        eventId: delivery.event.id,
+        sourceId: delivery.source.id,
+        destinationId: delivery.destination.id,
+        destinationKind: delivery.destination.kind,
+        responseStatus: sendResult.statusCode,
+      });
+
+      return "succeeded";
+    }
+
+    // Both writes failed. Land a terminal failure whose message says the alert
+    // was delivered, so an operator does not resend it by hand, and never let
+    // this fallback throw out of the batch.
+    try {
+      await this.markFailed(delivery, {
+        error:
+          "The destination accepted the alert, but recording success failed. " +
+          "The alert was already delivered — do not resend it.",
+        errorKind: "unknown_error",
+        retryHint: "not_retryable",
+        startedAt,
+        finishedAt: clock(),
+      });
+    } catch (error) {
+      deliveryLogger.error("Delivery {deliveryId} succeeded but could not be recorded", {
+        deliveryId: delivery.job.id,
+        attemptId: delivery.attempt.id,
+        destinationId: delivery.destination.id,
+        ...safeErrorProperties(error),
+      });
+    }
+
+    return "failed";
+  }
+
+  /**
+   * `markSucceeded` updates by id and is idempotent, so one transient write
+   * failure may be retried before the delivery is declared unrecordable.
+   */
+  private async recordSucceeded(
+    delivery: ClaimedDelivery,
+    sendResult: Extract<DestinationSendResult, { ok: true }>,
+    startedAt: string,
+    finishedAt: string,
+  ): Promise<boolean> {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        await this.store.deliveries.markSucceeded({
+          deliveryId: delivery.job.id,
+          attemptId: delivery.attempt.id,
+          renderedPayload: sendResult.renderedPayload,
+          providerReference: sendResult.providerReference,
+          responseStatus: sendResult.statusCode ?? undefined,
+          responseBody: redactOptionalText(sendResult.responseBody),
+          startedAt,
+          finishedAt,
+        });
+
+        return true;
+      } catch (error) {
+        if (attempt === 1) {
+          deliveryLogger.error("Recording delivery {deliveryId} success failed", {
+            deliveryId: delivery.job.id,
+            attemptId: delivery.attempt.id,
+            destinationId: delivery.destination.id,
+            ...safeErrorProperties(error),
+          });
+        }
+      }
+    }
+
+    return false;
   }
 
   private async markFailed(
