@@ -38,8 +38,11 @@ export const ActiveSessionSummarySchema = z.object({
   createdAt: IsoDateTimeSchema,
   updatedAt: IsoDateTimeSchema,
   expiresAt: IsoDateTimeSchema,
-  ipAddress: z.string().min(1).nullable(),
-  userAgent: z.string().min(1).nullable(),
+  // Not `min(1)`: the auth runtime may store an empty string when the proxy
+  // forwarded no address, and one odd row must not turn the whole list into a
+  // 500 at the output boundary. The panel renders empty as "unknown".
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
   current: z.boolean(),
 });
 

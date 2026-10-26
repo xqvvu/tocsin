@@ -32,8 +32,10 @@ export class SessionSecurityService {
         createdAt: session.createdAt,
         updatedAt: session.updatedAt,
         expiresAt: session.expiresAt,
-        ipAddress: session.ipAddress,
-        userAgent: session.userAgent,
+        // Normalise empty strings to null so the panel's "unknown" fallback
+        // covers records written without a forwarded address or client.
+        ipAddress: session.ipAddress || null,
+        userAgent: session.userAgent || null,
         current: session.id === input.currentSessionId,
       })),
     };
