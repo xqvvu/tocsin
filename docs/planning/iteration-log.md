@@ -2,6 +2,58 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 109 轮）
+
+- 时间：2026-10-26 10:25 CST 起。
+- 基线：本轮开始时 `origin/main` @ `a239c64`；main CI success（`40257298881`、`40257298910`）；无 open PR。
+- 类型：**UI 评审切片 + requirements/architecture 车道**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 ≥27 分 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道：`requirements`（窄化 brief：ADR + Integrations，10 分钟上限）、`ui-triage`（必跑）、`ui-review`（triage 判定 `review_now`）、`architecture`（轮转，与 ui-review 并行占用第 3 名额）。
+- `ui-triage`：**`review_now`** —— 自 `last_ui_review_at` 2026-10-26 01:15 起有 3 个 UI 合并（#448 04:43、#450 08:54、#454 09:46），达到「≥3 个 UI 合并」强信号；且 3 条中 2 条无浏览器验证。距上次评审约 9.4h（<48h），但单项强信号成立即倾向评审。
+- `last_ui_review_at`：**2026-10-26 10:35 CST**（隔离实例 `localhost:6199` + 临时 SQLite；Chromium 1440×900 与 390×844；截图 `/tmp/tocsin-ui-109-*.png`，未提交仓库）。#454 因新库缺少「目标修改晚于投递」的历史数据，仅代码核实。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、浏览器复看均在会话工作树 `nervous-curran-e604de`。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #457 `fix(console): keep add-condition buttons at their own width`（UI-60，27 分）**：
+  - 根因：`components/ui/field.tsx:55` 的垂直 Field 用 `*:w-full` 强制所有直接子元素全宽，覆盖按钮自身的 `w-fit`。路由表单 6 处、静默表单 4 处「添加条件」按钮渲染成整行宽的空白条，看起来像待填写的空输入框。
+  - 修法：把按钮包进普通 `div`，由容器吸收强制宽度；按钮保持内容宽度（浏览器实测 112px）。
+  - 新增结构回归测试（路由 1 条、静默 1 条）：断言按钮不是 `[data-slot="field"]` 的直接子元素；jsdom 不计算 Tailwind 宽度，只能以 DOM 结构固定约束。
+  - 新增 PRD `docs/prd/add-condition-button-width.md`。
+  - 验证：`vp fmt --check`、`vp check`（0 error）、`vp run -r test`（4/4，console 1038 tests）、`vp run -r build` 全部通过；1440×900 与 390×844 浏览器复看通过。
+
+### 专家发现
+
+- `ui-review`（真实浏览器，30 分钟）：
+  1. **已交付（UI-60）**：路由「添加条件」按钮被 Field 拉满（`route-forms.tsx:812-823`、`field.tsx:55`）。
+  2. UI-61：无通知目标时「创建路由」禁用，原因在滚动区底部首屏不可见（`route-forms.tsx:703`、`routes-page.tsx:153`）。
+  3. UI-62：一次性 Token 提示条自建 `section` 而非 `Alert`，无 `role="status"`/`aria-live`；两个 `IconTooltip` 包裹带文字按钮，hint 语义重复（`source-token-notice-panel.tsx:40,46-48,52-72,82-84`）。
+  4. UI-63：路由名称 `required` 走浏览器原生校验，绕过本地化 `FieldError` 与 `data-invalid`（`route-forms.tsx:284`）。
+  5. UI-64：路由弹窗固定 `sm:w-[min(64rem,...)]`，单列输入行约 982px（`configuration-dialog-content.tsx:13`）。
+  6. UI-65：#454 的配置提示在未完成投递上用「本次投递完成」文案（`delivery-destination-config-notice.tsx:20`、`zh-Hans.json:181`）。
+  7. UI-21 复现：中文界面关闭按钮读屏仍为英文 `Close`（`components/ui/dialog.tsx:63`、`sheet.tsx`）。
+- `requirements`（ADR + Integrations，10 分钟）：**本轮无新候选**。ADR 0009（飞书加急）7 个决策全部落地、ADR 0001 模板显示变量已交付；Integrations 的操作缺口均已被 NEW-F/NEW-H/REQ-126/REQ-17/REQ-106/REQ-127/REQ-128 覆盖。新增一条 REQ-17 实现约束：去重键不看 ping 终态，窗口内 `failed` 的 ping 会挡住运维修好凭证后的再呼叫（`oncall.repository.ts:43-55`、`oncall.service.ts:111-115`）。
+- `architecture`（轮转，45 次调用）：新增 ARCH-55（`destination-notices.tsx` 330 行组件簇）与 ARCH-56（`feishu-dynamic-properties-field.tsx` 300 行组件簇）；复核 ARCH-5/23/45/8/13/14/33/52/9/17/26/30/51/54/1/2/3/16 仍成立。已修复项：导入扩展名、包别名、subpath 越界、service 抛 `ORPCError`、模块级单例、`components/common` 纯净度、i18n 命名空间约定均 clean。
+
+### EXPERT_PANEL
+
+- 本轮无高风险事项，未启动专家小组。
+- Q-231（「已送达但记账失败」的终态投递仍可手动 retry）保持下一轮第一优先，需要专家组在「`last_error` 哨兵（无迁移、可逆）」与「新增 `delivered_unrecorded` 列（更稳、需加法迁移）」之间裁决。
+
+### 发布评估
+
+- 本轮有用户可见修复 #457，满足「至少一个用户可见变更」；最终发布评估在合并后执行，结果见 `release` 提交中的补充记录。
+
+### 下一轮优先项
+
+1. Q-231：EXPERT_PANEL 裁决后用最小可逆方案实现，必须带回归测试。
+2. UI-61/62：禁用原因首屏可见 + Token 提示条 Alert 化与读屏播报。
+3. UI-63/65：原生校验绕过 FieldError；投递未完成时的时间文案。
+4. REL-16/23：required checks（token 已具 admin，属仓库设置变更，交 EXPERT_PANEL）。
+5. ARCH-5 与 ARCH-23/45/8/13：一批 AUTO_FIX 入口收缩。
+6. Q-228/Q-229：webhook body 流错误分类与搜索测试缺口。
+
 ## 2026-10-26（第 108 轮）
 
 - 时间：2026-10-26 09:26 CST 起。
