@@ -2,6 +2,50 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 117 轮）
+
+- 时间：2026-10-26 18:30 CST 起。
+- 基线：本轮开始时 `origin/main` @ `92cbbd2`；main CI success（`40307606134`）；无 open PR。
+- 类型：**需求切片 + 发布**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 里有 `REQ-268`（28）达到门槛且为第 116 轮指定第一优先，按第 1.5 步继续，不重跑全量审计。
+- 车道：`requirements` 按第 115 轮约定恢复窄化 brief（只读 RC checklist + post-MVP 候选方向，10 分钟硬边界），产出 2 条候选（REQ-269 / REQ-270），并已与 backlog 现有 id 去重。`ui-triage` 由编排者按日志事实裁决：**`defer`** —— `last_ui_review_at` 2026-10-26 10:35 CST（距今约 8 小时）；自上次评审**零**个新 UI 合并；未解决 UI candidate 均为第 109 轮结论；无 ≥48h / ≥3 UI 合并的强信号。第 3 个名额未用，本轮交付为既有 backlog 项 REQ-268。
+- `last_ui_review_at`：**2026-10-26 10:35 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `vigorous-chatterjee-de5843`（`vp install --frozen-lockfile --force` 补全半删的 `node_modules`）。轮末已清理该工作树的 `node_modules` 与 `agent-iteration`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+- 浏览器验证：本轮 UI 行为由组件测试覆盖（无本地 dev server 在运行），未做浏览器实测。
+
+### 本轮交付
+
+- **PR #485 `feat(console): disclose deletion impact before irreversible deletes`（REQ-268）**：
+  - 事实：三个删除对话框只写「相关投递也会级联删除」，不给数量；告警源删除还会销毁事件、尝试与加急呼叫（`migrate/schema.ts:65-66,114-119,143,165-197,228-229`），运维无法判断破坏面。
+  - 实现：新增只读 `sources/routes/destinations.previewDelete`，统一输出 `DeletionImpact`（事件 / 投递 / 尝试 / 加急）；`history.countDeletionImpact` 沿 SQLite 实际级联外键统计（告警源经 `events.source_id`，路由经 `deliveries.route_id`，目标经 `deliveries.destination_id`）。对话框打开即拉取，有历史时删除按钮禁用直到勾选确认；预览失败只提示、不阻断。
+  - 共享展示：`components/common/deletion-impact-notice.tsx` + `use-deletion-impact.ts`（请求函数由 feature 注入，`common` 不碰 oRPC）。
+  - 测试（+6 组断言）：仓储三目标计数与「删除后归零 / 兄弟实体不受影响」、服务预览未知 id 抛 NOT_FOUND、组件级「有历史必须勾选」与「无历史直接删除」；同步更新 oRPC auth inventory 与 i18n 键。
+  - PRD `docs/prd/deletion-impact-preview.md`。
+  - 验证：`vp fmt --write`、`vp check` 0 error（23 条既有 warning）、`vp run -r test`（189 文件 / **1070** 测试）、`vp run -r build` 通过。rebase 合并 `2fce9a4` + `7646894`（后者为自查修复：同步抛错的 loader 落入 error 态、移除未使用导出）。
+
+### requirements 候选（已写入 backlog）
+
+- **REQ-269（28）**：发布前真实部署的升级 / 回滚 / 恢复演练与可复核验收记录。证据 `docs/release/mvp-rc-checklist.md:227-229`（自认未在真实部署演练）、REQ-104 只覆盖备份/恢复 smoke、REL-52 的 0004 回滚例外从未实测。
+- **REQ-270（24）**：Deliveries 绝对时间窗（`from`/`until`）与事件详情一键带入。代码事实：`DeliveryListQuery` 只有 `since` 下界（`history.interface.ts:74-81`），全仓 `until` 零命中；可与 REQ-207 合并评审。
+
+### 发布评估与发布记录
+
+- 发布经理：**RELEASE**。`v0.1.0-beta.92..origin/main` 共 3 个提交，唯一用户可见变更是 #485（删除影响面预览），其余为测试与 docs；建议 `0.1.0-beta.93`。
+- 阻断审计：**APPROVE_RELEASE**。目标 main `7646894` 的 CI 与 E2E 均 success；`gh pr list --state open` 为空；`blocked-autonomous` 仅 REL-13/16/23（法务与仓库设置）；migrate 目录自 beta.92 零 diff；`v0.1.0-beta.93` 无冲突；#485 已 MERGED。
+- 运维/回滚：**APPROVE_DEPLOY**。Dockerfile、compose、环境变量、启动参数、锁文件、迁移目录全部零 diff；升级与回滚均只需换镜像，无需数据库操作。
+- 版本 PR #486 `chore(release): v0.1.0-beta.93`（rebase 合并 `8af1ace`）；main CI 与 E2E 均 success。**注意**：该 PR 同时带上了本轮 backlog 的 3 行新增（发布候选与 REQ-269/270），属于流程偏差，已在下一轮改进。
+- tag `v0.1.0-beta.93` 指向 `8af1ace`（= `origin/main`）；GitHub Release 为 prerelease，body 1085 chars。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.93`（linux/amd64 + linux/arm64，index digest `sha256:c16b0eb4c7a33ab891a4e5a5152020789ebac613bd9ebe5788f2a97c54fc1e8e`）；回滚 `0.1.0-beta.92`，无需数据库操作。构建在 `/tmp/tocsin-beta93-build`（tag 对应的干净检出）中进行，`--provenance=false --sbom=false`；`imagetools inspect` 确认两个平台都在。
+
+### 下一轮优先项
+
+1. UI-68 / UI-69：加急呼叫失败信号与目标停用前置提示（纯展示 + 需服务端汇总 DTO）。
+2. REQ-269（28）：升级 / 回滚 / 恢复演练；REQ-270（24）：Deliveries 绝对时间窗（可并入 REQ-207）。
+3. REQ-267（27）：投递历史名称快照，先交 EXPERT_PANEL 裁决迁移形状。
+4. UI-67 / UI-61 / UI-63：既有 UI candidate。
+5. 车道轮转：下一轮非必跑车道从 `docs-drift` 或 `security-exposure` 恢复（自第 109 轮后未跑）。
+
 ## 2026-10-26（第 116 轮）
 
 - 时间：2026-10-26 17:44 CST 起。
