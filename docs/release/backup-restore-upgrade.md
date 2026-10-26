@@ -139,8 +139,11 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 
 要点：
 
-- migration 在**容器启动时**执行（server entry 顶层 `await` 打开 store 后才开始服务）。迁移失败会让进程
-  直接退出，容器按 `restart: unless-stopped` 反复重启 —— 这时先看日志里的 migration 报错，别让它一直重启。
+- migration 在**容器启动时**执行（server entry 顶层 `await` 打开 store 后才开始服务）。bootstrap 阶段失败
+  **不会让进程退出**：Nitro 已开始监听，所有请求（含 `/api/ready`）返回通用 500，`restart: unless-stopped`
+  只处理进程退出、不会重启健康检查失败的容器；`start_period 20s + 3 × interval 30s` 后容器被标记
+  `unhealthy`。这时先看 `docker compose logs` 里的 `SqliteMigrationError`，不要等它自动重启（第 6 节有
+  2026-10-26 的实测记录）。
 - 升级前必须读一遍本版本的 release 说明，确认本次是否新增 migration step（第 2 节）。已应用的 migration
   不会重跑，修改旧 migration 对已有库无效。
 - 老镜像 tag 不要删，回滚要用。
@@ -165,9 +168,11 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
      旧构建在 bootstrap 阶段抛
      `SqliteMigrationError: SQLite database has applied migrations not present in this build: <versions>`
      （`apps/console/src/infra/sqlite/migrate/runner.ts` 的 `assertNoUnknownAppliedMigrations`）。
-     进程**不会退出**：HTTP 服务已开始监听，`/api/ready` 一律返回 500（响应体是通用的
-     `Server Error`，具体原因只在日志里），健康检查在 `start_period 20s + 3 × interval 30s` 后把容器
-     标记为 `unhealthy`；`restart: unless-stopped` 只处理进程退出，不会重启 unhealthy 容器。2026-10-26
+     进程**不会退出**：HTTP 服务已开始监听，但 bootstrap 抛错使**所有**请求（含 `/api/ready`）返回通用
+     500（响应体是 `Server Error`，具体原因只在日志里）；健康检查在 `start_period 20s + 3 × interval 30s`
+     后把容器标记为 `unhealthy`；`restart: unless-stopped` 只处理进程退出，不会重启 unhealthy 容器。
+     注意区分：进程正常起来后只是 checks 未通过时，`/api/ready` 返回 **503 + JSON `checks`**
+     （`apps/console/src/routes/api/ready.ts`），只有上面这种 bootstrap 失败才是通用 500。2026-10-26
      演练实测：`running=true health=unhealthy restarts=0`，140 秒后仍是该状态。因此**不要等它自己重启**，
      看到 `/api/ready` 持续 500 就去看日志并开始处置。
 

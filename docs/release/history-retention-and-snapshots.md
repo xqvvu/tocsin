@@ -5,7 +5,7 @@
 
 ## 一句话结论
 
-**delivery history 不自动清理（理由见 §1）；raw payload 仍按 `rawPayloadRetentionDays` 清理但已从接入热路径上摘掉（见 §2）；`#134` 是一个真缺陷 —— 改名 destination/route 会追溯改写历史投递的显示名（见 §3）。**
+**delivery history 不自动清理（理由见 §1）；raw payload 仍按 `rawPayloadRetentionDays` 清理，接入路径只剩有界批、积压 sweep 在响应路径外（见 §2）；`#134` 是一个真缺陷 —— 改名 destination/route 会追溯改写历史投递的显示名（见 §3）。**
 
 ---
 
