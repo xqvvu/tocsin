@@ -32,7 +32,7 @@ Tocsin 的 MVP 约束不变：单进程、SQLite-first、server-only 后端运�
 | `AuthServer`             | 默认 container 内懒加载 | Better Auth server runtime，通过 Kysely SQLite adapter 配置连接数据库，包含 HTTP handler 与 `api.getSession(...)`。                                                                                                                         |
 | `DeliveryWorkerRunner` | 默认 container 内单例   | 由 `DeliveryWorker` + store + destination registry + env worker 配置组装，维持 MVP 的 in-process SQLite-backed delivery worker。                                                                                                            |
 | `OncallWorkerRunner`   | 默认 container 内单例   | 由 `OncallWorker` + store + `UrgencyRegistry` + `DestinationConfigResolver` 组装，复用 `createDeliveryWorkerRunner`（它对队列形状无感知），维持加急队列的 in-process 轮询。                                                                 |
-| service factory        | 每次调用新建            | `createSourceService()`、`createDestinationService()`、`createRouteService()`、`createFeishuAppService()`、`createAppSettingsService()`、`createConfigPortabilityService()`、`createWebhookIntakeService()`、`createDeliveryWorker()`、`createOncallService()`、`createOncallWorker()`、`createSuppressionService()`、`createStorageHealthService()`、`createWorkerHealthService()`、`createEventReplayService()`、`createOperationsService()`、`createRuntimeInformationService()` 返回显式注入依赖的 service 实例。 |
+| service factory        | 每次调用新建            | `createSourceService()`、`createDestinationService()`、`createRouteService()`、`createFeishuAppService()`、`createAppSettingsService()`、`createConfigPortabilityService()`、`createWebhookIntakeService()`、`createDeliveryWorker()`、`createOncallService()`、`createOncallWorker()`、`createSuppressionService()`、`createSessionSecurityService()`、`createStorageHealthService()`、`createWorkerHealthService()`、`createEventReplayService()`、`createOperationsService()`、`createRuntimeInformationService()` 返回显式注入依赖的 service 实例。 |
 
 加急切片的接线要点：`createDeliveryWorker()` 在成功分支注入窄接口 `triggerPings`（由 `OncallService.triggerPingsForDelivery` 提供）；该依赖缺省时投递行为与加急之前完全一致，触发内部抛错也只记日志，不会把已成功的投递改判失败。`DestinationConfigResolver`（`server/integrations/destination-config-resolver.ts`）在投递发送、目标测试、加急执行三条路径上按 `app.appRef` 解析应用凭证后再交给 adapter，secret 不落库、不进 DTO。
 
@@ -94,6 +94,9 @@ apps/console/src/server/
     oncall-execution.ts
     oncall-worker.service.ts
   operations/event-replay.service.ts
+  security/
+    session-security.service.ts
+    session-security.service.types.ts
   intake/
     intake.service.ts
     webhook-request.ts

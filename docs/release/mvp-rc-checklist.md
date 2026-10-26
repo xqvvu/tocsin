@@ -137,8 +137,9 @@ post-MVP 中继续设计。dedupe cleanup 已改为有界批（见下方 D 节�
 - [x] 增加 health endpoint 与 readiness endpoint。
 - [x] Dockerfile 提供 runtime image、数据卷和 container healthcheck。
 - [x] docker compose 提供本地自托管试运行形态。
-- [x] 增加 release checklist：`docs/release/release-checklist.md`。首个 tag 是全人工流程，仓库没有 release
-      workflow、changelog 工具或既有 tag。
+- [x] 增加 release checklist：`docs/release/release-checklist.md`。切首个 tag 时是全人工流程（当时仓库还没有
+      release workflow、changelog 工具或 tag）；此后版本 tag 与 GitHub Release 均已由发布流程创建，完整列表以
+      `git tag --list` 为准。
 
 ### B. 文档
 

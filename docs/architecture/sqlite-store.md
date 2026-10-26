@@ -101,6 +101,7 @@ apps/console/src/infra/sqlite/
     oncall/
     suppression/
     history/
+    session/
     settings/
 ```
 
