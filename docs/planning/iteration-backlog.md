@@ -14,6 +14,7 @@
 
 | id | 标题 | 来源 | 评分 | 状态 | PR | 备注 |
 |---|---|---|---|---|---|---|
+| REL-57 | 发布 `0.1.0-beta.95` | release panel（第 121 轮） | — | shipped | #494 | tag `v0.1.0-beta.95` @ `1b32971`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.95`（amd64+arm64，index digest `sha256:a202bf2b17fa4106f1bc7deb0423ac11e5171cb1b3e67b28a860fd07edc625ae`）；回滚 `0.1.0-beta.94`，**无需数据库操作**；用户可见变更 #492（UI-70/71）、#493（UI-72）；无迁移 |
 | REL-56 | 发布 `0.1.0-beta.94` | release panel（第 119 轮） | — | shipped | #490 | tag `v0.1.0-beta.94` @ `2d73a7c`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.94`（amd64+arm64，index digest `sha256:929b3996…`）；回滚 `0.1.0-beta.93`，**无需数据库操作**；用户可见变更 #489（UI-63）；无迁移 |
 | REL-55 | 发布 `0.1.0-beta.93` | release panel（第 117 轮） | — | shipped | #486 | tag `v0.1.0-beta.93` @ `8af1ace`；GitHub Release（prerelease，body 1085 chars）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.93`（amd64+arm64，index digest `sha256:c16b0eb4…`）；回滚 `0.1.0-beta.92`，**无需数据库操作**；用户可见变更 #485（REQ-268）；无迁移 |
 | REQ-268 | 删除告警源 / 路由 / 通知目标前展示将被销毁的历史影响面并要求显式确认 | requirements lane（第 116 轮） | 28 | shipped | #485 | 第 117 轮实现：新增只读 `sources/routes/destinations.previewDelete`（统一 `DeletionImpact`：事件 / 投递 / 尝试 / 加急），计数在 `history` 仓储沿真实外键级联路径统计（`history.repository.ts:440-535`）；三个删除对话框打开即拉取预览，有历史时删除按钮保持禁用直到勾选确认；预览失败只提示不阻断。共享组件 `components/common/deletion-impact-notice.tsx` + `use-deletion-impact.ts`；PRD `docs/prd/deletion-impact-preview.md`；测试覆盖仓储三目标计数、删除后归零、未知 id NOT_FOUND、组件级确认门禁。无迁移 |
