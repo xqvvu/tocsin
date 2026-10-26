@@ -40,6 +40,25 @@ export class SqliteOncallRepository implements OncallRepository {
 
       await pruneOncallDedupeKeys(context.db, input.dedupeWindowStartsAt);
 
+      // A card resend is the same delivery, not a new alert. Any ping already
+      // recorded for this delivery and receiver — whatever its state — proves
+      // the receiver was paged; `failed` is ambiguous because a placed call
+      // whose terminal state could not be persisted is also recorded as
+      // `failed`. Ringing again is irreversible, so stay pinned and leave a
+      // deliberate re-page to the manual buzz path.
+      if (input.dedupeByDelivery) {
+        const alreadyPaged = await context.db
+          .selectFrom("oncall_pings")
+          .select("id")
+          .where("delivery_id", "=", input.deliveryId)
+          .where("receiver", "=", input.receiver)
+          .executeTakeFirst();
+
+        if (alreadyPaged) {
+          return null;
+        }
+      }
+
       const existing = await findOncallDedupeKey(
         context.db,
         {
