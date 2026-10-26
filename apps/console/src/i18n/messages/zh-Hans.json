@@ -252,6 +252,7 @@
   "deliveries.detail.rawPruned.description": "该事件的原始载荷已按保留策略清理，渲染载荷仍然保留",
   "deliveries.detail.rawPruned.title": "原始载荷已清理",
   "deliveries.detail.retry.action": "重试投递",
+  "deliveries.detail.retry.blockedByAccepted": "目标已受理，禁止重试",
   "deliveries.detail.retry.failureTitle": "重试失败",
   "deliveries.detail.retry.successTitle": "投递已重新入队",
   "deliveries.detail.routeEvidence.currentMismatch": "当前规则已不再命中该事件——本次投递按当时生效的规则执行",

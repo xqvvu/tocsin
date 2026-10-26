@@ -176,3 +176,19 @@ export class InvalidDeliveryStateError extends SqliteError {
     super(`Cannot ${operation} delivery ${deliveryId} while it is ${state}`);
   }
 }
+
+/**
+ * Raised when a retry would resend an alert the destination already accepted.
+ *
+ * The delivery is terminal `failed` only because its success could not be
+ * recorded locally; the send itself succeeded, so re-queuing it would page
+ * on-call twice. See `DELIVERY_ACCEPTED_UNRECORDED_ERROR` in `@tocsin/core`.
+ */
+export class DeliveryAlreadyAcceptedError extends SqliteError {
+  constructor(deliveryId: string) {
+    super(
+      `Delivery ${deliveryId} was already accepted by the destination; ` +
+        "retrying it would send the alert again",
+    );
+  }
+}

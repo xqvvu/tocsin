@@ -252,6 +252,7 @@
   "deliveries.detail.rawPruned.description": "The retention policy cleared this event's raw payload, the rendered payload is still available",
   "deliveries.detail.rawPruned.title": "Raw payload pruned",
   "deliveries.detail.retry.action": "Retry delivery",
+  "deliveries.detail.retry.blockedByAccepted": "Already accepted by the destination — retry disabled",
   "deliveries.detail.retry.failureTitle": "Retry failed",
   "deliveries.detail.retry.successTitle": "Delivery queued for retry",
   "deliveries.detail.routeEvidence.currentMismatch": "The current rule no longer matches this event — this delivery ran under the rule in force at the time",

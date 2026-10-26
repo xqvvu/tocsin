@@ -3,6 +3,7 @@ import { sql } from "kysely";
 import {
   encodeJson,
   formatSuppressionReason,
+  isDeliveryAcceptedUnrecorded,
   redactEventRecord,
   redactText,
   selectSuppressionForDelivery,
@@ -45,7 +46,10 @@ import type {
   SummarizeClaimableDeliveriesInput,
   SummarizeClaimableDeliveriesResult,
 } from "#/infra/sqlite/repositories/delivery/delivery.interface";
-import { InvalidDeliveryStateError } from "#/infra/sqlite/repositories/delivery/delivery.interface";
+import {
+  DeliveryAlreadyAcceptedError,
+  InvalidDeliveryStateError,
+} from "#/infra/sqlite/repositories/delivery/delivery.interface";
 import {
   destinationMetadataFromRuntime,
   destinationSummaryFromRuntime,
@@ -467,6 +471,13 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
 
       if (current.state !== "failed") {
         throw new InvalidDeliveryStateError(input.deliveryId, current.state, "retry");
+      }
+
+      // The state is `failed` only because the success write failed twice; the
+      // destination already accepted the alert. Re-queuing it would page
+      // on-call a second time, so refuse before touching the row.
+      if (isDeliveryAcceptedUnrecorded(current.lastError)) {
+        throw new DeliveryAlreadyAcceptedError(input.deliveryId);
       }
 
       await context.db

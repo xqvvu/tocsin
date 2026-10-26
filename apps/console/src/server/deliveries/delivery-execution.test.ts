@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { DeliveryJob } from "@tocsin/core";
+import { DELIVERY_ACCEPTED_UNRECORDED_ERROR, type DeliveryJob } from "@tocsin/core";
 import type { DestinationRegistry, DestinationSendContext } from "@tocsin/destinations";
 
 import type {
@@ -525,7 +525,9 @@ describe("delivery execution", () => {
         deliveryId: "delivery-1",
         attemptId: "attempt-1",
         retryAt: null,
-        error: expect.stringContaining("already delivered"),
+        // The same constant the retry guard reads; a copy that drifts would
+        // turn this terminal state back into a retryable one.
+        error: DELIVERY_ACCEPTED_UNRECORDED_ERROR,
       }),
     ]);
     expect(triggered).toHaveLength(1);

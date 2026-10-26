@@ -100,7 +100,11 @@ export function EventDetailDeliveriesTable({
                     <EventDetailDeliverySuppressionCell delivery={delivery} />
                   </TableCell>
                   <TableCell>
-                    <DeliveryRetryButton id={delivery.id} state={delivery.state} />
+                    <DeliveryRetryButton
+                      id={delivery.id}
+                      state={delivery.state}
+                      lastError={delivery.lastError}
+                    />
                   </TableCell>
                 </TableRow>
               ))

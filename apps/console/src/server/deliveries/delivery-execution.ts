@@ -1,6 +1,11 @@
 import { getLogger } from "@logtape/logtape";
 
-import { redactJsonText, redactNormalizedEvent, redactText } from "@tocsin/core";
+import {
+  DELIVERY_ACCEPTED_UNRECORDED_ERROR,
+  redactJsonText,
+  redactNormalizedEvent,
+  redactText,
+} from "@tocsin/core";
 import type {
   DestinationErrorKind,
   DestinationRetryHint,
@@ -198,9 +203,7 @@ export class DeliveryExecution {
     // this fallback throw out of the batch.
     try {
       await this.markFailed(delivery, {
-        error:
-          "The destination accepted the alert, but recording success failed. " +
-          "The alert was already delivered — do not resend it.",
+        error: DELIVERY_ACCEPTED_UNRECORDED_ERROR,
         errorKind: "unknown_error",
         retryHint: "not_retryable",
         startedAt,

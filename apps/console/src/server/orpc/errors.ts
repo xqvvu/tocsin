@@ -2,7 +2,10 @@ import { type AnyORPCError, ORPCError } from "@orpc/server";
 import { z } from "zod";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
-import { InvalidDeliveryStateError } from "#/infra/sqlite/repositories/delivery/delivery.interface";
+import {
+  DeliveryAlreadyAcceptedError,
+  InvalidDeliveryStateError,
+} from "#/infra/sqlite/repositories/delivery/delivery.interface";
 import { DomainValidationError } from "#/server/runtime/domain-errors";
 
 /**
@@ -48,6 +51,13 @@ export function toContractError(error: unknown): AnyORPCError | null {
   }
 
   if (error instanceof InvalidDeliveryStateError) {
+    return new ORPCError("CONFLICT", {
+      message: error.message,
+      cause: error,
+    });
+  }
+
+  if (error instanceof DeliveryAlreadyAcceptedError) {
     return new ORPCError("CONFLICT", {
       message: error.message,
       cause: error,
