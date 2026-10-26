@@ -44,9 +44,14 @@
 ### 发布评估与发布记录
 
 - 发布经理：RELEASE。`v0.1.0-beta.86..9fb5ace` 共 3 个提交，其中 2 个用户可见修复（#463 无障碍/提示条、#464 失败行证据），1 个纯 docs；建议 `0.1.0-beta.87`。
-- 阻断审计：见下（待回填）。
+- 阻断审计：APPROVE_RELEASE。5 项门禁全 PASS —— main CI 双绿覆盖 `9fb5ace`（`40270137526`、`40270137556`；`0e81002` 的运行被新 push 取代记为 cancelled，非失败）；open PR 仅本轮日志 PR；无必修复回归（`blocked-autonomous` 仅 REL-13 / REL-16 / REL-23，属法律与仓库设置）；迁移零改动；`v0.1.0-beta.87` 无冲突。
 - 运维/回滚：APPROVE_DEPLOY。无迁移、无环境变量/配置格式/启动参数/Dockerfile/compose 变化；升级直接换镜像；回滚只需换回 `0.1.0-beta.86`（`sha256:d03ba112…`），无 DB 操作。
 - 门禁：`origin/main` @ `9fb5ace` CI 双绿（`40270137526` check、`40270137556` playwright）；无 open PR；`v0.1.0-beta.87` 无冲突。
+- 版本 PR #466 `chore(release): v0.1.0-beta.87`（rebase 合并 `927ed36`）；main CI 双绿（`40271185737` check、`40271185763` playwright）。
+- tag `v0.1.0-beta.87` 指向 `927ed36`（= `origin/main`）；GitHub Release 为 prerelease，body 941 chars。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.87`（linux/amd64 + linux/arm64，index digest `sha256:1c9b5bde450d83bbba07045a90dac72175f658a3be832af572aa3fefd8c654c4`）；回滚 `0.1.0-beta.86`（index digest `sha256:d03ba112…`）。构建在 tag 对应的干净检出中进行，`--provenance=false --sbom=false`。
+- 无迁移、无环境变量/配置格式/启动参数/镜像构建变化；回滚只需换回旧镜像 tag。
+- 最近 10 个 tag 与 GitHub Release 一一对齐，无需补建。
 
 ### 下一轮优先项
 
