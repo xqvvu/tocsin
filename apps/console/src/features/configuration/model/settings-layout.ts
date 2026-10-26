@@ -1,6 +1,12 @@
 /**
- * The Settings "UI" tab stacks the operational overview, the runtime facts,
- * the preferences form, and the account-security panel in one column.
+ * The Settings "UI" tab stacks the operational overview, the writable delivery
+ * and account-security controls, the runtime facts, worker health, storage
+ * facts, and the preferences form in one column.
+ *
+ * Account security sits directly after delivery pause, before the read-only
+ * diagnostics: "sign out other devices" is incident response and has to be on
+ * the first screen at 1440×900, not behind a scroll past runtime and storage
+ * facts.
  *
  * The stack is taller than the panel at both 390×844 and 1440×900. It used to
  * clip the overflow at `sm` and above because it was assumed to fit once the
