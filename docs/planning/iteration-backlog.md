@@ -14,6 +14,7 @@
 
 | id | 标题 | 来源 | 评分 | 状态 | PR | 备注 |
 |---|---|---|---|---|---|---|
+| REL-62 | 发布 `0.1.0-beta.100` | release panel（第 127 轮） | — | shipped | #516 | tag `v0.1.0-beta.100` @ `9623883`；GitHub Release（prerelease，body 1358 字符）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.100`（amd64+arm64，index digest `sha256:ae87503fd48509aeab692d4e1af3fe55e13904a912844beee5e210200766eda0`）；回滚 `0.1.0-beta.99`，**无需数据库操作**；用户可见变更 #515（REQ-32 解析失败可见性）；无迁移、无依赖、无 env 变化 |
 | ARCH-63 | `session` 仓储缺 `.helpers.ts` 拆分，行映射内联在实现类 | architecture lane（第 127 轮） | 24 | candidate | — | AGENTS.md 要求仓储按 `*.interface.ts` / `*.helpers.ts` / `*.repository.ts` 三分；`repositories/session/` 只有 interface + repository，映射直接写在类内（`session.repository.ts:22`）。纯搬移、无行为改变（AUTO_FIX） |
 | ARCH-64 | providers 共享 adapter DSL 未进 `shared/`，且 `shared/` 缺 barrel | architecture lane（第 127 轮） | 22 | candidate | — | `Adapter` / `ParseInput` / `ParseResult` 定义在包根 `packages/providers/src/utils.ts:1`，被 `registry.ts:17` 与 5 个 adapter 共 10 处导入；`providers/src/shared/` 无 `index.ts`，与 `destinations/src/shared/index.ts` 形状不一致。移动需同批改 10 处 `#providers/utils` 导入（AUTO_FIX，独立 chore） |
 | ARCH-65 | public procedure 直接使用模块级 container，绕过 service 注入 | architecture lane（第 127 轮） | 18 | candidate | — | `server/orpc/features/session/router.ts:42` 与 `i18n/router.ts:16` 直接 `getApplicationContainer()`；public probe 没有 request-scoped container，属一致性缺口而非错误。若要统一需 `withPublicService` 工厂，或在 AGENTS 写明 public probe 例外（仅记录） |

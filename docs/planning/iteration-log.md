@@ -2,6 +2,66 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 127 轮）
+
+- 时间：2026-10-27 05:52 CST 起。
+- 基线：本轮开始时 `origin/main` @ `3e6df97`（v0.1.0-beta.99 后的日志提交），CI 与 E2E 均 success；无 open PR。
+- 类型：**需求垂直切片 + 轮转车道审计**（非 full-audit）。
+- 全量审计时间戳：**2026-10-26 21:45 CST（未变，第 120 轮）**；距本轮约 8 小时，但 backlog 有多个 ≥27 候选，按第 1.5 步规则继续，不重跑全量审计。
+- 车道（3 并发，未超上限）：`requirements`（必跑，12 分钟窄化 brief）、`ui-triage`（必跑，read-only）、`architecture`（轮转；`release-infra` 第 126 轮已跑）。
+- `ui-triage` 决策：**`defer`** —— 距上次真实浏览器评审 1h48m（2026-10-27 04:05），自那以后仅 1 个 UI 路径合并（`910a6e0` #510），低于 ≥3 阈值；43 个未解决 UI candidate 属存量；UI-77/78/79 本身就是 2 小时前浏览器实测产物。**下一轮触发条件**：本轮新增了列表徽标与详情提示，下一轮应直接 `review_now`，重点覆盖 `event-title-cell.tsx`、`event-parse-failure-notice.tsx`、#510 投递健康列，视口 1440×900 与 390×844。
+- `last_ui_review_at`：**2026-10-27 04:05 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树 `amazing-lamport-3b2942`。
+- 浏览器验证：本轮未起浏览器实例；新增 UI 由 jsdom 组件测试与仓储回归测试覆盖，真实浏览器验证排入下一轮 UI 评审。
+
+### 专家发现
+
+**requirements（必跑）：无新候选。** 按「真实运维工作流衔接」与「列表一致性」深挖，并复核文档承诺；核对后判定为重复的方向：投递健康列 → Deliveries 下钻（REQ-59，建议作为范围收紧）、告警源沉默/最近接收（REQ-9）、配置列表排序（REQ-30）、重试耗尽文案（REQ-58 已 shipped）、会话安全面板剩余缺口（UI-77/78/79，且 PRD 明确非目标）、接入限流/维护窗口/自监控（REQ-255/NEW-AU/NEW-AX）。另指出 REQ-274 标题「最近登录记录与单会话撤销」与已交付范围不符，属 backlog 行准确性，未新开条目。
+
+**ui-triage（必跑）：`defer`。** 三个强信号全部不成立（48h、≥3 UI 合并、≥2 新登记未复看）；唯一缺口是 #510 投递健康列只有 jsdom 验证，单个合并未达既有先例门槛。
+
+**architecture（轮转，全部代码核实）：3 条低风险发现**
+
+- **ARCH-63（24，AUTO_FIX）**：`repositories/session/` 缺 `.helpers.ts`，行映射内联在实现类（`session.repository.ts:22`），是 11 个仓储模块里唯一破坏三分形状的。
+- **ARCH-64（22，AUTO_FIX）**：provider 共享 adapter DSL 留在包根 `packages/providers/src/utils.ts:1`，被 `registry.ts:17` 与 5 个 adapter 共 10 处导入；`providers/src/shared/` 无 barrel，与 destinations 形状不一致。
+- **ARCH-65（18，仅记录）**：`session/router.ts:42`、`i18n/router.ts:16` 的 public probe 直接 `getApplicationContainer()`，没有 request-scoped container，属一致性缺口而非错误。
+- 核实为 clean：service 纯度（零 `ORPCError`）、entrypoint 厚度、无模块级 service 单例、container 无请求级数据、`components/common` 无业务依赖、`packages/core` 与 `api` 的 import 边界、feature `api/model/ui` 形状、adapter barrel 形状。
+
+### 本轮交付
+
+- **PR #515 `feat(console): surface parser-rejected events in the list and detail`**（REQ-32，垂直切片，rebase 合并 `16fefba`）：
+  - `@tocsin/core` 新增 `ParseFailureMetadata` 与 `parseFailureMetadataFrom`（容错提取；损坏值返回 `null`）。
+  - `EventListItem`（core 接口 + `@tocsin/api` schema）增加 `parseFailed`；仓储在既有 select 中多取 `provider_metadata_json` 并投影，损坏 JSON 降级为 `false`。
+  - 列表标题单元格新增「解析失败」徽标；详情在摘要与标签页之间新增「告警解析失败」提示（本地化原因、错误类型/信息、载荷哈希），并链接 `/events?q=parse_failed`（复用既有全文搜索，无新 URL 维度）。
+  - 测试 4 个文件：core 提取、仓储投影（含损坏 JSON）、列表徽标、详情提示；PRD `docs/prd/parse-failure-visibility.md`。
+  - 验证：`vp check` 0 error / 23 条既有 warning；`vp run -r test` 4/4 成功（console 200 文件 / **1108** 测试）；`vp run -r build` 通过。
+  - CI 首次在 `Install system deps` 卡住约 9 分钟，`gh run cancel` + `rerun` 后通过（已知 GitHub Actions 抖动）。
+- backlog：REQ-32 → shipped #515；新增 ARCH-63/64/65、REL-62。
+
+### EXPERT_PANEL
+
+- 本轮切片为只读 DTO 增量 + 展示层，无 schema/迁移/投递语义变化，不需要专家小组。
+
+### 发布评估与发布记录
+
+- 三位发布专家独立评估，**一致放行**（`v0.1.0-beta.99..origin/main`）：
+  - **发布经理**：唯一用户可见变更是 #515（`16fefba`），其余 3 个提交为 docs/planning；建议 `0.1.0-beta.100`。
+  - **阻断审计**：`793b6f5` 与 `9623883` 的 CI/E2E 均 success；0 open PR；迁移目录零 diff；`v0.1.0-beta.100` 未被占用；`blocked-autonomous` 仅 REL-13/16/23（仓库设置/法务），不阻断；无未修复回归。
+  - **运维/回滚**：Dockerfile、compose、workflows、依赖、迁移均无改动；回滚只需切回 `0.1.0-beta.99` 镜像，无需数据库操作；无新敏感数据出口。
+- PR **#516 `chore(release): v0.1.0-beta.100`**（rebase 合并 `9623883`）；CI 与 E2E 均 success。
+- tag `v0.1.0-beta.100` @ `9623883`；GitHub Release 为 prerelease，body 非空（1358 字符）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.100`（linux/amd64 + linux/arm64，index digest `sha256:ae87503fd48509aeab692d4e1af3fe55e13904a912844beee5e210200766eda0`；`--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.99`（digest `sha256:ff371525…`），无需数据库操作。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 下一轮优先项
+
+1. **UI 评审 `review_now`**：覆盖本轮新增的列表徽标与详情提示、#510 投递健康列，视口 1440×900 与 390×844。
+2. Q-279：`deliveries(destination_id)` forward-only 加法迁移与迁移测试（EXPERT_PANEL）。
+3. REQ-59 范围收紧：投递健康列 → 过滤后 Deliveries 一键下钻（复用现有 URL 参数）。
+4. UI-77/78/79：设置页账号安全面板与窄屏会话表。
+5. ARCH-63/64：两个无行为改变的仓储/共享模块整理。
+6. 车道轮转：下一轮非必跑车道从 `security-exposure` 或 `quality` 继续（architecture 本轮已跑）。
+
 ## 2026-10-27（第 126 轮）
 
 - 时间：2026-10-27 04:45 CST 起。
