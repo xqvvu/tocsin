@@ -391,6 +391,7 @@
   "deliveries.table.previous": "上一页",
   "deliveries.table.range": "{total} 条投递",
   "deliveries.table.receipt.copy": "复制外部引用",
+  "deliveries.table.retriesExhausted": "重试耗尽",
   "deliveries.table.retry": "重试投递",
   "deliveries.table.title": "投递任务",
   "deliveries.table.unknownKind": "未知通知目标类型",

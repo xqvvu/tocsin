@@ -65,6 +65,7 @@ function deliveryRow(
     providerReference: null,
     state: "failed",
     attemptCount: 2,
+    maxAttempts: 3,
     nextAttemptAt: null,
     lastError: "connection reset",
     createdAt: "2026-10-21T09:55:00.000Z",

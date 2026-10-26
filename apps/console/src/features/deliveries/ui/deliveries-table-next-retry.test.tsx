@@ -43,6 +43,41 @@ describe("deliveries table next retry", () => {
     expect(screen.getAllByRole("cell")[5]?.textContent).toBe("—");
   });
 
+  it("shows the attempt count against the retry budget", () => {
+    renderTable([deliveryRow({ attemptCount: 2, maxAttempts: 3 })]);
+
+    expect(screen.getByText("2/3")).toBeTruthy();
+  });
+
+  it("labels a failure that spent its entire retry budget", () => {
+    renderTable([deliveryRow({ state: "failed", attemptCount: 3, maxAttempts: 3 })]);
+
+    expect(screen.getByText("Retries exhausted")).toBeTruthy();
+  });
+
+  it("keeps a scheduled retry from reading as exhausted", () => {
+    renderTable([
+      deliveryRow({
+        state: "pending",
+        attemptCount: 3,
+        maxAttempts: 3,
+        nextAttemptAt: "2026-10-24T02:00:00.000Z",
+      }),
+    ]);
+
+    expect(screen.queryByText("Retries exhausted")).toBeNull();
+    expect(formatOf("2026-10-24T02:00:00.000Z")).toBe("dateTime");
+  });
+
+  it("keeps the dash when a terminal failure still had budget left", () => {
+    // A non-retryable error also ends in `failed`, but the operator can still
+    // retry by hand, so the column must not claim the budget is gone.
+    renderTable([deliveryRow({ state: "failed", attemptCount: 1, maxAttempts: 3 })]);
+
+    expect(screen.queryByText("Retries exhausted")).toBeNull();
+    expect(screen.getAllByRole("cell")[5]?.textContent).toBe("—");
+  });
+
   it("clips a cross-day timestamp inside its fixed-width column", () => {
     renderTable([deliveryRow({ nextAttemptAt: "2026-10-24T02:00:00.000Z" })]);
 
@@ -92,6 +127,7 @@ function deliveryRow(
     providerReference: null,
     state: "failed",
     attemptCount: 2,
+    maxAttempts: 3,
     nextAttemptAt: null,
     lastError: "connection reset",
     createdAt: "2026-10-21T09:55:00.000Z",

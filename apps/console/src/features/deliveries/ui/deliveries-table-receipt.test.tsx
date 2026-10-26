@@ -79,6 +79,7 @@ function deliveryRow(
     providerReference: null,
     state: "succeeded",
     attemptCount: 1,
+    maxAttempts: 3,
     nextAttemptAt: null,
     lastError: null,
     createdAt: "2026-10-23T09:55:00.000Z",

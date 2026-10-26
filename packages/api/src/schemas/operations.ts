@@ -135,6 +135,9 @@ export const DeliveryListItemSchema = z.object({
   providerReference: ProviderReferenceSchema.nullable(),
   state: DeliveryStateSchema,
   attemptCount: z.number().int().min(0),
+  // The retry budget, so the list can render `attemptCount / maxAttempts` and
+  // an operator can tell "backing off" from "out of retries" at a glance.
+  maxAttempts: z.number().int().min(1),
   nextAttemptAt: IsoDateTimeSchema.nullable(),
   lastError: z.string().nullable(),
   // The default list basis. Without it the table can only show `updatedAt`

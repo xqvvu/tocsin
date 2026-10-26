@@ -230,6 +230,7 @@ describe("delivery schemas expose destinationKind", () => {
     providerReference: null,
     state: "pending" as const,
     attemptCount: 0,
+    maxAttempts: 3,
     nextAttemptAt: null,
     lastError: null,
     createdAt: NOW,

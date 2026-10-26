@@ -351,6 +351,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
         "deliveries.provider_ref_value as provider_ref_value",
         "deliveries.state as state",
         "deliveries.attempt_count as attempt_count",
+        "deliveries.max_attempts as max_attempts",
         "deliveries.next_attempt_at as next_attempt_at",
         "deliveries.last_error as last_error",
         "deliveries.created_at as created_at",
@@ -425,6 +426,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
         providerReference: providerReferenceFromRow(row),
         state: row.state,
         attemptCount: row.attempt_count,
+        maxAttempts: row.max_attempts,
         nextAttemptAt: row.next_attempt_at,
         // Legacy rows may predate value-shape redaction, so re-check on read.
         lastError: redactNullableText(row.last_error),

@@ -391,6 +391,7 @@
   "deliveries.table.previous": "Previous",
   "deliveries.table.range": "{total, plural, one {# delivery} other {# deliveries}}",
   "deliveries.table.receipt.copy": "Copy external reference",
+  "deliveries.table.retriesExhausted": "Retries exhausted",
   "deliveries.table.retry": "Retry delivery",
   "deliveries.table.title": "Delivery jobs",
   "deliveries.table.unknownKind": "Unknown destination type",

@@ -72,6 +72,7 @@ function deliveryRow(): Operations["deliveries"]["items"][number] {
     providerReference: null,
     state: "succeeded",
     attemptCount: 1,
+    maxAttempts: 3,
     nextAttemptAt: null,
     lastError: null,
     createdAt,

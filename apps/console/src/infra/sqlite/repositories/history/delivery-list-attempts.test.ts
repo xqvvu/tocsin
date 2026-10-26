@@ -86,6 +86,92 @@ async function repositoryWithAttempts(): Promise<
   return createSqliteRepositories(new SqliteRepositoryContext({ db })).history;
 }
 
+describe("delivery list retry budget", () => {
+  it("projects each row's retry budget beside its attempt count", async () => {
+    const db = createSqliteDatabase({ databasePath: ":memory:" });
+    await migrateSqliteDatabase(db);
+    const repository = createSqliteRepositories(new SqliteRepositoryContext({ db })).history;
+
+    await db
+      .insertInto("sources")
+      .values({
+        id: "src-1",
+        name: "Prometheus",
+        provider: "generic",
+        token_hash: "hash",
+        created_at: NOW,
+        updated_at: NOW,
+      })
+      .execute();
+    await db
+      .insertInto("destinations")
+      .values({
+        id: "dest-1",
+        name: "Ops webhook",
+        kind: "generic_webhook",
+        created_at: NOW,
+        updated_at: NOW,
+      })
+      .execute();
+    await db
+      .insertInto("events")
+      .values({
+        id: "evt-1",
+        source_id: "src-1",
+        fingerprint: "fp-1",
+        severity: "critical",
+        status: "firing",
+        title: "Disk full",
+        message: "disk full",
+        labels_json: "{}",
+        normalized_json: "{}",
+        provider_metadata_json: "{}",
+        raw_payload_json: "{}",
+        raw_headers_json: "{}",
+        received_at: NOW,
+        occurred_at: NOW,
+        created_at: NOW,
+      })
+      .execute();
+    await db
+      .insertInto("deliveries")
+      .values([
+        {
+          id: "del-spent",
+          event_id: "evt-1",
+          destination_id: "dest-1",
+          state: "failed" as const,
+          attempt_count: 3,
+          // Kysely fills a key missing from only some rows with NULL instead
+          // of the column default, so spell out the schema default here.
+          max_attempts: 3,
+          created_at: "2026-10-12T09:00:00.000Z",
+          updated_at: "2026-10-12T09:00:00.000Z",
+        },
+        {
+          id: "del-widened",
+          event_id: "evt-1",
+          destination_id: "dest-1",
+          state: "pending" as const,
+          attempt_count: 3,
+          max_attempts: 5,
+          created_at: "2026-10-12T10:00:00.000Z",
+          updated_at: "2026-10-12T10:00:00.000Z",
+        },
+      ])
+      .execute();
+
+    const page = await repository.listDeliveries();
+
+    // The UI renders `attemptCount/maxAttempts`; a missing budget would make
+    // an exhausted row and a manually retried row indistinguishable.
+    expect(page.items.map((item) => [item.id, item.attemptCount, item.maxAttempts])).toEqual([
+      ["del-widened", 3, 5],
+      ["del-spent", 3, 3],
+    ]);
+  });
+});
+
 describe("delivery list attempt-count filter", () => {
   it("returns every delivery when no bound is set", async () => {
     const repository = await repositoryWithAttempts();
