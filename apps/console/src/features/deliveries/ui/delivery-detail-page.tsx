@@ -64,7 +64,13 @@ function DeliveryDetailPageToolbar({
               state={detail.job.state}
             />
           ) : null}
-          {detail ? <DeliveryRetryButton id={detail.job.id} state={detail.job.state} /> : null}
+          {detail ? (
+            <DeliveryRetryButton
+              id={detail.job.id}
+              state={detail.job.state}
+              lastError={detail.job.lastError}
+            />
+          ) : null}
           {detail ? <DeliveryEvidenceDownload detail={detail} /> : null}
           <Link
             to="/deliveries"

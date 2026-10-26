@@ -1,5 +1,7 @@
 import { RiEyeLine, RiRestartLine } from "@remixicon/react";
 
+import { isDeliveryAcceptedUnrecorded } from "@tocsin/core";
+
 import { IconTooltip } from "#/components/common/icon-tooltip";
 import { Button } from "#/components/ui/button";
 import type { Operations } from "#/features/operations/model/operation-types";
@@ -19,10 +21,13 @@ export function DeliveryActions({
   const t = useTranslations();
   const retryLabel = t("deliveries.table.retry");
   const inspectLabel = t("deliveries.table.inspect");
+  // A retry would resend an alert the destination already accepted; the
+  // last-error column carries the explanation, so the icon is omitted.
+  const canRetry = delivery.state === "failed" && !isDeliveryAcceptedUnrecorded(delivery.lastError);
 
   return (
     <div className="flex justify-center gap-1">
-      {delivery.state === "failed" ? (
+      {canRetry ? (
         <IconTooltip label={retryLabel}>
           <Button
             type="button"

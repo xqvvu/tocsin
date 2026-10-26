@@ -76,6 +76,15 @@ Q-30 的决策记录已明确把本项拆出单独裁决，理由是：投递成
 从「任意一次写失败」收窄到「两次写 + 兜底写全部失败或崩溃」。
 终态 `failed` 仍可人工重试（`delivery-retry-button.tsx`），唯一闸门是 `last_error` 的明确措辞。
 
+## 后续（第 110 轮）
+
+「终态 `failed` 仍可人工重试」已被修复：`@tocsin/core` 暴露
+`DELIVERY_ACCEPTED_UNRECORDED_ERROR` 与 `isDeliveryAcceptedUnrecorded`，
+写入端、仓储与 UI 共用；`retryNow` 在该终态抛
+`DeliveryAlreadyAcceptedError`（oRPC 映射为 `CONFLICT`），
+详情页与列表不再提供重试动作。无迁移，存量行按同一文案自动受保护。
+详见 `docs/prd/delivery-accepted-retry-guard.md`。
+
 ## 回滚
 
 单提交 revert，无迁移、无 schema、无配置、无依赖变化；已落终态的行保持 `failed`，

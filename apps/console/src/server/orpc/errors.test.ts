@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { CreateSourceCommandSchema } from "@tocsin/core";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
-import { InvalidDeliveryStateError } from "#/infra/sqlite/repositories/delivery/delivery.interface";
+import {
+  DeliveryAlreadyAcceptedError,
+  InvalidDeliveryStateError,
+} from "#/infra/sqlite/repositories/delivery/delivery.interface";
 import type { ApplicationContainer } from "#/server/runtime/container";
 import { DomainValidationError } from "#/server/runtime/domain-errors";
 
@@ -15,8 +18,11 @@ const fakeContainer = {
     },
   }),
   createOperationsService: async () => ({
-    retryDelivery: async () => {
-      throw new InvalidDeliveryStateError("delivery-1", "succeeded", "retry");
+    retryDelivery: async (deliveryId: string) => {
+      if (deliveryId === "delivery-accepted") {
+        throw new DeliveryAlreadyAcceptedError(deliveryId);
+      }
+      throw new InvalidDeliveryStateError(deliveryId, "succeeded", "retry");
     },
   }),
   createSuppressionService: async () => ({
@@ -83,6 +89,19 @@ describe("oRPC domain error translation", () => {
     expect(status).toBe(409);
     expect(body.code).toBe("CONFLICT");
     expect(body.message).toBe("Cannot retry delivery delivery-1 while it is succeeded");
+  });
+
+  it("maps a retry of an already accepted delivery to CONFLICT", async () => {
+    const { status, body } = await callProcedure("operations/retryDelivery", {
+      id: "delivery-accepted",
+    });
+
+    expect(status).toBe(409);
+    expect(body.code).toBe("CONFLICT");
+    expect(body.message).toBe(
+      "Delivery delivery-accepted was already accepted by the destination; " +
+        "retrying it would send the alert again",
+    );
   });
 
   it("maps a missing suppression rule to NOT_FOUND through the new namespace", async () => {

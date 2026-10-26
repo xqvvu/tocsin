@@ -3,6 +3,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
+import { DELIVERY_ACCEPTED_UNRECORDED_ERROR } from "@tocsin/core";
+
 import { DeliveryRetryButton } from "#/features/deliveries/ui/delivery-retry-button";
 
 const testState = vi.hoisted(() => ({
@@ -42,7 +44,7 @@ describe("delivery retry button", () => {
   });
 
   it("re-queues a failed delivery and refreshes operations", async () => {
-    render(<DeliveryRetryButton id="delivery-1" state="failed" />);
+    render(<DeliveryRetryButton id="delivery-1" state="failed" lastError={null} />);
     fireEvent.click(retryButtonFixture());
 
     await waitFor(() => {
@@ -53,9 +55,23 @@ describe("delivery retry button", () => {
   });
 
   it("stays hidden for a delivery that cannot be retried", () => {
-    render(<DeliveryRetryButton id="delivery-1" state="succeeded" />);
+    render(<DeliveryRetryButton id="delivery-1" state="succeeded" lastError={null} />);
 
     expect(screen.queryByRole("button")).toBeNull();
+    expect(testState.retryDelivery).not.toHaveBeenCalled();
+  });
+
+  it("shows the reason instead of the action when the destination already accepted the alert", () => {
+    render(
+      <DeliveryRetryButton
+        id="delivery-1"
+        state="failed"
+        lastError={DELIVERY_ACCEPTED_UNRECORDED_ERROR}
+      />,
+    );
+
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByText("deliveries.detail.retry.blockedByAccepted")).toBeTruthy();
     expect(testState.retryDelivery).not.toHaveBeenCalled();
   });
 
@@ -66,7 +82,7 @@ describe("delivery retry button", () => {
     });
     testState.retryDelivery.mockReturnValueOnce(retryPromise);
 
-    render(<DeliveryRetryButton id="delivery-1" state="failed" />);
+    render(<DeliveryRetryButton id="delivery-1" state="failed" lastError={null} />);
     const button = retryButtonFixture();
     fireEvent.click(button);
 
@@ -84,7 +100,7 @@ describe("delivery retry button", () => {
   it("surfaces a refused retry as an error toast", async () => {
     testState.retryDelivery.mockRejectedValueOnce(new Error("delivery is not failed"));
 
-    render(<DeliveryRetryButton id="delivery-1" state="failed" />);
+    render(<DeliveryRetryButton id="delivery-1" state="failed" lastError={null} />);
     fireEvent.click(retryButtonFixture());
 
     await waitFor(() => {
