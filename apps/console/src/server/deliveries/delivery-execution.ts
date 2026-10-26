@@ -201,25 +201,35 @@ export class DeliveryExecution {
     // Both writes failed. Land a terminal failure whose message says the alert
     // was delivered, so an operator does not resend it by hand, and never let
     // this fallback throw out of the batch.
-    try {
-      await this.markFailed(delivery, {
-        error: DELIVERY_ACCEPTED_UNRECORDED_ERROR,
-        // Keep the target's success response on the failure row: an operator
-        // debugging this state needs the evidence that the send itself worked.
-        responseStatus: sendResult.statusCode ?? undefined,
-        responseBody: redactOptionalText(sendResult.responseBody),
-        errorKind: "unknown_error",
-        retryHint: "not_retryable",
-        startedAt,
-        finishedAt: clock(),
-      });
-    } catch (error) {
-      deliveryLogger.error("Delivery {deliveryId} succeeded but could not be recorded", {
-        deliveryId: delivery.job.id,
-        attemptId: delivery.attempt.id,
-        destinationId: delivery.destination.id,
-        ...safeErrorProperties(error),
-      });
+    //
+    // Retry the write once, like `recordSucceeded`: this row is the only local
+    // evidence that the target accepted the alert. If it never lands, the stale
+    // attempt reclaim cannot tell this delivery apart from one whose worker
+    // died before sending, and it will schedule a duplicate attempt.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        await this.markFailed(delivery, {
+          error: DELIVERY_ACCEPTED_UNRECORDED_ERROR,
+          // Keep the target's success response on the failure row: an operator
+          // debugging this state needs the evidence that the send itself worked.
+          responseStatus: sendResult.statusCode ?? undefined,
+          responseBody: redactOptionalText(sendResult.responseBody),
+          errorKind: "unknown_error",
+          retryHint: "not_retryable",
+          startedAt,
+          finishedAt: clock(),
+        });
+        break;
+      } catch (error) {
+        if (attempt === 1) {
+          deliveryLogger.error("Delivery {deliveryId} succeeded but could not be recorded", {
+            deliveryId: delivery.job.id,
+            attemptId: delivery.attempt.id,
+            destinationId: delivery.destination.id,
+            ...safeErrorProperties(error),
+          });
+        }
+      }
     }
 
     return "failed";

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { DELIVERY_ACCEPTED_UNRECORDED_ERROR } from "@tocsin/core";
+import {
+  DELIVERY_ACCEPTED_UNRECORDED_ERROR,
+  DELIVERY_OUTCOME_UNKNOWN_FINAL_ERROR,
+} from "@tocsin/core";
 
 import { DeliveryAlreadyAcceptedError } from "#/infra/sqlite/repositories/delivery/delivery.interface";
 import { openSqliteStore } from "#/infra/sqlite/store";
@@ -98,6 +101,27 @@ describe("manual delivery retry", () => {
       lastError: DELIVERY_ACCEPTED_UNRECORDED_ERROR,
     });
     expect(after?.attempts).toHaveLength(before?.attempts.length ?? 0);
+
+    await store.close();
+  });
+
+  it("still re-queues a delivery whose stale attempt left the outcome unknown", async () => {
+    const { store, deliveryId } = await seedFailedDelivery(DELIVERY_OUTCOME_UNKNOWN_FINAL_ERROR);
+
+    // An unknown outcome is not proof of delivery: the operator must be able to
+    // retry after checking the target, so this message is deliberately not the
+    // do-not-resend marker.
+    const retried = await store.deliveries.retryNow({
+      deliveryId,
+      requestedAt: "2026-06-07T00:02:00.000Z",
+    });
+
+    expect(retried).toMatchObject({
+      state: "pending",
+      nextAttemptAt: "2026-06-07T00:02:00.000Z",
+      lastError: null,
+      finishedAt: null,
+    });
 
     await store.close();
   });

@@ -63,6 +63,32 @@ export function isDeliveryAcceptedUnrecorded(lastError: string | null): boolean 
   return lastError?.startsWith(DELIVERY_ACCEPTED_UNRECORDED_ERROR) ?? false;
 }
 
+/**
+ * Recorded when a worker disappeared mid-attempt (a restart, an OOM kill)
+ * before the send's result reached the database. Unlike the accepted-but-
+ * unrecorded marker, the outcome is genuinely unknown: the target may or may
+ * not have received the alert. Automatic retries stay enabled, because the
+ * delivery might never have left the host.
+ *
+ * The value is persisted verbatim, so `redactText` must leave it unchanged.
+ */
+export const DELIVERY_OUTCOME_UNKNOWN_RETRY_ERROR =
+  "The delivery attempt ended without a recorded result; the target may or may not " +
+  "have received the alert. A retry is scheduled automatically.";
+
+/**
+ * Terminal variant of `DELIVERY_OUTCOME_UNKNOWN_RETRY_ERROR`, written when the
+ * stale attempt exhausted its retry budget. Automatic retries stop, so the
+ * message tells the operator to check the target before retrying by hand.
+ *
+ * This is *not* a do-not-resend marker: an unknown outcome must stay manually
+ * retryable, and `isDeliveryAcceptedUnrecorded` must not match it.
+ */
+export const DELIVERY_OUTCOME_UNKNOWN_FINAL_ERROR =
+  "The delivery attempt ended without a recorded result; the target may or may not " +
+  "have received the alert. Automatic retries stopped; verify with the target " +
+  "before retrying.";
+
 /** 目标系统里可反向操作的资产句柄，例如飞书消息的 message_id。 */
 export const ProviderReferenceSchema = z.object({
   type: z.string().min(1),

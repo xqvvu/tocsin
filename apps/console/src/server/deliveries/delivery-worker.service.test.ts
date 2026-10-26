@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import {
+  DELIVERY_OUTCOME_UNKNOWN_FINAL_ERROR,
+  DELIVERY_OUTCOME_UNKNOWN_RETRY_ERROR,
+} from "@tocsin/core";
 import { createDefaultDestinationRegistry } from "@tocsin/destinations";
 
 import { openSqliteStore } from "#/infra/sqlite/store";
@@ -618,7 +622,9 @@ describe("delivery worker", () => {
       {
         attemptNumber: 1,
         state: "failed",
-        error: "Delivery attempt timed out before completion",
+        // The worker vanished mid-attempt, so the row must not claim a plain
+        // timeout: the target may already have received the alert.
+        error: DELIVERY_OUTCOME_UNKNOWN_RETRY_ERROR,
         finishedAt: "2026-06-09T08:06:00.000Z",
       },
       {
@@ -681,7 +687,7 @@ describe("delivery worker", () => {
       {
         attemptNumber: 1,
         state: "failed",
-        error: "Delivery attempt timed out before completion",
+        error: DELIVERY_OUTCOME_UNKNOWN_FINAL_ERROR,
       },
     ]);
 
