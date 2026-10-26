@@ -15,6 +15,10 @@ export const routesRouter = os.routes.router({
     .use(withRouteService)
     .handler(({ context, input }) => context.service.updateRoute(input)),
 
+  previewDelete: os.routes.previewDelete
+    .use(withRouteService)
+    .handler(({ context, input }) => context.service.previewDeleteRoute(input)),
+
   delete: os.routes.delete
     .use(withRouteService)
     .handler(({ context, input }) => context.service.deleteRoute(input)),

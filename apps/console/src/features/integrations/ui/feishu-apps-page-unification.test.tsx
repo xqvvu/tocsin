@@ -26,6 +26,14 @@ import { AppIntlProvider } from "#/i18n/provider";
 
 const noop = () => {};
 
+/** This page comparison never opens a delete dialog, so history is empty. */
+const noDeletionImpact = async () => ({
+  eventCount: 0,
+  deliveryCount: 0,
+  attemptCount: 0,
+  oncallPingCount: 0,
+});
+
 const sourceFixture = {
   id: "source-1",
   name: "Grafana",
@@ -52,6 +60,7 @@ function sourcesSection(sources: SourceSummary[] = []) {
       routes={[]}
       destinations={[]}
       pending={false}
+      requestDeleteImpact={noDeletionImpact}
       onEdit={noop}
       onToggle={noop}
       onRotateToken={noop}

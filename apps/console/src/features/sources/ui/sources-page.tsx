@@ -25,7 +25,12 @@ export function SourcesPage() {
   const [{ data: sources }, { data: routes }, { data: destinations }] = useSuspenseQueries({
     queries: [sourcesQueryOptions(), routesQueryOptions(), destinationsQueryOptions()],
   });
-  const { deleteSource, invalidateSources, rotateSourceToken, updateSource } = useSourceMutations();
+  const { deleteSource, invalidateSources, previewDeleteSource, rotateSourceToken, updateSource } =
+    useSourceMutations();
+  const requestDeleteImpact = React.useCallback(
+    (id: string) => previewDeleteSource({ id }),
+    [previewDeleteSource],
+  );
   const [tokenNotice, setTokenNotice] = React.useState<SourceTokenNotice | null>(null);
   const [editingSourceId, setEditingSourceId] = React.useState<string | null>(null);
   const [sourceEditorOpen, setSourceEditorOpen] = React.useState(false);
@@ -98,6 +103,7 @@ export function SourcesPage() {
             routes={routes}
             destinations={destinations}
             pending={pending}
+            requestDeleteImpact={requestDeleteImpact}
             onEdit={(sourceId) => {
               setEditingSourceId(sourceId);
               setSourceEditorOpen(true);

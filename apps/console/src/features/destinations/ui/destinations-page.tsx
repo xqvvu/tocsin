@@ -58,6 +58,7 @@ export function DestinationsPage() {
   const {
     deleteDestination,
     invalidateDestinations,
+    previewDeleteDestination,
     previewDestination,
     previewDestinationDraft,
     previewDestinationUpdate,
@@ -75,6 +76,10 @@ export function DestinationsPage() {
     ...recentEventsQueryOptions(),
     enabled: previewDialogOpen || testDialogOpen,
   });
+  const requestDeleteImpact = React.useCallback(
+    (id: string) => previewDeleteDestination({ id }),
+    [previewDeleteDestination],
+  );
   const [editingDestinationId, setEditingDestinationId] = React.useState<string | null>(null);
   const [destinationEditorOpen, setDestinationEditorOpen] = React.useState(false);
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
@@ -247,6 +252,7 @@ export function DestinationsPage() {
             destinationCatalog={destinationCatalog}
             routes={routes}
             pending={pending}
+            requestDeleteImpact={requestDeleteImpact}
             onTest={(destination) => {
               setTestDestinationTarget(destination);
               setTestDialogOpen(true);

@@ -4,6 +4,7 @@ import type {
   DeliveryListItem,
   DeliveryReceiptFilter,
   DeliveryTimeField,
+  DeletionImpact,
   DestinationKind,
   EventDeliveryOutcome,
   EventDetail,
@@ -39,6 +40,7 @@ import {
 } from "#/infra/sqlite/repositories/history/history.helpers";
 import type {
   DeliveryListQuery,
+  DeletionImpactTarget,
   EventListQuery,
   HistoryRepository,
 } from "#/infra/sqlite/repositories/history/history.interface";
@@ -435,6 +437,104 @@ export class SqliteHistoryRepository implements HistoryRepository {
     };
   }
 
+  async countDeletionImpact(target: DeletionImpactTarget): Promise<DeletionImpact> {
+    const db = this.context.db;
+
+    if ("sourceId" in target) {
+      // Deleting the source cascades through events, and every delivery,
+      // attempt, and ping hangs off an event: walk the same path.
+      const eventCount = await countAll(() =>
+        db
+          .selectFrom("events")
+          .select((eb) => eb.fn.countAll<number>().as("count"))
+          .where("source_id", "=", target.sourceId)
+          .executeTakeFirst(),
+      );
+      const deliveryCount = await countAll(() =>
+        db
+          .selectFrom("deliveries")
+          .innerJoin("events", "events.id", "deliveries.event_id")
+          .select((eb) => eb.fn.countAll<number>().as("count"))
+          .where("events.source_id", "=", target.sourceId)
+          .executeTakeFirst(),
+      );
+      const attemptCount = await countAll(() =>
+        db
+          .selectFrom("delivery_attempts")
+          .innerJoin("deliveries", "deliveries.id", "delivery_attempts.delivery_id")
+          .innerJoin("events", "events.id", "deliveries.event_id")
+          .select((eb) => eb.fn.countAll<number>().as("count"))
+          .where("events.source_id", "=", target.sourceId)
+          .executeTakeFirst(),
+      );
+      const oncallPingCount = await countAll(() =>
+        db
+          .selectFrom("oncall_pings")
+          .innerJoin("events", "events.id", "oncall_pings.event_id")
+          .select((eb) => eb.fn.countAll<number>().as("count"))
+          .where("events.source_id", "=", target.sourceId)
+          .executeTakeFirst(),
+      );
+
+      return { eventCount, deliveryCount, attemptCount, oncallPingCount };
+    }
+
+    if ("routeId" in target) {
+      // Route deletes keep their events; only the fan-out they produced goes.
+      const deliveryCount = await countAll(() =>
+        db
+          .selectFrom("deliveries")
+          .select((eb) => eb.fn.countAll<number>().as("count"))
+          .where("route_id", "=", target.routeId)
+          .executeTakeFirst(),
+      );
+      const attemptCount = await countAll(() =>
+        db
+          .selectFrom("delivery_attempts")
+          .innerJoin("deliveries", "deliveries.id", "delivery_attempts.delivery_id")
+          .select((eb) => eb.fn.countAll<number>().as("count"))
+          .where("deliveries.route_id", "=", target.routeId)
+          .executeTakeFirst(),
+      );
+      const oncallPingCount = await countAll(() =>
+        db
+          .selectFrom("oncall_pings")
+          .innerJoin("deliveries", "deliveries.id", "oncall_pings.delivery_id")
+          .select((eb) => eb.fn.countAll<number>().as("count"))
+          .where("deliveries.route_id", "=", target.routeId)
+          .executeTakeFirst(),
+      );
+
+      return { eventCount: 0, deliveryCount, attemptCount, oncallPingCount };
+    }
+
+    // Destination deletes also keep their events.
+    const deliveryCount = await countAll(() =>
+      db
+        .selectFrom("deliveries")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where("destination_id", "=", target.destinationId)
+        .executeTakeFirst(),
+    );
+    const attemptCount = await countAll(() =>
+      db
+        .selectFrom("delivery_attempts")
+        .innerJoin("deliveries", "deliveries.id", "delivery_attempts.delivery_id")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where("deliveries.destination_id", "=", target.destinationId)
+        .executeTakeFirst(),
+    );
+    const oncallPingCount = await countAll(() =>
+      db
+        .selectFrom("oncall_pings")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where("destination_id", "=", target.destinationId)
+        .executeTakeFirst(),
+    );
+
+    return { eventCount: 0, deliveryCount, attemptCount, oncallPingCount };
+  }
+
   private async countEvents(query: EventListQuery): Promise<number> {
     let builder = this.context.db.selectFrom("events").select(sql<number>`COUNT(*)`.as("total"));
 
@@ -762,4 +862,9 @@ function deliveryReceiptPredicate(receipt: DeliveryReceiptFilter) {
  */
 function escapeLikeTerm(term: string): string {
   return `%${term.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+}
+
+/** SQLite count queries always return one row; treat a missing row as zero. */
+async function countAll(run: () => Promise<{ count: number } | undefined>): Promise<number> {
+  return (await run())?.count ?? 0;
 }

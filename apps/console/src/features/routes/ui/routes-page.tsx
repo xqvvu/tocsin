@@ -22,7 +22,12 @@ export function RoutesPage() {
   const [{ data: routes }, { data: sources }, { data: destinations }] = useSuspenseQueries({
     queries: [routesQueryOptions(), sourcesQueryOptions(), destinationsQueryOptions()],
   });
-  const { createRoute, deleteRoute, invalidateRoutes, updateRoute } = useRouteMutations();
+  const { createRoute, deleteRoute, invalidateRoutes, previewDeleteRoute, updateRoute } =
+    useRouteMutations();
+  const requestDeleteImpact = React.useCallback(
+    (id: string) => previewDeleteRoute({ id }),
+    [previewDeleteRoute],
+  );
   const [editingRouteId, setEditingRouteId] = React.useState<string | null>(null);
   const [replayRouteId, setReplayRouteId] = React.useState<string | null>(null);
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
@@ -92,6 +97,7 @@ export function RoutesPage() {
             destinations={destinations}
             editingRoute={editingRoute}
             pending={pending}
+            requestDeleteImpact={requestDeleteImpact}
             onEdit={setEditingRouteId}
             onCancelEdit={() => setEditingRouteId(null)}
             onPreviewReplay={(route) => setReplayRouteId(route.id)}

@@ -21,6 +21,10 @@ export const sourcesRouter = os.sources.router({
     .use(withSourceService)
     .handler(({ context, input }) => context.service.rotateSourceToken(input)),
 
+  previewDelete: os.sources.previewDelete
+    .use(withSourceService)
+    .handler(({ context, input }) => context.service.previewDeleteSource(input)),
+
   delete: os.sources.delete
     .use(withSourceService)
     .handler(({ context, input }) => context.service.deleteSource(input)),

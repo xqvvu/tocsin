@@ -12,6 +12,7 @@ import {
   UpdateDestinationCommandSchema,
   type CreateDestinationCommand,
   type DeleteDestinationCommand,
+  type DeletionImpact,
   type GetDestinationTemplateDraftCommand,
   type DestinationDeleteResult,
   type DestinationListItem,
@@ -115,6 +116,21 @@ export class DestinationService {
     });
 
     return destinationListItemFromRuntime(updated);
+  }
+
+  /**
+   * History rows a destination delete would cascade to. Events survive a
+   * destination delete, so its impact only covers the deliveries it received.
+   */
+  async previewDeleteDestination(command: DeleteDestinationCommand): Promise<DeletionImpact> {
+    const input = DeleteDestinationCommandSchema.parse(command);
+    const destination = await this.store.destinations.get(input.id);
+
+    if (!destination) {
+      throw new RecordNotFoundError("Destination", input.id);
+    }
+
+    return this.store.history.countDeletionImpact({ destinationId: input.id });
   }
 
   async deleteDestination(command: DeleteDestinationCommand): Promise<DestinationDeleteResult> {

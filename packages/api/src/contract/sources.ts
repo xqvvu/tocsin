@@ -8,6 +8,7 @@ import {
 
 import { dashboardAuth } from "../errors/dashboard-auth";
 import { resourceErrors } from "../errors/resources";
+import { DeletionImpactOutputSchema } from "../schemas/deletion-impact";
 import {
   SourceDeleteOutputSchema,
   SourceListOutputSchema,
@@ -47,6 +48,14 @@ export const sources = {
     .errors(dashboardErrors)
     .errors(resourceErrors.error)
     .output(SourceTokenOutputSchema),
+
+  // Read-only disclosure of the history the delete cascades to. The console
+  // calls it when the confirmation dialog opens, never as part of the delete.
+  previewDelete: oc
+    .input(DeleteSourceCommandSchema)
+    .errors(dashboardErrors)
+    .errors(resourceErrors.error)
+    .output(DeletionImpactOutputSchema),
 
   delete: oc
     .input(DeleteSourceCommandSchema)

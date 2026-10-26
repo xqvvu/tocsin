@@ -2730,6 +2730,61 @@ describe("configuration capabilities", () => {
     await store.close();
   });
 
+  it("previews the history a delete cascades and rejects unknown ids", async () => {
+    const { store, services } = await createTestContext();
+    const source = await services.sources.createSource({
+      name: "Grafana prod",
+      provider: "grafana",
+    });
+    const destination = await services.destinations.createDestination({
+      name: "Ops webhook",
+      kind: "generic_webhook",
+      config: {
+        url: "https://example.test/webhook",
+      },
+    });
+    const route = await services.routes.createRoute({
+      name: "Grafana only",
+      rule: {
+        sourceIds: [source.source.id],
+      },
+      destinationIds: [destination.id],
+    });
+
+    // Fresh configuration has nothing to disclose, but the preview still runs.
+    expect(await services.sources.previewDeleteSource({ id: source.source.id })).toEqual({
+      eventCount: 0,
+      deliveryCount: 0,
+      attemptCount: 0,
+      oncallPingCount: 0,
+    });
+    expect(await services.routes.previewDeleteRoute({ id: route.id })).toEqual({
+      eventCount: 0,
+      deliveryCount: 0,
+      attemptCount: 0,
+      oncallPingCount: 0,
+    });
+    expect(await services.destinations.previewDeleteDestination({ id: destination.id })).toEqual({
+      eventCount: 0,
+      deliveryCount: 0,
+      attemptCount: 0,
+      oncallPingCount: 0,
+    });
+
+    // A preview for a row that is already gone has to be as loud as the delete.
+    await expect(services.sources.previewDeleteSource({ id: "source-missing" })).rejects.toThrow(
+      "Source not found: source-missing",
+    );
+    await expect(services.routes.previewDeleteRoute({ id: "route-missing" })).rejects.toThrow(
+      "Route not found: route-missing",
+    );
+    await expect(
+      services.destinations.previewDeleteDestination({ id: "destination-missing" }),
+    ).rejects.toThrow("Destination not found: destination-missing");
+
+    await store.close();
+  });
+
   it("rejects route configuration that references unknown sources", async () => {
     const { store, services } = await createTestContext();
     const source = await services.sources.createSource({

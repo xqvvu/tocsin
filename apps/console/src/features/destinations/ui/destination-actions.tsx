@@ -9,8 +9,14 @@ import {
 } from "@remixicon/react";
 import * as React from "react";
 
+import { DeletionImpactNotice } from "#/components/common/deletion-impact-notice";
 import { IconTooltip } from "#/components/common/icon-tooltip";
 import { powerActionButtonClassName } from "#/components/common/power-action-button";
+import {
+  deletionImpactBlocksConfirm,
+  type DeletionImpactLoader,
+  useDeletionImpact,
+} from "#/components/common/use-deletion-impact";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import {
   AlertDialog,
@@ -35,6 +41,7 @@ export function DestinationActions({
   enabledRouteCount,
   deleteImpact,
   pending,
+  requestDeleteImpact,
   onTest,
   onPreview,
   onEdit,
@@ -45,6 +52,7 @@ export function DestinationActions({
   enabledRouteCount: number;
   deleteImpact: RouteReferenceImpact;
   pending: boolean;
+  requestDeleteImpact: DeletionImpactLoader;
   onTest: (destination: DestinationListItem) => void;
   onPreview: (destination: DestinationListItem) => void;
   onEdit: (destinationId: string) => void;
@@ -54,6 +62,7 @@ export function DestinationActions({
   const t = useTranslations();
   const [disableDialogOpen, setDisableDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const historyImpact = useDeletionImpact(requestDeleteImpact);
   const testLabel = t("destinations.table.actions.testTitle", { name: destination.name });
   const previewLabel = t("destinations.table.actions.previewTitle", {
     name: destination.name,
@@ -193,8 +202,15 @@ export function DestinationActions({
       <AlertDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {
-          if (!pending) {
-            setDeleteDialogOpen(open);
+          if (pending) {
+            return;
+          }
+
+          setDeleteDialogOpen(open);
+          if (open) {
+            historyImpact.request(destination.id);
+          } else {
+            historyImpact.reset();
           }
         }}
       >
@@ -247,6 +263,12 @@ export function DestinationActions({
                 </AlertDescription>
               </Alert>
             ) : null}
+            <DeletionImpactNotice
+              impact={historyImpact.impact}
+              state={historyImpact.state}
+              confirmed={historyImpact.confirmed}
+              onConfirmedChange={historyImpact.setConfirmed}
+            />
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>
@@ -254,7 +276,14 @@ export function DestinationActions({
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={pending}
+              disabled={
+                pending ||
+                deletionImpactBlocksConfirm(
+                  historyImpact.impact,
+                  historyImpact.state,
+                  historyImpact.confirmed,
+                )
+              }
               onClick={() => {
                 setDeleteDialogOpen(false);
                 onDelete(destination);

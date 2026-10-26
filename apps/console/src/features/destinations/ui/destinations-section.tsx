@@ -6,6 +6,7 @@ import type { RouteDefinition } from "@tocsin/core";
 import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
 import { OperationsTable } from "#/components/common/operations-table";
 import type { ConsoleTableFeatures } from "#/components/common/table-features";
+import type { DeletionImpactLoader } from "#/components/common/use-deletion-impact";
 import { destinationRouteCoverage } from "#/features/destinations/model/destination-route-coverage";
 import type {
   DestinationCatalog,
@@ -30,6 +31,7 @@ export interface DestinationsSectionProps {
   destinationCatalog: DestinationCatalog;
   routes: RouteDefinition[];
   pending: boolean;
+  requestDeleteImpact: DeletionImpactLoader;
   onTest: (destination: DestinationListItem) => void;
   onPreview: (destination: DestinationListItem) => void;
   onEdit: (destinationId: string) => void;
@@ -42,6 +44,7 @@ export function DestinationsSection({
   destinationCatalog,
   routes,
   pending,
+  requestDeleteImpact,
   onTest,
   onPreview,
   onEdit,
@@ -98,6 +101,7 @@ export function DestinationsSection({
               row.original.id,
             )}
             pending={pending}
+            requestDeleteImpact={requestDeleteImpact}
             onTest={onTest}
             onPreview={onPreview}
             onEdit={onEdit}
@@ -107,7 +111,18 @@ export function DestinationsSection({
         ),
       },
     ],
-    [destinationIconNames, onDelete, onEdit, onPreview, onTest, onToggle, pending, routes, t],
+    [
+      destinationIconNames,
+      onDelete,
+      onEdit,
+      onPreview,
+      onTest,
+      onToggle,
+      pending,
+      requestDeleteImpact,
+      routes,
+      t,
+    ],
   );
 
   return (

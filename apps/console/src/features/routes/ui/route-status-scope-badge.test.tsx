@@ -16,6 +16,14 @@ vi.mock("#/features/operations/ui/queued-deliveries-notice", () => ({
 
 const noop = () => {};
 
+/** This badge suite never opens a delete dialog, so history is empty. */
+const noDeletionImpact = async () => ({
+  eventCount: 0,
+  deliveryCount: 0,
+  attemptCount: 0,
+  oncallPingCount: 0,
+});
+
 const destination: DestinationSummary = {
   id: "destination-1",
   name: "Pager",
@@ -49,6 +57,7 @@ function renderSection(routes: RouteDefinition[]) {
         destinations={[destination]}
         editingRoute={null}
         pending={false}
+        requestDeleteImpact={noDeletionImpact}
         onEdit={noop}
         onCancelEdit={noop}
         onPreviewReplay={noop}
