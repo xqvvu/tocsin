@@ -7,6 +7,7 @@ import { EventDetailSummary } from "#/features/events/ui/event-detail-summary";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { EventFingerprintContextTab } from "#/features/events/ui/event-fingerprint-context-tab";
 import { EventNormalizedTab } from "#/features/events/ui/event-normalized-tab";
+import { EventParseFailureNotice } from "#/features/events/ui/event-parse-failure-notice";
 import { EventRawTab } from "#/features/events/ui/event-raw-tab";
 import { useTranslations } from "#/i18n/use-i18n";
 
@@ -22,6 +23,13 @@ export function EventDetailView({ detail }: { detail: EventDetailData }) {
         matchedRouteCount={matchedRouteCount}
         deliveryStats={deliveryStats}
       />
+
+      {/*
+        Above the tabs on purpose: when intake could not parse the payload,
+        every tab below describes an event that never existed upstream. The
+        notice is the first thing the operator needs to read.
+      */}
+      <EventParseFailureNotice providerMetadata={detail.event.providerMetadata} />
 
       <Tabs
         defaultValue="normalized"
