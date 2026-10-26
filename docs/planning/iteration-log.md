@@ -2,6 +2,84 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 120 轮）
+
+- 时间：2026-10-26 21:41 CST 起。
+- 基线：本轮开始时 `origin/main` @ `36ba5db`；main CI success（`40332320917`）；无 open PR。
+- 类型：**full-audit**（上次全量审计 2026-10-23 18:22 CST 已超过 6 小时；backlog 有 27 分 candidate，
+  按第 1.5 步展开）。
+- 全量审计时间戳：**2026-10-26 21:45 CST**（本轮更新）。
+- 车道（3 并发，未超过上限）：`requirements`（窄化 brief：只读 post-MVP 方向 + RC checklist，
+  10 分钟硬边界）、`ui-triage`（必跑，read-only）、`security-exposure`（轮转，自第 109 轮未跑）。
+- `ui-triage` 决策：**`defer`** —— `last_ui_review_at` 2026-10-26 20:50 CST（约 1 小时前）；自第 119 轮后
+  main 仅 `2d73a7c`（release）与 `36ba5db`（docs），零个 `features/*/ui` / `routes` / `shell` /
+  `components` 合并；未触达 ≥48h / ≥3 UI 合并强信号。未解决 UI candidate 多只说明队列有活，不构成重扫理由。
+  第 3 个名额转给轮转车道。
+- `last_ui_review_at`：**2026-10-26 20:50 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `elegant-montalcini-27f0be`
+  （分支 `agent/deletion-impact-retry-live-region`，基于 `origin/main`）。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 专家发现
+
+**requirements（需求发现官，2 条新候选，已与 465 条 backlog 去重）**
+
+- **REQ-274（28）**：控制台「安全」页的活跃会话列表与单会话撤销。证据（代码已核实）：
+  `better-auth.schema.ts:21-33` 的 `session` 表已有 `ip_address`/`user_agent`/`expires_at`，但
+  `auth-options.ts:67-70` 只有 email/password 与 cookies；`docker-production-deployment.md:119-121`
+  要求经反代暴露控制台。不改 schema；撤销会话属 auth 语义，实施前交 EXPERT_PANEL。
+- **REQ-275（25）**：通知目标保存前的字段级配置差异与密钥保留状态。
+  `destination-form.tsx` / `edit-destination-form.tsx` 无变更审阅，preserve/replace/clear 易误清空。
+  纯前端，低于 27 门槛，登记待与 REQ-229 合并评估。
+
+**security-exposure（轮转，只读）**
+
+- **SEC-30 复核确认（代码已核实，中）**：签名族仍不脱敏。`redaction.ts:82-83` 后缀不含 `signature`，
+  精确集缺 `xhubsignature`/`xhubsignature256`/`xslacksignature`/`stripesignature`/`twiliosignature`/
+  `xgoogsignature`；`redactSensitiveAssignments` 也不认 `sha256=` 值（`:656-658`）。generic 告警源可经
+  `intake.service.ts:80` 入库、经 `history.repository.ts:247` 投影到浏览器，真实可达。
+- **新增（低）**：`azureStorageAccountKey`/`serviceAccountKey`/`gcpServiceAccountKey` 不匹配精确键，
+  后缀规则也不含 `accountkey|accesskey|secretkey`（`redaction.ts:43-59,82-83`）。
+- **DOC-27 部分自愈**：`docs/research/route-authoring-current-state.md:3-4` 的旧 `devs/vane` 路径已被
+  改成「以当前 origin/main 为准」；ADR 0008/0003 的版本与路径部分本轮未复核。
+- **已核实无问题**：SEC-2 的 `DestinationKindSchema.options` 参数化确实存在
+  （`configuration.integration.test.ts:982-984,1174-1177`，且有 registry 对齐守卫 `:254-260`）；
+  import protection 无缺口（`connection.ts:7`、`container.ts:3` 等均已标记）；
+  浏览器 DTO 无 secret（`SourceSummary`、`DestinationSummarySchema`、`FeishuAppSummarySchema.omit`）。
+
+### 本轮交付
+
+- **PR #492 `fix(console): retry and announce the deletion impact preview`（UI-70 + UI-71）**：
+  - 问题：删除影响面读取失败后对话框里没有恢复路径；加载态文案在 `sr-only` 且不在 live region，
+    确认按钮同时禁用，操作员以为弹窗卡住（`deletion-impact-notice.tsx:38-57`）。
+  - 实现：`DeletionImpactNotice` 新增可选 `onRetry`，失败态在 `AlertAction` 渲染「重试」
+    （复用 `common.actions.tryAgain`）；告警源/路由/通知目标三个删除对话框接到已有的
+    `historyImpact.request(<id>)`；加载态改为 `role="status"` 的可视 live region；失败态继续用
+    `Alert` 自带 `role="alert"`，fail-open 删除语义不变。组件测试 4 例；PRD
+    `docs/prd/deletion-impact-retry-and-live-region.md`。
+  - 验证：`vp fmt --write`；`vp check` 0 error / 23 warning（与基线一致）；
+    `vp run -r test` 190 文件 / **1075** 测试全绿；`vp run -r build` 通过。
+- backlog：UI-70/71 → shipped；新增 REQ-274/275；SEC-30（签名族）补第 120 轮可达性证据；DOC-27 注明自愈部分。
+
+### EXPERT_PANEL
+
+- 本轮未启动：交付切片为纯展示层，不触碰 schema、secret 或 auth 语义。下一轮待裁决：
+  REQ-267（名称快照 forward-only 迁移）、SEC-30（签名族脱敏形状）、REQ-274（会话撤销权限边界）。
+
+### 发布评估与发布记录
+
+- 本轮开始时 `v0.1.0-beta.94..origin/main` 仅有 `36ba5db docs(planning)`，无用户可见变更，
+  发布门槛 1 不满足 → 本轮不发布基线；不打 tag、不推镜像。#492 合并后如形成用户可见变更，
+  由下一轮发布评估统一处理。
+
+### 下一轮优先项
+
+1. REQ-267（27）：投递名称快照，先交 EXPERT_PANEL 裁决迁移形状与老投递显示语义。
+2. SEC-30（25）：签名族脱敏，交 EXPERT_PANEL 决定精确键族与后缀边界。
+3. REQ-274（28）：会话安全面板，先 panel 确认 owner/admin 权限边界与撤销当前会话语义。
+4. REQ-271（22）：`/api/ready` 的机器可读失败原因。
+5. 车道轮转：`docs-drift`（自第 109 轮未跑）。
+
 ## 2026-10-26（第 119 轮）
 
 - 时间：2026-10-26 20:25 CST 起。
