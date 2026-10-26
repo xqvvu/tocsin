@@ -1,7 +1,7 @@
 import { RiShieldCheckLine } from "@remixicon/react";
 import { toast } from "sonner";
 
-import { IconTooltip } from "#/components/common/icon-tooltip";
+import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { Button } from "#/components/ui/button";
 import { sourceWebhookUrlFromPath } from "#/features/sources/model/source-webhook";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -37,56 +37,38 @@ export function SourceTokenNoticePanel({
   }
 
   return (
-    <section className="border-l-primary bg-muted/50 border-l-4 p-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <RiShieldCheckLine className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold">{t("sources.notice.createdTitle")}</h2>
-            <p className="text-muted-foreground mt-1 text-xs">
-              {t("sources.notice.createdDescription", { sourceName: notice.sourceName })}
-            </p>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <IconTooltip label={copyTokenLabel}>
-            <Button
-              type="button"
-              size="sm"
-              aria-label={copyTokenLabel}
-              onClick={() => void copy(notice.token)}
-            >
-              {copyTokenLabel}
-            </Button>
-          </IconTooltip>
-          <IconTooltip label={copyUrlLabel}>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              aria-label={copyUrlLabel}
-              onClick={() => void copy(webhookUrl)}
-            >
-              {copyUrlLabel}
-            </Button>
-          </IconTooltip>
-        </div>
-      </div>
+    <Alert role="status" aria-live="polite" className="border-l-primary bg-muted/50 border-l-4">
+      <RiShieldCheckLine aria-hidden />
+      <AlertTitle>{t("sources.notice.createdTitle")}</AlertTitle>
+      <AlertDescription>
+        {t("sources.notice.createdDescription", { sourceName: notice.sourceName })}
+      </AlertDescription>
 
-      <div className="mt-3 flex flex-col gap-1">
-        <span className="text-muted-foreground text-[11px]">{t("sources.notice.tokenLabel")}</span>
-        <code className="bg-background block rounded border px-2 py-1 font-mono text-[11px] break-all select-all">
-          {notice.token}
-        </code>
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="col-start-2 mt-2 flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" size="sm" onClick={() => void copy(notice.token)}>
+            {copyTokenLabel}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => void copy(webhookUrl)}>
+            {copyUrlLabel}
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-[11px]">
-            {t("sources.notice.tokenOnceHint")}
+            {t("sources.notice.tokenLabel")}
           </span>
+          <code className="bg-background block rounded border px-2 py-1 font-mono text-[11px] break-all select-all">
+            {notice.token}
+          </code>
+        </div>
+
+        <div className="flex justify-end">
           <Button type="button" variant="outline" size="sm" onClick={onDismiss}>
             {t("sources.notice.dismissSaved")}
           </Button>
         </div>
       </div>
-    </section>
+    </Alert>
   );
 }
