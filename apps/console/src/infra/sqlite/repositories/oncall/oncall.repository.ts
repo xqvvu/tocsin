@@ -1,3 +1,5 @@
+import { sql } from "kysely";
+
 import { redactText } from "@tocsin/core";
 import type { OncallPing } from "@tocsin/core";
 
@@ -19,12 +21,26 @@ import type {
   ClaimOncallPingsInput,
   ClaimedOncallPing,
   EnqueueOncallPingInput,
+  MarkOncallPingDispatchStartedInput,
   MarkOncallPingFailedInput,
   MarkOncallPingFiredInput,
   OncallRepository,
   ReclaimStaleRunningPingsInput,
   ReclaimStaleRunningPingsResult,
 } from "#/infra/sqlite/repositories/oncall/oncall.interface";
+
+const STALE_RUNNING_ERROR = "Urgent call timed out before completion";
+
+/**
+ * Terminal message for a stale attempt that may already have rung.
+ *
+ * `dispatch_started_at` is written right before the provider is asked to call,
+ * so a stale `running` row carrying the marker cannot be retried without
+ * risking a second call to the same engineer. The text points the operator at
+ * the explicit re-page path instead of implying the call never happened.
+ */
+const DISPATCH_UNKNOWN_ERROR =
+  "Urgent call may have been placed before the worker stopped; it was not retried automatically";
 
 export class SqliteOncallRepository implements OncallRepository {
   constructor(
@@ -119,7 +135,7 @@ export class SqliteOncallRepository implements OncallRepository {
     return this.context.runInTransaction(async (context) => {
       const repository = this.withContext(context);
       const now = input.now ?? this.context.now();
-      const error = input.error ?? "Urgent call timed out before completion";
+      const error = input.error ?? STALE_RUNNING_ERROR;
       const rows = await context.db
         .selectFrom("oncall_pings")
         .selectAll()
@@ -129,16 +145,29 @@ export class SqliteOncallRepository implements OncallRepository {
       let reclaimed = 0;
 
       for (const row of rows) {
-        const current = requireOncallPing(await repository.get(row.id));
+        // Re-read inside the transaction: another batch may have advanced or
+        // already reclaimed the row since the candidate list was selected.
+        const current = await context.db
+          .selectFrom("oncall_pings")
+          .selectAll()
+          .where("id", "=", row.id)
+          .executeTakeFirst();
 
-        if (current.state !== "running") {
+        if (!current || current.state !== "running") {
           continue;
         }
 
+        // No dispatch marker means the attempt never reached the provider, so
+        // retrying it cannot ring anyone twice. With the marker set the call may
+        // already have gone out; stay terminal and leave a deliberate re-page to
+        // the manual buzz path.
+        const dispatchMayHaveStarted = current.dispatch_started_at !== null;
+
         await repository.markFailed({
           pingId: row.id,
-          error,
-          retryAt: current.attemptCount < current.maxAttempts ? now : null,
+          error: dispatchMayHaveStarted ? DISPATCH_UNKNOWN_ERROR : error,
+          retryAt:
+            !dispatchMayHaveStarted && current.attempt_count < current.max_attempts ? now : null,
           updatedAt: now,
         });
         reclaimed += 1;
@@ -177,6 +206,9 @@ export class SqliteOncallRepository implements OncallRepository {
           .set({
             state: "running",
             attempt_count: row.attempt_count + 1,
+            // Each attempt starts without dispatch evidence, so a marker left
+            // by a previous attempt cannot mask a legitimate retry.
+            dispatch_started_at: null,
             updated_at: now,
           })
           .where("id", "=", row.id)
@@ -235,6 +267,29 @@ export class SqliteOncallRepository implements OncallRepository {
           next_attempt_at: shouldRetry ? input.retryAt : null,
           last_error: redactText(input.error),
           updated_at: updatedAt,
+        })
+        .where("id", "=", input.pingId)
+        .execute();
+
+      return requireOncallPing(await repository.get(input.pingId));
+    });
+  }
+
+  markDispatchStarted(input: MarkOncallPingDispatchStartedInput): Promise<OncallPing> {
+    return this.context.runInTransaction(async (context) => {
+      const repository = this.withContext(context);
+      const startedAt = input.startedAt ?? this.context.now();
+
+      await context.db
+        .updateTable("oncall_pings")
+        .set({
+          // Keep the earliest intent of this attempt: the executor writes once
+          // per claim, and a second write must not push the marker later than
+          // the moment the provider may first have rung.
+          dispatch_started_at: sql<string>`coalesce(dispatch_started_at, ${startedAt})`,
+          // Anchor the stale window to the call instead of the claim, so a batch
+          // claimed up front cannot look stale while it is still dialing.
+          updated_at: startedAt,
         })
         .where("id", "=", input.pingId)
         .execute();

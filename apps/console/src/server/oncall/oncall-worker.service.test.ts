@@ -124,6 +124,83 @@ describe("oncall worker", () => {
     expect(ping?.nextAttemptAt).toBe("2026-10-09T09:00:00.000Z");
   });
 
+  it("stops a stale ping that may already have rung instead of calling twice", async () => {
+    const store = await createStore();
+    const deliveryId = await seedPing(store);
+    let calls = 0;
+
+    await store.oncall.claimNext({ now, limit: 10 });
+
+    const [claimedPing] = await store.oncall.listForDelivery(deliveryId);
+
+    expect(claimedPing).toBeDefined();
+    // The worker writes this immediately before handing the call to the
+    // provider, so it proves the attempt may have reached the receiver.
+    await store.oncall.markDispatchStarted({ pingId: claimedPing!.id, startedAt: now });
+
+    const worker = new OncallWorker({
+      store,
+      urgency: {
+        async ping() {
+          calls += 1;
+
+          return { ok: true, statusCode: 200, responseBody: "{}" };
+        },
+      } satisfies Pick<UrgencyRegistry, "ping">,
+      now: () => "2026-10-09T09:00:00.000Z",
+      resolveDestinationConfig: resolveAppCredentials,
+    });
+    const result = await worker.runOnce();
+
+    // Ringing again is irreversible, so the row goes terminal and the
+    // deliberate re-page is left to the manual buzz path.
+    expect(result).toMatchObject({ reclaimed: 1, claimed: 0, succeeded: 0, failed: 0 });
+    expect(calls).toBe(0);
+
+    const [ping] = await store.oncall.listForDelivery(deliveryId);
+
+    expect(ping).toMatchObject({ state: "failed", attemptCount: 1, nextAttemptAt: null });
+    expect(ping?.lastError).toContain("may have been placed");
+    expect(await store.oncall.claimNext({ now: "2026-10-09T09:00:00.000Z", limit: 10 })).toEqual(
+      [],
+    );
+  });
+
+  it("retries a stale ping that never reached the provider", async () => {
+    const store = await createStore();
+    const deliveryId = await seedPing(store);
+    const calls: string[] = [];
+
+    // Claimed but no dispatch marker: the attempt died before the provider was
+    // involved, so repeating it cannot ring anyone twice.
+    await store.oncall.claimNext({ now, limit: 10 });
+
+    const worker = new OncallWorker({
+      store,
+      urgency: {
+        async ping() {
+          calls.push("ping");
+
+          return { ok: true, statusCode: 200, responseBody: "{}" };
+        },
+      } satisfies Pick<UrgencyRegistry, "ping">,
+      now: () => "2026-10-09T09:00:00.000Z",
+      resolveDestinationConfig: resolveAppCredentials,
+    });
+    const result = await worker.runOnce();
+
+    expect(result).toMatchObject({ reclaimed: 1, claimed: 1, succeeded: 1 });
+    expect(calls).toHaveLength(1);
+
+    const [ping] = await store.oncall.listForDelivery(deliveryId);
+
+    expect(ping).toMatchObject({
+      state: "fired",
+      attemptCount: 2,
+      firedAt: "2026-10-09T09:00:00.000Z",
+    });
+  });
+
   it("stops a page the platform can never serve and keeps the operator hint", async () => {
     // Quota/permission rejections are documented as permanent for the same
     // request, so the ping must go failed on the first attempt, not burn calls.

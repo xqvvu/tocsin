@@ -119,7 +119,14 @@ async function ensureOlderNullableColumns(db: Kysely<SqliteDatabaseSchema>) {
   await ensureColumn(db, "destinations", "secret_refs_json", "TEXT NOT NULL DEFAULT '{}'");
 }
 
-async function ensureColumn(
+/**
+ * Adds a column only when the table does not already carry it.
+ *
+ * The baseline builder already creates every current column on a fresh
+ * database, so later forward steps must tolerate the column being present
+ * instead of failing with `duplicate column name`.
+ */
+export async function ensureColumn(
   db: Kysely<SqliteDatabaseSchema>,
   table: "events" | "destinations" | "oncall_pings",
   column: string,

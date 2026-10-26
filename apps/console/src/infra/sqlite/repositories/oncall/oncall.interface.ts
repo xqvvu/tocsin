@@ -24,6 +24,7 @@ export interface OncallPingRow {
   max_attempts: number;
   next_attempt_at: IsoDateTimeString | null;
   last_error: string | null;
+  dispatch_started_at: IsoDateTimeString | null;
   trigger: OncallPingTrigger;
   initiated_by: string | null;
   suppress_reason: string | null;
@@ -49,6 +50,12 @@ export interface OncallRepository {
   claimNext(input: ClaimOncallPingsInput): Promise<ClaimedOncallPing[]>;
   markFired(input: MarkOncallPingFiredInput): Promise<OncallPing>;
   markFailed(input: MarkOncallPingFailedInput): Promise<OncallPing>;
+  /**
+   * Records that this attempt is about to reach the provider. Must be written
+   * before the call; once it is set, a stale reclaim treats the call as
+   * possibly placed and will not schedule it again.
+   */
+  markDispatchStarted(input: MarkOncallPingDispatchStartedInput): Promise<OncallPing>;
   listForDelivery(deliveryId: string): Promise<OncallPing[]>;
   get(id: string): Promise<OncallPing | null>;
 }
@@ -107,4 +114,9 @@ export interface MarkOncallPingFailedInput {
   error: string;
   retryAt: IsoDateTimeString | null;
   updatedAt?: IsoDateTimeString;
+}
+
+export interface MarkOncallPingDispatchStartedInput {
+  pingId: string;
+  startedAt?: IsoDateTimeString;
 }
