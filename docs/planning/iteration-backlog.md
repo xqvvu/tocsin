@@ -215,7 +215,7 @@
 | DOC-13 | import boundaries 文档 4 处与代码不一致 | architecture lane | 24 | shipped | #127 | `withDashboardService` 示例、core operations 路径、`findDashboardContext()`、middleware 数量均已更正 |
 | DOC-14 | sqlite-store 文档缺 suppressions 信息 | architecture lane | 23 | shipped | #127 | schema 列表补 `suppressions`，id 工厂补 `suppression` |
 | REQ-31 | 排障搜索覆盖事件/投递 ID | requirements lane | 29 | shipped | #125 | 事件谓词加 `events.id` + 所属投递 `EXISTS`；投递谓词加 `deliveries.id`/`events.id`；列表与 total 同谓词；PRD `docs/prd/operation-search-identifiers.md` |
-| REQ-32 | 解析失败事件的诊断可见性 | requirements lane | 28 | candidate | — | 审计事件已写 providerMetadata，但列表/详情/筛选都看不到；`intake.service.ts:191-239`、`event-raw-tab.tsx:13-28` |
+| REQ-32 | 解析失败事件的诊断可见性 | requirements lane | 28 | in-progress | #515 | 第 127 轮复核：intake 写入 `providerMetadata`（`intake.service.ts:194-239`）；详情页经 `event-upstream-source.tsx` 以英文机器键展示元数据，但列表无标记也无入口。本轮实现列表 `parseFailed` 徽标 + 详情诊断提示 + `q=parse_failed` 链接；损坏 JSON 容错。PRD `docs/prd/parse-failure-visibility.md` |
 | REQ-33 | 绝对时间窗口过滤 | requirements lane | 27 | candidate | — | URL `from`/`to`，与 `range` 互斥；仓储只有 `since` 没有上界；`operations.ts:26-28`、`history.interface.ts:23-49` ；第 54 轮由 **REQ-207** 吸收（补仓储上界、互斥归一化与「事件前后 15 分钟」入口），不再单独实现 |
 | REQ-34 | 筛选结果导出 CSV | requirements lane | 27 | candidate | — | 只读 `operations.export`，上限 5000 行，CSV 公式注入转义；`packages/api/src/contract/operations.ts:36-88` |
 | REQ-35 | 运维列表自动刷新 | requirements lane | 27 | candidate | — | 15/30/60s 开关；全仓无 `refetchInterval`；Deliveries 连手动刷新都没有（`deliveries-page-toolbar.tsx:21-46`） |
