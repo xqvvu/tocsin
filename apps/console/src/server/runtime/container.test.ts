@@ -236,4 +236,103 @@ describe("application container", () => {
     expect(sqliteStoreClose).toHaveBeenCalledTimes(1);
     expect(authDatabaseDestroy).toHaveBeenCalledTimes(1);
   });
+
+  it("dispatches a manual page through the shared on-call runner", async () => {
+    const openStore = vi.fn<() => Promise<SqliteStore>>(async () => {
+      store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
+
+      return store;
+    });
+    const runner = {
+      runNow: vi.fn<() => Promise<null>>(async () => null),
+      getHealth: () => ({
+        state: "idle" as const,
+        lastStartedAt: null,
+        lastFinishedAt: null,
+        lastError: null,
+        lastRun: null,
+      }),
+      stop: () => {},
+    };
+    const createWorkerRunner = vi.fn<
+      NonNullable<ApplicationContainerOptions["createWorkerRunner"]>
+    >(() => runner);
+    const container = createApplicationContainer({ openStore, createWorkerRunner });
+
+    await container.getSqliteStore();
+    const deliveryId = await seedSucceededDelivery(store!);
+    const service = await container.createOncallService();
+
+    await service.buzzDelivery({ deliveryId, initiatedBy: "user-1" });
+
+    // The buzz reuses the on-call runner instead of starting a second worker:
+    // a concurrent worker could reclaim pings the running batch has claimed
+    // but not yet dialled.
+    expect(runner.runNow).toHaveBeenCalledTimes(1);
+    // Delivery and on-call runners only; no third worker was created.
+    expect(createWorkerRunner).toHaveBeenCalledTimes(2);
+  });
 });
+
+const now = "2026-10-09T08:00:00.000Z";
+const messageReference = { type: "feishu_message_id", value: "om_123" } as const;
+
+/** Seeds an app-mode delivery that captured a Feishu message id. */
+async function seedSucceededDelivery(store: SqliteStore): Promise<string> {
+  await store.sources.create({
+    id: "source-1",
+    name: "Generic source",
+    provider: "generic",
+    tokenHash: "token-hash",
+  });
+  await store.destinations.create({
+    id: "destination-1",
+    name: "Feishu SRE",
+    kind: "feishu",
+    config: {
+      sendMode: "app",
+      app: { appRef: "feishu-app-1", chatId: "oc_group" },
+      urgent: {
+        autoEnabled: true,
+        severities: ["critical"],
+        userIdType: "open_id",
+        receivers: ["ou_1"],
+      },
+    },
+  });
+  const route = await store.routes.create({
+    id: "route-1",
+    name: "All alerts",
+    destinationIds: ["destination-1"],
+  });
+  const event = await store.intake.recordEvent({
+    sourceId: "source-1",
+    idempotencyKey: "request-1",
+    normalized: {
+      title: "Checkout unavailable",
+      message: "checkout returned 503",
+      severity: "critical",
+      status: "firing",
+      fingerprint: "checkout:unavailable",
+      labels: { service: "checkout" },
+      occurredAt: now,
+    },
+    rawPayload: {},
+  });
+  const enqueue = await store.deliveries.enqueueForEvent({
+    event,
+    matches: [{ routeId: route.id, destinationIds: route.destinationIds }],
+    dedupeWindowStartsAt: "2026-10-09T07:55:00.000Z",
+  });
+  const [claimed] = await store.deliveries.claimNext({ now, limit: 1 });
+
+  expect(claimed).toBeDefined();
+  await store.deliveries.markSucceeded({
+    deliveryId: claimed!.job.id,
+    attemptId: claimed!.attempt.id,
+    providerReference: messageReference,
+    finishedAt: now,
+  });
+
+  return enqueue.created[0]!.id;
+}

@@ -343,11 +343,14 @@ export function createApplicationContainer(
     async createOncallService(serviceOptions = {}) {
       return new OncallService({
         store: await container.getSqliteStore(),
-        // Manual pages dispatch immediately through a one-off worker run so the
-        // operator gets instant feedback; whatever does not fire stays queued.
-        dispatchNow: async (now) => {
-          const worker = await container.createOncallWorker();
-          await worker.runOnce({ now });
+        // Manual pages share the periodic runner's single-flight instead of
+        // starting a second worker: a concurrent run would reclaim pings this
+        // batch has claimed but not yet dialled and ring them twice. An idle
+        // runner still dispatches at once; a busy one picks the ping up on its
+        // next tick, and whatever does not fire stays queued.
+        dispatchNow: async () => {
+          const runner = await container.ensureOncallWorkerRunner();
+          await runner.runNow();
         },
         ...serviceOptions,
       });

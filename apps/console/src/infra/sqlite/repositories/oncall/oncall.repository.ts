@@ -275,12 +275,12 @@ export class SqliteOncallRepository implements OncallRepository {
     });
   }
 
-  markDispatchStarted(input: MarkOncallPingDispatchStartedInput): Promise<OncallPing> {
+  markDispatchStarted(input: MarkOncallPingDispatchStartedInput): Promise<OncallPing | null> {
     return this.context.runInTransaction(async (context) => {
       const repository = this.withContext(context);
       const startedAt = input.startedAt ?? this.context.now();
 
-      await context.db
+      const updateResult = await context.db
         .updateTable("oncall_pings")
         .set({
           // Keep the earliest intent of this attempt: the executor writes once
@@ -292,7 +292,17 @@ export class SqliteOncallRepository implements OncallRepository {
           updated_at: startedAt,
         })
         .where("id", "=", input.pingId)
-        .execute();
+        // Fencing: only the attempt that still owns the row may record the
+        // moment of dispatch. A reclaimed ping has either left `running` or
+        // been re-claimed with a higher `attempt_count`; in both cases the
+        // caller must not dial.
+        .where("state", "=", "running")
+        .where("attempt_count", "=", input.expectedAttemptCount)
+        .executeTakeFirst();
+
+      if (updateResult.numUpdatedRows === 0n) {
+        return null;
+      }
 
       return requireOncallPing(await repository.get(input.pingId));
     });
