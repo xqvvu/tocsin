@@ -100,6 +100,34 @@ describe("oncall auto paging trigger", () => {
     expect(await store.oncall.listForDelivery(second.job.id)).toHaveLength(2);
   });
 
+  it("pages only the receivers the delivery has not paged yet", async () => {
+    const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
+    const { delivery } = await seedDelivery(store);
+    const service = new OncallService({ store });
+
+    await service.triggerPingsForDelivery({ delivery, providerReference: messageReference, now });
+
+    // A receiver added to the destination between sends is still owed a page;
+    // the delivery + receiver check must not swallow the whole trigger.
+    const widened = {
+      ...delivery,
+      destination: {
+        ...delivery.destination,
+        config: appModeConfig({ receivers: ["ou_1", "ou_2", "ou_3"] }),
+      },
+    };
+
+    await service.triggerPingsForDelivery({
+      delivery: widened,
+      providerReference: { type: "feishu_message_id", value: "om_resend" },
+      now: "2026-10-09T08:06:00.000Z",
+    });
+
+    const pings = await store.oncall.listForDelivery(delivery.job.id);
+
+    expect(pings.map((ping) => ping.receiver)).toEqual(["ou_1", "ou_2", "ou_3"]);
+  });
+
   it("keeps the delivery pinned when the first page ended in failed", async () => {
     // `failed` is ambiguous: oncall execution also records a call that was
     // placed but whose terminal state could not be persisted as failed. A
