@@ -37,7 +37,13 @@
 
 ### 发布评估与发布记录
 
-- 见本轮发布小节（待 tag 与镜像推送后补记）。
+- 发布经理：**RELEASE**。`v0.1.0-beta.90..origin/main` 只有 `b588262`（PR #478，Q-236）是用户可见代码变更，其余为纯 docs；建议 `0.1.0-beta.91`。
+- 阻断审计：**APPROVE_RELEASE**。`adbd40c` 的 CI 与 E2E 均 success（`40299081466` / `40299081171`）；无 open PR；`blocked-autonomous` 仅 REL-13/16/23（法律与仓库设置）；migrate 目录零 diff；`v0.1.0-beta.91` 无冲突；beta.81–90 十个 tag 均有 release；新用例断言非空转（移除守卫即失败）。
+- 运维/回滚：**APPROVE_DEPLOY**。Dockerfile / compose / env / 启动参数 / 锁文件 / 迁移全部零 diff；beta.90 已认识 `0004`，双向兼容。回滚换回 `0.1.0-beta.90` 镜像即可，无需数据库操作。运维提示：日志频繁出现 `was reclaimed before dialling; skipping` 说明单批耗时接近 stale 窗口，属保护动作，可调小 `TOCSIN_WORKER_BATCH_SIZE` 或调大 `TOCSIN_WORKER_STALE_RUNNING_MS`；手工补呼的实际拨号延迟跟随 `TOCSIN_WORKER_INTERVAL_MS`（默认 5s）。
+- 版本 PR #479 `chore(release): v0.1.0-beta.91`（rebase 合并 `5708741`）；该 commit 的 main CI 与 E2E 均 success。
+- tag `v0.1.0-beta.91` 指向 `5708741`（= `origin/main`）；GitHub Release 为 prerelease，body 1896 chars。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.91`（linux/amd64 + linux/arm64，index digest `sha256:445842af4e36288a5316aeae4ce4fc392b95794f46900c190530c0cbe59206d1`）；回滚 `0.1.0-beta.90`，无需数据库操作。构建在 `/tmp/tocsin-beta91-build`（tag 对应的干净检出）中进行，`--provenance=false --sbom=false`；`imagetools inspect` 确认两个平台都在。
+- 文档漂移（不阻断）：`docs/release/backup-restore-upgrade.md` 仍写计划只到 `0003`，下一轮修正。
 
 ### 下一轮优先项
 
