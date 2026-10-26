@@ -253,13 +253,12 @@ describe("sources section table", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Delete source" }));
 
-    expect(requestDeleteImpact).toHaveBeenCalledWith("source-1");
-
     const deleteDialog = screen.getByRole("alertdialog");
     const confirm = within(deleteDialog).getByRole("button", { name: "Delete source" });
 
     // The counts reach the operator before the destructive action unlocks.
     expect(await within(deleteDialog).findByText("Events: 12")).toBeTruthy();
+    expect(requestDeleteImpact).toHaveBeenCalledWith("source-1");
     expect(within(deleteDialog).getByText("Deliveries: 3")).toBeTruthy();
     expect(within(deleteDialog).getByText("Delivery attempts: 4")).toBeTruthy();
     expect(within(deleteDialog).getByText("Urgent calls: 1")).toBeTruthy();
