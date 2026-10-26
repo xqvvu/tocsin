@@ -2,6 +2,80 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 121 轮）
+
+- 时间：2026-10-26 22:41 CST 起。
+- 基线：本轮开始时 `origin/main` @ `0dc4d58`；上一轮 CI 已 success，本轮期间 `0dc4d58` 的 CI 与 E2E 也均 success；无 open PR。
+- 类型：**UI 评审切片 + 发布**（非 full-audit）。
+- 全量审计时间戳：**2026-10-26 21:45 CST（未变，第 120 轮）**；backlog 有 `REQ-274`（28）、`REQ-267`（27）等达到门槛的 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道（并发未超过 3）：`requirements`（窄化 brief：只读 post-MVP 方向与 RC checklist，10 分钟硬边界）、`ui-triage`（必跑）、`docs-drift`（轮转，自第 109 轮未跑）；`ui-triage` 判定 `review_now` 后补位 `ui-review`（浏览器实测，20 分钟边界）。
+- `ui-triage` 决策：**`review_now`** —— 距上次评审仅约 1h54m（未达 48h），但自上次评审有 2 个 UI 合并（`2316792` 路由校验、`d0edfdf` 删除影响面重试），两次都只有 jsdom 测试、无浏览器复看；叠加 ≥2 个未解决 UI 发现，浏览器验证缺口是决定性信号。
+- `last_ui_review_at`：**2026-10-26 23:09 CST**（更新）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、发布构建在会话工作树 `modest-bardeen-44948c`。
+- 浏览器验证：ui-review 用隔离实例 `localhost:6197`（`/tmp/tocsin-ui-r121/db.sqlite`）实跑 Playwright，截图在 `/tmp/tocsin-ui-r121/shots/`；结束后实例已停止。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 专家发现
+
+**requirements（窄化 brief，无新候选）**
+
+- 文档缺口均已被 465 条 backlog 覆盖（抑制汇总、名称快照、删除语义、fingerprint、绝对时间窗、provider fixture 等均已有条目）。
+- 唯一未跟踪的产品面「on-call resolved 恢复呼叫」评分 **26 < 27**：`docs/prd/post-mvp-planning.md:221-222` 与 `docs/prd/oncall-feishu-urgent.md:90` 明确列为 out-of-scope；`oncall.service.ts:161-163` 对非 `firing` 直接 return。普通 resolved 投递已通知群，增量价值有限且有夜间噪声风险，不建议立项。
+
+**ui-review（浏览器实测 + 代码核实）**
+
+- 通过项：#492 的删除影响面失败 → 重试 → 计数恢复、`role=status`/`role=alert` live region、勾选状态重置在 Sources / Routes / Destinations 三个对话框实测正常；#489 空名称提交走本地化 `FieldError` 且无原生气泡；390×844 弹窗无裁切/横向溢出。
+- **UI-73（22，新）**：删除预览失败时 `AlertAction` 的重试按钮为右上角绝对定位预留 72px，正文只剩约 190px 宽、换行 3 行（`components/common/deletion-impact-notice.tsx:58-75`、`components/ui/alert.tsx:7,63`；截图 `/tmp/tocsin-ui-r121/shots/10-source-delete-error.png`、`21-mobile-source-delete-error.png`）。
+- **UI-74（20，新）**：英文分页文案不统一，`/sources`、`/destinations` 为 `Page 1 / 1`，`/routes` 为 `Page 1 of 1`（`en-US.json:600,830,1165` vs `:1029,1317,1359`）。
+- **UI-75（18，新）**：`features/routes/ui/route-forms.tsx:713-719` 的 form 没有 `noValidate`（实测 `false`），#489 目前只因名称输入框没有 `required` 才通过；将来任何字段加原生约束会回归。
+- UI-72 的浏览器复看与并发改动一致：英文 `/sources` = `1 source`、`/routes` = `1 route`、`/destinations` = `1 destination`。
+
+**docs-drift（轮转，6 条，均未实现）**
+
+- （中）`docs/release/backup-restore-upgrade.md:142-143` 称「迁移失败会让进程直接退出、容器反复重启」，与同文 `:168-172` 及第 8 节升级演练实测冲突；代码 `apps/console/src/server.ts:22` 在入口 await 打开 store，`ready.ts` 不会因此退出。建议删改 §5。
+- （中）同文 `:168-169` 称 `/api/ready` 一律返回通用 500；实际 checks 失败返回 **503 + JSON**（`apps/console/src/routes/api/ready.ts:39-48`，`docker-production-deployment.md:186` 也写 503）。仅 bootstrap 失败才是通用 500。
+- （低）`docs/prd/post-mvp-planning.md:140-145,236` 未记录 2026-10-23 已交付的同指纹上下文与变更对比（`docs/prd/event-fingerprint-context.md:3`、`event-fingerprint-context-tab.tsx`、`history.repository.ts:258-323`）。
+- （低）`docs/prd/post-mvp-planning.md:144` 引 `search.test.ts:384`，真实断言在 `:421`（注释 `:125`）。
+- （低）`docs/release/history-retention-and-snapshots.md:8` 称 raw payload 已从接入热路径摘掉；实际接入事务内仍有有界 `pruneRawPayloads`（`intake.service.ts:120-134`），只有积压 sweep 在响应路径外。
+- （信息）旧仓库名无失效链接：`xqvvu/vane` 仅历史日志与合法 ACR 坐标，`devs/vane` 仅在 planning 历史叙述；建议不改。
+- RC checklist 三个未勾 gate 仍成立：E2E 只覆盖 setup/Source/Destination/webhook/Event；`docs/contributing/` 只有 destination 指南；`packages/providers` 无 fixture 目录。
+
+### 本轮交付
+
+- **PR #493 `fix(console): inflect English list count labels`（UI-72）**，rebase 合并 `a62262a`：
+  - 8 个计数文案键改为 ICU 复数（`{total, plural, one {# …} other {# …}}`），`use-intl` 按 `total` 选分支；中文文案不变。
+  - 新增 `apps/console/src/i18n/count-labels.test.tsx`，用 `AppIntlProvider` 渲染真实文案覆盖英文 0/1/7 与中文；
+    更正 `feishu-apps-page-unification.test.tsx:132-133` 把错误文案锁成期望值的断言。
+  - PRD `docs/prd/english-count-plurals.md`。
+  - 验证：`vp fmt --write`；`vp check` 0 error / 23 条既有 warning；`vp run -r test` 191 文件 / **1078** 测试全绿；
+    `vp run -r build` 通过；隔离实例 `localhost:6197` 浏览器实测。
+- backlog：UI-72 → shipped；新增 UI-73/74/75；`REQ-182`/`REQ-200` 经第 121 轮核实已在 main 实现，改为 shipped。
+
+### EXPERT_PANEL
+
+- 本轮未新开裁决。`REQ-267`（名称快照迁移）、`REQ-274`（会话撤销权限边界）、`SEC-30`（签名族脱敏）仍待后续轮次。
+
+### 发布评估与发布记录
+
+- 三位发布专家一致放行：
+  - **发布经理**：`v0.1.0-beta.94..origin/main` 有 #492（`d0edfdf`）与 #493（`a62262a`）两个用户可见修复，其余为 docs/planning；建议 `0.1.0-beta.95`。
+  - **阻断审计员**：`origin/main` @ `a39aaa5` 的 CI（40347895821）与 E2E（40347895704）均 success；0 open PR；
+    无 migration；`blocked-autonomous` 仅 REL-13/REL-16/REL-23 等既有事项，不阻断。
+  - **运维/回滚专家**：`Dockerfile`、compose、环境变量、启动参数、migrate 目录零 diff；回滚只需把镜像换回 `0.1.0-beta.94`，无需数据库操作。
+- 版本 PR **#494 `chore(release): v0.1.0-beta.95`**（rebase 合并 `1b32971`）；main CI 与 E2E 均 success。
+- tag **`v0.1.0-beta.95`** → `1b32971`（= `origin/main`）；GitHub Release 为 prerelease，
+  body 来自 `/tmp/tocsin-release-notes-v0.1.0-beta.95.md`（已硬校验非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.95`（linux/amd64 + linux/arm64）；
+  回滚 `0.1.0-beta.94`，无需数据库操作。
+
+### 下一轮优先项
+
+1. **UI-73（22）**：删除预览失败态把「重试」移到正文下方，三个删除框共用，纯展示 + 单测。
+2. **REQ-267（27）/ REQ-274（28）/ SEC-30（25）**：各开 EXPERT_PANEL 裁决迁移形状、auth 权限边界与脱敏键族。
+3. **docs-drift 第二批（AUTO_FIX）**：`backup-restore-upgrade.md` 的 migration 退出语义与 ready 500/503 两处更正；`post-mvp-planning.md` 的方向 4 状态与行号。
+4. **UI-74 / UI-75**：低成本 i18n 统一与表单 `noValidate` 加固。
+5. 车道轮转：下一轮非必跑车道从 `security-exposure` 或 `release-infra` 继续。
+
 ## 2026-10-26（第 120 轮）
 
 - 时间：2026-10-26 21:41 CST 起。
