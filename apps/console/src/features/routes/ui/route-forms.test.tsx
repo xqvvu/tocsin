@@ -126,6 +126,24 @@ describe("edit route form", () => {
     });
   });
 
+  it("shows the localized name error instead of the browser's native validation", async () => {
+    const { onSubmit } = renderEditForm(multiConditionRoute());
+
+    const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
+    // The native constraint would preempt the submit event and show a bubble in
+    // the browser's language; the ARIA flag keeps the field announced as required.
+    expect(nameInput.hasAttribute("required")).toBe(false);
+    expect(nameInput.getAttribute("aria-required")).toBe("true");
+
+    fireEvent.change(nameInput, { target: { value: "" } });
+    saveRoute();
+
+    await waitFor(() => {
+      expect(screen.getByText("Route name is required")).toBeTruthy();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it("asks for confirmation before saving a route with no conditions", async () => {
     const route = emptyRuleRoute();
 
