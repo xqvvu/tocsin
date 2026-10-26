@@ -132,6 +132,7 @@ apps/console/src/
         suppression/
         feishu-app/
         oncall/
+        session/
 ```
 
 > 共享命令 schema、操作 DTO 等 client/server 契约放在 `@tocsin/core` 包，oRPC contract
