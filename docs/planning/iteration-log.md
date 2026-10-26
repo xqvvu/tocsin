@@ -2,6 +2,63 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 122 轮）
+
+- 时间：2026-10-27 00:04 CST 起。
+- 基线：本轮开始时 `origin/main` @ `ab9fdbe`；`1b32971` 的 CI 与 E2E 均 success，`ab9fdbe`（docs）的 CI 在本轮中完成；无 open PR。
+- 类型：**AUTO_FIX 双切片**（非 full-audit）。
+- 全量审计时间戳：**2026-10-26 21:45 CST（未变，第 120 轮）**；backlog 有 `REQ-274`（28）、`REQ-267`（27）等达到门槛的 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道（3 并发，未超上限）：`requirements`（必跑，10 分钟窄化 brief）、`ui-triage`（必跑）、`release-infra`（轮转）。
+- `ui-triage` 决策：**`defer`** —— 距上次评审约 56 分钟；自 23:09 起零个 `features/*/ui`、`routes`、`shell`、`components` 合并（`a62262a` 只改了 `features/integrations/ui` 的测试）；#492/#493 均已有浏览器验证记录；未触及强信号。
+- `last_ui_review_at`：**2026-10-26 23:09 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `inspiring-albattani-2827db`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 专家发现
+
+**requirements（必跑，10 分钟窄化 brief）**
+
+- **无新候选**。逐方向核对 post-MVP 与 RC checklist 的未交付项，全部已有 backlog 条目（REQ-6/REQ-33/REQ-34/REQ-3/REQ-272/REQ-25/REQ-267/REQ-273/REL-22/REL-46 等）。
+- 两个「差一点」但低于门槛的想法：目标级重试策略（~22/30，docs 未提出）、加急 ping 失败后的手动再呼叫（~21/30，需 EXPERT_PANEL 定义去重语义）。
+- 建议：文档层面已饱和（402 candidate / 270 shipped），后续 requirements 输入应换成浏览器实测场景或直接认领既有 27+ 项。
+
+**release-infra（轮转）**
+
+- 两个旧缺口已过期（代码已核实）：`.github/workflows/e2e.yml` 已存在且最近 6 次全绿（REL-21 shipped）；`scripts/docker-smoke.sh` + `docker-compose.smoke.yml` 已做卷隔离与自检（`c51ecbb`）。
+- 真实缺口：`apps/console/e2e/alert-flow.spec.ts:27` 用例名声称 route/deliver，实际只覆盖到 Event；无 Route、无 Delivery 断言；RC checklist gate A `:131-132` 未勾选。
+- 推荐切片（本轮采纳）：从 UI 创建 Route，断言事件不再 `No route matched`，并断言投递表出现「目标 + 事件」行；不断言最终状态/attempts，避免 worker 退避抖动。
+- EXPERT_PANEL 候选：把 `check · test · build` / `playwright · chromium` 设为 required status checks（仓库设置，非代码）。
+
+**ui-triage**
+
+- `defer`（理由见上）。
+
+### 本轮交付
+
+- **PR #496 `test(console): cover route creation and delivery fan-out in e2e`**，rebase 合并 `bdc1351`：
+  - spec 通过 UI 创建 Route（Source 条件 + 目标多选）→ 事件行不再显示 `No route matched` → `/deliveries` 出现目标+事件配对行；只断言行存在。
+  - RC checklist 记录已覆盖 Route+Delivery，但因仍缺历史过滤与失败 retry 保持未勾选。
+  - 验证：本机 `playwright test` 连续两次通过（13.4s / 13.3s）；`vp check` 0 error / 23 条既有 warning；`vp run -r test` 191 文件 / 1078 测试；`vp run -r build`；PR 上 `playwright · chromium`（20m40s）与 `check · test · build` 均 pass。
+- **PR #497 `docs(release): correct migration-failure and retention drift`**，rebase 合并 `46ce0fb`：
+  - 更正迁移失败「进程退出/反复重启」为实测的「进程不退出、通用 500、unhealthy、restarts=0」；区分 `/api/ready` 的 bootstrap 500 与运行期 503+JSON；更正 raw payload 清理「离开接入热路径」为「接入内仍有界批、sweep 在响应路径外」；补记 REQ-249 已交付并修正 `search.test.ts:384 → :421`。
+  - 验证：`vp fmt --check`；PR 上 `check · test · build`（11m1s）与 `playwright · chromium`（1m13s）均 pass。
+- backlog：REL-22 增补第 122 轮进度（部分交付）；新增 DOC-85（docs-drift 第二批，shipped #497）。
+
+### EXPERT_PANEL
+
+- 本轮未新开裁决。`REQ-267`（名称快照迁移）、`REQ-274`（会话撤销权限边界）、`SEC-30`（签名族脱敏）继续顺延，下一轮优先处理。
+
+### 发布评估与发布记录
+
+- **本轮不发布**：两个 PR 均为测试与文档改动，没有用户可见行为变化；按第 9.5 步门槛跳过打 tag 与镜像推送。
+
+### 下一轮优先项
+
+1. **REQ-267（27）/ REQ-274（28）/ SEC-30（25）**：各开 EXPERT_PANEL 裁决并实施（已连续两轮顺延）。
+2. **UI-73（22）/ UI-74（20）/ UI-75（18）**：删除预览失败态布局、分页文案统一、路由表单 `noValidate`，可合成一个 UI 小 PR。
+3. **REL-22 剩余**：E2E 补历史过滤与失败 retry（需要可控 sink，先拆「失败注入」基础设施）。
+4. 车道轮转：下一轮非必跑车道从 `architecture` 或 `security-exposure` 继续（`release-infra` 本轮已跑）。
+
 ## 2026-10-26（第 121 轮）
 
 - 时间：2026-10-26 22:41 CST 起。
