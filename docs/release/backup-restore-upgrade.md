@@ -2,10 +2,11 @@
 
 > 一句话结论：要备份的只有 `/data` 里的一个 SQLite 文件（外加 WAL/SHM 两个伴生文件）；升级与回滚的正确
 > 顺序是“先冷备份、再换镜像”。当前 migration plan 是 `0001_initial_schema` baseline +
-> `0002_suppressions` 与 `0003_complete_legacy_schema` 两个 forward step；runner 会跳过已应用的版本，
-> 所以**原地修改已提交的 migration 对任何已有数据库都是 no-op**，schema 变更必须新增 forward step。
+> `0002_suppressions`、`0003_complete_legacy_schema` 与 `0004_oncall_dispatch_started_at` 三个
+> forward step；runner 会跳过已应用的版本，所以**原地修改已提交的 migration 对任何已有数据库都是
+> no-op**，schema 变更必须新增 forward step。
 
-核实时间 2026-10-18，核实基线 `origin/main` @ `a563ff7`。相关文件：
+核实时间 2026-10-26，核实基线 `origin/main` @ `4ad0ad6`。相关文件：
 `apps/console/src/infra/sqlite/connection.ts`、`apps/console/src/infra/sqlite/migrate/{plan,runner}.ts`、
 `apps/console/src/infra/sqlite/migrate/schema.ts`、`Dockerfile`、`scripts/docker-entrypoint.sh`。
 部署形态与变量见 `docs/release/docker-production-deployment.md`。
@@ -25,22 +26,25 @@
   1. 已经记录过的 version → **跳过**，不重跑。
   2. 库里存在当前构建不认识的 version → 直接抛错
      `SQLite database has applied migrations not present in this build: <versions>`，进程启动失败。
-- 当前 plan 有三个条目（`migrate/plan.ts`）：`0001_initial_schema`、`0002_suppressions`、
-  `0003_complete_legacy_schema`。
+- 当前 plan 有四个条目（`migrate/plan.ts`）：`0001_initial_schema`、`0002_suppressions`、
+  `0003_complete_legacy_schema`、`0004_oncall_dispatch_started_at`。
 
 ## 2. Migration 现状：baseline + forward repair
 
 `0001_initial_schema.ts` 是全新数据库的完整 baseline；`0002_suppressions.ts` 是新增抑制表的 forward
 step；`0003_complete_legacy_schema.ts` 对已应用过 `0001` 的旧库做幂等 repair（补 Feishu apps、on-call
-表、抑制列与索引等）。`0003` 可以重复执行，只补缺失对象，不覆盖已有数据。
+表、抑制列与索引等）；`0004_oncall_dispatch_started_at.ts` 为 `oncall_pings` 增加 nullable 的
+`dispatch_started_at` 列（拨号意图证据，无默认值、不回填）。`0003` 与 `0004` 的补列都通过
+`ensureColumn` 实现，可以重复执行，只补缺失对象，不覆盖已有数据。
 
-因此升级行为分三种：
+因此升级行为分四种：
 
 | 场景                          | 行为                                                                 |
 | ----------------------------- | -------------------------------------------------------------------- |
-| 全新数据库                    | 依次应用 `0001` → `0002` → `0003`，schema 与当前代码一致              |
-| 已有 `0001` 的旧库            | 启动时应用尚未记录的 `0002` / `0003`；`0003` 补齐旧库缺失的表、列与索引 |
-| 已有 `0001` + `0002` 的库     | 只应用 `0003`                                                         |
+| 全新数据库                    | 依次应用 `0001` → `0002` → `0003` → `0004`，schema 与当前代码一致     |
+| 已有 `0001` 的旧库            | 启动时应用尚未记录的 `0002` / `0003` / `0004`；`0003` 补齐旧库缺失的表、列与索引 |
+| 已有 `0001` + `0002` 的库     | 依次应用 `0003` 与 `0004`                                             |
+| 已有 `0001`～`0003` 的库      | 只应用 `0004`                                                         |
 
 所以“升级镜像”会执行尚未应用的 forward step；已经记录的 migration 不会重跑，**不要修改已提交的
 migration 文件**。若未来需要变更 schema，应新增 forward-only step 并在 `migrate/plan.ts` 注册。
@@ -157,6 +161,17 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
      旧构建**启动就会失败**，报 `SQLite database has applied migrations not present in this build: …`
      （`apps/console/src/infra/sqlite/migrate/runner.ts` 的 `assertNoUnknownAppliedMigrations`）。
 
+   已知实例：从 `0.1.0-beta.90` 及更早版本回滚到 `0.1.0-beta.89` 及更早版本时，数据库里已有
+   `0004_oncall_dispatch_started_at`，旧镜像只认识 `0001`～`0003`，会启动失败。若确认旧镜像不使用该列
+   （nullable、无默认值，旧代码不读取），可以在**冷备份之后**先删除台账行再启动：
+
+   ```sql
+   DELETE FROM schema_migrations WHERE version = '0004';
+   ```
+
+   列本身可以保留；下次升级会被 `0004` 的 `ensureColumn` 幂等补回并重新记录。无法确认兼容性时走第 2 种
+   方式恢复备份。
+
 2. **恢复备份**（数据回滚，唯一可靠方式）：按第 4 节恢复升级前的冷备份。代价是丢掉备份之后写入的全部
    数据（Event、Delivery、配置改动、session）。
 
@@ -184,5 +199,5 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
   本文的 `docker compose cp` / 恢复步骤是标准工具用法，**没有在真实部署上演练过**；首次生产升级请把
   备份校验和回滚演练当成独立动作。
 - 在线备份的具体实现（helper 容器镜像、调度方式）没有仓库内的既定做法，需要运维自己选型。
-- `0001` baseline 与 `0002`/`0003` forward step 均已存在；后续 schema 变更应继续新增 forward step，
+- `0001` baseline 与 `0002`～`0004` forward step 均已存在；后续 schema 变更应继续新增 forward step，
   并按第 2 节的升级语义更新本文。
