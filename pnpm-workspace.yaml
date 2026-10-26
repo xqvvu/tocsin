@@ -27,12 +27,12 @@ catalog:
 
 catalogs:
   orpc:
-    "@orpc/client": 2.0.0-beta.44
-    "@orpc/openapi": 2.0.0-beta.44
-    "@orpc/server": 2.0.0-beta.44
-    "@orpc/zod": 2.0.0-beta.44
-    "@orpc/tanstack-query": 2.0.0-beta.44
-    "@orpc/contract": 2.0.0-beta.44
+    "@orpc/client": 2.0.0-beta.46
+    "@orpc/openapi": 2.0.0-beta.46
+    "@orpc/server": 2.0.0-beta.46
+    "@orpc/zod": 2.0.0-beta.46
+    "@orpc/tanstack-query": 2.0.0-beta.46
+    "@orpc/contract": 2.0.0-beta.46
 
   codemirror:
     "@codemirror/lang-json": ^6.0.2
