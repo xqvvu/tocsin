@@ -801,6 +801,8 @@
   "events.table.deliveryShort.running": "运",
   "events.table.deliveryShort.succeeded": "成",
   "events.table.clearFiltersLabel": "清除筛选并显示全部事件",
+  "events.parseFailure.fallbackMessage": "原始载荷已保留，可在「原始调试」中核对",
+  "events.parseFailure.fallbackTitle": "未能解析的上游载荷",
   "events.table.empty": "还没有事件",
   "events.table.emptyFiltered": "没有匹配的事件",
   "events.table.emptyFilteredDescription": "当前筛选条件没有命中任何事件，调整条件或重置筛选后再试",

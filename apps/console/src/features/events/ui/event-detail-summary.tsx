@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { REDACTED_VALUE, type DeliveryState } from "@tocsin/core";
+import { REDACTED_VALUE, type DeliveryState, parseFailureMetadataFrom } from "@tocsin/core";
 
 import { Badge } from "#/components/ui/badge";
 import { DELIVERY_STATE_PRIORITY } from "#/features/events/model/delivery-priority";
@@ -40,6 +40,18 @@ export function EventDetailSummary({
   const t = useTranslations();
   const normalized = detail.event.normalized;
   const deliveryTotal = Object.values(deliveryStats).reduce((total, count) => total + count, 0);
+  /*
+    A parser-rejected event is intake's audit row: its stored title and message
+    are fixed English literals written before any viewer locale is known. The
+    headline is a presentation slot, so it gets localized copy while the
+    normalized tab keeps showing the stored record. Silence actions below keep
+    targeting the stored value, since that is what the matcher compares against.
+  */
+  const parseFailed = parseFailureMetadataFrom(detail.event.providerMetadata) !== null;
+  const displayTitle = parseFailed ? t("events.parseFailure.fallbackTitle") : normalized.title;
+  const displayMessage = parseFailed
+    ? t("events.parseFailure.fallbackMessage")
+    : normalized.message;
 
   return (
     <section className="border-border bg-card shrink-0 border">
@@ -51,13 +63,13 @@ export function EventDetailSummary({
           </div>
           <div className="flex min-w-0 items-start gap-1.5">
             <h2 className="min-w-0 flex-1 text-sm leading-5 font-semibold wrap-break-word">
-              {normalized.title}
+              {displayTitle}
             </h2>
             <TextSilenceAction detail={detail} field="title" value={normalized.title} />
           </div>
           <div className="mt-1 flex min-w-0 items-start gap-1.5">
             <p className="text-muted-foreground max-w-4xl min-w-0 flex-1 text-xs leading-5 wrap-break-word">
-              {normalized.message}
+              {displayMessage}
             </p>
             <TextSilenceAction detail={detail} field="message" value={normalized.message} />
           </div>

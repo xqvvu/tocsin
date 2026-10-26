@@ -15,6 +15,13 @@ export function EventTitleCell({
   parseFailed: boolean;
 }) {
   const t = useTranslations();
+  /*
+    Intake writes a fixed English title into the audit row, but the viewer's
+    locale is a display concern that intake cannot know. Rendering the stored
+    literal would put English text next to the localized badge in a zh-Hans
+    console; the stored value stays visible in the normalized and raw tabs.
+  */
+  const displayTitle = parseFailed ? t("events.parseFailure.fallbackTitle") : title;
 
   return (
     <div className="min-w-0">
@@ -35,8 +42,8 @@ export function EventTitleCell({
             {t("events.table.parseFailed")}
           </Badge>
         ) : null}
-        <span className="truncate font-medium" title={title}>
-          {title}
+        <span className="truncate font-medium" title={displayTitle}>
+          {displayTitle}
         </span>
       </div>
       <div className="text-muted-foreground truncate text-[11px]" title={fingerprint}>

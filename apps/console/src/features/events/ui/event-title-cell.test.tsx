@@ -26,6 +26,40 @@ describe("event title cell", () => {
     expect(screen.getByText("解析失败")).toBeTruthy();
   });
 
+  it("replaces intake's English fallback title with localized copy", () => {
+    render(
+      <AppIntlProvider locale="zh-Hans">
+        <EventTitleCell
+          title="Provider parser rejected webhook payload"
+          fingerprint="parse_failed:src-1:abc"
+          severity="unknown"
+          parseFailed
+        />
+      </AppIntlProvider>,
+    );
+
+    // Intake stores a fixed English title before any viewer locale is known;
+    // rendering it as-is put English text beside the zh-Hans badge.
+    expect(screen.getByText("未能解析的上游载荷")).toBeTruthy();
+    expect(screen.queryByText("Provider parser rejected webhook payload")).toBeNull();
+  });
+
+  it("keeps the stored title for events the parser accepted", () => {
+    render(
+      <AppIntlProvider locale="zh-Hans">
+        <EventTitleCell
+          title="磁盘将满"
+          fingerprint="disk-full"
+          severity="critical"
+          parseFailed={false}
+        />
+      </AppIntlProvider>,
+    );
+
+    expect(screen.getByText("磁盘将满")).toBeTruthy();
+    expect(screen.queryByText("未能解析的上游载荷")).toBeNull();
+  });
+
   it("leaves a successfully parsed event unmarked", () => {
     render(
       <AppIntlProvider locale="zh-Hans">
