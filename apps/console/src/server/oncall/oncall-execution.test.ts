@@ -201,6 +201,83 @@ describe("oncall execution dispatch intent", () => {
 
     expect(calls).toEqual(["ping"]);
   });
+
+  it("does not dial when a reclaim handed the ping to another attempt", async () => {
+    const store = await createStore();
+    const deliveryId = await seedPing(store);
+    const calls: string[] = [];
+    const urgency = {
+      async ping() {
+        calls.push("ping");
+
+        return { ok: true, statusCode: 200, responseBody: "{}" };
+      },
+    } satisfies Pick<UrgencyRegistry, "ping">;
+    const [staleClaim] = await store.oncall.claimNext({ now, limit: 1 });
+
+    expect(staleClaim).toBeDefined();
+
+    // The batch ran past the stale window and another worker re-claimed it.
+    await store.oncall.reclaimStaleRunning({
+      staleBefore: "2026-10-09T08:06:00.000Z",
+      now: "2026-10-09T08:06:00.000Z",
+    });
+    const [freshClaim] = await store.oncall.claimNext({
+      now: "2026-10-09T08:06:01.000Z",
+      limit: 10,
+    });
+
+    expect(freshClaim?.ping.attemptCount).toBe(2);
+
+    const execution = new OncallExecution({
+      store,
+      urgency,
+      resolveDestinationConfig: resolveAppCredentials,
+    });
+
+    await expect(execution.execute(staleClaim!, now)).resolves.toBe("superseded");
+    expect(calls).toEqual([]);
+
+    // The old attempt must not rewrite the row the new attempt now owns.
+    const [ping] = await store.oncall.listForDelivery(deliveryId);
+
+    expect(ping).toMatchObject({
+      state: "running",
+      attemptCount: 2,
+      updatedAt: "2026-10-09T08:06:01.000Z",
+    });
+  });
+
+  it("anchors the dispatch marker to the call, not to the batch claim", async () => {
+    const store = await createStore();
+    const deliveryId = await seedPing(store);
+    const callTime = "2026-10-09T08:04:00.000Z";
+    let seenAtDial: { updatedAt: string } | undefined;
+    const urgency = {
+      async ping() {
+        const [ping] = await store.oncall.listForDelivery(deliveryId);
+
+        seenAtDial = ping ? { updatedAt: ping.updatedAt } : undefined;
+
+        return { ok: true, statusCode: 200, responseBody: "{}" };
+      },
+    } satisfies Pick<UrgencyRegistry, "ping">;
+    const [claimed] = await store.oncall.claimNext({ now, limit: 1 });
+
+    expect(claimed).toBeDefined();
+
+    const execution = new OncallExecution({
+      store,
+      urgency,
+      resolveDestinationConfig: resolveAppCredentials,
+      now: () => callTime,
+    });
+
+    await expect(execution.execute(claimed!, now)).resolves.toBe("fired");
+    // A batch may reach this ping minutes after claiming it; the stale window
+    // must start at the call, otherwise a later tick can reclaim it mid-dial.
+    expect(seenAtDial).toEqual({ updatedAt: callTime });
+  });
 });
 
 const resolveAppCredentials: DestinationConfigResolver = async ({ config }) => ({

@@ -30,9 +30,11 @@ export interface OncallExecutionOptions {
   resolveDestinationConfig?: DestinationConfigResolver;
   sendContext?: DestinationSendContext;
   backoff?: DeliveryBackoffOptions;
+  /** Clock used for the dispatch marker, so it anchors to the call, not the claim. */
+  now?: () => string;
 }
 
-export type OncallExecutionOutcome = "fired" | "retrying" | "failed";
+export type OncallExecutionOutcome = "fired" | "retrying" | "failed" | "superseded";
 
 /**
  * Executes one urgent call.
@@ -48,6 +50,7 @@ export class OncallExecution {
   private readonly urgency: Pick<UrgencyRegistry, "ping">;
   private readonly resolveDestinationConfig?: DestinationConfigResolver;
   private readonly sendContext?: DestinationSendContext;
+  private readonly now: () => string;
   private readonly initialDelayMs: number;
   private readonly maxDelayMs: number;
 
@@ -56,6 +59,7 @@ export class OncallExecution {
     this.urgency = options.urgency;
     this.resolveDestinationConfig = options.resolveDestinationConfig;
     this.sendContext = options.sendContext;
+    this.now = options.now ?? (() => new Date().toISOString());
     this.initialDelayMs = options.backoff?.initialDelayMs ?? 30_000;
     this.maxDelayMs = options.backoff?.maxDelayMs ?? 15 * 60_000;
   }
@@ -83,21 +87,14 @@ export class OncallExecution {
         });
       }
 
-      // Record the intent to ring before the provider is asked to call. The
-      // write is best-effort on purpose: paging must never depend on
-      // bookkeeping (docs/planning/decisions/delivery-success-persistence-failure.md).
-      // If it fails, this attempt degrades to the pre-marker behavior, where a
-      // stale reclaim cannot rule out a call that already went out.
-      try {
-        await this.store.oncall.markDispatchStarted({ pingId: claimed.ping.id, startedAt: now });
-      } catch (error) {
-        oncallLogger.warn("Urgent call {pingId} dispatch intent could not be recorded", {
-          pingId: claimed.ping.id,
-          deliveryId: claimed.ping.deliveryId,
-          destinationId: claimed.ping.destinationId,
-          receiver: claimed.ping.receiver,
-          ...safeErrorProperties(error),
-        });
+      // Fence this attempt to the row before the provider is asked to call. A
+      // slow batch can take longer than the stale window, so another worker
+      // may have reclaimed and re-claimed this ping; ringing then would place
+      // a second, irreversible call for the same receiver.
+      const ownsAttempt = await this.recordDispatchStarted(claimed);
+
+      if (!ownsAttempt) {
+        return "superseded";
       }
 
       const result = await this.urgency.ping(
@@ -136,6 +133,53 @@ export class OncallExecution {
         retryHint: "retryable",
         now,
       });
+    }
+  }
+
+  /**
+   * Fences this attempt to the ping and records the intent to ring.
+   *
+   * Returns `false` when the row no longer belongs to this attempt: another
+   * worker reclaimed it after the stale window and claimed it again, so it is
+   * now responsible for the call. A write failure returns `true` on purpose:
+   * paging must never depend on bookkeeping
+   * (docs/planning/decisions/delivery-success-persistence-failure.md), so it
+   * degrades to the pre-marker behavior for this attempt.
+   */
+  private async recordDispatchStarted(claimed: ClaimedOncallPing): Promise<boolean> {
+    try {
+      // The marker also refreshes `updated_at`, which must anchor to the call
+      // rather than to the batch claim: a batch can spend minutes on earlier
+      // pings before it reaches this one.
+      const started = await this.store.oncall.markDispatchStarted({
+        pingId: claimed.ping.id,
+        expectedAttemptCount: claimed.ping.attemptCount,
+        startedAt: this.now(),
+      });
+
+      if (started) {
+        return true;
+      }
+
+      oncallLogger.warn("Urgent call {pingId} was reclaimed before dialling; skipping", {
+        pingId: claimed.ping.id,
+        deliveryId: claimed.ping.deliveryId,
+        destinationId: claimed.ping.destinationId,
+        receiver: claimed.ping.receiver,
+        attemptNumber: claimed.ping.attemptCount,
+      });
+
+      return false;
+    } catch (error) {
+      oncallLogger.warn("Urgent call {pingId} dispatch intent could not be recorded", {
+        pingId: claimed.ping.id,
+        deliveryId: claimed.ping.deliveryId,
+        destinationId: claimed.ping.destinationId,
+        receiver: claimed.ping.receiver,
+        ...safeErrorProperties(error),
+      });
+
+      return true;
     }
   }
 

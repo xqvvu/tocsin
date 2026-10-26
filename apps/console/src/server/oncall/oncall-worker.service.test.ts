@@ -136,7 +136,11 @@ describe("oncall worker", () => {
     expect(claimedPing).toBeDefined();
     // The worker writes this immediately before handing the call to the
     // provider, so it proves the attempt may have reached the receiver.
-    await store.oncall.markDispatchStarted({ pingId: claimedPing!.id, startedAt: now });
+    await store.oncall.markDispatchStarted({
+      pingId: claimedPing!.id,
+      expectedAttemptCount: claimedPing!.attemptCount,
+      startedAt: now,
+    });
 
     const worker = new OncallWorker({
       store,
@@ -199,6 +203,82 @@ describe("oncall worker", () => {
       attemptCount: 2,
       firedAt: "2026-10-09T09:00:00.000Z",
     });
+  });
+
+  it("rings each receiver at most once when a slow batch is reclaimed", async () => {
+    const store = await createStore();
+    const deliveryId = await seedPing(store);
+    const delivery = await store.deliveries.get(deliveryId);
+
+    expect(delivery).toBeDefined();
+
+    // A second receiver turns the batch into a queue: the first call blocks
+    // while the second ping is already claimed but not yet dialled.
+    await store.oncall.enqueueForDelivery({
+      deliveryId,
+      destinationId: "destination-1",
+      eventId: delivery!.event.id,
+      fingerprint: "checkout:unavailable",
+      receiver: "ou_2",
+      channel: "feishu_urgent_phone",
+      providerReference: messageReference,
+      trigger: "manual",
+      dedupeWindowStartsAt: "2026-10-09T07:55:00.000Z",
+    });
+
+    const calls: string[] = [];
+    let releaseFirst!: () => void;
+    const firstCallReleased = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let markFirstStarted!: () => void;
+    const firstCallStarted = new Promise<void>((resolve) => {
+      markFirstStarted = resolve;
+    });
+    const urgency = {
+      async ping(_kind, input) {
+        calls.push(input.receivers[0]!);
+
+        if (calls.length === 1) {
+          markFirstStarted();
+          await firstCallReleased;
+        }
+
+        return { ok: true, statusCode: 200, responseBody: "{}" };
+      },
+    } satisfies Pick<UrgencyRegistry, "ping">;
+    const batchWorker = new OncallWorker({
+      store,
+      urgency,
+      now: () => now,
+      resolveDestinationConfig: resolveAppCredentials,
+    });
+    const batchRun = batchWorker.runOnce({ limit: 2 });
+
+    await firstCallStarted;
+
+    // Six minutes later a manual page starts another worker while the batch is
+    // still dialling. The waiting ping is past the five-minute stale window, so
+    // the second worker reclaims and re-claims it.
+    const later = "2026-10-09T08:06:00.000Z";
+    const manualWorker = new OncallWorker({
+      store,
+      urgency,
+      now: () => later,
+      resolveDestinationConfig: resolveAppCredentials,
+    });
+
+    await manualWorker.runOnce();
+
+    releaseFirst();
+    await batchRun;
+
+    // The batch worker must not dial the ping another attempt now owns.
+    expect(calls.toSorted()).toEqual(["ou_1", "ou_2"]);
+
+    for (const ping of await store.oncall.listForDelivery(deliveryId)) {
+      expect(ping.state).toBe("fired");
+    }
   });
 
   it("stops a page the platform can never serve and keeps the operator hint", async () => {

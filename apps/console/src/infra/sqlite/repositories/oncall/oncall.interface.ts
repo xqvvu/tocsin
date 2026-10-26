@@ -54,8 +54,12 @@ export interface OncallRepository {
    * Records that this attempt is about to reach the provider. Must be written
    * before the call; once it is set, a stale reclaim treats the call as
    * possibly placed and will not schedule it again.
+   *
+   * `expectedAttemptCount` fences the write to the attempt that still owns the
+   * row. Returns `null` when the ping was reclaimed and re-claimed elsewhere,
+   * so the caller must not dial.
    */
-  markDispatchStarted(input: MarkOncallPingDispatchStartedInput): Promise<OncallPing>;
+  markDispatchStarted(input: MarkOncallPingDispatchStartedInput): Promise<OncallPing | null>;
   listForDelivery(deliveryId: string): Promise<OncallPing[]>;
   get(id: string): Promise<OncallPing | null>;
 }
@@ -118,5 +122,10 @@ export interface MarkOncallPingFailedInput {
 
 export interface MarkOncallPingDispatchStartedInput {
   pingId: string;
+  /**
+   * The `attempt_count` this caller observed when it claimed the ping. Every
+   * claim increments it, so a mismatch means another attempt owns the row.
+   */
+  expectedAttemptCount: number;
   startedAt?: IsoDateTimeString;
 }

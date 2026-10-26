@@ -66,6 +66,15 @@
    重新排期，带标记的行落终态并在 `last_error` 写明「可能已拨出、未自动重试」。
    决策记录 `docs/planning/decisions/oncall-dispatch-intent.md`，PRD
    `docs/prd/oncall-dispatch-intent.md`。
+   **实现补充（2026-10-26，第 115 轮）：** 「绝不重复打电话」还要求领取归属。
+   慢批次可能在 stale 窗口之后被另一轮 reclaim 重新排期，而原 worker 到达该 ping 时
+   仍会照拨；手工 buzz 的 `dispatchNow` 每次新建 worker 也绕过 runner 的 single-flight。
+   现在 `markDispatchStarted` 带 `expectedAttemptCount` 做 fencing（`attempt_count`
+   每次领取递增），更新 0 行即表示归属已丢失，执行器返回 `superseded` 且不拨号；
+   标记的 `startedAt` 改用拨号时刻的时钟（此前误用批次领取时刻）；`dispatchNow` 复用
+   同一个 on-call runner 的 `runNow()`。决策记录
+   `docs/planning/decisions/oncall-claim-ownership.md`，PRD
+   `docs/prd/oncall-claim-ownership.md`。
 
 6. **去重风暴保护。** ping 按 `(fingerprint, destination_id, receiver)` 在一个去重窗口（沿用 `intake.service.ts:54` 的 `dedupeWindowMs ?? 5 * 60 * 1000` 模式，作为 service 选项而非共享常量）内只建一条。告警风暴下"每 30 秒一条 firing 就刷一次电话"不可接受。新建 `oncall_ping_dedupe_keys` 表，不复用 `delivery_dedupe_keys` 的行。
    **实现补充（2026-10-26，第 113 轮）：** 「卡片重发也绝不重复打电话」由

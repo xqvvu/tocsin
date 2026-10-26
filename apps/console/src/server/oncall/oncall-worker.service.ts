@@ -32,14 +32,15 @@ export class OncallWorker {
 
   constructor(options: OncallWorkerOptions) {
     this.store = options.store;
+    this.now = options.now ?? (() => new Date().toISOString());
     this.execution = new OncallExecution({
       store: options.store,
       urgency: options.urgency,
       resolveDestinationConfig: options.resolveDestinationConfig,
       sendContext: options.sendContext,
       backoff: options.backoff,
+      now: this.now,
     });
-    this.now = options.now ?? (() => new Date().toISOString());
     this.batchSize = options.batchSize ?? 10;
     this.staleRunningTimeoutMs = options.staleRunningTimeoutMs ?? 5 * 60_000;
   }
@@ -109,7 +110,9 @@ function addOutcome(result: DeliveryWorkerRunResult, outcome: OncallExecutionOut
     result.succeeded += 1;
   } else if (outcome === "retrying") {
     result.retrying += 1;
-  } else {
+  } else if (outcome === "failed") {
     result.failed += 1;
   }
+  // "superseded" belongs to the worker that reclaimed the ping, so it counts
+  // neither as a success nor as a failure of this batch.
 }
