@@ -1,20 +1,21 @@
 /**
  * The Settings "UI" tab stacks the operational overview, the runtime facts,
- * and the preferences form in one column. At 390×844 that stack is taller than
- * the viewport (measured 863px content in a 651px panel), and the panel used to
- * clip the overflow without a scroll container: the last runtime facts and the
- * save button were unreachable by wheel or touch.
+ * the preferences form, and the account-security panel in one column.
  *
- * Below `sm` the active panel owns the scroll. At `sm` and above the stack fits
- * the desktop layout, so the original fixed-height composition stays.
+ * The stack is taller than the panel at both 390×844 and 1440×900. It used to
+ * clip the overflow at `sm` and above because it was assumed to fit once the
+ * desktop layout was wide enough; adding the account-security panel made the
+ * preferences form collapse to a slit there. The UI tab therefore owns the
+ * scroll at every breakpoint instead of only below `sm`.
  */
-export const settingsUiPanelClassName =
-  "flex min-h-0 flex-col gap-4 overflow-y-auto sm:overflow-hidden";
+export const settingsUiPanelClassName = "flex min-h-0 flex-col gap-4 overflow-y-auto";
 
 /**
- * The preferences form fills the remaining desktop height. Inside the mobile
- * scroll container it must keep its natural height instead of shrinking to a
- * slit, otherwise each field is only visible while focused.
+ * The preferences form keeps its natural height inside the scroll container.
+ *
+ * Growing to fill the remaining height (`flex-1`) only worked while the stack
+ * fit the panel; inside a scroller it would shrink instead, because the panel
+ * uses `min-h-0` and clips. Every other panel on this tab is natural height.
  */
 export const settingsPreferencesPanelClassName =
-  "border-border flex min-h-0 min-w-0 flex-none flex-col overflow-hidden border py-3 sm:flex-1";
+  "border-border flex min-h-0 min-w-0 flex-none flex-col overflow-hidden border py-3";

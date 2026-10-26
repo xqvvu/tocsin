@@ -54,6 +54,8 @@ import type { RuntimeInformationServiceOptions } from "#/server/runtime/runtime-
 import { StorageHealthService } from "#/server/runtime/storage-health.service";
 import type { StorageHealthServiceOptions } from "#/server/runtime/storage-health.service.types";
 import { WorkerHealthService } from "#/server/runtime/worker-health.service";
+import { SessionSecurityService } from "#/server/security/session-security.service";
+import type { SessionSecurityServiceOptions } from "#/server/security/session-security.service.types";
 import { SourceService } from "#/server/sources/source.service";
 import type { SourceServiceOptions } from "#/server/sources/source.service.types";
 import { SuppressionService } from "#/server/suppressions/suppression.service";
@@ -72,6 +74,14 @@ export interface AuthServer {
      * handing back a shape that looks safe to return as-is.
      */
     getSession(input: { headers: HeadersInit }): Promise<BetterAuthSession | null>;
+    /**
+     * Revokes every session except the one the request is authenticated with.
+     *
+     * Exposed instead of a session-table delete so Better Auth keeps ownership
+     * of cookie and adapter semantics. It resolves the account from the
+     * request headers, so callers never pass a user or session id.
+     */
+    revokeOtherSessions(input: { headers: HeadersInit }): Promise<{ status: boolean }>;
   };
 }
 
@@ -119,6 +129,9 @@ export interface ApplicationContainer {
   createEventReplayService(
     options?: Partial<Omit<EventReplayServiceOptions, "store">>,
   ): Promise<EventReplayService>;
+  createSessionSecurityService(
+    options?: Partial<Omit<SessionSecurityServiceOptions, "store" | "auth">>,
+  ): Promise<SessionSecurityService>;
   createOperationsService(): Promise<OperationsService>;
   ensureDeliveryWorkerRunner(): Promise<DeliveryWorkerRunner>;
   ensureOncallWorkerRunner(): Promise<DeliveryWorkerRunner>;
@@ -270,6 +283,14 @@ export function createApplicationContainer(
 
     async createAppSettingsService() {
       return new AppSettingsService({ store: await container.getSqliteStore() });
+    },
+
+    async createSessionSecurityService(serviceOptions = {}) {
+      return new SessionSecurityService({
+        store: await container.getSqliteStore(),
+        auth: (await container.getAuth()).api,
+        ...serviceOptions,
+      });
     },
 
     async createStorageHealthService(serviceOptions = {}) {

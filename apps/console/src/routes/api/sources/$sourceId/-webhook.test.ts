@@ -553,6 +553,9 @@ function createTestContainer(): ApplicationContainer {
     createOperationsService: async () => {
       throw new Error("Operations service is not used by webhook route handler tests");
     },
+    createSessionSecurityService: async () => {
+      throw new Error("Session security service is not used by webhook route handler tests");
+    },
     getUrgencyRegistry: () => createDefaultUrgencyRegistry(),
     createOncallService: async () => {
       throw new Error("On-call service is not used by webhook route handler tests");

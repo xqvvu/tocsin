@@ -53,6 +53,9 @@ const fakeContainer = {
   createDeliveryWorker: async () => {
     throw new Error("worker procedures must not run without a dashboard session");
   },
+  createSessionSecurityService: async () => {
+    throw new Error("session security procedures must not run without a dashboard session");
+  },
 } as unknown as ApplicationContainer;
 
 vi.mock("#/server/runtime/container", () => ({
@@ -83,7 +86,10 @@ const expectedProcedures: Record<
 > = {
   // Keyed by feature DIRECTORY name, which is `session` — named for what it
   // exposes, and deliberately not `auth`, which better-auth owns at /api/auth/*.
-  session: { public: ["getDashboardSession", "getAuthBootstrap"], private: [] },
+  session: {
+    public: ["getDashboardSession", "getAuthBootstrap"],
+    private: ["listActiveSessions", "revokeOtherSessions"],
+  },
   destinations: {
     public: [],
     private: [
@@ -156,6 +162,8 @@ const procedureArgs: Record<string, unknown> = {
   getRequestLocale: undefined,
   getAuthBootstrap: undefined,
   getDashboardSession: undefined,
+  listActiveSessions: undefined,
+  revokeOtherSessions: undefined,
   list: { limit: 20, eventPage: 1 },
   listCatalog: undefined,
   get: undefined,
