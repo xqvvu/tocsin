@@ -9,7 +9,8 @@ test.use({ permissions: ["clipboard-read", "clipboard-write"] });
  * The core operator journey, end to end against a real server:
  *
  *   first-run setup -> create a Source -> copy its webhook URL ->
- *   create a Destination -> send a real alert -> see it arrive.
+ *   create a Destination -> create a Route -> send a real alert ->
+ *   see the event arrive and fan out into a delivery.
  *
  * This is the flow `docs/release/mvp-rc-checklist.md` asks for, and it exists
  * because every layer below it is unit-tested but nothing proved the seams
@@ -25,6 +26,10 @@ const OWNER = {
 test.describe.configure({ mode: "serial" });
 
 test("a first-run operator can set up, route, and deliver an alert", async ({ page, request }) => {
+  // --- 0. A clean name for every run --------------------------------------
+  // The throwaway database is deleted before the server boots, but the run is
+  // still the only writer; timestamps keep two consecutive local runs readable.
+  const suffix = Date.now();
   // --- 1. First-run setup -------------------------------------------------
   await page.goto("/setup");
 
@@ -60,7 +65,7 @@ test("a first-run operator can set up, route, and deliver an alert", async ({ pa
   });
   const sourceDialog = await openDialog(page, "Add", "New Source");
 
-  const sourceName = `E2E source ${Date.now()}`;
+  const sourceName = `E2E source ${suffix}`;
   await sourceDialog.locator('input[name="name"]').fill(sourceName);
   await sourceDialog.getByRole("button", { name: "Create Source" }).click();
 
@@ -78,7 +83,7 @@ test("a first-run operator can set up, route, and deliver an alert", async ({ pa
 
   const destinationDialog = await openDialog(page, "Add", "New destination");
 
-  const destinationName = `E2E webhook ${Date.now()}`;
+  const destinationName = `E2E webhook ${suffix}`;
   await destinationDialog.locator('input[name="name"]').fill(destinationName);
 
   // A generic webhook destination requires its URL: without one the form refuses
@@ -93,7 +98,40 @@ test("a first-run operator can set up, route, and deliver an alert", async ({ pa
 
   await expect(page.getByText(destinationName).first()).toBeVisible({ timeout: 30_000 });
 
-  // --- 4. Deliver a real alert -------------------------------------------
+  // --- 4. Create a Route from the Source to the Destination --------------
+  // Without this step the event would be stored unmatched: the assertions
+  // below exist precisely because intake, matching, and fan-out only meet in
+  // the real app.
+  await page.goto("/routes");
+
+  const routeDialog = await openDialog(page, "Add", "New route");
+
+  const routeName = `E2E route ${suffix}`;
+  await routeDialog.locator('input[name="name"]').fill(routeName);
+
+  // The rule starts empty; add the source condition the way an operator does.
+  // Nested ConditionList buttons carry their class in the accessible name.
+  await routeDialog.getByRole("button", { name: "Add condition: Source" }).click();
+
+  // The row's select is labelled by its condition class and 1-based index.
+  await routeDialog.getByRole("combobox", { name: "Source 1" }).click();
+  await page.getByRole("option", { name: sourceName, exact: true }).click();
+
+  // Destinations are a checkbox list rendered inside the dialog's listbox.
+  // Click the trigger twice: once to open, once to close after selecting, so
+  // the dropdown does not sit over the submit button. Anchor on the trigger's
+  // own id: every Radix select trigger also carries aria-haspopup="listbox",
+  // so a haspopup selector would match the rule's select fields as well.
+  const destinationTrigger = routeDialog.locator("button#destinationIds");
+  await destinationTrigger.click();
+  await routeDialog.getByRole("option").filter({ hasText: destinationName }).click();
+  await destinationTrigger.click();
+
+  await routeDialog.getByRole("button", { name: "Create route" }).click();
+
+  await expect(page.getByText(routeName).first()).toBeVisible({ timeout: 30_000 });
+
+  // --- 5. Deliver a real alert -------------------------------------------
   // POST straight at the token-authenticated webhook the UI handed us, sending
   // the token the way an upstream alerting system must: as a header. The path
   // itself carries no token.
@@ -113,9 +151,28 @@ test("a first-run operator can set up, route, and deliver an alert", async ({ pa
 
   expect(response.ok(), `webhook POST failed: ${response.status()}`).toBe(true);
 
-  // --- 5. The operator can see it ----------------------------------------
+  // --- 6. The operator can see the event and its delivery ----------------
   await page.goto("/events");
-  await expect(page.getByText("E2E alert").first()).toBeVisible({ timeout: 30_000 });
+
+  const eventRow = page.getByRole("row").filter({ hasText: "E2E alert" });
+  await expect(eventRow.first()).toBeVisible({ timeout: 30_000 });
+
+  // A matched route projects a route-match count, so the counts cell must not
+  // fall back to the unmatched badge. Asserting the absence is stable: it does
+  // not depend on whether the worker has attempted the delivery yet.
+  await expect(eventRow.first().getByText("No route matched")).toHaveCount(0);
+
+  // The delivery itself is the fan-out proof. Assert row presence and the
+  // target/event pairing, never the final state or attempt count: the target
+  // refuses connections, and the worker may sit in pending, running, or failed
+  // depending on scheduling.
+  await page.goto("/deliveries");
+
+  const deliveryRow = page
+    .getByRole("row")
+    .filter({ hasText: destinationName })
+    .filter({ hasText: "E2E alert" });
+  await expect(deliveryRow.first()).toBeVisible({ timeout: 30_000 });
 });
 
 /**
