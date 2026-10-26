@@ -1113,7 +1113,6 @@
   "sources.notice.createdTitle": "告警源创建成功",
   "sources.notice.dismissSaved": "我已保存",
   "sources.notice.tokenLabel": "接入 Token",
-  "sources.notice.tokenOnceHint": "仅在此处显示，关闭提示后将无法再次查看",
   "sources.page.addTitle": "新增告警源",
   "sources.page.configured": "已配置 {count} 个",
   "sources.page.description": "管理上游监控系统的 Webhook 接入和鉴权配置",

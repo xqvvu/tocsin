@@ -1113,7 +1113,6 @@
   "sources.notice.createdTitle": "Source created successfully",
   "sources.notice.dismissSaved": "I saved it",
   "sources.notice.tokenLabel": "Access token",
-  "sources.notice.tokenOnceHint": "Shown only here and cannot be viewed again after dismissal",
   "sources.page.addTitle": "Add source configuration",
   "sources.page.configured": "{count} configured",
   "sources.page.description": "Manage inbound webhook senders and secure intake",

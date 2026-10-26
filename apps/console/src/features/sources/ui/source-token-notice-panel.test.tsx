@@ -59,6 +59,23 @@ describe("source token notice panel", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
+  it("announces the notice politely instead of interrupting", () => {
+    renderPanel();
+
+    const status = screen.getByRole("status");
+
+    expect(status.getAttribute("aria-live")).toBe("polite");
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(status.textContent).toContain("Source created successfully");
+  });
+
+  it("states the one-time warning only once", () => {
+    renderPanel();
+
+    expect(screen.getAllByText(/no longer shown after you dismiss this notice/)).toHaveLength(1);
+    expect(screen.queryByText(/cannot be viewed again/)).toBeNull();
+  });
+
   it("makes copying the one-time token the primary action", () => {
     renderPanel();
 
