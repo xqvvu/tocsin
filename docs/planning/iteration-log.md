@@ -51,7 +51,7 @@
   - **运维/回滚**：Dockerfile、compose、workflows、依赖、迁移均无改动；回滚只需切回 `0.1.0-beta.98` 镜像，无需数据库操作。提示：健康聚合对 `deliveries` 全表分组，大表首次打开目标列表可能延迟 → Q-279。
 - **发布 `0.1.0-beta.99`**：
   - tag `v0.1.0-beta.99` @ `d1ddbbc`；GitHub Release（prerelease，body 非空）。
-  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.99`（amd64+arm64，`--provenance=false --sbom=false`）。
+  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.99`（amd64+arm64，index digest `sha256:ff3715256bf8a608d00389af552232caec74d1bedb9205600c40b8b93a2299b6`；构建时 `--provenance=false --sbom=false`）。
   - 回滚镜像 `0.1.0-beta.98`，无需数据库操作；无迁移。
 
 ### 下一轮优先项
