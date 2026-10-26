@@ -129,8 +129,8 @@ describe("Feishu apps page matches the other list pages", () => {
     // this page needed fixing for.
     const rangeLabel = (container: HTMLElement) => footer(container).split("Page ")[0];
 
-    expect(rangeLabel(feishu)).toBe("1 Feishu apps");
-    expect(rangeLabel(sources)).toBe("1 sources");
+    expect(rangeLabel(feishu)).toBe("1 Feishu app");
+    expect(rangeLabel(sources)).toBe("1 source");
   });
 
   it("renders its own columns, so the table is not merely structurally identical", () => {
