@@ -2,6 +2,66 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 126 轮）
+
+- 时间：2026-10-27 04:45 CST 起。
+- 基线：本轮开始时 `origin/main` @ `6fa0011`（v0.1.0-beta.98 后的日志提交），CI 与 E2E 均 success；无 open PR。
+- 类型：**需求垂直切片 + 轮转车道审计**（非 full-audit）。
+- 全量审计时间戳：**2026-10-26 21:45 CST（未变，第 120 轮）**；距本轮约 7 小时，但 backlog 有多个 ≥27 候选，按第 1.5 步规则继续，不重跑全量审计。
+- 车道（3 并发，未超上限）：`requirements`（必跑，10 分钟窄化 brief）、`ui-triage`（必跑，read-only）、`release-infra`（轮转；`docs-drift` 第 125 轮已跑）。
+- `ui-triage` 决策：**`defer`** —— 距上次真实浏览器评审仅 41 分钟（2026-10-27 04:05），自那以后 UI 路径 **0 个合并**；未解决的 UI-77/78/79 是 41 分钟前刚登记的，立即重扫只会重复发现。
+- `last_ui_review_at`：**2026-10-27 04:05 CST**（未变）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树 `elastic-bell-494e13`。
+
+### 专家发现
+
+**requirements（必跑）：无新候选。** `post-mvp-planning.md` 方向 2/4/6 与 `mvp-rc-checklist.md` 的未勾 gate 逐条比对后，均已登记在 backlog（REQ-3/6/33/34、REQ-267、REQ-272/276、REL-2/22 等）。唯一看似新切片的「投递列表按重试耗尽过滤」与已交付的 REQ-58（重试预算可见）和 REQ-18（按失败批量重试）重叠，预估 ≤25 分，不足门槛。
+
+**ui-triage（必跑）：`defer`。** 理由见上：距上次评审 41 分钟、0 个 UI 合并；未解决 UI 发现属存量队列而非新触发。下一次深度评审应重点看 #510 新增的「投递健康」列在 1440/390 的密度，以及 UI-77/78/79。
+
+**release-infra（轮转，4 条，均对代码核实）：**
+
+- 先纠正历史结论：`.github/workflows/e2e.yml` **已存在**（`playwright · chromium`，push main + PR，失败上传 `apps/console/test-results` 保留 3 天）；`justfile` 的 `e2e`/`docker-smoke`/`docker-buildx` 与 `scripts/docker-smoke.sh` 全部存在，无断链。
+- `docs/release/release-checklist.md:58-60` 的 migration 清单只到 `0003`，实际 `migrate/plan.ts:7-12` 已注册 `0004_oncall_dispatch_started_at`。
+- 同文件 `:52-53` 仍称 E2E 只覆盖到 Event，实际 `apps/console/e2e/alert-flow.spec.ts:104-176` 已从 UI 创建 Route 并断言 Events/Deliveries 行。
+- `docs/release/mvp-rc-checklist.md:178` 引用的 `pruneDedupeKeys` 调用点实际在 `delivery.repository.ts:108`，不是 `:101`。
+- Provider fixture 仍缺失：全仓无 `fixtures` 目录，6 个 adapter 测试继续内联 payload，REL-2 成立。
+
+### 本轮交付
+
+- **PR #510 `feat(console): show delivery health on the destinations list`**（REQ-12，垂直切片）：
+  - `@tocsin/core` 新增 `DestinationDeliveryHealthSchema` 与 `DESTINATION_HEALTH_RECENT_FAILURE_HOURS = 24`；`DestinationListItemSchema` 增加可选 `deliveryHealth`，仅列表投影填充，创建/更新响应不变。
+  - history 仓储新增 `destinationDeliveryHealth({ since })`，一次 `GROUP BY destination_id` 聚合最近成功/失败时间、排队+发送中数量、窗口内失败数（`history.repository.ts:444`）。
+  - `DestinationService.listDestinations()` 并行读取目标与聚合，`now` 时钟可注入；通知目标表新增「投递健康」列（`destination-delivery-health-cell.tsx`），无历史显示「暂无投递」。
+  - 测试 6 条（仓储聚合 3、组件 3）；PRD `docs/prd/destination-delivery-health.md`。
+  - 验证：`vp check` 0 error / 23 条既有 warning；`vp run -r test` 197 文件 / **1101** 测试；`vp run -r build` 通过；rebase 合并。
+- **PR #511 `docs(release): correct migration list and E2E coverage claims`**（release-infra 三条 AUTO_FIX）；`vp fmt --check` 通过；rebase 合并。
+- backlog：REQ-12 → shipped #510；新增 DOC-87（#511）；新增 Q-279（`deliveries` 缺 `destination_id` 索引）；刷新 REL-2 的复核证据。
+
+### EXPERT_PANEL
+
+- 本轮需求切片为只读 DTO 增量，无 schema/迁移/投递语义变化，不需要专家小组。
+- 发布评估由三位专家独立完成（见下）；一致放行。
+
+### 发布评估与发布记录
+
+- 三位发布专家一致放行（`v0.1.0-beta.98..origin/main`）：
+  - **发布经理**：唯一用户可见变更是 #510（`910a6e0`，通知目标列表投递健康），其余 2 个提交为 docs；建议 `0.1.0-beta.99`。放行条件「目标 commit CI 绿」在 `d1ddbbc` 上已满足。
+  - **阻断审计**：`d1ddbbc` 的 CI 与 E2E 均 success；0 open PR；迁移目录零 diff；`v0.1.0-beta.99` 未被占用；`blocked-autonomous` 仅 REL-13/16/23（仓库设置/法务项），不阻断；diff 复核无回归。
+  - **运维/回滚**：Dockerfile、compose、workflows、依赖、迁移均无改动；回滚只需切回 `0.1.0-beta.98` 镜像，无需数据库操作。提示：健康聚合对 `deliveries` 全表分组，大表首次打开目标列表可能延迟 → Q-279。
+- **发布 `0.1.0-beta.99`**：
+  - tag `v0.1.0-beta.99` @ `d1ddbbc`；GitHub Release（prerelease，body 非空）。
+  - 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.99`（amd64+arm64，`--provenance=false --sbom=false`）。
+  - 回滚镜像 `0.1.0-beta.98`，无需数据库操作；无迁移。
+
+### 下一轮优先项
+
+1. Q-279：为 `deliveries(destination_id)` 补 forward-only 加法迁移与迁移测试（EXPERT_PANEL）。
+2. UI-77/78/79：设置页账号安全面板与窄屏会话表。
+3. REL-2：provider payload fixture 目录。
+4. 车道轮转：下一轮非必跑车道从 `architecture` 或 `security-exposure` 继续（`release-infra` 本轮已跑）。
+5. backlog 仍有多个 ≥27 候选（REQ-24/32/13、REQ-36/2 等）；若下一轮无候选才按 6 小时闸门展开全量审计（上次为 2026-10-26 21:45）。
+
 ## 2026-10-27（第 125 轮）
 
 - 时间：2026-10-27 03:48 CST 起。
