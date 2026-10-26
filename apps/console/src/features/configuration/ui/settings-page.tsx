@@ -36,11 +36,11 @@ export function SettingsPage() {
           <TabsContent value="ui" className={settingsUiPanelClassName}>
             <SettingsOperationalOverview />
             <SettingsDeliveryPausePanel />
+            <SettingsSecurityPanel />
             <SettingsRuntimePanel />
             <SettingsWorkerHealthPanel />
             <SettingsStoragePanel />
             <SettingsPreferencesPanel />
-            <SettingsSecurityPanel />
           </TabsContent>
           <TabsContent value="toml" className="min-h-0">
             {workspace.activeTab === "toml" ? (
