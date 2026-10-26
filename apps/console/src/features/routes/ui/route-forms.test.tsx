@@ -134,6 +134,9 @@ describe("edit route form", () => {
     // the browser's language; the ARIA flag keeps the field announced as required.
     expect(nameInput.hasAttribute("required")).toBe(false);
     expect(nameInput.getAttribute("aria-required")).toBe("true");
+    // The form itself opts out of native constraint validation too, so a future
+    // `required` field cannot silently reintroduce the browser bubble.
+    expect((nameInput.closest("form") as HTMLFormElement | null)?.noValidate).toBe(true);
 
     fireEvent.change(nameInput, { target: { value: "" } });
     saveRoute();
