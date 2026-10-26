@@ -281,7 +281,10 @@ function RouteForm({
               name={field.name}
               placeholder={t("routing.form.namePlaceholder")}
               value={field.state.value}
-              required
+              // `required` would let the browser's native bubble intercept the
+              // submit before TanStack Form can render the localized error.
+              // The validator above is the single source of this rule.
+              aria-required
               aria-invalid={field.state.meta.errors.length > 0}
               onBlur={field.handleBlur}
               onChange={(event) => field.handleChange(event.currentTarget.value)}
