@@ -2,7 +2,7 @@ import { RiDeleteBinLine, RiErrorWarningLine, RiRefreshLine } from "@remixicon/r
 
 import type { DeletionImpact } from "@tocsin/core";
 
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "#/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
 import { Skeleton } from "#/components/ui/skeleton";
@@ -59,19 +59,25 @@ export function DeletionImpactNotice({
     // An unreadable preview is a warning, not a lock: the operator still has to
     // be able to clear a broken configuration from a degraded instance, and
     // must be able to ask again without closing the dialog.
+    //
+    // The retry sits under the copy rather than in `AlertAction`: on a 320px
+    // dialog the absolutely positioned action reserves 72px on the right and
+    // squeezes this message into a three-line column.
     return (
       <Alert>
         <RiErrorWarningLine aria-hidden />
         <AlertTitle>{t("common.deletionImpact.errorTitle")}</AlertTitle>
-        <AlertDescription>{t("common.deletionImpact.errorDescription")}</AlertDescription>
-        {onRetry ? (
-          <AlertAction>
-            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-              <RiRefreshLine data-icon="inline-start" aria-hidden />
-              {t("common.actions.tryAgain")}
-            </Button>
-          </AlertAction>
-        ) : null}
+        <AlertDescription>
+          <span>{t("common.deletionImpact.errorDescription")}</span>
+          {onRetry ? (
+            <div className="mt-1.5">
+              <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                <RiRefreshLine data-icon="inline-start" aria-hidden />
+                {t("common.actions.tryAgain")}
+              </Button>
+            </div>
+          ) : null}
+        </AlertDescription>
       </Alert>
     );
   }

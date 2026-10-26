@@ -714,6 +714,9 @@ function RouteForm({
     <>
       <form
         className={cn("flex flex-col", isDialogLayout ? "min-h-0 flex-1 overflow-hidden" : "gap-2")}
+        // TanStack Form owns validation and renders localized field errors; the
+        // native constraint bubbles would preempt submit in the browser locale.
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
           event.stopPropagation();

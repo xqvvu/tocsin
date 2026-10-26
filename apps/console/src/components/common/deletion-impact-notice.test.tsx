@@ -54,6 +54,10 @@ describe("deletion impact notice", () => {
     );
 
     expect(screen.getByRole("alert").textContent).toContain("common.deletionImpact.errorTitle");
+    // `AlertAction` is absolutely positioned and reserves 72px on the right,
+    // which leaves ~190px for the copy in a 320px dialog. The retry has to stay
+    // in normal flow under the description.
+    expect(screen.getByRole("alert").querySelector('[data-slot="alert-action"]')).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /common\.actions\.tryAgain/ }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });

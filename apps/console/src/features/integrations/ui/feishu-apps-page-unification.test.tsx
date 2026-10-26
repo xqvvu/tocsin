@@ -118,7 +118,7 @@ describe("Feishu apps page matches the other list pages", () => {
 
     // Page label, Previous and Next all present — i.e. the shared numbered
     // control, which is what makes the footer identical across list pages.
-    expect(pageControl(feishu)).toContain("Page 1 / 1");
+    expect(pageControl(feishu)).toContain("Page 1 of 1");
     expect(pageControl(feishu)).toContain("Previous");
     expect(pageControl(feishu)).toContain("Next");
     expect(pageControl(feishu)).toBe(pageControl(sources));
