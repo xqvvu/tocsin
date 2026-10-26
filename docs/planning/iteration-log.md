@@ -2,6 +2,90 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 119 轮）
+
+- 时间：2026-10-26 20:25 CST 起。
+- 基线：本轮开始时 `origin/main` @ `76e3a87`；main CI success（`40319057613`）；无 open PR。
+- 类型：**UI 评审切片**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有 `REQ-267`（27）等达到门槛的
+  candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道（最多 2 并发，未超过 3）：`requirements`（窄化 brief：只读
+  `post-mvp-planning.md` + `mvp-rc-checklist.md`，10 分钟硬边界，最多 2 条）、`ui-triage`（read-only，
+  5 分钟）、`ui-review`（triage 判定 `review_now` 后启动，浏览器实测 + 20 分钟边界）。
+- `ui-triage` 决策：**`review_now`**，理由：① 第 117 轮 #485（删除影响面预览）18:43 合并，晚于上次
+  UI 评审 10:35，属「新交互上线从未评审」；② 自上次评审仍有 `0e81002`（Token 提示改 Alert）等 UI
+  变更，`defer` 的前提「UI 代码未变」不成立；③ 未解决 UI candidate 实测 40 条，其中 UI-61/63/64/67/68/69
+  与 #485、`1d5fff7` 的改动面重合，可在本轮顺带复核。
+- `last_ui_review_at`：**2026-10-26 20:50 CST**（更新）。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `charming-wing-14f32d`。
+  `vp run -r test` 首次因 `node_modules` 半删失败（缺 `@rolldown/plugin-babel`），
+  `vp install --frozen-lockfile --force` 5.3 秒修复。
+- 浏览器验证：ui-review 用隔离实例（`/tmp/tocsin-ui-r119/db.sqlite`，端口 6198）实测。因会话工作树当时
+  `node_modules` 不完整，dev server 从主 checkout 启动；主 checkout 与本轮同 commit `76e3a87`、目标文件
+  逐字节一致、未修改任何文件，进程已停止、端口已释放。截图 `/tmp/tocsin-ui-r119/`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### ui-review 发现
+
+通过项（第 117 轮 #485 的删除影响面交互）：加载 / 失败 / 0 计数三态按设计工作；有历史时确认按钮
+保持禁用直到勾选，勾选后可点；checkbox 可访问名称为「I understand…」，点击文字可切换；390×844
+弹窗完整折行无裁切；0 计数不显示勾选框、删除按钮直接可用；失败态确认按钮保持可用（fail-open）。
+逐条证据：
+
+- **UI-63 confirmed（代码核实）**：`features/routes/ui/route-forms.tsx:284` 原生 `required` 抢在
+  TanStack 校验前；浏览器侧因「未选通知目标时创建按钮禁用」未触发气泡。
+- **UI-64 confirmed（浏览器实测）**：路由弹窗 1024×760、名称输入 992×32
+  （`/tmp/tocsin-ui-r119/20-routes.png`；`components/common/configuration-dialog-content.tsx:13`）。
+- **UI-69 代码仍成立**：`deliveries/ui/delivery-buzz-button.tsx:33-36` 不看目标启用状态；
+  `destination.repository.ts:44-52` 的 `get` 不过滤 `enabled`；浏览器无夹具未复现。
+- **UI-70（新，浏览器实测）**：拦截 `POST /api/sources/previewDelete` 后失败态只有 Alert，无重试、
+  无 `aria-live`（`components/common/deletion-impact-notice.tsx:48-57`）；
+  截图 `/tmp/tocsin-ui-r119/51-delete-error.png`。
+- **UI-71（新，代码核实）**：加载态只有 Skeleton，可见区域无「正在统计…」，sr-only 文本不在
+  live region（`deletion-impact-notice.tsx:38-46`）。
+- **UI-72（新，浏览器实测）**：英文列表页脚显示「1 sources」
+  （`i18n/messages/en-US.json:1167`；截图 `/tmp/tocsin-ui-r119/12-sources-list.png`）。
+
+### requirements 候选（已写入 backlog，均低于门槛）
+
+- **REQ-272（16）**：维护窗口结束后的抑制汇总投递。证据 `docs/release/mvp-rc-checklist.md:62,198-199`
+  明确「窗口结束后的通知型汇总仍不做」；需内部 digest 事件来源（schema + 投递语义），交 EXPERT_PANEL。
+- **REQ-273（16）**：有历史投递的目标改为归档而非硬删除。证据 `docs/prd/post-mvp-planning.md:61`；
+  与 REQ-267/268 部分重叠，反转删除语义属产品决策，交 EXPERT_PANEL。
+
+### 本轮交付
+
+- **PR #489 `fix(console): show localized route name error instead of native bubble`（UI-63）**：
+  - 事实：名称输入框同时有原生 `required` 与 TanStack `onSubmit` 校验；原生约束在 submit 前拦截，
+    中文界面弹出浏览器语言气泡，`FieldError` 与 `data-invalid` 样式不出现。
+  - 实现：移除 `required`、保留 `aria-required`；必填规则仍由 `onSubmit` 校验器提供。新增组件回归
+    测试（空名称提交显示 `Route name is required`、不触发保存、断言无 `required` 且有
+    `aria-required="true"`）。PRD `docs/prd/route-name-localized-validation.md`。
+  - 验证：`vp fmt --write`、`vp check` 0 error（23 条既有 warning）、`vp run -r test`（189 文件 /
+    **1071** 测试）、`vp run -r build` 通过；隔离实例 `localhost:6197` 在 1440×900 实测
+    `required=false`、`aria-required=true`、`validationMessage=""`、本地化错误可见
+    （截图 `/tmp/tocsin-ui-119-fix/route-empty-name-1440.png`）。
+- backlog：UI-63 → shipped；新增 UI-70/71/72、REQ-272/273；UI-64/69 补第 119 轮复核备注；
+  删除与已 shipped 行重复的 REQ-268 旧 candidate 行。
+
+### EXPERT_PANEL
+
+- 本轮无高风险改动，未启动。REQ-267（投递名称快照，需 forward-only 加法迁移）留待下一轮
+  panel 裁决；REQ-272/273 同样需要 panel 决策。
+
+### 发布评估
+
+- 本轮含用户可见修复（PR #489），合并后按发布门槛裁决；若发布，版本与发布记录随
+  `chore(release)` PR 一并落盘。
+
+### 下一轮优先项
+
+1. REQ-267（27）：投递历史名称快照，先交 EXPERT_PANEL 裁决迁移形状与老投递显示语义。
+2. UI-70（26）/ UI-71（25）：删除影响面失败重试与加载 live region（同一交互，可合成一片）。
+3. UI-64（20）：路由弹窗宽度；UI-69（21）：停用目标前置禁用加急。
+4. REQ-271（22）：`/api/ready` bootstrap 失败的机器可读原因。
+5. 车道轮转：`docs-drift` 或 `security-exposure`（自第 109 轮未跑）。
+
 ## 2026-10-26（第 118 轮）
 
 - 时间：2026-10-26 19:30 CST 起。
