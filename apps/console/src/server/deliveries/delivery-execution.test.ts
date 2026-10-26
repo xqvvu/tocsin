@@ -536,7 +536,58 @@ describe("delivery execution", () => {
     expect(triggered).toHaveLength(1);
   });
 
+  it("retries the terminal failure write once before giving up the evidence", async () => {
+    const failed: Parameters<DeliveryRepository["markFailed"]>[0][] = [];
+    let failureWrites = 0;
+    const store = createExecutionStore({
+      succeeded: [],
+      failed,
+      markSucceeded: async () => {
+        throw new Error("database is locked");
+      },
+      markFailed: async (command) => {
+        failureWrites += 1;
+
+        if (failureWrites === 1) {
+          throw new Error("database is still locked");
+        }
+
+        failed.push(command);
+
+        return deliveryJob({
+          state: "failed",
+          lastError: command.error,
+          finishedAt: command.finishedAt ?? now,
+        });
+      },
+    });
+    const triggered: unknown[] = [];
+    const execution = new DeliveryExecution({
+      store,
+      destinations: sendOkWithEvidence(),
+      triggerPings: async (input) => {
+        triggered.push(input);
+      },
+    });
+
+    await expect(execution.execute(createClaimedDelivery(), now)).resolves.toBe("failed");
+
+    // The second write is what keeps the stale-attempt reclaim from sending the
+    // alert again, so the evidence and the do-not-resend marker must survive it.
+    expect(failureWrites).toBe(2);
+    expect(failed).toEqual([
+      expect.objectContaining({
+        error: DELIVERY_ACCEPTED_UNRECORDED_ERROR,
+        retryAt: null,
+        responseStatus: 202,
+        responseBody: '{"code":0}',
+      }),
+    ]);
+    expect(triggered).toHaveLength(1);
+  });
+
   it("keeps the batch alive when the terminal failure write also throws", async () => {
+    let failureWrites = 0;
     const store = createExecutionStore({
       succeeded: [],
       failed: [],
@@ -544,6 +595,7 @@ describe("delivery execution", () => {
         throw new Error("database is locked");
       },
       markFailed: async () => {
+        failureWrites += 1;
         throw new Error("database is still locked");
       },
     });
@@ -557,6 +609,7 @@ describe("delivery execution", () => {
     });
 
     await expect(execution.execute(createClaimedDelivery(), now)).resolves.toBe("failed");
+    expect(failureWrites).toBe(2);
     expect(triggered).toHaveLength(1);
   });
 });

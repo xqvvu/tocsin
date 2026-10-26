@@ -1,6 +1,8 @@
 import { sql } from "kysely";
 
 import {
+  DELIVERY_OUTCOME_UNKNOWN_FINAL_ERROR,
+  DELIVERY_OUTCOME_UNKNOWN_RETRY_ERROR,
   encodeJson,
   formatSuppressionReason,
   isDeliveryAcceptedUnrecorded,
@@ -193,7 +195,6 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
     return this.context.runInTransaction(async (context) => {
       const repository = this.withContext(context);
       const now = input.now ?? this.context.now();
-      const error = input.error ?? "Delivery attempt timed out before completion";
       const rows = await context.db
         .selectFrom("deliveries")
         .innerJoin("delivery_attempts", "delivery_attempts.delivery_id", "deliveries.id")
@@ -213,11 +214,21 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
           continue;
         }
 
+        // The worker vanished mid-attempt, so whether the target received the
+        // alert is unknown. Say so instead of reporting a plain timeout: an
+        // operator who reads "timed out" assumes nothing was sent and may
+        // retry by hand even though the alert already went out.
+        const willRetry = current.attemptCount < current.maxAttempts;
+
         await repository.markFailed({
           deliveryId: row.id,
           attemptId: row.attempt_id,
-          error,
-          retryAt: current.attemptCount < current.maxAttempts ? now : null,
+          error:
+            input.error ??
+            (willRetry
+              ? DELIVERY_OUTCOME_UNKNOWN_RETRY_ERROR
+              : DELIVERY_OUTCOME_UNKNOWN_FINAL_ERROR),
+          retryAt: willRetry ? now : null,
           finishedAt: now,
         });
         reclaimed += 1;
