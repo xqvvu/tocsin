@@ -129,7 +129,10 @@ post-MVP 中继续设计。dedupe cleanup 已改为有界批（见下方 D 节�
 - [x] 增加关键浏览器 E2E workflow：`.github/workflows/e2e.yml`（Playwright + Chromium，`push` 到 main
       与 `pull_request` 触发，失败上传 `apps/console/test-results`，保留 3 天）。本机 `just e2e` 实测通过。
 - [ ] 扩展 E2E spec 覆盖到 gate 要求的全部步骤：创建 Route、发送 webhook 后查看 Delivery、过滤历史、
-      失败 retry。当前 spec 覆盖 setup/login、Source、Destination 与 Event（见 REL-22）。
+      失败 retry。2026-10-27 已补齐 setup/login、Source、Destination、Route、Event 与 Delivery：
+      `apps/console/e2e/alert-flow.spec.ts` 从 UI 创建 Route，断言事件不再显示 `No route matched`
+      且投递列表出现「目标 + 事件」配对行（不断言最终状态，避免 worker 退避时序抖动）。
+      仍缺历史过滤与失败 retry，见 REL-22。
 - [x] 增加 Docker build/compose smoke automation。→ `just docker-smoke` / `scripts/docker-smoke.sh`：构建镜像 → 起栈 → 等 `/api/ready` → 断言 `/api/health` 与 `/api/ready` 不同 → 断言 `/data/tocsin.sqlite` 已挂载 → 断言首页出 HTML → 拆栈并删卷。**已在本机实测通过**（见 PR）。故意不进 `ci.yml`：构镜像慢，快速门禁应保持快。
 - [x] 增加 health endpoint 与 readiness endpoint。
 - [x] Dockerfile 提供 runtime image、数据卷和 container healthcheck。
