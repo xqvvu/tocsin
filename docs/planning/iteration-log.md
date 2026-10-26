@@ -41,9 +41,14 @@
 - 本轮无高风险事项，未启动专家小组。
 - Q-231（「已送达但记账失败」的终态投递仍可手动 retry）保持下一轮第一优先，需要专家组在「`last_error` 哨兵（无迁移、可逆）」与「新增 `delivered_unrecorded` 列（更稳、需加法迁移）」之间裁决。
 
-### 发布评估
+### 发布评估与发布记录
 
-- 本轮有用户可见修复 #457，满足「至少一个用户可见变更」；最终发布评估在合并后执行，结果见 `release` 提交中的补充记录。
+- 发布依据：自 `v0.1.0-beta.84` 起 1 个用户可见修复 #457（UI-60）；两个 docs 提交不单独构成发布理由。发布三专家（发布经理 / 阻断审计 / 运维回滚）一致 RELEASE：6 项门禁全 PASS（main CI success、无 open PR、无回归、无迁移、tag/release 10/10 对齐、目标树含修复与测试）。
+- 版本 PR #458 `chore(release): v0.1.0-beta.85`（rebase 合并 `abc3bbb`）；main CI success。
+- tag `v0.1.0-beta.85` 指向 `abc3bbb`（= `origin/main`）；GitHub Release 为 prerelease 且 body 1641 chars。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.85`（linux/amd64 + linux/arm64，index digest `sha256:fd467fbac8e64e3bfba44b5b14ea0e2c45117f680fb0a90e522209de90a6b05b`）；回滚 `0.1.0-beta.84`（index digest `sha256:776dd420…`）。
+- 无迁移、无环境变量/配置格式/启动参数/镜像构建变化；回滚只需换回旧镜像 tag。
+- 顺带关闭 DOC-84：`docs/release/release-checklist.md` 的固定 tag 上界改为 `git tag --sort=-v:refname | head -1` 查询。
 
 ### 下一轮优先项
 
