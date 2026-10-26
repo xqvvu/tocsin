@@ -73,10 +73,18 @@
 - 本轮无高风险改动，未启动。REQ-267（投递名称快照，需 forward-only 加法迁移）留待下一轮
   panel 裁决；REQ-272/273 同样需要 panel 决策。
 
-### 发布评估
+### 发布评估与发布记录
 
-- 本轮含用户可见修复（PR #489），合并后按发布门槛裁决；若发布，版本与发布记录随
-  `chore(release)` PR 一并落盘。
+- 发布经理：**RELEASE**。`v0.1.0-beta.93..origin/main` 共 7 个提交，唯一用户可见变更是 #489
+  （路由名称为空时渲染本地化 FieldError）；其余为 docs 与两笔依赖补丁升级（oRPC beta.44→beta.46、
+  TanStack Router/Start 补丁、pnpm 12.15.0）；建议 `0.1.0-beta.94`，`git tag -l` 无同名 tag。
+- 阻断审计：**APPROVE_RELEASE**。`b74a317` 的 CI（check/test/build）success；open PR 0；
+  `migrate/` 自 beta.93 零 diff；`blocked-autonomous` 仅 REL-13/16/23（法务与仓库设置）；
+  第 119 轮新发现 UI-70/71/72 为候选改进，非本轮引入的回归。main 上的 E2E 首跑卡在安装系统依赖，
+  已 cancel + rerun。
+- 运维/回滚：**APPROVE_DEPLOY**。Dockerfile、compose、环境变量、启动参数零 diff；锁文件为补丁升级；
+  回滚到 `0.1.0-beta.93` 无需数据库操作；建议镜像 tag `0.1.0-beta.94`。
+- 版本 PR `chore(release): v0.1.0-beta.94`；tag、GitHub Release 与镜像 digest 在发布完成后补记。
 
 ### 下一轮优先项
 

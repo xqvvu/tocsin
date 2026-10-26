@@ -14,6 +14,7 @@
 
 | id | 标题 | 来源 | 评分 | 状态 | PR | 备注 |
 |---|---|---|---|---|---|---|
+| REL-56 | 发布 `0.1.0-beta.94` | release panel（第 119 轮） | — | in-progress | — | 用户可见变更 #489（UI-63，本地化路由名称校验）；无迁移；回滚 `0.1.0-beta.93` 无需数据库操作；tag / GitHub Release / 镜像 digest 发布完成后补记 |
 | REL-55 | 发布 `0.1.0-beta.93` | release panel（第 117 轮） | — | shipped | #486 | tag `v0.1.0-beta.93` @ `8af1ace`；GitHub Release（prerelease，body 1085 chars）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.93`（amd64+arm64，index digest `sha256:c16b0eb4…`）；回滚 `0.1.0-beta.92`，**无需数据库操作**；用户可见变更 #485（REQ-268）；无迁移 |
 | REQ-268 | 删除告警源 / 路由 / 通知目标前展示将被销毁的历史影响面并要求显式确认 | requirements lane（第 116 轮） | 28 | shipped | #485 | 第 117 轮实现：新增只读 `sources/routes/destinations.previewDelete`（统一 `DeletionImpact`：事件 / 投递 / 尝试 / 加急），计数在 `history` 仓储沿真实外键级联路径统计（`history.repository.ts:440-535`）；三个删除对话框打开即拉取预览，有历史时删除按钮保持禁用直到勾选确认；预览失败只提示不阻断。共享组件 `components/common/deletion-impact-notice.tsx` + `use-deletion-impact.ts`；PRD `docs/prd/deletion-impact-preview.md`；测试覆盖仓储三目标计数、删除后归零、未知 id NOT_FOUND、组件级确认门禁。无迁移 |
 | REQ-269 | 发布前真实部署的升级 / 回滚 / 恢复演练与可复核验收记录 | requirements lane（第 117 轮） | 28 | shipped | #488 | 第 118 轮实现（docs-only）：用已发布镜像 beta.89/90/92/93 在本地 Docker（linux/arm64）跑完冷备份→升级（含 `0004`）→跨 0004 回滚→恢复，写入 `docs/release/backup-restore-upgrade.md` 第 8 节（步骤表、命令、`integrity_check` 证据）。实测纠偏：未知 migration 时旧镜像**不会退出**，而是 `running=true`、`/api/ready` 500、140s 后 `health=unhealthy`、`restarts=0`；已回写第 6 节。未覆盖真实部署（反代/TLS/生产规模/命名卷 cp/amd64）见第 9 节 |
