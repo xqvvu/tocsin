@@ -2,6 +2,55 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 129 轮）
+
+- 时间：2026-10-27 07:34 CST 起。
+- 基线：本轮开始时 `origin/main` @ `90f78e5`（第 128 轮日志提交）；该提交的 CI 仍在跑，
+  上一提交 `0dd8dd6`（v0.1.0-beta.101）的 CI 与 E2E 均 success；无 open PR。
+- 类型：**需求切片（非 full-audit）**。第 128 轮全量审计与浏览器 UI 评审刚在 07:30 收尾，
+  本轮距其不足 1 小时且仓库代码零变化，按第 1.5 步的配额纪律不再重跑专家车道。
+- 全量审计时间戳：**2026-10-27 06:40 CST（未变，第 128 轮更新）**；距上次约 54 分钟。
+- 车道：本轮**未 spawn subagent**。理由：`requirements` 在第 128 轮已用窄化 brief 确认
+  「无新候选」且逐条给出 backlog 映射；`last_ui_review_at` 为 06:45 CST（49 分钟前），
+  `ui-triage` 的任一强信号都不成立，等价结论为 `defer`。两者在本轮重跑只会重复同一批结论。
+  编排者直接按第 128 轮「下一轮优先项」第 1 条选题。
+- `ui-triage` 决策：**`defer`**（沿用第 128 轮实测基线：距浏览器评审 49 分钟，
+  期间 0 个 UI 路径合并、0 条新增 UI 发现）。
+- `last_ui_review_at`：**2026-10-27 06:45 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `charming-mendel-88ff0c`。
+- 浏览器验证：本轮未起浏览器实例。改动只是把两个标题/正文槽位的固定英文换成中英 i18n 文案
+  （中文串更短，不改变布局与截断行为），由 jsdom 组件测试覆盖；同页面的 1440×900 与
+  390×844 实测见第 128 轮。
+
+### 本轮交付
+
+- **PR #522 `feat(console): localize the parse-failure fallback headline`**（UI-80，需求切片，
+  rebase 合并 `a93c3f9`）：
+  - 新增 `events.parseFailure.fallbackTitle` / `fallbackMessage`（zh-Hans + en-US）。
+  - `event-title-cell.tsx`：`parseFailed` 为真时标题改用本地化文案；
+    `event-detail-summary.tsx`：`parseFailureMetadataFrom(providerMetadata)` 命中时 H2 与正文
+    改用本地化文案。
+  - 入库值、「规范化 / 原始调试」标签页、静默动作的匹配值保持不变（静默仍以库中原值为准，
+    代码内加注释说明）。
+  - 测试 +7：列表（中英、普通事件不受影响）、详情摘要（中英、普通事件不受影响）。
+  - PRD `docs/prd/parse-failure-localized-fallback.md`。
+  - 验证：`vp check` 0 error / 23 条既有 warning；`vp run -r test` 4/4（console 201 文件 /
+    **1115** 测试）；`vp run -r build` 通过；CI `check · test · build` 2m56s、
+    `playwright · chromium` 16m32s 均 success。
+
+### EXPERT_PANEL
+
+- 本轮未触发：改动是纯展示层本地化，无 schema/迁移/投递/路由/auth 语义变化，可整文件回滚。
+
+### 下一轮优先项
+
+1. **Q-279（25）**：`deliveries(destination_id)` forward-only 加法迁移 + 迁移测试（EXPERT_PANEL）。
+2. **REQ-271（22）**：`/api/ready` 启动失败原因机器可读 code（M）。
+3. UI-81（24）/ Q-281（22）：中文术语统一、飞书 FastGPT 卡片 unknown 三态文案。
+4. UI-78/79：窄屏会话表与撤销确认框影响数量。
+5. 车道轮转：下一轮非必跑车道为 **`security-exposure`**（自第 124 轮未跑）。
+
 ## 2026-10-27（第 128 轮）
 
 - 时间：2026-10-27 06:38 CST 起。
