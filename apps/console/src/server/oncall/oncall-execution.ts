@@ -21,7 +21,7 @@ import { safeErrorProperties } from "#/server/runtime/log-safety";
 const oncallLogger = getLogger(["tocsin", "oncall"]);
 
 export interface OncallExecutionStore {
-  readonly oncall: Pick<OncallRepository, "markFired" | "markFailed">;
+  readonly oncall: Pick<OncallRepository, "markDispatchStarted" | "markFired" | "markFailed">;
 }
 
 export interface OncallExecutionOptions {
@@ -80,6 +80,23 @@ export class OncallExecution {
             "Feishu urgent paging requires an app-mode destination with resolved credentials and a message reference",
           retryHint: "not_retryable",
           now,
+        });
+      }
+
+      // Record the intent to ring before the provider is asked to call. The
+      // write is best-effort on purpose: paging must never depend on
+      // bookkeeping (docs/planning/decisions/delivery-success-persistence-failure.md).
+      // If it fails, this attempt degrades to the pre-marker behavior, where a
+      // stale reclaim cannot rule out a call that already went out.
+      try {
+        await this.store.oncall.markDispatchStarted({ pingId: claimed.ping.id, startedAt: now });
+      } catch (error) {
+        oncallLogger.warn("Urgent call {pingId} dispatch intent could not be recorded", {
+          pingId: claimed.ping.id,
+          deliveryId: claimed.ping.deliveryId,
+          destinationId: claimed.ping.destinationId,
+          receiver: claimed.ping.receiver,
+          ...safeErrorProperties(error),
         });
       }
 

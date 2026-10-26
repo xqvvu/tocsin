@@ -206,6 +206,7 @@ export async function createAppTables(db: Kysely<SqliteDatabaseSchema>): Promise
     .addColumn("max_attempts", "integer", (column) => column.notNull().defaultTo(3))
     .addColumn("next_attempt_at", "text")
     .addColumn("last_error", "text")
+    .addColumn("dispatch_started_at", "text")
     .addColumn("trigger", "text", (column) => column.notNull())
     .addColumn("initiated_by", "text")
     .addColumn("suppress_reason", "text")

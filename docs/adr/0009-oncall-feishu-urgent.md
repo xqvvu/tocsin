@@ -59,6 +59,13 @@
    ```
 
    电话失败只重试电话，绝不重发卡片；卡片重发也绝不重复打电话。`OncallWorker.runOnce()` 照抄 `DeliveryWorkerService`（`server/deliveries/delivery-worker.service.ts`）的 reclaim → claim(due) → execute 顺序，退避复用 `DeliveryBackoffOptions`（`server/deliveries/delivery-execution.ts:31`）；runner 复用 `createDeliveryWorkerRunner`（`server/runtime/delivery-worker-runner.ts:47`，它对队列形状无感知），container 里 `ensureOncallWorkerRunner()` 与 delivery runner 并列（注入点见 `server/runtime/container.ts:138`），仍是单进程 setInterval。MVP 阶段按 AGENTS.md 直接在 `migrate/schema.ts` 的 `createAppTables` / `createAppIndexes` 加表。
+   **实现补充（2026-10-26，第 114 轮）：** `running` 本身不能证明这次呼叫是否已经发出，
+   因此新增 `oncall_pings.dispatch_started_at`（forward-only 迁移 `0004`）。执行器在把呼叫
+   交给 provider **之前** best-effort 写入该标记（写失败只记日志、呼叫照发，呼叫不依赖记账），
+   `claimNext` 每次领取都把标记重置为 `NULL`；`reclaimStaleRunning` 只对**没有**标记的行
+   重新排期，带标记的行落终态并在 `last_error` 写明「可能已拨出、未自动重试」。
+   决策记录 `docs/planning/decisions/oncall-dispatch-intent.md`，PRD
+   `docs/prd/oncall-dispatch-intent.md`。
 
 6. **去重风暴保护。** ping 按 `(fingerprint, destination_id, receiver)` 在一个去重窗口（沿用 `intake.service.ts:54` 的 `dedupeWindowMs ?? 5 * 60 * 1000` 模式，作为 service 选项而非共享常量）内只建一条。告警风暴下"每 30 秒一条 firing 就刷一次电话"不可接受。新建 `oncall_ping_dedupe_keys` 表，不复用 `delivery_dedupe_keys` 的行。
    **实现补充（2026-10-26，第 113 轮）：** 「卡片重发也绝不重复打电话」由

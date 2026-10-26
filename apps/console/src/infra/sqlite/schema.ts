@@ -177,6 +177,12 @@ export interface OncallPingsTable {
   max_attempts: SqliteGenerated<number>;
   next_attempt_at: string | null;
   last_error: string | null;
+  /**
+   * Written immediately before the provider is asked to ring. A `running` row
+   * with this set proves the call may already have been placed, so stale
+   * reclaim must never schedule it again. Reset by every claim.
+   */
+  dispatch_started_at: SqliteGenerated<string | null>;
   trigger: OncallPing["trigger"];
   initiated_by: string | null;
   suppress_reason: string | null;

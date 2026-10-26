@@ -20,7 +20,30 @@ describe("sqlite schema plan", () => {
       "0001_initial_schema.ts",
       "0002_suppressions.ts",
       "0003_complete_legacy_schema.ts",
+      "0004_oncall_dispatch_started_at.ts",
     ]);
+  });
+
+  it("adds the nullable dispatch-intent marker without rewriting existing pings", async () => {
+    const db = createSqliteDatabase({ databasePath: ":memory:" });
+
+    try {
+      await migrateSqliteDatabase(db);
+
+      const columns = await sql<{
+        name: string;
+        notnull: number;
+        dflt_value: string | null;
+      }>`PRAGMA table_info("oncall_pings")`.execute(db);
+      const marker = columns.rows.find((row) => row.name === "dispatch_started_at");
+
+      // A stale reclaim reads the absence of this value as "the attempt never
+      // reached the provider", so pre-existing rows must stay NULL rather than
+      // gain a backfilled timestamp.
+      expect(marker).toMatchObject({ notnull: 0, dflt_value: null });
+    } finally {
+      await db.destroy();
+    }
   });
 
   it("keeps the Better Auth generated SQL snapshot beside the Kysely builders", () => {
@@ -42,11 +65,14 @@ describe("sqlite schema plan", () => {
         "0001",
         "0002",
         "0003",
+        "0004",
       ]);
-      expect(await getAppliedMigrationVersions(db)).toEqual(new Set(["0001", "0002", "0003"]));
+      expect(await getAppliedMigrationVersions(db)).toEqual(
+        new Set(["0001", "0002", "0003", "0004"]),
+      );
       const store = new OpenedSqliteStore(db, new SqliteRepositoryContext({ db }));
 
-      expect(await store.schemaVersion()).toBe("0003");
+      expect(await store.schemaVersion()).toBe("0004");
       expect((await store.settings.get()).rawPayloadRetentionDays).toBe(30);
 
       const tables = (
@@ -253,8 +279,10 @@ describe("sqlite schema plan", () => {
 
       const result = await migrateSqliteDatabase(db);
 
-      expect(result.applied.map((migration) => migration.version)).toEqual(["0003"]);
-      expect(await getAppliedMigrationVersions(db)).toEqual(new Set(["0001", "0002", "0003"]));
+      expect(result.applied.map((migration) => migration.version)).toEqual(["0003", "0004"]);
+      expect(await getAppliedMigrationVersions(db)).toEqual(
+        new Set(["0001", "0002", "0003", "0004"]),
+      );
       expect(
         await db
           .selectFrom("deliveries")
@@ -366,6 +394,8 @@ describe("sqlite schema plan", () => {
         name: string;
       }>`PRAGMA table_info("oncall_pings")`.execute(db);
       expect(repairedOncallColumns.rows.map((row) => row.name)).toContain("provider_ref_type");
+      // 0004 lands on legacy databases too, not just on a fresh baseline.
+      expect(repairedOncallColumns.rows.map((row) => row.name)).toContain("dispatch_started_at");
       const repairedIndexes = await sql<{ name: string }>`
         SELECT name FROM sqlite_master WHERE type = 'index'
       `.execute(db);
@@ -427,6 +457,7 @@ describe("sqlite schema plan", () => {
         "0001",
         "0002",
         "0003",
+        "0004",
       ]);
     } finally {
       await db.destroy();

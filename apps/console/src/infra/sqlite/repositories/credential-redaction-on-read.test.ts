@@ -74,6 +74,7 @@ describe("credential redaction on read", () => {
       max_attempts: 3,
       next_attempt_at: null,
       last_error: "carrier rejected Basic bGVnYWN5OnNlY3JldA==",
+      dispatch_started_at: null,
       trigger: "auto",
       initiated_by: null,
       suppress_reason: null,

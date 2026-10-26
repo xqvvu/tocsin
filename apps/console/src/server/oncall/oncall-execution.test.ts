@@ -29,6 +29,7 @@ describe("oncall execution after the provider accepts the call", () => {
     const execution = new OncallExecution({
       store: {
         oncall: {
+          markDispatchStarted: (command) => store.oncall.markDispatchStarted(command),
           async markFired() {
             throw new Error("database is locked");
           },
@@ -67,6 +68,7 @@ describe("oncall execution after the provider accepts the call", () => {
     const execution = new OncallExecution({
       store: {
         oncall: {
+          markDispatchStarted: (command) => store.oncall.markDispatchStarted(command),
           async markFired(command) {
             marks += 1;
 
@@ -107,6 +109,7 @@ describe("oncall execution after the provider accepts the call", () => {
     const execution = new OncallExecution({
       store: {
         oncall: {
+          markDispatchStarted: (command) => store.oncall.markDispatchStarted(command),
           async markFired() {
             throw new Error("database is locked");
           },
@@ -121,6 +124,82 @@ describe("oncall execution after the provider accepts the call", () => {
 
     // One bad row must not abort the batch and must not cause a second call.
     await expect(execution.execute(claimed!, now)).resolves.toBe("failed");
+  });
+});
+
+describe("oncall execution dispatch intent", () => {
+  it("records the dispatch intent before asking the provider to ring", async () => {
+    const store = await createStore();
+    await seedPing(store);
+    const order: string[] = [];
+    const urgency = {
+      async ping() {
+        order.push("ping");
+
+        return { ok: true, statusCode: 200, responseBody: "{}" };
+      },
+    } satisfies Pick<UrgencyRegistry, "ping">;
+    const [claimed] = await store.oncall.claimNext({ now, limit: 1 });
+
+    expect(claimed).toBeDefined();
+
+    const execution = new OncallExecution({
+      store: {
+        oncall: {
+          async markDispatchStarted(command) {
+            order.push("markDispatchStarted");
+
+            return store.oncall.markDispatchStarted(command);
+          },
+          markFired: (command) => store.oncall.markFired(command),
+          markFailed: (command) => store.oncall.markFailed(command),
+        },
+      },
+      urgency,
+      resolveDestinationConfig: resolveAppCredentials,
+    });
+
+    await expect(execution.execute(claimed!, now)).resolves.toBe("fired");
+
+    // The marker only protects the reclaim path if it is durable before the
+    // provider can ring; writing it afterwards would prove nothing.
+    expect(order).toEqual(["markDispatchStarted", "ping"]);
+  });
+
+  it("still rings when the dispatch intent cannot be recorded", async () => {
+    const store = await createStore();
+    await seedPing(store);
+    const calls: string[] = [];
+    const urgency = {
+      async ping() {
+        calls.push("ping");
+
+        return { ok: true, statusCode: 200, responseBody: "{}" };
+      },
+    } satisfies Pick<UrgencyRegistry, "ping">;
+    const [claimed] = await store.oncall.claimNext({ now, limit: 1 });
+
+    expect(claimed).toBeDefined();
+
+    const execution = new OncallExecution({
+      store: {
+        oncall: {
+          // Paging must never depend on bookkeeping: this write is best-effort
+          // and degrades to the pre-marker behavior for this attempt.
+          async markDispatchStarted() {
+            throw new Error("database is locked");
+          },
+          markFired: (command) => store.oncall.markFired(command),
+          markFailed: (command) => store.oncall.markFailed(command),
+        },
+      },
+      urgency,
+      resolveDestinationConfig: resolveAppCredentials,
+    });
+
+    await expect(execution.execute(claimed!, now)).resolves.toBe("fired");
+
+    expect(calls).toEqual(["ping"]);
   });
 });
 
