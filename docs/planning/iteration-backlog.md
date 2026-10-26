@@ -14,6 +14,7 @@
 
 | id | 标题 | 来源 | 评分 | 状态 | PR | 备注 |
 |---|---|---|---|---|---|---|
+| REL-55 | 发布 `0.1.0-beta.93` | release panel（第 117 轮） | — | shipped | #486 | tag `v0.1.0-beta.93` @ `8af1ace`；GitHub Release（prerelease，body 1085 chars）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.93`（amd64+arm64，index digest `sha256:c16b0eb4…`）；回滚 `0.1.0-beta.92`，**无需数据库操作**；用户可见变更 #485（REQ-268）；无迁移 |
 | REQ-268 | 删除告警源 / 路由 / 通知目标前展示将被销毁的历史影响面并要求显式确认 | requirements lane（第 116 轮） | 28 | shipped | #485 | 第 117 轮实现：新增只读 `sources/routes/destinations.previewDelete`（统一 `DeletionImpact`：事件 / 投递 / 尝试 / 加急），计数在 `history` 仓储沿真实外键级联路径统计（`history.repository.ts:440-535`）；三个删除对话框打开即拉取预览，有历史时删除按钮保持禁用直到勾选确认；预览失败只提示不阻断。共享组件 `components/common/deletion-impact-notice.tsx` + `use-deletion-impact.ts`；PRD `docs/prd/deletion-impact-preview.md`；测试覆盖仓储三目标计数、删除后归零、未知 id NOT_FOUND、组件级确认门禁。无迁移 |
 | REQ-269 | 发布前真实部署的升级 / 回滚 / 恢复演练与可复核验收记录 | requirements lane（第 117 轮） | 28 | candidate | — | `docs/release/mvp-rc-checklist.md:227-229` 自认升级/回滚/恢复未在真实部署演练；REQ-104 只覆盖备份/恢复 smoke，不覆盖升级与回滚；REL-52 记录 beta.90 回滚需先删 `0004` 的 `schema_migrations` 行，从未实测。范围：一次性 Docker 卷 + 代表性数据跑冷备份→恢复→升级→回滚（含 0004 路径），记录命令/输出/偏差并回写 `docs/release/backup-restore-upgrade.md`。不改运行时、不接 CI |
 | REQ-270 | Deliveries 绝对时间窗（`from`/`until`）与事件详情一键带入 | requirements lane（第 117 轮） | 24 | candidate | — | 代码事实：`DeliveryListQuery` 只有 `since` 下界（`history.interface.ts:74-81`），全仓检索 `until` 零命中；事故复盘（如 02:13–02:47）只能靠相对窗口。范围：URL `from`/`to` 与 `range` 互斥、仓储上界、`from > to` 校验、事件详情「查看前后 15 分钟投递」入口。可与 REQ-207（事件侧绝对时间窗）合并评审 |
