@@ -74,6 +74,15 @@ export class OncallService {
       throw new RecordNotFoundError("Destination", delivery.job.destinationId);
     }
 
+    // The dispatch claim skips disabled destinations, so a page queued here
+    // would sit in "scheduled" forever while the operator is told it was
+    // initiated. Refuse up front instead of reporting a call nobody will get.
+    if (!destination.enabled) {
+      throw new DomainValidationError(
+        "This destination is disabled, so a manual page would not be dispatched. Enable the destination before paging",
+      );
+    }
+
     const parsed = FeishuConfigSchema.safeParse(destination.config);
     const urgent = parsed.success ? parsed.data.urgent : undefined;
 

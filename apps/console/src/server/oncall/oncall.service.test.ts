@@ -317,6 +317,26 @@ describe("oncall manual paging", () => {
     expect(await store.oncall.listForDelivery(deliveryId)).toEqual([]);
   });
 
+  it("refuses to page a disabled destination instead of queueing a page that can never dispatch", async () => {
+    // claimNext filters on destinations.enabled, so a queued page for a
+    // disabled destination would never leave "scheduled". Answering with a
+    // success would tell the operator someone was paged when nobody was.
+    const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
+    const deliveryId = await seedSucceededDelivery(store);
+    await store.destinations.setEnabled("destination-1", false);
+    const dispatchNow = vi.fn<(now: string) => Promise<unknown>>(async () => {});
+    const service = new OncallService({ store, now: () => now, dispatchNow });
+
+    await expect(service.buzzDelivery({ deliveryId, initiatedBy: "user-1" })).rejects.toThrow(
+      DomainValidationError,
+    );
+    await expect(service.buzzDelivery({ deliveryId, initiatedBy: "user-1" })).rejects.toThrow(
+      /destination is disabled/,
+    );
+    expect(dispatchNow).not.toHaveBeenCalled();
+    expect(await store.oncall.listForDelivery(deliveryId)).toEqual([]);
+  });
+
   it("refuses a missing delivery", async () => {
     const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
     const service = new OncallService({ store, now: () => now });
