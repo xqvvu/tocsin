@@ -123,7 +123,21 @@ function extractLabels(payload: JsonObject, monitor: JsonObject | undefined): La
 
 function normalizeUptimeKumaStatus(value: unknown): "firing" | "resolved" | "unknown" {
   if (typeof value === "number") {
-    return value === 1 ? "resolved" : "firing";
+    // Uptime Kuma heartbeat enum: 0 = DOWN, 1 = UP, 2 = PENDING (retry),
+    // 3 = MAINTENANCE. Only a confirmed DOWN is a firing alert; pending and
+    // maintenance are not outages, and an unrecognized future code is unknown
+    // rather than a critical page. The string branch below already lands
+    // "pending" and "maintenance" on unknown, so this keeps both encodings of
+    // the same upstream state in agreement.
+    if (value === 0) {
+      return "firing";
+    }
+
+    if (value === 1) {
+      return "resolved";
+    }
+
+    return "unknown";
   }
 
   return normalizeStatus(value);
