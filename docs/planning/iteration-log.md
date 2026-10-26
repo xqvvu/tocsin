@@ -2,6 +2,42 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 116 轮）
+
+- 时间：2026-10-26 17:44 CST 起。
+- 基线：本轮开始时 `origin/main` @ `4ad0ad6`；main CI success；无 open PR。
+- 类型：**小修复 + 文档更正**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有 458 条 candidate、Q-237 为第 115 轮指定第二优先，按第 1.5 步继续，不重跑全量审计。
+- 车道：`requirements` 按第 115 轮约定恢复，窄化 brief（只读 2 个指定文件 + 10 分钟硬边界）产出 2 条候选（REQ-267 / REQ-268）。`ui-triage` 由编排者按日志事实裁决：**`defer`** —— `last_ui_review_at` 2026-10-26 10:35 CST（距本轮约 7.1h）；自上次评审**零**个新 UI 合并；未解决 UI candidate 均为第 109 轮结论；无 ≥48h / ≥3 UI 合并的强信号。第 3 个名额未用，本轮交付为既有 backlog 项 Q-237。
+- `last_ui_review_at`：**2026-10-26 10:35 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `lucid-goldstine-a663fe`（其 `node_modules` 为半删残留，按既有记忆先删全部 workspace `node_modules` 再 `vp install --frozen-lockfile`）。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #481 `fix(console): refuse manual paging for a disabled destination`（Q-237）**：
+  - 事实：`claimNext` 只领取 `destinations.enabled = 1` 的 ping（`oncall.repository.ts:160`），而 `buzzDelivery` 不校验目标启用状态（`oncall.service.ts:67-85`）——停用目标的加急 ping 入队后永远不会派发，接口仍返回成功，toast 报「已向 N 位呼叫对象发起加急」。
+  - 修法：`buzzDelivery` 取到目标后校验 `destination.enabled`，停用时抛 `DomainValidationError`（oRPC 映射 BAD_REQUEST），不写 ping、不触发 `dispatchNow`。
+  - 测试（+1）：停用目标时拒绝、`dispatchNow` 零调用、`listForDelivery` 为空。
+  - 验证：`vp fmt --write`、`vp check` 0 error（22 条既有 warning）、`vp run -r test`（188 文件 / **1064** 测试）、`vp run -r build` 通过。
+  - CI：`check · test · build` pass 2m48s；`playwright · chromium` 首次卡在 `Install Chromium` 约 15 分钟，`gh run cancel` + `gh run rerun` 后 1m18s pass（既有 Actions 抖动处理方式）。rebase 合并 `1d5fff7`。
+- **本 PR `docs(release): record the 0004 migration in the upgrade guide`（AUTO_FIX）**：
+  - `docs/release/backup-restore-upgrade.md` 此前只写到 `0003`（第 115 轮日志已标记该漂移）。补 `0004_oncall_dispatch_started_at`（nullable、无默认值、`ensureColumn` 幂等）、四种升级路径，以及镜像回滚的已知实例：回滚到只认识 `0001`～`0003` 的镜像需先 `DELETE FROM schema_migrations WHERE version = '0004'`，否则被 `assertNoUnknownAppliedMigrations` 挡住。
+  - 验证：`vp fmt --check` 通过。
+
+### requirements 候选（已写入 backlog）
+
+- **REQ-267（27）**：投递历史保存 destination / route 名称快照。证据 `docs/release/mvp-rc-checklist.md:175`、`docs/release/history-retention-and-snapshots.md:53-58,60-65,67,80-84`。需 forward-only 加法迁移，按规则交 EXPERT_PANEL。
+- **REQ-268（28）**：删除告警源 / 路由 / 目标前展示历史销毁影响面并显式确认。证据 `docs/prd/post-mvp-planning.md:49-59,61`、`features/sources/ui/sources-section.test.tsx:205-209`。无 schema、可回滚，下一轮可直接实现。
+
+### 下一轮优先项
+
+1. REQ-268（28）：删除影响面 preview + 显式确认（无 schema，可单轮交付）。
+2. UI-68（23）→ UI-69（21）：呼叫失败信号与目标停用前置提示。
+3. REQ-267（27）：名称快照，先交 EXPERT_PANEL 裁决迁移形状。
+4. UI-67 / UI-61 / UI-63：既有 UI candidate。
+5. 恢复 `requirements` 车道轮转，避免重复方向 4。
+
 ## 2026-10-26（第 115 轮）
 
 - 时间：2026-10-26 16:42 CST 起。
