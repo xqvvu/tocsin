@@ -78,6 +78,7 @@ function hitsFixture(): NumberedPage<DeliveryListItem> {
         providerReference: null,
         state: "suppressed",
         attemptCount: 0,
+        maxAttempts: 3,
         nextAttemptAt: null,
         lastError: null,
         createdAt: "2026-10-12T10:00:00.000Z",

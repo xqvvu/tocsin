@@ -273,6 +273,13 @@ export interface DeliveryListItem {
   providerReference: ProviderReference | null;
   state: DeliveryState;
   attemptCount: number;
+  /**
+   * The retry budget the job was created with. The list shows
+   * `attemptCount / maxAttempts` so an operator can tell "will retry again"
+   * from "gave up" without opening the delivery: `failed` with the budget
+   * spent is final, while `pending` with a next attempt is still backing off.
+   */
+  maxAttempts: number;
   nextAttemptAt: IsoDateTimeString | null;
   lastError: string | null;
   /**

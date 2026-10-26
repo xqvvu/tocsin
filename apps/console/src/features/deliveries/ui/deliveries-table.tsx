@@ -96,7 +96,13 @@ export function DeliveriesTable({
       {
         id: "attempts",
         header: t("deliveries.table.headers.attempts"),
-        cell: ({ row }) => <span className="font-medium">{row.original.attemptCount}</span>,
+        // The budget is part of the fact: "2" alone cannot be read as "2 of 3,
+        // one retry left" or "2 of 2, out of retries".
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.attemptCount}/{row.original.maxAttempts}
+          </span>
+        ),
       },
       {
         id: "receipt",
@@ -108,8 +114,17 @@ export function DeliveriesTable({
       {
         id: "next",
         header: t("deliveries.table.headers.next"),
+        // Three distinct situations share this column: a scheduled retry (a
+        // timestamp), a terminal failure that spent its budget (say so, or the
+        // dash reads like "nothing happened"), and no retry at all.
         cell: ({ row }) =>
-          row.original.nextAttemptAt ? <RetryTimestamp value={row.original.nextAttemptAt} /> : "—",
+          row.original.nextAttemptAt ? (
+            <RetryTimestamp value={row.original.nextAttemptAt} />
+          ) : deliveryRetriesExhausted(row.original) ? (
+            <span className="text-muted-foreground">{t("deliveries.table.retriesExhausted")}</span>
+          ) : (
+            "—"
+          ),
       },
       {
         id: "lastError",
@@ -188,6 +203,17 @@ export function DeliveriesTable({
       ) : null}
     </section>
   );
+}
+
+/**
+ * A failure that has spent its whole manual-and-automatic retry budget.
+ *
+ * `failed` alone is ambiguous: a non-retryable error also ends in `failed`
+ * while attempts remain, and the retry action stays available there. Only
+ * "failed with the budget spent" means the queue will not try again.
+ */
+function deliveryRetriesExhausted(delivery: Operations["deliveries"]["items"][number]): boolean {
+  return delivery.state === "failed" && delivery.attemptCount >= delivery.maxAttempts;
 }
 
 /**
