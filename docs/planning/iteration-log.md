@@ -30,6 +30,16 @@
 - **REQ-267（27）**：投递历史保存 destination / route 名称快照。证据 `docs/release/mvp-rc-checklist.md:175`、`docs/release/history-retention-and-snapshots.md:53-58,60-65,67,80-84`。需 forward-only 加法迁移，按规则交 EXPERT_PANEL。
 - **REQ-268（28）**：删除告警源 / 路由 / 目标前展示历史销毁影响面并显式确认。证据 `docs/prd/post-mvp-planning.md:49-59,61`、`features/sources/ui/sources-section.test.tsx:205-209`。无 schema、可回滚，下一轮可直接实现。
 
+### 发布评估与发布记录
+
+- 发布经理：**RELEASE**。`v0.1.0-beta.91..origin/main` 共 2 个提交，唯一用户可见变更是 #481（Q-237：停用目标的手工加急从假成功改为明确 400），其余为纯 docs；建议 `0.1.0-beta.92`。
+- 阻断审计：**APPROVE_RELEASE**。目标 main `e64669f` 的 CI 与 E2E 均 success（`40306330062` / `40306330169`）；open PR 仅本轮 docs PR #482；`blocked-autonomous` 仅 REL-13/16/23（法律与仓库设置）；migrate 目录自 beta.91 零 diff；`v0.1.0-beta.92` 无冲突；新用例断言非空转（移除 `!destination.enabled` 守卫后 rejects/零调用/零行三条断言都会失败）。
+- 运维/回滚：**APPROVE_DEPLOY**。Dockerfile、compose、环境变量、启动参数、锁文件、迁移目录全部零 diff；beta.91 → beta.92 升级直接换镜像，回滚换回 `0.1.0-beta.91`，均无需数据库操作。
+- 版本 PR #483 `chore(release): v0.1.0-beta.92`（rebase 合并 `e64669f`）；该 commit 的 main CI 与 E2E 均 success。
+- tag `v0.1.0-beta.92` 指向 `e64669f`（= `origin/main`）；GitHub Release 为 prerelease，body 876 chars。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.92`（linux/amd64 + linux/arm64，index digest `sha256:d00a780c3600dc3781a94b8b8fe9febc70979dc520eaf9d09ae8a4634a9d047f`）；回滚 `0.1.0-beta.91`，无需数据库操作。构建在 `/tmp/tocsin-beta92-build`（tag 对应的干净检出）中进行，`--provenance=false --sbom=false`；`imagetools inspect` 确认两个平台都在。
+- 文档 PR #482 `docs(release): record the 0004 migration in the upgrade guide`（rebase 合并 `1011679`）。
+
 ### 下一轮优先项
 
 1. REQ-268（28）：删除影响面 preview + 显式确认（无 schema，可单轮交付）。
