@@ -33,9 +33,16 @@
 - 独立评估者：A 可测性最高，一次 `retryNow` 即可断言拒绝与整行不变；必须新增（a）哨兵拒绝且行不变、（b）普通 failed 仍可重试、（c）常量经脱敏不变且写入端严格等于常量、（d）两个 UI 入口不渲染重试。
 - 分歧处理：列表入口「隐藏 vs 禁用+徽标」存在分歧，按「最保守且可逆」选隐藏（`last_error` 列仍保留完整原因），徽标本地化另开 UI-66。
 
-### 下一轮优先项
+### 发布评估与发布记录
 
-1. 发布评估与发布（三专家通过后执行，记录见本节末尾）。
+- 发布依据：自 `v0.1.0-beta.85` 起唯一用户可见变更 PR #460（Q-231，已送达未记账的投递禁止手动重试）；两个 docs 提交不构成发布理由。发布三专家（发布经理 / 阻断审计 / 运维回滚）一致 APPROVE_RELEASE：6 项门禁 PASS（CI 双绿、仅 #460 一个 open PR、无迁移、无代码回归阻断项、tag 无冲突、目标树含修复与测试）。
+- 版本 PR #461 `chore(release): v0.1.0-beta.86`（rebase 合并 `0a0f5e1`）；main CI success（`40265734828` check、`40265734797` playwright 均 pass）。
+- tag `v0.1.0-beta.86` 指向 `0a0f5e1`（= `origin/main`）；GitHub Release 为 prerelease，body 1220 chars。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.86`（linux/amd64 + linux/arm64，index digest `sha256:d03ba11248e3eb967fe4440a8f474de2160b730bb13d7ca3841dc8f93d78906c`）；回滚 `0.1.0-beta.85`（index digest `sha256:fd467fba…`）。构建在 tag 对应的干净检出中进行，`--provenance=false --sbom=false`。
+- 无迁移、无环境变量/配置格式/启动参数/镜像构建变化；回滚只需换回旧镜像 tag。回滚语义降级（旧镜像恢复可重试）已写入发布说明。
+- 最近 10 个 tag 与 GitHub Release 一一对齐，无需补建。
+
+### 下一轮优先项
 2. UI-61/62（第 109 轮遗留）：禁用原因首屏可见 + Token 提示条 Alert 化与读屏播报。
 3. Q-233：补兜底 `markFailed` 的响应状态/响应体证据（纯加法）。
 4. Q-232：`running` 重领重复发送的重领策略裁决（EXPERT_PANEL）。
