@@ -7,6 +7,7 @@ import { SettingsOperationalOverview } from "#/features/configuration/ui/setting
 import { SettingsPageToolbar } from "#/features/configuration/ui/settings-page-toolbar";
 import { SettingsPreferencesPanel } from "#/features/configuration/ui/settings-preferences-panel";
 import { SettingsRuntimePanel } from "#/features/configuration/ui/settings-runtime-panel";
+import { SettingsSecurityPanel } from "#/features/configuration/ui/settings-security-panel";
 import { SettingsStoragePanel } from "#/features/configuration/ui/settings-storage-panel";
 import { SettingsWorkerHealthPanel } from "#/features/configuration/ui/settings-worker-health-panel";
 import { useSettingsWorkspace } from "#/features/configuration/ui/use-settings-workspace";
@@ -39,6 +40,7 @@ export function SettingsPage() {
             <SettingsWorkerHealthPanel />
             <SettingsStoragePanel />
             <SettingsPreferencesPanel />
+            <SettingsSecurityPanel />
           </TabsContent>
           <TabsContent value="toml" className="min-h-0">
             {workspace.activeTab === "toml" ? (

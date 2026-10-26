@@ -63,6 +63,7 @@ const fakeAuth: AuthServer = {
   handler: async () => new Response(null),
   api: {
     getSession: fakeGetSession,
+    revokeOtherSessions: async () => ({ status: true }),
   },
 };
 
@@ -222,6 +223,9 @@ function createFakeContainer(): ApplicationContainer {
     },
     createOperationsService: async () => {
       throw new Error("Operations service is not used by request context tests");
+    },
+    createSessionSecurityService: async () => {
+      throw new Error("Session security service is not used by request context tests");
     },
     getUrgencyRegistry: () => createDefaultUrgencyRegistry(),
     createOncallService: async () => {

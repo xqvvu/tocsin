@@ -1,3 +1,4 @@
+import { IsoDateTimeSchema } from "@tocsin/core";
 import * as z from "zod";
 
 /**
@@ -22,3 +23,36 @@ export const DashboardSessionOutputSchema = z
 export const AuthBootstrapOutputSchema = z.object({
   setupRequired: z.boolean(),
 });
+
+/**
+ * One live dashboard session.
+ *
+ * Built by naming the columns the account-security panel renders. The session
+ * token and hash stay in SQLite: the projection is by omission, so a column the
+ * auth runtime adds later cannot leak by default. `current` marks the session
+ * the request was authenticated with, which lets the console label it instead
+ * of offering an action that would sign the operator out mid-incident.
+ */
+export const ActiveSessionSummarySchema = z.object({
+  id: z.string().min(1),
+  createdAt: IsoDateTimeSchema,
+  updatedAt: IsoDateTimeSchema,
+  expiresAt: IsoDateTimeSchema,
+  ipAddress: z.string().min(1).nullable(),
+  userAgent: z.string().min(1).nullable(),
+  current: z.boolean(),
+});
+
+export const ActiveSessionsOutputSchema = z.object({
+  sessions: z.array(ActiveSessionSummarySchema),
+});
+
+export type ActiveSessionSummary = z.infer<typeof ActiveSessionSummarySchema>;
+export type ActiveSessionsOutput = z.infer<typeof ActiveSessionsOutputSchema>;
+
+/** Result of signing out every other session of the signed-in account. */
+export const RevokeOtherSessionsOutputSchema = z.object({
+  status: z.boolean(),
+});
+
+export type RevokeOtherSessionsOutput = z.infer<typeof RevokeOtherSessionsOutputSchema>;

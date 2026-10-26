@@ -20,6 +20,8 @@ import type { OncallRepository } from "#/infra/sqlite/repositories/oncall/oncall
 import { SqliteOncallRepository } from "#/infra/sqlite/repositories/oncall/oncall.repository";
 import type { RouteRepository } from "#/infra/sqlite/repositories/route/route.interface";
 import { SqliteRouteRepository } from "#/infra/sqlite/repositories/route/route.repository";
+import type { SessionRepository } from "#/infra/sqlite/repositories/session/session.interface";
+import { SqliteSessionRepository } from "#/infra/sqlite/repositories/session/session.repository";
 import type { SettingsRepository } from "#/infra/sqlite/repositories/settings/settings.interface";
 import { SqliteSettingsRepository } from "#/infra/sqlite/repositories/settings/settings.repository";
 import type { SourceRepository } from "#/infra/sqlite/repositories/source/source.interface";
@@ -58,6 +60,7 @@ export interface SqliteStoreUnitOfWork {
   readonly oncall: OncallRepository;
   readonly history: HistoryRepository;
   readonly settings: SettingsRepository;
+  readonly sessions: SessionRepository;
 }
 
 export interface SqliteStore extends SqliteStoreUnitOfWork {
@@ -104,6 +107,7 @@ export function createSqliteRepositories(context: SqliteRepositoryContext): Sqli
     deliveries,
   );
   const settings = new SqliteSettingsRepository(context);
+  const sessions = new SqliteSessionRepository(context);
 
   return {
     sources,
@@ -116,6 +120,7 @@ export function createSqliteRepositories(context: SqliteRepositoryContext): Sqli
     oncall,
     history,
     settings,
+    sessions,
   };
 }
 
@@ -232,6 +237,10 @@ export class OpenedSqliteStore implements SqliteStore {
 
   get settings() {
     return this.repositories.settings;
+  }
+
+  get sessions() {
+    return this.repositories.sessions;
   }
 
   async close(): Promise<void> {

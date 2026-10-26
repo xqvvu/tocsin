@@ -71,6 +71,7 @@ describe("configuration query invalidation", () => {
       [{ queryKey: ["runtime-information"] }],
       [{ queryKey: ["storage-health"] }],
       [{ queryKey: ["worker-health"] }],
+      [{ queryKey: ["active-sessions"] }],
       [{ queryKey: ["sources"] }],
       [{ queryKey: ["destinations"] }],
       [{ queryKey: ["routes"] }],

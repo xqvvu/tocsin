@@ -1,7 +1,12 @@
 import { oc } from "@orpc/contract";
 
 import { dashboardAuth } from "../errors/dashboard-auth";
-import { AuthBootstrapOutputSchema, DashboardSessionOutputSchema } from "../schemas/auth";
+import {
+  ActiveSessionsOutputSchema,
+  AuthBootstrapOutputSchema,
+  DashboardSessionOutputSchema,
+  RevokeOtherSessionsOutputSchema,
+} from "../schemas/auth";
 
 /**
  * Public session procedures.
@@ -26,4 +31,21 @@ export const session = {
   getDashboardSession: oc.errors(dashboardAuth.error).output(DashboardSessionOutputSchema),
 
   getAuthBootstrap: oc.output(AuthBootstrapOutputSchema),
+
+  /**
+   * Live sessions of the signed-in dashboard account.
+   *
+   * Self-only by construction: the procedure accepts no user id, and the
+   * service resolves the caller from the verified dashboard session. Session
+   * tokens never appear in the output.
+   */
+  listActiveSessions: oc.errors(dashboardAuth.error).output(ActiveSessionsOutputSchema),
+
+  /**
+   * Signs out every other session of the signed-in account.
+   *
+   * No session id is accepted: the current request cookie is the only input, so
+   * this cannot be pointed at another account or a single stale session.
+   */
+  revokeOtherSessions: oc.errors(dashboardAuth.error).output(RevokeOtherSessionsOutputSchema),
 };

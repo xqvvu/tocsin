@@ -1,4 +1,5 @@
 import {
+  activeSessionsQueryKeys,
   appSettingsQueryKeys,
   runtimeInformationQueryKeys,
   storageHealthQueryKeys,
@@ -19,6 +20,7 @@ export const configurationReadOnlyQueryKeys = [
   runtimeInformationQueryKeys.all,
   storageHealthQueryKeys.all,
   workerHealthQueryKeys.all,
+  activeSessionsQueryKeys.all,
   sourceQueryKeys.all,
   destinationQueryKeys.all,
   routeQueryKeys.all,

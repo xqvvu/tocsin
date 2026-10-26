@@ -43,3 +43,14 @@ export function workerHealthQueryOptions() {
     queryKey: workerHealthQueryKeys.detail(),
   });
 }
+
+export const activeSessionsQueryKeys = {
+  all: ["active-sessions"] as const,
+  detail: () => [...activeSessionsQueryKeys.all, "detail"] as const,
+};
+
+export function activeSessionsQueryOptions() {
+  return orpc.session.listActiveSessions.queryOptions({
+    queryKey: activeSessionsQueryKeys.detail(),
+  });
+}
