@@ -2,6 +2,50 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 115 轮）
+
+- 时间：2026-10-26 16:42 CST 起。
+- 基线：本轮开始时 `origin/main` @ `ebdd8f3`；main CI success（`40294019736`、`40294019835`）；无 open PR。
+- 类型：**P0 并发语义修复 + EXPERT_PANEL**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 仍有 ≥22 分 candidate，且 Q-236 为第 114 轮指定第一优先，按第 1.5 步继续，不重跑全量审计。
+- 车道：3 个并发名额全部给 **Q-236 的 EXPERT_PANEL**（安全与可靠性 / 产品与运维 / 独立评估者）。
+  - `requirements` 未单独启动：第 114 轮刚跑过窄化 brief，backlog 仍有 458 条；本轮配额留给 P0 并发修复。下一轮恢复。
+  - `ui-triage` 由编排者按日志事实裁决：**`defer`**。`last_ui_review_at` 2026-10-26 10:35 CST（距本轮约 6.1h）；自上次评审**零**个新 UI 合并（`0e81002` 即那次评审的产出）；未解决 UI candidate 均为第 109 轮结论。无 ≥48h / ≥3 UI 合并的强信号，本轮预算给 Q-236。下一轮若预算空闲应直接做 UI-68 / UI-67 / UI-61。
+- `last_ui_review_at`：**2026-10-26 10:35 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `amazing-ptolemy-c9ae14`（其 `node_modules` 为半删残留，按既有记忆先删全部 workspace `node_modules` 再 `vp install --frozen-lockfile`）。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #478 `fix(console): fence urgent paging to the claiming attempt`（Q-236，P0）**：
+  - 事实纠偏：Q-235 声称标记把 stale 窗口「锚在拨号开始」，实际写入的是 `runOnce` 开头的批次时刻（`oncall-worker.service.ts:51-52`、`oncall-execution.ts:92`）。慢批次里已经在通话的 ping 也会被判 stale。
+  - 修法：`markDispatchStarted` 增加 `expectedAttemptCount` fencing，仅更新 `state='running' AND attempt_count = ?` 的行，0 行返回 `null`；执行器在拨号前做归属校验，失去归属返回新 outcome `superseded`（不拨号、不写库、不计数），写库异常仍照拨（Q-225）；标记 `startedAt` 改用执行器时钟；手工 buzz 复用 `ensureOncallWorkerRunner().runNow()`，与周期 runner 共享 single-flight。
+  - 测试（+4）：失去归属不拨号且不覆盖新 attempt、标记锚定拨号时刻、慢批次交错时每个接收人恰好一次、buzz 复用 runner。变异验证：临时移除守卫后前两个新用例失败。
+  - PRD `docs/prd/oncall-claim-ownership.md`；决策记录 `docs/planning/decisions/oncall-claim-ownership.md`；ADR 0009 决定 5 补实现说明。
+  - 验证：`vp check` 0 error（22 条既有 warning）、`vp run -r test`（188 文件 / 1063 测试）、`vp run -r build` 通过。
+
+### 专家发现
+
+- `panel-safety`：**CONFIRMED，P0**。默认 batch 10、单次呼叫 10s（上限 30s）、单 ping 最多 3 次 HTTP；`batch ≥ 16` 或超时调 30s 即可稳定超过 300s stale 窗口。`attempt_count` 已是单调 fencing token，无需迁移。推荐 **C+A**；反对不修，认为 B（滚动领取）单独使用依赖隐式不变量。
+- `panel-ops`：**CONFIRMED**，可达性比描述窄（默认配置下需调大 batch/timeout、进程冻结或双实例），但一旦发生不可逆且几乎不可观测。buzz 文案是「已发起」而非「已接通」，A 不削弱承诺；runner 忙时 mutation 立即返回反而更符合运维预期。推荐 **C+A**，明确 charter 全部满足。
+- `panel-evaluator`：**CONFIRMED**，修正两点——`claimNext` 的条件更新已避免重复领取，真正缺陷是旧 worker 仍持有内存对象并照拨；反向也成立（buzz 的慢批次会被周期 runner 重排）。现有测试恰好掩盖：reclaim 用例都假设原 owner 已死，没有交错用例。推荐 **C 必做、A 补充、B 不做**，要求 `superseded` 不计数并给出确定性断言。
+- `requirements`：本轮未跑（见车道说明）。
+
+### EXPERT_PANEL
+
+三位专家独立评审，**一致选择 C+A**，无分歧。B 与 C 冗余，不实施。决策记录 `docs/planning/decisions/oncall-claim-ownership.md`。
+
+### 发布评估与发布记录
+
+- 见本轮发布小节（待 tag 与镜像推送后补记）。
+
+### 下一轮优先项
+
+1. UI-68：投递列表/事件页的呼叫失败信号（需服务端汇总 DTO）。
+2. Q-237：`buzzDelivery` 校验目标启用状态并如实反馈。
+3. UI-67 / UI-61 / UI-63：投递「结果未知」徽标、创建路由禁用原因、路由名称原生校验。
+4. 恢复 `requirements` 车道（轮转方向，避免重复方向 4）。
+
 ## 2026-10-26（第 114 轮）
 
 - 时间：2026-10-26 15:27 CST 起。
