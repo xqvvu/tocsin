@@ -121,6 +121,112 @@ describe("uptime kuma provider parser", () => {
     expect(JSON.stringify(result.normalized)).not.toContain("203.0.113.10");
   });
 
+  // Uptime Kuma's heartbeat enum is 0 = DOWN, 1 = UP, 2 = PENDING (retry),
+  // 3 = MAINTENANCE. Only DOWN is an outage; escalating the others to critical
+  // pages on-call during planned maintenance.
+  it.each([
+    ["pending retry", 2],
+    ["maintenance window", 3],
+    ["future code", 99],
+  ])("does not escalate a %s heartbeat to a critical alert", (_label, status) => {
+    const result = parseUptimeKumaProvider({
+      sourceId: "source-uptime-kuma",
+      sourceName: "Uptime Kuma prod",
+      receivedAt,
+      headers: {},
+      payload: {
+        monitor: {
+          id: 42,
+          name: "Tocsin API",
+        },
+        heartbeat: {
+          status,
+          time: "2026-06-09T08:05:00Z",
+        },
+      },
+    });
+
+    expect(result.normalized.status).toBe("unknown");
+    expect(result.normalized.severity).toBe("info");
+    expect(result.normalized.title).toBe("Tocsin API is unknown");
+    expect(result.normalized.fingerprint).toBe("uptime_kuma:42");
+    expect(JSON.stringify(result.normalized)).not.toContain("critical");
+  });
+
+  it.each([["pending"], ["maintenance"]])(
+    "maps the string status %s the same way as its numeric form",
+    (status) => {
+      const result = parseUptimeKumaProvider({
+        sourceId: "source-uptime-kuma",
+        sourceName: "Uptime Kuma prod",
+        receivedAt,
+        headers: {},
+        payload: {
+          monitor: { id: 42, name: "Tocsin API" },
+          heartbeat: { status },
+        },
+      });
+
+      expect(result.normalized.status).toBe("unknown");
+      expect(result.normalized.severity).toBe("info");
+    },
+  );
+
+  it("reads the maintenance code from the heartbeatJSON alias and monitorStatus fallback", () => {
+    const aliased = parseUptimeKumaProvider({
+      sourceId: "source-uptime-kuma",
+      sourceName: "Uptime Kuma prod",
+      receivedAt,
+      headers: {},
+      payload: {
+        monitor: { id: 42, name: "Tocsin API" },
+        heartbeatJSON: { status: 3 },
+      },
+    });
+    const fallback = parseUptimeKumaProvider({
+      sourceId: "source-uptime-kuma",
+      sourceName: "Uptime Kuma prod",
+      receivedAt,
+      headers: {},
+      payload: {
+        monitor: { id: 42, name: "Tocsin API" },
+        monitorStatus: 3,
+      },
+    });
+
+    expect(aliased.normalized.status).toBe("unknown");
+    expect(aliased.normalized.severity).toBe("info");
+    expect(fallback.normalized.status).toBe("unknown");
+    expect(fallback.normalized.severity).toBe("info");
+  });
+
+  it("keeps idempotency keyed to the payload rather than the normalized status", () => {
+    const down = parseUptimeKumaProvider({
+      sourceId: "source-uptime-kuma",
+      sourceName: "Uptime Kuma prod",
+      receivedAt,
+      headers: {},
+      payload: {
+        monitor: { id: 42, name: "Tocsin API" },
+        heartbeat: { status: 0, time: "2026-06-09T08:05:00Z" },
+      },
+    });
+    const maintenance = parseUptimeKumaProvider({
+      sourceId: "source-uptime-kuma",
+      sourceName: "Uptime Kuma prod",
+      receivedAt,
+      headers: {},
+      payload: {
+        monitor: { id: 42, name: "Tocsin API" },
+        heartbeat: { status: 3, time: "2026-06-09T08:05:00Z" },
+      },
+    });
+
+    expect(down.normalized.status).toBe("firing");
+    expect(down.normalized.severity).toBe("critical");
+    expect(down.idempotencyKey).not.toBe(maintenance.idempotencyKey);
+  });
+
   it("registers Uptime Kuma in the default provider registry", () => {
     const adapter = createDefaultProviderRegistry().get("uptime_kuma");
 
