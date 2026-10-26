@@ -81,9 +81,12 @@ marker 是唯一同时守住「不重复拨已拨出的」与「不丢没拨出�
 
 ## 回滚方式
 
-只回滚代码，保留 `0004` 在计划里。nullable 列对旧代码惰性；旧代码只 claim `scheduled`，
-已落 `failed` 的行不会回溯重拨。删除 `0004` 会让已记录该版本的库启动失败
-（`runner.ts:177-190`）。
+- 代码回滚：保留 `0004` 在计划里；删除它会让已记录该版本的库启动失败
+  （`runner.ts:177-190`）。
+- 镜像回滚：旧镜像的计划只到 `0003`，同样会被 `assertNoUnknownAppliedMigrations`
+  挡住。必须先 `DELETE FROM schema_migrations WHERE version = '0004'` 再换回旧镜像；
+  列可保留（nullable、旧代码忽略未知列）。再次升级会幂等重跑 `0004`。
+- 已落 `failed` 的行回滚后不会被旧代码重拨（旧代码只 claim `scheduled`）。
 
 ## 验收标准
 
