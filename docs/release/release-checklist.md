@@ -49,16 +49,17 @@
 
    不要再用裸 `docker compose up` / `down -v` 做冒烟：基础 compose 文件固定了生产镜像名与卷名。
 
-4. **手工走一遍产品验收路径。** E2E 已覆盖 setup → Source → Destination → webhook → Event；Route、
-   Delivery/retry、过滤、重启、导出仍无自动化守护，发布前按 `docs/release/mvp-rc-checklist.md`
-   「验收标准」人工补走：setup/login → 建 Source → 复制 webhook URL → 建 Destination 并 preview/test →
-   建 Route → 发 webhook → 看 Event/Delivery → 失败 retry → 重启进程 → 导出配置不含明文 secret。
+4. **手工走一遍产品验收路径。** E2E 已覆盖 setup → Source → Destination → Route → webhook →
+   Event/Delivery 列表；失败 retry、历史过滤、重启、导出仍无自动化守护，发布前按
+   `docs/release/mvp-rc-checklist.md` 「验收标准」人工补走：setup/login → 建 Source → 复制 webhook URL →
+   建 Destination 并 preview/test → 建 Route → 发 webhook → 看 Event/Delivery → 失败 retry → 重启进程 →
+   导出配置不含明文 secret。
 5. **文档与版本一致。** 版本号、README 状态段落、部署/备份文档、`mvp-rc-checklist.md` 的结论日期要对齐
    本次 tag 的事实；不要留下“尚无部署文档”这类已经过时的说法。
 6. **数据兼容性自查。** 当前 migration plan 为 `0001_initial_schema` + `0002_suppressions` +
-   `0003_complete_legacy_schema`。runner 会跳过已应用的版本，所以**修改已提交的 migration 对任何已有
-   数据库都是 no-op**；本次发布若改 schema，必须新增 forward step 并在 `migrate/plan.ts` 注册。
-   判断方法与后果见 `docs/release/backup-restore-upgrade.md`。
+   `0003_complete_legacy_schema` + `0004_oncall_dispatch_started_at`。runner 会跳过已应用的版本，所以
+   **修改已提交的 migration 对任何已有数据库都是 no-op**；本次发布若改 schema，必须新增 forward step
+   并在 `migrate/plan.ts` 注册。判断方法与后果见 `docs/release/backup-restore-upgrade.md`。
 
 ## 3. 打 tag（人工）
 

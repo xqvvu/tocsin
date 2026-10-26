@@ -175,7 +175,7 @@ post-MVP 中继续设计。dedupe cleanup 已改为有界批（见下方 D 节�
 - [x] raw payload retention 可配置并有测试覆盖。
 - [x] 增加 delivery history retention 或明确不自动清理 delivery history 的产品理由。→ **决定不自动清理**，理由与代价见 `docs/release/history-retention-and-snapshots.md` §1。
 - [x] 将 raw payload pruning 从 intake hot path 中移出或限制成本。→ 接入改为**有界批**（100/次，主键定位），积压由响应路径外的单飞 sweep 清空；保留行为不变。见 `docs/release/history-retention-and-snapshots.md` §2。
-- [x] 将 dedupe cleanup 从接入热路径移出或限制成本。→ **已限制成本**：`pruneDedupeKeys` 改为最旧优先的有界批（每批 100 条，`rowid IN (SELECT … ORDER BY created_at, rowid LIMIT 100)`），每次 `enqueueForEvent` 只在写事务内、去重判定之前执行一次（`apps/console/src/infra/sqlite/repositories/delivery/delivery.helpers.ts:144-160`、`delivery.repository.ts:101`）；oncall 队列同构（`oncall/oncall.helpers.ts:50-67`）。老库缺少 `idx_delivery_dedupe_created_at` 时扫描成本仍待评估（backlog Q-224）。
+- [x] 将 dedupe cleanup 从接入热路径移出或限制成本。→ **已限制成本**：`pruneDedupeKeys` 改为最旧优先的有界批（每批 100 条，`rowid IN (SELECT … ORDER BY created_at, rowid LIMIT 100)`），每次 `enqueueForEvent` 只在写事务内、去重判定之前执行一次（`apps/console/src/infra/sqlite/repositories/delivery/delivery.helpers.ts:144-160`、`delivery.repository.ts:108`）；oncall 队列同构（`oncall/oncall.helpers.ts:50-67`）。老库缺少 `idx_delivery_dedupe_created_at` 时扫描成本仍待评估（backlog Q-224）。
 - [x] 评估 Delivery detail 所需的历史快照字段，避免配置重命名破坏历史解释。→ **评估完成：缺陷成立**（改名会追溯改写历史显示名；删除则级联删掉投递行）。需 schema 变更，属发布决策，见 `docs/release/history-retention-and-snapshots.md` §3。
 - [x] 增加 secret-safe logging 测试或边界测试。
 
