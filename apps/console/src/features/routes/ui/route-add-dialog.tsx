@@ -30,7 +30,7 @@ export function RouteAddDialog({
     name: string;
     rule: RouteDefinition["rule"];
     destinationIds: string[];
-  }) => void;
+  }) => boolean | Promise<boolean>;
 }) {
   const t = useTranslations();
   const [open, setOpen] = React.useState(false);
@@ -72,9 +72,17 @@ export function RouteAddDialog({
           destinations={destinations}
           layout="dialog"
           pending={disabled || pending}
-          onSubmit={(input) => {
-            onSubmit(input);
-            setOpen(false);
+          onSubmit={async (input) => {
+            // Keep the dialog and the filled form on a failed save; the page
+            // reports the failure and the operator can retry without losing
+            // every condition they just entered.
+            const created = await onSubmit(input);
+
+            if (created !== false) {
+              setOpen(false);
+            }
+
+            return created;
           }}
         />
       </ConfigurationDialogContent>

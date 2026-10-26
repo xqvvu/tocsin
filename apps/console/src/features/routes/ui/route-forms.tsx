@@ -79,7 +79,7 @@ export function CreateRouteForm({
     name: string;
     rule: RouteDefinition["rule"];
     destinationIds: string[];
-  }) => void;
+  }) => void | Promise<boolean>;
 }) {
   const t = useTranslations();
   const form = (
@@ -104,7 +104,7 @@ export function CreateRouteForm({
       submitIcon={<RiAddLine data-icon="inline-start" aria-hidden />}
       resetOnSubmit
       onSubmit={(values) => {
-        onSubmit({
+        return onSubmit({
           name: values.name.trim(),
           rule: routeRuleFromValues(values.rule),
           destinationIds: values.destinationIds,
@@ -218,7 +218,11 @@ function RouteForm({
   submitLabel: string;
   submitIcon: React.ReactNode;
   resetOnSubmit?: boolean;
-  onSubmit: (values: RouteFormValues) => void;
+  /**
+   * Returning `false` means the save was rejected; a create form keeps the
+   * operator's values instead of clearing them for a request that never landed.
+   */
+  onSubmit: (values: RouteFormValues) => void | Promise<boolean>;
   onCancel?: () => void;
 }) {
   const t = useTranslations();
@@ -237,17 +241,17 @@ function RouteForm({
     { value: "equals", label: t("routing.form.operatorEquals") },
     { value: "contains", label: t("routing.form.operatorContains") },
   ];
-  function submitRoute(values: RouteFormValues): void {
-    onSubmit(values);
+  async function submitRoute(values: RouteFormValues): Promise<void> {
+    const accepted = await onSubmit(values);
 
-    if (resetOnSubmit) {
+    if (resetOnSubmit && accepted !== false) {
       form.reset();
     }
   }
 
   const form = useForm({
     defaultValues,
-    onSubmit: ({ value }) => {
+    onSubmit: async ({ value }) => {
       // An empty rule matches every alert. Legal, but never by accident: ask
       // the operator to confirm the blast radius first, then save the value
       // they already validated.
@@ -256,7 +260,7 @@ function RouteForm({
         return;
       }
 
-      submitRoute(value);
+      await submitRoute(value);
     },
   });
 
@@ -772,7 +776,7 @@ function RouteForm({
                 setPendingCatchAll(null);
 
                 if (values) {
-                  submitRoute(values);
+                  void submitRoute(values);
                 }
               }}
             >
