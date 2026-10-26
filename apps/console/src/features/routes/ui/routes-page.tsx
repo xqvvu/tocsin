@@ -74,9 +74,16 @@ export function RoutesPage() {
             pending={pending}
             sources={sources}
             destinations={destinations}
-            onCreate={(input) =>
-              void submitAction("create-route", () => createRoute(input)).then(maybeOpenRouteReplay)
-            }
+            onCreate={async (input) => {
+              const route = await submitAction("create-route", () => createRoute(input));
+
+              if (route === null) {
+                return false;
+              }
+
+              maybeOpenRouteReplay(route);
+              return true;
+            }}
             onRefresh={() => void refreshConfiguration()}
           />
           <RoutesSection
@@ -132,7 +139,7 @@ function RoutesPageToolbar({
     name: string;
     rule: RouteDefinition["rule"];
     destinationIds: string[];
-  }) => void;
+  }) => boolean | Promise<boolean>;
   onRefresh: () => void;
 }) {
   const t = useTranslations();
