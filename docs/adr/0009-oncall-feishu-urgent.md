@@ -61,6 +61,12 @@
    电话失败只重试电话，绝不重发卡片；卡片重发也绝不重复打电话。`OncallWorker.runOnce()` 照抄 `DeliveryWorkerService`（`server/deliveries/delivery-worker.service.ts`）的 reclaim → claim(due) → execute 顺序，退避复用 `DeliveryBackoffOptions`（`server/deliveries/delivery-execution.ts:31`）；runner 复用 `createDeliveryWorkerRunner`（`server/runtime/delivery-worker-runner.ts:47`，它对队列形状无感知），container 里 `ensureOncallWorkerRunner()` 与 delivery runner 并列（注入点见 `server/runtime/container.ts:138`），仍是单进程 setInterval。MVP 阶段按 AGENTS.md 直接在 `migrate/schema.ts` 的 `createAppTables` / `createAppIndexes` 加表。
 
 6. **去重风暴保护。** ping 按 `(fingerprint, destination_id, receiver)` 在一个去重窗口（沿用 `intake.service.ts:54` 的 `dedupeWindowMs ?? 5 * 60 * 1000` 模式，作为 service 选项而非共享常量）内只建一条。告警风暴下"每 30 秒一条 firing 就刷一次电话"不可接受。新建 `oncall_ping_dedupe_keys` 表，不复用 `delivery_dedupe_keys` 的行。
+   **实现补充（2026-10-26，第 113 轮）：** 「卡片重发也绝不重复打电话」由
+   `enqueueForDelivery` 的 delivery 维度判定保证：同一 `delivery_id` + `receiver`
+   已有 ping（无论状态）即抑制自动入队，不再依赖墙钟窗口。终态 `failed` 同样抑制，
+   因为 `markDispatchedButUnrecorded` 会把「电话已拨出但状态未落库」记为 `failed`；
+   需要显式重呼时走手工 buzz。决策记录见
+   `docs/planning/decisions/oncall-card-resend-dedupe.md`。
 
 7. **urgency channel adapter 家族与 Destination adapter 并列。** `packages/destinations/src/urgency/` 新增 `UrgencyChannelAdapter`（`kind` / `ping(input, ctx)`）与 `UrgencyRegistry`，复用 0002 的全部纪律：结构化 `ok` union、封闭 error kind、retry hint、只接收已校验 typed config、不碰 DB/container/logger、`fetch` 与 `now` 从 ctx 注入。渠道本身**不带 `configSchema`/manifest/preview**：加急不渲染用户可见消息，配置形状（severity 门槛、`userIdType`、呼叫对象）挂在 destination config 的 `urgent` 块上，由飞书 destination schema 校验；渠道只接收已解析的 `UrgencyPingInput`。`UrgencyChannelKind` 是封闭枚举，v1 唯一成员 `feishu_urgent_phone`；输入为 `{ app: { appId, appSecret }, messageId, receivers, userIdType }`。卡模式直接对 `messageId` 执行 `urgent_phone`（官方文档确认群卡片可加急，**不设单聊回退**）。重试判定按**业务码**而非 HTTP 状态：配额/权限/配置类拒绝映射为 `target_rejected` + `not_retryable` 并附运维提示，限流（99991400/11232/11233 或 HTTP 429）与未读加急超限（230023）映射为 `retryable`，凭证失效（99991661/99991663/99991665）映射为 `retryable` 并丢弃缓存 token 重换一次。`code 0` 但本 ping 的接收人出现在 `data.invalid_user_id_list` 里记为 `target_rejected` + `not_retryable`。分类表在 `packages/destinations/src/shared/feishu-errors.ts`，被 destination 发送路径与加急路径共用；失败文本统一由 `feishuFailureSummary()` 生成，保证平台的 `msg` 不被丢弃（自定义群机器人用 HTTP 200 + body code 回答拒绝，此时不引用状态码）。
 

@@ -67,6 +67,12 @@ export interface EnqueueOncallPingInput {
   maxAttempts?: number;
   /** Pings older than this instant no longer block the dedupe key. */
   dedupeWindowStartsAt: IsoDateTimeString;
+  /**
+   * Suppress the enqueue when this delivery already paged the receiver,
+   * regardless of the dedupe window. Card resends must never ring the same
+   * receiver twice (ADR 0009); only the automatic path opts in.
+   */
+  dedupeByDelivery?: boolean;
   now?: IsoDateTimeString;
 }
 

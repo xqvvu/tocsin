@@ -53,17 +53,79 @@ describe("oncall auto paging trigger", () => {
     await service.triggerPingsForDelivery({ delivery, providerReference: messageReference, now });
 
     expect(await store.oncall.listForDelivery(delivery.job.id)).toHaveLength(2);
+  });
 
-    // Outside the window the same page is placed again.
-    const later = "2026-10-09T08:06:00.000Z";
+  it("does not page again when the same delivery is resent after the window", async () => {
+    // ADR 0009: 卡片重发也绝不重复打电话. A stale reclaim resends the card with a
+    // new provider reference; delivery-scoped suppression must hold even though
+    // the wall-clock dedupe window has expired.
+    const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
+    const { delivery } = await seedDelivery(store);
+    const service = new OncallService({ store });
+
+    await service.triggerPingsForDelivery({ delivery, providerReference: messageReference, now });
+
+    const resendAt = "2026-10-09T08:06:00.000Z";
+    await service.triggerPingsForDelivery({
+      delivery,
+      providerReference: { type: "feishu_message_id", value: "om_resend" },
+      now: resendAt,
+    });
+
+    const pings = await store.oncall.listForDelivery(delivery.job.id);
+
+    expect(pings).toHaveLength(2);
+    expect(pings.map((ping) => ping.providerReference?.value)).toEqual(["om_123", "om_123"]);
+    expect(pings.map((ping) => ping.createdAt)).toEqual([now, now]);
+  });
+
+  it("still pages a different delivery of the same alert after the window", async () => {
+    // Storm protection keeps its fingerprint window: only the resent delivery
+    // is pinned, a genuinely new delivery pages again.
+    const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
+    const { delivery } = await seedDelivery(store);
+    const service = new OncallService({ store });
+
+    await service.triggerPingsForDelivery({ delivery, providerReference: messageReference, now });
+
+    const second = await seedRepeatDelivery(store);
+
+    await service.triggerPingsForDelivery({
+      delivery: second,
+      providerReference: { type: "feishu_message_id", value: "om_second" },
+      now: "2026-10-09T08:06:00.000Z",
+    });
+
+    expect(await store.oncall.listForDelivery(delivery.job.id)).toHaveLength(2);
+    expect(await store.oncall.listForDelivery(second.job.id)).toHaveLength(2);
+  });
+
+  it("keeps the delivery pinned when the first page ended in failed", async () => {
+    // `failed` is ambiguous: oncall execution also records a call that was
+    // placed but whose terminal state could not be persisted as failed. A
+    // second ring is irreversible, so the delivery stays pinned; an operator
+    // can still page manually.
+    const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
+    const { delivery } = await seedDelivery(store);
+    const service = new OncallService({ store });
+
+    await service.triggerPingsForDelivery({ delivery, providerReference: messageReference, now });
+
+    for (const ping of await store.oncall.listForDelivery(delivery.job.id)) {
+      await store.oncall.markFailed({
+        pingId: ping.id,
+        error: "provider rejected the call",
+        retryAt: null,
+      });
+    }
 
     await service.triggerPingsForDelivery({
       delivery,
-      providerReference: messageReference,
-      now: later,
+      providerReference: { type: "feishu_message_id", value: "om_resend" },
+      now: "2026-10-09T08:06:00.000Z",
     });
 
-    expect(await store.oncall.listForDelivery(delivery.job.id)).toHaveLength(4);
+    expect(await store.oncall.listForDelivery(delivery.job.id)).toHaveLength(2);
   });
 
   it("exposes the paging records on the delivery detail", async () => {
@@ -249,6 +311,39 @@ describe("oncall manual paging", () => {
     expect(await store.oncall.listForDelivery(deliveryId)).toHaveLength(2);
   });
 
+  it("allows a manual page after the window for an already auto-paged delivery", async () => {
+    // Delivery-scoped suppression applies to the automatic path only: an
+    // operator who confirms the alert is still urgent keeps the manual route.
+    const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
+    await seedDelivery(store);
+    const [claimed] = await store.deliveries.claimNext({ now, limit: 1 });
+
+    await store.deliveries.markSucceeded({
+      deliveryId: claimed!.job.id,
+      attemptId: claimed!.attempt.id,
+      providerReference: messageReference,
+      finishedAt: now,
+    });
+
+    const autoService = new OncallService({ store, now: () => now });
+
+    await autoService.triggerPingsForDelivery({
+      delivery: claimed!,
+      providerReference: messageReference,
+      now,
+    });
+
+    const later = "2026-10-09T08:06:00.000Z";
+    const manualService = new OncallService({ store, now: () => later });
+    const created = await manualService.buzzDelivery({
+      deliveryId: claimed!.job.id,
+      initiatedBy: "user-1",
+    });
+
+    expect(created.map((ping) => ping.trigger)).toEqual(["manual", "manual"]);
+    expect(await store.oncall.listForDelivery(claimed!.job.id)).toHaveLength(4);
+  });
+
   it("keeps the records queued when the immediate dispatch fails", async () => {
     const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
     const deliveryId = await seedSucceededDelivery(store);
@@ -365,5 +460,54 @@ async function seedDelivery(
       destination: destination!,
       route: await store.routes.get("route-1"),
     },
+  };
+}
+
+/** Seeds a second delivery for the same alert, as a repeat notification would. */
+async function seedRepeatDelivery(
+  store: Awaited<ReturnType<typeof openSqliteStore>>,
+): Promise<ClaimedDelivery> {
+  const event = await store.intake.recordEvent({
+    sourceId: "source-1",
+    idempotencyKey: "request-2",
+    normalized: {
+      title: "Checkout unavailable",
+      message: "checkout returned 503",
+      severity: "critical",
+      status: "firing",
+      fingerprint: "checkout:unavailable",
+      labels: { service: "checkout" },
+      occurredAt: now,
+    },
+    rawPayload: {},
+  });
+  const route = await store.routes.get("route-1");
+  const enqueue = await store.deliveries.enqueueForEvent({
+    event,
+    matches: [{ routeId: route!.id, destinationIds: route!.destinationIds }],
+    dedupeWindowStartsAt: "2026-10-09T07:55:00.000Z",
+  });
+  const job = enqueue.created[0]!;
+  const storedEvent = await store.intake.get(job.eventId);
+  const source = await store.sources.get("source-1");
+  const destination = await store.destinations.get("destination-1");
+
+  return {
+    job,
+    attempt: {
+      id: "attempt-repeat",
+      deliveryId: job.id,
+      attemptNumber: 1,
+      state: "running",
+      responseStatus: null,
+      responseBody: null,
+      error: null,
+      startedAt: now,
+      finishedAt: null,
+    },
+    event: storedEvent!,
+    source: source!,
+    destination: destination!,
+    route,
   };
 }

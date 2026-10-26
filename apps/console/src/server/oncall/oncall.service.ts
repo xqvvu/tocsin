@@ -26,8 +26,9 @@ const URGENT_CHANNEL: UrgencyChannelKind = "feishu_urgent_phone";
  * urgent gate creates pings. Manual paging reuses the same records and gate
  * for one delivery an operator is looking at. Pings are per receiver and
  * deduplicated per fingerprint + destination + receiver, so an alert storm
- * cannot become a call storm. Every other delivery, including webhook-mode
- * sends, has nothing to page.
+ * cannot become a call storm; the automatic path additionally pins each
+ * delivery + receiver so a card resend cannot ring the same person twice.
+ * Every other delivery, including webhook-mode sends, has nothing to page.
  */
 export class OncallService {
   private readonly store: OncallServiceOptions["store"];
@@ -176,6 +177,9 @@ export class OncallService {
         providerReference: input.providerReference,
         trigger: "auto",
         dedupeWindowStartsAt,
+        // A resend of the same delivery creates a new card and a new provider
+        // reference; the receiver must still be called only once (ADR 0009).
+        dedupeByDelivery: true,
         now,
       });
 
