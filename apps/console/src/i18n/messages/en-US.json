@@ -801,6 +801,8 @@
   "events.table.deliveryShort.running": "R",
   "events.table.deliveryShort.succeeded": "S",
   "events.table.clearFiltersLabel": "Clear filters and show all events",
+  "events.parseFailure.fallbackMessage": "The raw payload is preserved — inspect it in the Raw debug tab",
+  "events.parseFailure.fallbackTitle": "Upstream payload could not be parsed",
   "events.table.empty": "No events yet",
   "events.table.emptyFiltered": "No events match",
   "events.table.emptyFilteredDescription": "No event matched the current filters — adjust them or reset the filters",

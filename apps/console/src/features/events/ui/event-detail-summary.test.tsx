@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import { REDACTED_VALUE, type DeliveryState } from "@tocsin/core";
+import { REDACTED_VALUE, type DeliveryState, type JsonObject } from "@tocsin/core";
 
 import { getEventDeliveryStats } from "#/features/events/ui/event-detail-stats";
 import { EventDetailSummary } from "#/features/events/ui/event-detail-summary";
@@ -57,6 +57,37 @@ describe("event detail summary delivery health", () => {
     expect(screen.getByRole("button", { name: "按消息静默相似告警" })).toBeTruthy();
   });
 
+  it("localizes the fallback headline of a parser-rejected event", () => {
+    renderSummary("zh-Hans", [], {
+      title: "Provider parser rejected webhook payload",
+      message: "Webhook payload was stored for inspection but could not be normalized",
+      providerMetadata: { parseFailed: true, reason: "invalid_payload" },
+    });
+
+    // Intake writes this audit row's headline before any viewer locale exists;
+    // the summary is a presentation slot, so it must not surface raw English.
+    expect(screen.getByText("未能解析的上游载荷")).toBeTruthy();
+    expect(screen.getByText("原始载荷已保留，可在「原始调试」中核对")).toBeTruthy();
+    expect(screen.queryByText("Provider parser rejected webhook payload")).toBeNull();
+  });
+
+  it("localizes the fallback headline of a parser-rejected event in English", () => {
+    renderSummary("en-US", [], {
+      title: "Provider parser rejected webhook payload",
+      message: "Webhook payload was stored for inspection but could not be normalized",
+      providerMetadata: { parseFailed: true },
+    });
+
+    expect(screen.getByText("Upstream payload could not be parsed")).toBeTruthy();
+  });
+
+  it("keeps the stored headline for events the parser accepted", () => {
+    renderSummary("zh-Hans", [], { providerMetadata: { parseFailed: false } });
+
+    expect(screen.getByText("磁盘将满")).toBeTruthy();
+    expect(screen.queryByText("未能解析的上游载荷")).toBeNull();
+  });
+
   it("disables text silence when the displayed text cannot match", () => {
     renderSummary("zh-Hans", [], {
       title: `磁盘 ${REDACTED_VALUE}`,
@@ -76,7 +107,7 @@ describe("event detail summary delivery health", () => {
 function renderSummary(
   locale: "zh-Hans" | "en-US",
   states: DeliveryState[],
-  overrides: { title?: string; message?: string } = {},
+  overrides: { title?: string; message?: string; providerMetadata?: JsonObject } = {},
 ) {
   const deliveries = states.map((state, index): EventDetailData["deliveries"][number] => ({
     id: `dlv_${index}`,
@@ -115,7 +146,7 @@ function renderSummary(
         labels: {},
         occurredAt: "2026-10-20T12:00:00.000Z",
       },
-      providerMetadata: {},
+      providerMetadata: overrides.providerMetadata ?? {},
       rawPayload: {},
       rawHeaders: {},
       routeMatches: null,
