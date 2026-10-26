@@ -1,8 +1,9 @@
-import { RiDeleteBinLine, RiErrorWarningLine } from "@remixicon/react";
+import { RiDeleteBinLine, RiErrorWarningLine, RiRefreshLine } from "@remixicon/react";
 
 import type { DeletionImpact } from "@tocsin/core";
 
-import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "#/components/ui/alert";
+import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
 import { Skeleton } from "#/components/ui/skeleton";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -23,11 +24,17 @@ export function DeletionImpactNotice({
   state,
   confirmed,
   onConfirmedChange,
+  onRetry,
 }: {
   impact: DeletionImpact | null;
   state: DeletionImpactLoadState;
   confirmed: boolean;
   onConfirmedChange: (confirmed: boolean) => void;
+  /**
+   * Re-issues the preview request. Omitted by callers that cannot retry, in
+   * which case the error alert carries no action.
+   */
+  onRetry?: () => void;
 }) {
   const t = useTranslations();
 
@@ -36,23 +43,35 @@ export function DeletionImpactNotice({
   }
 
   if (state === "loading") {
+    // `role="status"` makes the wait audible: the skeletons alone carry no text
+    // for a screen reader, and an sr-only string outside a live region is never
+    // announced.
     return (
-      <div className="flex flex-col gap-1">
+      <div role="status" className="flex flex-col gap-1">
+        <p className="text-muted-foreground text-xs">{t("common.deletionImpact.loading")}</p>
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-4 w-1/2" />
-        <span className="sr-only">{t("common.deletionImpact.loading")}</span>
       </div>
     );
   }
 
   if (state === "error" || !impact) {
     // An unreadable preview is a warning, not a lock: the operator still has to
-    // be able to clear a broken configuration from a degraded instance.
+    // be able to clear a broken configuration from a degraded instance, and
+    // must be able to ask again without closing the dialog.
     return (
       <Alert>
         <RiErrorWarningLine aria-hidden />
         <AlertTitle>{t("common.deletionImpact.errorTitle")}</AlertTitle>
         <AlertDescription>{t("common.deletionImpact.errorDescription")}</AlertDescription>
+        {onRetry ? (
+          <AlertAction>
+            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+              <RiRefreshLine data-icon="inline-start" aria-hidden />
+              {t("common.actions.tryAgain")}
+            </Button>
+          </AlertAction>
+        ) : null}
       </Alert>
     );
   }

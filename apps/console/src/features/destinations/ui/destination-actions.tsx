@@ -268,6 +268,7 @@ export function DestinationActions({
               state={historyImpact.state}
               confirmed={historyImpact.confirmed}
               onConfirmedChange={historyImpact.setConfirmed}
+              onRetry={() => historyImpact.request(destination.id)}
             />
           </AlertDialogHeader>
           <AlertDialogFooter>
