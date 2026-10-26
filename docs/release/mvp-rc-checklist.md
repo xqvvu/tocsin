@@ -101,7 +101,7 @@ https://github.com/xqvvu/tocsin/issues/47 已在 `xqvvu/tocsin` 关闭，清单�
   “没有 TLS 终止”仍是已知缺口。`BETTER_AUTH_SECRET` 支持 `_FILE`（Compose file secret / Swarm secret /
   K8s Secret 卷），compose 不再内置默认值，缺失或沿用历史公开值会让生产进程启动失败。
 - `docs/release/backup-restore-upgrade.md`：SQLite 冷备份/恢复、升级、回滚，以及 baseline + forward
-  repair migration（0001–0003）的升级约束。
+  repair migration（0001–0004）的升级约束；第 8 节记录 2026-10-26 的本地 Docker 演练。
 
 自动化接入现状：`.github/workflows/ci.yml` 跑 `check · test · build`，`.github/workflows/e2e.yml`
 跑浏览器 E2E（两者都在 `push` 到 main 与 `pull_request` 触发，tag 不触发任何东西）；本地入口分别是
@@ -224,6 +224,7 @@ MVP baseline 已能覆盖以下演示路径；E2E 由 CI 自动运行，Docker s
 11. 发布 gate 中，CI、测试、build、Docker smoke 和 E2E 通过。
 12. 发布文档能指导用户完成自托管部署、备份、升级和恢复。
 
-> 第 12 条的文档已经就位（`docs/release/`），但**没有在真实部署上演练过**：E2E 已在 CI 中运行，
-> Docker smoke 仍是本地脚本，备份/恢复/回滚步骤也只是标准工具用法，未在部署环境执行。首次发布前应把
-> 第 11、12 条当成人工验收项，而不是已完成项。
+> 第 12 条的文档已经就位（`docs/release/`）。2026-10-26 已在本地 Docker 上用已发布镜像完成
+> 升级 / 回滚 / 恢复演练（含 `0004` 台账路径，记录见 `docs/release/backup-restore-upgrade.md`
+> 第 8 节），但仍**没有在真实部署上演练过**：反向代理/TLS、生产数据规模、外部目标与 compose 命名卷
+> 的备份路径都未覆盖。首次发布前应把第 11、12 条当成人工验收项，而不是已完成项。
