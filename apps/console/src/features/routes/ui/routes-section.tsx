@@ -347,6 +347,7 @@ function RouteActions({
               state={historyImpact.state}
               confirmed={historyImpact.confirmed}
               onConfirmedChange={historyImpact.setConfirmed}
+              onRetry={() => historyImpact.request(route.id)}
             />
           </AlertDialogHeader>
           <AlertDialogFooter>

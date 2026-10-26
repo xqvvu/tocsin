@@ -258,6 +258,7 @@ export function SourceActions({
               state={historyImpact.state}
               confirmed={historyImpact.confirmed}
               onConfirmedChange={historyImpact.setConfirmed}
+              onRetry={() => historyImpact.request(source.id)}
             />
           </AlertDialogHeader>
           <AlertDialogFooter>
