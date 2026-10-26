@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import {
+  activeSessionsQueryOptions,
   appSettingsQueryOptions,
   runtimeInformationQueryOptions,
 } from "#/features/configuration/api/configuration.queries";
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/_dashboard/settings")({
       context.queryClient.ensureQueryData(sourcesQueryOptions()),
       context.queryClient.ensureQueryData(destinationsQueryOptions()),
       context.queryClient.ensureQueryData(routesQueryOptions()),
+      context.queryClient.ensureQueryData(activeSessionsQueryOptions()),
     ]),
   component: SettingsPage,
   pendingComponent: DashboardContentLayout.SettingsSkeleton,
