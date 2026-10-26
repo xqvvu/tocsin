@@ -50,6 +50,9 @@ export const EventListItemSchema = z.object({
   routeMatchCount: z.number().int().min(0),
   // The history projection always emits all four delivery states.
   deliveryCounts: z.record(DeliveryStateSchema, z.number().int().min(0)),
+  // Intake's audit rows for payloads a provider parser rejected. Derived from
+  // provider metadata on read; old rows without the marker project as false.
+  parseFailed: z.boolean(),
 });
 
 export const EventDetailDeliverySchema = DeliveryJobSchema.extend({

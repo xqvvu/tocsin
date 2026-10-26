@@ -10,6 +10,7 @@ import {
   decodeSchemaJson,
   EVENT_FINGERPRINT_CHANGE_FIELDS,
   LabelsSchema,
+  parseFailureMetadataFrom,
   redactNormalizedEvent,
 } from "@tocsin/core";
 
@@ -48,6 +49,26 @@ export function eventDetailDeliveryFromRow(
     lastResponseStatus: latestAttempt?.response_status ?? null,
     lastResponseAt: latestAttempt?.finished_at ?? null,
   };
+}
+
+/**
+ * Whether the list row is intake's audit event for a payload a provider parser
+ * rejected.
+ *
+ * Reads the same `parseFailed` marker the detail notice reads, and tolerates a
+ * corrupt `provider_metadata_json`: one damaged row must not fail the whole
+ * event list. A value that cannot be parsed simply is not a parse-failure row.
+ */
+export function isParseFailureRow(providerMetadataJson: string): boolean {
+  return parseFailureMetadataFrom(decodeJsonTolerantly(providerMetadataJson)) !== null;
+}
+
+function decodeJsonTolerantly(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
 
 /** The `events` columns the fingerprint comparison reads. */

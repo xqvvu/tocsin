@@ -36,6 +36,7 @@ import {
   type EventDetailLatestAttempt,
   fingerprintChangesFrom,
   fingerprintOccurrence,
+  isParseFailureRow,
   redactedFingerprintFields,
 } from "#/infra/sqlite/repositories/history/history.helpers";
 import type {
@@ -88,6 +89,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
         "events.title as title",
         "events.fingerprint as fingerprint",
         "events.route_matches_json as route_matches_json",
+        "events.provider_metadata_json as provider_metadata_json",
         "events.received_at as received_at",
         sql<number>`SUM(CASE WHEN deliveries.state = 'pending' THEN 1 ELSE 0 END)`.as(
           "pending_count",
@@ -149,6 +151,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
         title: redactText(row.title),
         fingerprint: row.fingerprint,
         receivedAt: row.received_at,
+        parseFailed: isParseFailureRow(row.provider_metadata_json),
         routeMatchCount: countMatchedRoutes(row.route_matches_json),
         deliveryCounts: {
           pending: row.pending_count ?? 0,

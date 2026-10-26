@@ -56,6 +56,7 @@ export function EventsTable({
             title={row.original.title}
             fingerprint={row.original.fingerprint}
             severity={row.original.severity}
+            parseFailed={row.original.parseFailed}
           />
         ),
       },

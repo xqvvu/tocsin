@@ -133,6 +133,13 @@ export interface EventListItem {
   receivedAt: IsoDateTimeString;
   routeMatchCount: number;
   deliveryCounts: Record<DeliveryState, number>;
+  /**
+   * True when the event is intake's audit row for a payload its provider
+   * parser rejected. Those rows carry `unknown` severity and a generic title,
+   * so without this flag the list looks like an upstream system sent an
+   * unreadable alert rather than like Tocsin failed to parse a real one.
+   */
+  parseFailed: boolean;
 }
 
 export interface EventDetail {

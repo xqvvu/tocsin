@@ -154,6 +154,7 @@ function eventFixture(id: string): Operations["events"]["items"][number] {
     fingerprint: "cpu:api",
     receivedAt: "2026-06-06T00:00:00.000Z",
     routeMatchCount: 1,
+    parseFailed: false,
     deliveryCounts: {
       pending: 0,
       running: 0,
