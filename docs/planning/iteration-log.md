@@ -2,6 +2,54 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 114 轮）
+
+- 时间：2026-10-26 15:27 CST 起。
+- 基线：本轮开始时 `origin/main` @ `db7b746`；main CI success（`40285452597`、`40285452604`）；无 open PR。
+- 类型：**P0 呼叫语义修复 + EXPERT_PANEL + 小修复**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有 458 条 candidate、Q-235 为第 113 轮指定第一优先，按第 1.5 步继续，不重跑全量审计。
+- 车道：3 个并发名额全部给 **Q-235 的 EXPERT_PANEL**（安全与可靠性 / 产品与运维 / 独立评估者）。
+  - `requirements` 未单独启动：第 111 轮窄化 brief 刚跑过、第 112/113 轮为配额让路，backlog 仍有 458 条；本轮配额留给最高优先的阻断项。下一轮恢复。
+  - `ui-triage` 由编排者按日志事实裁决：**`defer`**。`last_ui_review_at` 2026-10-26 10:35 CST（距本轮约 4.9h）；自上次评审**零**个 UI 合并（#463 本身就是那次评审的产出）；未解决 UI candidate 属长期常态（38 条，均为第 109 轮已评审结论，重复评审只会复读）。无 ≥48h / ≥3 UI 合并的强信号；本轮预算给 P0 呼叫语义。下一轮若预算空闲应直接做 UI-67 / UI-61 / UI-63。
+- `last_ui_review_at`：**2026-10-26 10:35 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `reverent-noyce-48fe59`（其 `node_modules` 为半删残留，按既有记忆先删全部 workspace `node_modules` 再 `vp install --frozen-lockfile`）。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #475 `fix(console): prove a stale on-call call never dialled before retrying`（Q-235，P0）**：
+  - 事实纠偏：根因不是「同一 tick」，而是「`running` 不携带任何证据说明这次有没有拨出」。同 tick 重拨只是让它立刻发生。
+  - 修法：nullable 列 `oncall_pings.dispatch_started_at` + forward-only 迁移 `0004`（`ensureColumn` 幂等，fresh 库由 baseline builder 建列）；`claimNext` 每次领取重置标记；执行器在 `urgency.ping` **之前** best-effort 写标记并刷新 `updated_at`（写失败只记 warn、照常拨号）；`reclaimStaleRunning` 按标记分流（NULL → 既有重试语义；非 NULL → 终态 + 「may have been placed」）。
+  - 测试（+6）：意图先于拨号的顺序断言、记账失败仍拨号、可能已拨出的 stale 行零调用 + 终态 + 文案 + 不可再 claim、确定没拨出的 stale 行同 tick 补呼（`attemptCount=2`）、迁移列 nullable 无默认值、0003 修复路径同样有该列。
+  - PRD `docs/prd/oncall-dispatch-intent.md`；决策记录 `docs/planning/decisions/oncall-dispatch-intent.md`；ADR 0009 决定 5 补实现说明。
+  - 验证：`vp fmt --write`、`vp check` 0 error（22 条既有 warning）、`vp run -r test`（188 文件 / **1058** 测试）、`vp run -r build` 通过。
+- **PR #474 `test(console): cover backslash escaping and blank delivery search`（Q-229，AUTO_FIX）**：
+  - LIKE 谓词用 `ESCAPE '\'`，但测试只覆盖 `%`/`_`；新增 `C:\temp` 与诱饵 `C:temp` fixture，断言事件与投递两个列表都只命中真实行；空白查询用例扩展为同时断言 `listDeliveries`。仅测试。CI 双绿（`40287218590` / `40287218543`），rebase 合并。
+
+### 专家发现
+
+- `panel-safety`：漏呼 > 重复呼叫 > 状态不可见；单进程 `better-sqlite3` 吸收常见 BUSY，但「claim 后进程被杀」不需要任何写库失败即可到达；还发现 `claimNext` 一次性领取整批 + `dispatchNow` 绕过 runner single-flight，仍在执行的 ping 会被判 stale（登记 **Q-236**）。
+- `panel-ops`：现有 UI 没有任何字段能区分「确定没拨 / 可能拨了 / 已拨出」，四种方案都只能靠 `last_error` 承载证据，因此文案必须写「可能」；**修正**「标记写失败则不拨号」违背 Q-225 的「呼叫不得依赖记账」；还发现 `buzzDelivery` 不校验 `destination.enabled` 会假成功（登记 **Q-237**）、投递列表/事件页完全看不到呼叫失败（登记 **UI-68**）。
+- `panel-evaluator`：reclaim→claim 同 tick 成立（reclaim 不增加 `attempt_count`）；「同一分钟」不成立，间隔 ≥5 分钟；唯一 reclaim 用例用 `runOnce({limit: 0})` 故意阻止同 tick claim，恰好掩盖缺陷；`repositories/oncall/` 无测试文件；给出 B/C 的可执行验收标准与 C 的迁移改动清单。
+- `requirements`：本轮未跑（见车道说明）。
+
+### EXPERT_PANEL
+
+三位专家独立评审，**一致选择 C（拨号意图证据）**，一致反对 A（现状）。唯一分歧是标记写入失败时是否拨号：
+
+- 安全与可靠性 / 独立评估者：不拨号（fail-closed）。
+- 产品与运维：照拨（best-effort），因为让呼叫依赖记账违背 Q-225 的既有裁决。
+- 裁决：采纳 **best-effort**。理由：两条路的不可逆后果分别是漏呼与重复呼叫，安全专家自己的排序把漏呼列为最坏；Q-225 已明确「呼叫不得依赖记账是否成功」（`delivery-success-persistence-failure.md:40,55-59`）。决策记录 `docs/planning/decisions/oncall-dispatch-intent.md`。
+
+### 下一轮优先项
+
+1. 发布评估：`v0.1.0-beta.89..main` 将包含 #474（仅测试，不触发发版）与 #475（用户可见的呼叫语义修复）→ 满足发版门槛后发 `0.1.0-beta.90`。
+2. Q-236：`claimNext` 一次性领取整批 + `dispatchNow` 绕过 single-flight 的并发竞争（EXPERT_PANEL）。
+3. UI-68：投递列表/事件页的呼叫失败信号（需服务端汇总 DTO）。
+4. Q-237：`buzzDelivery` 校验目标启用状态并如实反馈。
+5. UI-67 / UI-61 / UI-63：投递「结果未知」徽标、创建路由禁用原因、路由名称原生校验。
+6. 恢复 `requirements` 车道（轮转方向，避免重复方向 4）。
+
 ## 2026-10-26（第 113 轮）
 
 - 时间：2026-10-26 14:26 CST 起。
