@@ -41,14 +41,22 @@
 - 产品与运维：照拨（best-effort），因为让呼叫依赖记账违背 Q-225 的既有裁决。
 - 裁决：采纳 **best-effort**。理由：两条路的不可逆后果分别是漏呼与重复呼叫，安全专家自己的排序把漏呼列为最坏；Q-225 已明确「呼叫不得依赖记账是否成功」（`delivery-success-persistence-failure.md:40,55-59`）。决策记录 `docs/planning/decisions/oncall-dispatch-intent.md`。
 
+### 发布评估与发布记录
+
+- 发布经理：**RELEASE**。`v0.1.0-beta.89..(main + #475)` 中唯一用户可见变更是 #475（Q-235 拨号意图证据）；#474 仅测试，其余为纯 docs。建议 `0.1.0-beta.90`。
+- 阻断审计：**APPROVE_RELEASE**（#475 合入后复核）。6 项门禁 PASS —— 目标 main CI 绿、无其他 open PR、新用例断言非空转（`oncall-worker.service.test.ts:127,169`、`oncall-execution.test.ts:131,169`）、`blocked-autonomous` 仅 REL-13/16/23 法律与仓库设置、`0004` 为 nullable 幂等加法且 fresh/legacy 两路径有测试、`v0.1.0-beta.90` 无冲突。
+- 运维/回滚：**WARN**（非阻断，已修文档）。发现 PRD/决策记录「代码回滚即可」的说法对**镜像回滚**不成立：旧镜像的计划只到 `0003`，会被 `assertNoUnknownAppliedMigrations` 挡住导致 `/api/ready` 永久 503；必须先 `DELETE FROM schema_migrations WHERE version = '0004'`。已在合入前修正 `docs/prd/oncall-dispatch-intent.md` 与决策记录。
+- 版本 PR #476 `chore(release): v0.1.0-beta.90`（rebase 合并 `64fd7dc`）；目标 commit 的 CI 与 E2E 均 success。
+- tag `v0.1.0-beta.90` 指向 `64fd7dc`（= `origin/main`）；GitHub Release 为 prerelease，body 非空。
+- 观察：`ddf5def` 的 main-branch E2E 单 job 卡住 >15 分钟（`40289903177`），同一棵树的 PR 级 playwright 1m23s 通过，随后被新 commit supersede；判定为 Actions 基础设施抖动，不是代码问题，已记录。
+
 ### 下一轮优先项
 
-1. 发布评估：`v0.1.0-beta.89..main` 将包含 #474（仅测试，不触发发版）与 #475（用户可见的呼叫语义修复）→ 满足发版门槛后发 `0.1.0-beta.90`。
-2. Q-236：`claimNext` 一次性领取整批 + `dispatchNow` 绕过 single-flight 的并发竞争（EXPERT_PANEL）。
-3. UI-68：投递列表/事件页的呼叫失败信号（需服务端汇总 DTO）。
-4. Q-237：`buzzDelivery` 校验目标启用状态并如实反馈。
-5. UI-67 / UI-61 / UI-63：投递「结果未知」徽标、创建路由禁用原因、路由名称原生校验。
-6. 恢复 `requirements` 车道（轮转方向，避免重复方向 4）。
+1. Q-236：`claimNext` 一次性领取整批 + `dispatchNow` 绕过 single-flight 的并发竞争（EXPERT_PANEL）。
+2. UI-68：投递列表/事件页的呼叫失败信号（需服务端汇总 DTO）。
+3. Q-237：`buzzDelivery` 校验目标启用状态并如实反馈。
+4. UI-67 / UI-61 / UI-63：投递「结果未知」徽标、创建路由禁用原因、路由名称原生校验。
+5. 恢复 `requirements` 车道（轮转方向，避免重复方向 4）。
 
 ## 2026-10-26（第 113 轮）
 
