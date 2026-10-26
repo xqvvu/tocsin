@@ -809,18 +809,23 @@ function ConditionList({
     <UiField>
       <FieldLabel>{label}</FieldLabel>
       <div className="flex w-full flex-col gap-1">{children}</div>
-      <Button
-        type="button"
-        variant="outline"
-        size="xs"
-        className="w-fit"
-        disabled={addDisabled}
-        aria-label={`${t("routing.form.addCondition")}: ${label}`}
-        onClick={onAdd}
-      >
-        <RiAddLine data-icon="inline-start" aria-hidden />
-        {t("routing.form.addCondition")}
-      </Button>
+      {/* A vertical Field forces every direct child to full width, which
+          stretched this xs button into an empty-looking bar. The wrapper takes
+          the full width so the button keeps its own size. */}
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          className="w-fit"
+          disabled={addDisabled}
+          aria-label={`${t("routing.form.addCondition")}: ${label}`}
+          onClick={onAdd}
+        >
+          <RiAddLine data-icon="inline-start" aria-hidden />
+          {t("routing.form.addCondition")}
+        </Button>
+      </div>
       <FieldDescription>{description}</FieldDescription>
     </UiField>
   );

@@ -106,6 +106,21 @@ describe("suppression create form", () => {
     expect(screen.queryByText("This silences everything")).toBeNull();
   });
 
+  it("keeps every add-condition button at its own size inside the field", () => {
+    renderCreateForm();
+
+    const addButtons = screen.getAllByRole("button", { name: /^Add: / });
+
+    expect(addButtons).toHaveLength(4);
+
+    for (const button of addButtons) {
+      // A vertical Field forces every direct child to full width, which used to
+      // render this xs button as an empty-looking bar. The button must sit one
+      // level deeper so a wrapper absorbs that width instead.
+      expect(button.parentElement).not.toBe(button.closest('[data-slot="field"]'));
+    }
+  });
+
   it("submits the prefilled source and fingerprint without touching the form", async () => {
     const onSubmit = vi.fn<(input: SuppressionFormSubmission) => void>();
 

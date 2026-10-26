@@ -610,17 +610,22 @@ function RepeatableTextList({
           </div>
         ))}
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="xs"
-        className="w-fit"
-        aria-label={`${t("suppressions.form.addCondition")}: ${label}`}
-        onClick={() => onChange([...values, ""])}
-      >
-        <RiAddLine data-icon="inline-start" aria-hidden />
-        {t("suppressions.form.addCondition")}
-      </Button>
+      {/* A vertical Field forces every direct child to full width, which
+          stretched this xs button into an empty-looking bar. The wrapper takes
+          the full width so the button keeps its own size. */}
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          className="w-fit"
+          aria-label={`${t("suppressions.form.addCondition")}: ${label}`}
+          onClick={() => onChange([...values, ""])}
+        >
+          <RiAddLine data-icon="inline-start" aria-hidden />
+          {t("suppressions.form.addCondition")}
+        </Button>
+      </div>
       <FieldDescription>{description}</FieldDescription>
     </UiField>
   );
@@ -705,17 +710,21 @@ function LabelConditionList({
           </div>
         ))}
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="xs"
-        className="w-fit"
-        aria-label={`${t("suppressions.form.addCondition")}: ${t("suppressions.form.labelsLabel")}`}
-        onClick={() => onChange([...values, { key: "", operator: "equals", value: "" }])}
-      >
-        <RiAddLine data-icon="inline-start" aria-hidden />
-        {t("suppressions.form.addCondition")}
-      </Button>
+      {/* See the text-condition list above: the wrapper absorbs the Field's
+          forced full width so the button keeps its own size. */}
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          className="w-fit"
+          aria-label={`${t("suppressions.form.addCondition")}: ${t("suppressions.form.labelsLabel")}`}
+          onClick={() => onChange([...values, { key: "", operator: "equals", value: "" }])}
+        >
+          <RiAddLine data-icon="inline-start" aria-hidden />
+          {t("suppressions.form.addCondition")}
+        </Button>
+      </div>
       <FieldDescription>{t("suppressions.form.labelsDescription")}</FieldDescription>
     </UiField>
   );
