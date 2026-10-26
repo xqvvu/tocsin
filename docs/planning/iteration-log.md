@@ -2,6 +2,71 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 123 轮）
+
+- 时间：2026-10-27 01:55 CST 起。
+- 基线：本轮开始时 `origin/main` @ `8fdc2ce`；`8fdc2ce` 的 CI 为 success（E2E 本轮开始时仍在跑，前两次 E2E 均为 success）；无 open PR。
+- 类型：**UI 小切片 + EXPERT_PANEL 裁决**（非 full-audit）。
+- 全量审计时间戳：**2026-10-26 21:45 CST（未变，第 120 轮）**；backlog 有 `REQ-274`（28）、`REQ-267`（27）等达门槛 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道（3 并发，未超上限）：`requirements`（10 分钟窄化 brief）、`ui-triage`（必跑）、`architecture`（轮转）。
+- `ui-triage` 决策：**`defer`** —— 距上次评审约 2h47m（`last_ui_review_at` 2026-10-26 23:09）；自上次评审仅 1 个触及 UI 路径的合并（`a62262a`，且只改测试断言，文案已在第 121 轮浏览器确认）；42 个 UI candidate / 0 planned 属队列存量而非重扫理由；第 121 轮浏览器覆盖仍是最新。建议直接把 UI-73/74/75 实现掉，而不是再发现一遍。
+- `last_ui_review_at`：**2026-10-26 23:09 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `stoic-poincare-7eedbe`。
+- 浏览器验证：隔离实例 `localhost:6197` + `/tmp/tocsin-ui-r123.sqlite`（临时），截图 `/tmp/tocsin-ui-r123/shots/`；结束后实例已停止。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 专家发现
+
+**requirements（必跑，12 分钟窄化 brief）**
+
+- **无新候选**。逐方向核对后，fingerprint 聚合、label 过滤、接入被拒可观测、重试状态、自动刷新、配置审计等全部已有 backlog 条目（REQ-6/19/34/51/58/35/85 等）。
+- 推荐优先认领既有的三个被低估项：**REQ-32（28，解析失败可见性）**、**REQ-17（27，加急呼叫失败全局可观测与再呼叫）**、**REQ-58（27，等待重试 vs 重试耗尽）**；并建议 REQ-12 / NEW-AJ / REQ-9 合并为一次配置面健康摘要交付，避免三个并行聚合端点。
+
+**architecture（轮转，6 条，均未实现）**
+
+- （中）`hashSourceToken`/`verifySourceToken` 定义在 `server/intake/intake.service.ts:354`，被 `server/sources/source.service.ts:20` 与 `server/configuration/config-portability.service.ts:33` 反向引用；凭证原语无中立归属 → **ARCH-57（21）**。
+- （低）`infra/sqlite/repositories/history/route-match-gaps.ts` 是纯域派生、无 SQL，却放在仓储目录（`history.repository.ts:50` 引用）→ **ARCH-58（19）**。
+- （低）`features/deliveries/model/urgent-ping-explanation.test.ts:7` 从 `#/infra` 引仓储助手，破坏 feature `model/` 环境中立约定 → **ARCH-59（18）**。
+- （低）`features/routes/ui/route-forms.tsx`（1073 行）与 `features/suppressions/ui/suppression-forms.tsx`（739 行）仍是多组件簇，未按 AGENTS.md 拆同级文件 → **ARCH-60（18）**。
+- （低）10 处 service 直接 `throw new RecordNotFoundError`（`destination.service.ts:130,154,174,230,278,402` 等），与仓储 `requireX` 助手并存 → **ARCH-61（17）**。
+- （低，EXPERT_PANEL）`features/events` 与 `features/deliveries` 无 `api/` 边界，22 处直接引 `#/features/operations/*` → **ARCH-62（20）**。
+- 已核实为 clean：11 个 router 均薄（≤87 行）、service 无 `ORPCError`/无模块级单例、无 DI 框架、`components/common` 不碰服务端/查询、`@tocsin/core` 与 `@tocsin/api` 环境中立、适配器包形状合规。
+
+**ui-triage**：`defer`（理由见上）。
+
+### 本轮交付
+
+- **PR #499 `fix(console): unify list paging copy and unclip delete-preview retry`**：
+  - UI-73：删除预览失败态把「重试」从 `AlertAction`（绝对定位、预留 72px）移到 `AlertDescription` 内的正文下方，保留 `role="alert"`。
+  - UI-74：`en-US.json` 三个分页键统一为 `Page {page} of {pageCount}`；新增 `pagination-labels.test.tsx` 一次断言 8 个键（英文/中文），并更正 `feishu-apps-page-unification.test.tsx:121` 锁死旧文案的断言。
+  - UI-75：`route-forms.tsx` 表单加 `noValidate`，测试断言 `form.noValidate === true`。
+  - PRD `docs/prd/ui-copy-and-dialog-polish.md`。
+  - 验证：`vp check` 0 error / 23 条既有 warning；`vp run -r test` 192 文件 / **1080** 测试全绿；`vp run -r build` 通过；浏览器实测见上（描述宽 242px、`Page 1 of 1`、`form.noValidate === true`）。
+- **PR #500 `docs(planning): record round 123 and the session-surface decision`**（本 PR）：日志、backlog 与 REQ-274 决策记录。
+- backlog：UI-73/74/75 → shipped #499；新增 UI-76（其他表单原生校验，20）与 ARCH-57..62。
+
+### EXPERT_PANEL
+
+- **REQ-274（28）控制台会话可见性与撤销**：3 位专家（安全与可靠性 / 产品与运维 / 评估者）独立裁决，记录 `docs/planning/decisions/req-274-session-surface.md`。
+  - 一致点：可直接查 SQLite `session` 表实现，**不得**用 BA `listSessions`（返回 `token` 且被 24h fresh 门槛包住）；授权必须 self-only。
+  - 分歧：产品专家主张先做 REQ-58 / SEC-30 / REQ-267，会话面板优先级最低；安全与评估专家认为单 PR 可实现。
+  - 最终选择（最保守且可逆）：采纳最小切片——Settings 内只读会话列表 + 「退出其他设备」，不做逐行撤销、不撤销当前会话、不做登录审计；REQ-274 置为 `planned`，下一轮实施。
+- `REQ-267`（名称快照迁移）与 `SEC-30`（签名族脱敏）本轮未裁决，顺延。
+
+### 发布评估与发布记录
+
+- **本轮不发布**：唯一用户可见变更是 #499 的三个界面/文案修复；按发布门槛需等 main CI 绿且无 open PR 后再评估。
+  本轮结束时 #499 仍在等待 CI（`playwright · chromium` 已 pass），若在收尾前合入，发布与否交下一轮专家小组按第 9.5 步重新评估。
+- 最近 tag 仍为 `v0.1.0-beta.95`（`1b32971`），与 `gh release list` 对齐，无缺 release 的 tag。
+
+### 下一轮优先项
+
+1. **REQ-274 最小切片实施**（决策已定，按 `docs/planning/decisions/req-274-session-surface.md`）。
+2. **REQ-58（27）**：失败投递区分「等待重试」与「重试耗尽」，纯展示 + DTO 字段。
+3. **SEC-30（25）**：签名族脱敏精确键（`sig`/`hmac`/`xhubsignature`/`ticket`），交 EXPERT_PANEL 定后缀策略。
+4. **REL-22 剩余**：E2E 补历史过滤与失败 retry（需要可控 sink）。
+5. 车道轮转：下一轮非必跑车道从 `security-exposure` 或 `release-infra` 继续（`architecture` 本轮已跑）。
+
 ## 2026-10-27（第 122 轮）
 
 - 时间：2026-10-27 00:04 CST 起。
