@@ -55,9 +55,17 @@
 
 ### 发布评估与发布记录
 
-- **本轮不发布**：#499 在收尾时 rebase 合入（`playwright · chromium` 与 `check · test · build` 均 pass），
-  但合并后的 main CI 在本轮结束时尚未完成，不满足「目标 commit CI 为 success」门槛。
-  本轮唯一用户可见变更就是 #499 的三个界面/文案修复，交下一轮专家小组按第 9.5 步评估发版。
+- 三位发布专家一致放行（`v0.1.0-beta.95..origin/main`）：
+  - **发布经理**：唯一用户可见变更是 #499（`b7c4d31`，UI-73/74/75），其余为 docs 与 e2e 测试；建议 `0.1.0-beta.96`。
+  - **阻断审计员**：`origin/main` @ `0550018` 的 CI 与 E2E 均 success；0 open PR；迁移目录零 diff；
+    `blocked-autonomous` 仅 REL-13/16/23（均 ≤24 分、属仓库设置/法务项），不阻断；最近 10 个 tag 均有 release。
+  - **运维/回滚专家**：`Dockerfile`、compose、`env.ts`、migrate 目录与 beta.95 零 diff；回滚只需换回 `0.1.0-beta.95`，无需数据库操作。
+- 版本 PR **#501 `chore(release): v0.1.0-beta.96`**（rebase 合并 `83da5cb`）；main CI 与 E2E 均 success。
+- tag **`v0.1.0-beta.96`** → `83da5cb`（= `origin/main`）；GitHub Release 为 prerelease，
+  body 来自 `/tmp/tocsin-release-notes-v0.1.0-beta.96.md`（已硬校验非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.96`
+  （linux/amd64 + linux/arm64，index digest `sha256:7dff6ae460de6b755f10389eb79ddb3b15369d0c1b38d5ffa0fd11d32256b052`）；
+  回滚 `0.1.0-beta.95`，无需数据库操作。
 - 最近 tag 仍为 `v0.1.0-beta.95`（`1b32971`），与 `gh release list` 对齐，无缺 release 的 tag。
 
 ### 下一轮优先项
