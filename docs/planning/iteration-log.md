@@ -24,7 +24,7 @@
 
 ### 本轮交付
 
-- **PR #TBD `docs(release): record the upgrade, rollback, and restore drill`（REQ-269）**：
+- **PR #488 `docs(release): record the upgrade, rollback, and restore drill`（REQ-269）**：
   - 用已发布镜像 `0.1.0-beta.89/90/92/93` 在本地 Docker（linux/arm64）跑完整路径：
     beta.89 基线（台账 `0001–0003`、无 `dispatch_started_at`）→ beta.90（应用 `0004`；升级后
     webhook 返回 202）→ 不删台账回滚（复现失败）→ 删 `0004` 台账行后回滚成功（数据与列保留）→
