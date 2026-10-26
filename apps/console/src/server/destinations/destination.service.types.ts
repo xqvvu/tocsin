@@ -16,6 +16,8 @@ export interface DestinationServiceOptions {
   destinationSendContext?: DestinationSendContext;
   /** Resolves server-side references (for example a Feishu app credential) before a test send. */
   resolveDestinationConfig?: DestinationConfigResolver;
+  /** Injectable clock so tests can pin the delivery-health window boundary. */
+  now?: () => string;
 }
 
 /** Re-exported dashboard DTOs — source of truth is `@tocsin/core`. */

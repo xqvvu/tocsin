@@ -13,6 +13,7 @@ import type {
   DestinationListItem,
 } from "#/features/destinations/model/destination-types";
 import { DestinationActions } from "#/features/destinations/ui/destination-actions";
+import { DestinationDeliveryHealthCell } from "#/features/destinations/ui/destination-delivery-health-cell";
 import { DestinationIdentityCell } from "#/features/destinations/ui/destination-identity-cell";
 import { destinationIconNamesByKind } from "#/features/destinations/ui/destination-kind-icon";
 import { DestinationOperationalConfigCell } from "#/features/destinations/ui/destination-operational-config-cell";
@@ -89,6 +90,11 @@ export function DestinationsSection({
         cell: ({ row }) => <EnabledStateBadge enabled={row.original.enabled} />,
       },
       {
+        id: "deliveryHealth",
+        header: t("destinations.table.headers.deliveryHealth"),
+        cell: ({ row }) => <DestinationDeliveryHealthCell health={row.original.deliveryHealth} />,
+      },
+      {
         id: "actions",
         header: t("destinations.table.headers.actions"),
         cell: ({ row }) => (
@@ -147,15 +153,17 @@ export function DestinationsSection({
 function destinationsColumnClassName(columnId: string): string | null {
   switch (columnId) {
     case "destination":
-      return "w-[24%]";
+      return "w-[22%]";
     case "operationalConfig":
-      return "w-[24%]";
+      return "w-[23%]";
     case "routing":
-      return "w-[14%]";
+      return "w-[12%]";
     case "status":
-      return "w-[10%]";
+      return "w-[9%]";
+    case "deliveryHealth":
+      return "w-[14%]";
     case "actions":
-      return "w-[28%]";
+      return "w-[20%]";
     default:
       return null;
   }

@@ -41,6 +41,8 @@ import {
 import type {
   DeliveryListQuery,
   DeletionImpactTarget,
+  DestinationDeliveryHealthQuery,
+  DestinationDeliveryHealthRow,
   EventListQuery,
   HistoryRepository,
 } from "#/infra/sqlite/repositories/history/history.interface";
@@ -437,6 +439,41 @@ export class SqliteHistoryRepository implements HistoryRepository {
       page,
       pageSize,
     };
+  }
+
+  async destinationDeliveryHealth(
+    query: DestinationDeliveryHealthQuery,
+  ): Promise<DestinationDeliveryHealthRow[]> {
+    // One grouped pass over deliveries, not a query per destination. The list
+    // is the only caller and history retention bounds the table, so a full
+    // scan here is cheaper than D correlated subqueries.
+    const rows = await this.context.db
+      .selectFrom("deliveries")
+      .select([
+        "destination_id as destination_id",
+        sql<string | null>`MAX(CASE WHEN state = 'succeeded' THEN finished_at END)`.as(
+          "last_succeeded_at",
+        ),
+        sql<string | null>`MAX(CASE WHEN state = 'failed' THEN finished_at END)`.as(
+          "last_failed_at",
+        ),
+        sql<number>`SUM(CASE WHEN state IN ('pending', 'running') THEN 1 ELSE 0 END)`.as(
+          "queued_count",
+        ),
+        sql<number>`SUM(CASE WHEN state = 'failed' AND created_at >= ${query.since} THEN 1 ELSE 0 END)`.as(
+          "recent_failure_count",
+        ),
+      ])
+      .groupBy("destination_id")
+      .execute();
+
+    return rows.map((row) => ({
+      destinationId: row.destination_id,
+      lastSucceededAt: row.last_succeeded_at,
+      lastFailedAt: row.last_failed_at,
+      queuedCount: row.queued_count,
+      recentFailureCount: row.recent_failure_count,
+    }));
   }
 
   async countDeletionImpact(target: DeletionImpactTarget): Promise<DeletionImpact> {
