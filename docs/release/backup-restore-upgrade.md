@@ -6,10 +6,13 @@
 > forward step；runner 会跳过已应用的版本，所以**原地修改已提交的 migration 对任何已有数据库都是
 > no-op**，schema 变更必须新增 forward step。
 
-核实时间 2026-10-26，核实基线 `origin/main` @ `4ad0ad6`。相关文件：
+核实时间 2026-10-26，核实基线 `origin/main` @ `5161911`。相关文件：
 `apps/console/src/infra/sqlite/connection.ts`、`apps/console/src/infra/sqlite/migrate/{plan,runner}.ts`、
 `apps/console/src/infra/sqlite/migrate/schema.ts`、`Dockerfile`、`scripts/docker-entrypoint.sh`。
 部署形态与变量见 `docs/release/docker-production-deployment.md`。
+
+2026-10-26 已用已发布镜像在本地 Docker 上完成一次升级 / 回滚 / 恢复演练，覆盖 `0004`
+迁移路径；记录见第 8 节，未覆盖项见第 9 节。
 
 ## 1. 数据面事实
 
@@ -55,7 +58,8 @@ migration 文件**。若未来需要变更 schema，应新增 forward-only step 
   TOML/JSON 导出），重建后重新 setup 再导入；`docker compose down -v` 会删掉命名卷 `tocsin-data`，
   只有在确认数据可以丢弃时才用它。
 - 自托管生产环境：启动时会自动应用待执行的 forward step；若日志出现 migration 报错，先停止升级并
-  恢复冷备份，不要手工改 `schema_migrations`。
+  恢复冷备份，不要手工改 `schema_migrations`。唯一例外是跨版本回滚时删除旧构建不认识的台账行
+  （第 6 节第 1 种方式），且必须先做冷备份；不要为了绕过升级错误去删台账行。
 
 ## 3. 备份
 
@@ -158,12 +162,19 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
    - 新版写入了旧版不认识的字段/状态值（例如 `suppressed` 这样的新 delivery 状态、suppressions 表），
      旧版在运行时会报错或读到无法解释的数据；
    - 构建启动时会校验已应用的 migration：如果数据库里已经记录了旧构建没有的 migration version，
-     旧构建**启动就会失败**，报 `SQLite database has applied migrations not present in this build: …`
+     旧构建在 bootstrap 阶段抛
+     `SqliteMigrationError: SQLite database has applied migrations not present in this build: <versions>`
      （`apps/console/src/infra/sqlite/migrate/runner.ts` 的 `assertNoUnknownAppliedMigrations`）。
+     进程**不会退出**：HTTP 服务已开始监听，`/api/ready` 一律返回 500（响应体是通用的
+     `Server Error`，具体原因只在日志里），健康检查在 `start_period 20s + 3 × interval 30s` 后把容器
+     标记为 `unhealthy`；`restart: unless-stopped` 只处理进程退出，不会重启 unhealthy 容器。2026-10-26
+     演练实测：`running=true health=unhealthy restarts=0`，140 秒后仍是该状态。因此**不要等它自己重启**，
+     看到 `/api/ready` 持续 500 就去看日志并开始处置。
 
    已知实例：从 `0.1.0-beta.90` 及更早版本回滚到 `0.1.0-beta.89` 及更早版本时，数据库里已有
-   `0004_oncall_dispatch_started_at`，旧镜像只认识 `0001`～`0003`，会启动失败。若确认旧镜像不使用该列
-   （nullable、无默认值，旧代码不读取），可以在**冷备份之后**先删除台账行再启动：
+   `0004_oncall_dispatch_started_at`，旧镜像只认识 `0001`～`0003`，会命中上面的 500。若确认旧镜像
+   不使用该列（nullable、无默认值，旧代码不读取），可以在**冷备份之后**先删除台账行再启动
+   （2026-10-26 演练已验证：删除后旧镜像恢复 ready，数据行不变，列保留）：
 
    ```sql
    DELETE FROM schema_migrations WHERE version = '0004';
@@ -192,12 +203,66 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
 | 8 | 手工验收：登录、Sources、Routes、Destinations、发一条 webhook  | Event 入库、Delivery 有状态与 attempts        |
 | 9 | 观察一个 worker 周期                                          | 没有卡在 `running`，没有重复投递              |
 
-## 8. 未验证与未知
+## 8. 演练记录（2026-10-26）
+
+执行环境：macOS + Docker 29.8.2（Docker Desktop，容器平台 linux/arm64）；镜像直接取
+`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane` 的 `0.1.0-beta.89`、`0.1.0-beta.90`、
+`0.1.0-beta.92`、`0.1.0-beta.93`；`/data` 使用宿主机目录 bind mount（便于在宿主机用 `sqlite3`
+核对，与 compose 命名卷的数据面等价）；数据通过 HTTP API 创建：owner、generic 告警源、指向
+`http://127.0.0.1:9/drill` 的 generic_webhook 目标、全匹配路由，然后向 webhook 发事件。
+
+| 步骤 | 动作 | 实测结果 |
+| --- | --- | --- |
+| 1 | beta.89 全新启动 | `/api/ready` ok；`schema_migrations` = `0001,0002,0003`；`oncall_pings` 无 `dispatch_started_at`；写入 1 个事件，产生 1 条 delivery 与 1 条 attempt；停止后冷备份三个文件 |
+| 2 | 升级到 beta.90 | 启动即应用 `0004`；台账 `0001–0004`，列已存在；sources/routes/destinations/events 均为 1；升级后再发一个 webhook 返回 202，events/deliveries 变为 2 |
+| 3 | 不删台账直接回滚到 beta.89 | 容器 `running=true`、`restarts=0`；`/api/ready` 返回 500；日志含 `SqliteMigrationError: SQLite database has applied migrations not present in this build: 0004`；140 秒后 `health=unhealthy` |
+| 4 | 删除 `0004` 台账行后重启 beta.89 | `/api/ready` ok；events/deliveries 仍为 2；`dispatch_started_at` 列仍在；再发 webhook 返回 202，events=3 |
+| 5 | beta.89 → beta.92 → beta.93 | 两次启动均 ready；beta.92 幂等补回并记录 `0004`；beta.93 台账不变；数据始终为 3 个事件 |
+| 6 | 把第 1 步的 beta.89 冷备份恢复到 beta.93 | `/api/ready` ok；beta.93 应用 `0004`；events/deliveries/attempts 回到备份时的 1/1/1 —— 备份之后的写入按预期丢失 |
+
+三个快照（beta.89 冷备份、beta.90 升级后、恢复后的库）的 `PRAGMA integrity_check` 均为 `ok`。
+
+关键命令（演练里逐条执行过）：
+
+```bash
+# 启动某个版本（compose 等价：改 image 后 docker compose up -d）
+docker run -d --name tocsin-drill -p 127.0.0.1:3191:3000 \
+  -e NODE_ENV=production -e BETTER_AUTH_URL=http://localhost:3191 \
+  -e BETTER_AUTH_SECRET=<drill-only-secret> -e SERVER_URL=http://localhost:3191 \
+  -v /tmp/tocsin-drill/data:/data <image>
+
+# 冷备份：停容器后一次拷全三个文件
+docker stop tocsin-drill
+cp -p /tmp/tocsin-drill/data/tocsin.sqlite* /tmp/tocsin-drill/backup/
+
+# 核对台账、备份完整性与数据
+sqlite3 /tmp/tocsin-drill/data/tocsin.sqlite \
+  "select version from schema_migrations order by version; pragma integrity_check;"
+
+# 跨 0004 回滚：冷备份后删除台账行，再启动旧镜像
+sqlite3 /tmp/tocsin-drill/data/tocsin.sqlite \
+  "delete from schema_migrations where version = '0004';"
+```
+
+演练暴露并已修正的文档偏差：
+
+- 旧文档写「旧构建启动就会失败」，实测是**进程保持运行并持续返回 500**，健康检查转 `unhealthy`
+  但不触发重启。第 6 节已按实测改写。
+- `REL-52` 记录的回滚前置条件（beta.90 → beta.89 必须先删 `0004` 台账行）已实测确认：不删时旧镜像
+  永远起不来；删除后启动正常，且下次升级会幂等补回 `0004`。
+- `/api/ready` 对 bootstrap 阶段的 migration 失败只返回通用 500，运维必须先看日志才能判断原因；
+  记为 REQ-271（候选）。
+
+未覆盖的部分仍见第 9 节。
+
+## 9. 未验证与未知
 
 - 本仓库的浏览器 E2E 已接入 CI（`.github/workflows/e2e.yml`，脚本在 `apps/console/e2e`）；Docker smoke（`scripts/docker-smoke.sh`）仍未接入 CI；
   Docker smoke 保留为本地人工 gate（使用独立的 `tocsin-smoke-data` 卷，不会触碰本文件操作的生产卷）。
-  本文的 `docker compose cp` / 恢复步骤是标准工具用法，**没有在真实部署上演练过**；首次生产升级请把
+  升级/回滚/恢复语义已在本地 Docker 上演练（第 8 节），但**尚未在真实部署上演练**：反向代理/TLS、
+  生产数据规模、外部目标与 compose 命名卷的 `docker compose cp` 备份路径都没覆盖。首次生产升级仍应把
   备份校验和回滚演练当成独立动作。
+- 演练只在 linux/arm64 上执行；`linux/amd64` 镜像没有在本机运行。
 - 在线备份的具体实现（helper 容器镜像、调度方式）没有仓库内的既定做法，需要运维自己选型。
 - `0001` baseline 与 `0002`～`0004` forward step 均已存在；后续 schema 变更应继续新增 forward step，
   并按第 2 节的升级语义更新本文。

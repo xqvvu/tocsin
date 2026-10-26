@@ -2,6 +2,59 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 118 轮）
+
+- 时间：2026-10-26 19:30 CST 起。
+- 基线：本轮开始时 `origin/main` @ `5161911`；main CI success（`40315274959` / `40315275016`）；无 open PR。
+- 类型：**需求切片（docs-only 演练）+ 文档更正**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有 REQ-269（28）达到门槛且为
+  第 117 轮指定第二优先，按第 1.5 步继续，不重跑全量审计。
+- 车道：`requirements` 按窄化 brief（只读 `post-mvp-planning.md` + `mvp-rc-checklist.md`，10 分钟硬边界，
+  最多 2 条）运行，结论 **无新候选**：方向 4 与未勾 RC gate 的主题已全部被 backlog 覆盖
+  （fingerprint 聚合 REQ-6、绝对时间窗 REQ-270/REQ-33/REQ-207、导出 REQ-34、E2E 覆盖 REL-22、
+  provider 指南 REL-46、fixture REL-2/REL-24、真实部署演练 REQ-269）。`ui-triage` 由编排者按日志事实
+  裁决：**`defer`** —— `last_ui_review_at` 2026-10-26 10:35 CST（距今约 9 小时）；自上次评审零个新 UI
+  合并；未解决 UI candidate 已 15+，再评审只会增加发现，本轮优先交付既有 REQ-269。第 3 个名额未用
+  （配额纪律）。
+- `last_ui_review_at`：**2026-10-26 10:35 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `inspiring-benz-466558`。
+  轮末已清理该工作树的 `node_modules` 与 `agent-iteration`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+- 浏览器验证：不适用（docs-only）；以真实容器启动、HTTP API 写入与 SQLite 校验替代。
+
+### 本轮交付
+
+- **PR #TBD `docs(release): record the upgrade, rollback, and restore drill`（REQ-269）**：
+  - 用已发布镜像 `0.1.0-beta.89/90/92/93` 在本地 Docker（linux/arm64）跑完整路径：
+    beta.89 基线（台账 `0001–0003`、无 `dispatch_started_at`）→ beta.90（应用 `0004`；升级后
+    webhook 返回 202）→ 不删台账回滚（复现失败）→ 删 `0004` 台账行后回滚成功（数据与列保留）→
+    beta.92 → beta.93（台账不变）→ 用 beta.89 冷备份恢复到 beta.93。
+  - 数据经真实 HTTP API 创建（owner、generic 告警源、generic_webhook 目标、全匹配路由、3 个事件）；
+    三份快照 `PRAGMA integrity_check` 均为 `ok`；恢复后 events/deliveries/attempts 回到备份时的
+    1/1/1（备份之后的写入按预期丢失）。
+  - **实测纠偏**：未知 migration 时旧镜像**不会退出** —— `running=true`、`/api/ready` 500（通用
+    `Server Error`）、140 秒后 `health=unhealthy`、`restarts=0`。第 6 节已按实测改写；REL-52 记录的
+    “beta.90 → beta.89 回滚前必须删 `0004` 台账行”获得实测确认，且下次升级会幂等补回。
+  - 新增候选 **REQ-271（22）**：`/api/ready` 对 bootstrap 迁移失败只回通用 500，缺机器可读原因。
+  - 文档：`docs/release/backup-restore-upgrade.md` 新增第 8 节（演练记录，含步骤表与关键命令），
+    原“未验证与未知”改为第 9 节并补充演练边界；`docs/release/mvp-rc-checklist.md` 的 migration 区间
+    更正为 `0001–0004`，并更新第 12 条备注。
+  - 验证：`vp fmt --check`（仅文档）；演练证据保存在 `/tmp/tocsin-drill/run-20261026-194304`（未提交）。
+
+### 发布评估
+
+- 本轮唯一变更是 docs（演练记录与 RC checklist 更正），没有用户可见行为变化；不满足
+  “自上一个 tag 以来至少有一个用户可见变更或修复”的发布门槛，**本轮不发布**，`v0.1.0-beta.93`
+  仍是最新。按规则未启动发布面板：门槛由变更类型确定性判定，不消耗配额。
+
+### 下一轮优先项
+
+1. UI-68 / UI-69：加急呼叫失败信号与目标停用前置提示（需服务端汇总 DTO）。
+2. REQ-267（27）：投递历史名称快照，先交 EXPERT_PANEL 裁决迁移形状。
+3. REQ-270（24）/ REQ-271（22）：Deliveries 绝对时间窗、ready 失败原因。
+4. UI-67 / UI-61 / UI-63 等既有 UI candidate。
+5. 车道轮转：`docs-drift` 或 `security-exposure`（自第 109 轮未跑）。
+
 ## 2026-10-26（第 117 轮）
 
 - 时间：2026-10-26 18:30 CST 起。
