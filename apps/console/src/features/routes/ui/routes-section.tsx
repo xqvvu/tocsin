@@ -11,11 +11,17 @@ import * as React from "react";
 
 import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
 
+import { DeletionImpactNotice } from "#/components/common/deletion-impact-notice";
 import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
 import { IconTooltip } from "#/components/common/icon-tooltip";
 import { OperationsTable } from "#/components/common/operations-table";
 import { powerActionButtonClassName } from "#/components/common/power-action-button";
 import type { ConsoleTableFeatures } from "#/components/common/table-features";
+import {
+  deletionImpactBlocksConfirm,
+  type DeletionImpactLoader,
+  useDeletionImpact,
+} from "#/components/common/use-deletion-impact";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +65,7 @@ export interface RoutesSectionProps {
   destinations: DestinationSummary[];
   editingRoute: RouteSummary | null;
   pending: boolean;
+  requestDeleteImpact: DeletionImpactLoader;
   onEdit: (routeId: string) => void;
   onCancelEdit: () => void;
   onPreviewReplay: (route: RouteSummary) => void;
@@ -78,6 +85,7 @@ export function RoutesSection({
   destinations,
   editingRoute,
   pending,
+  requestDeleteImpact,
   onEdit,
   onCancelEdit,
   onPreviewReplay,
@@ -121,6 +129,7 @@ export function RoutesSection({
           <RouteActions
             route={row.original}
             pending={pending}
+            requestDeleteImpact={requestDeleteImpact}
             onEdit={onEdit}
             onPreviewReplay={onPreviewReplay}
             onToggle={onToggle}
@@ -129,7 +138,17 @@ export function RoutesSection({
         ),
       },
     ],
-    [destinations, onDelete, onEdit, onPreviewReplay, onToggle, pending, sources, t],
+    [
+      destinations,
+      onDelete,
+      onEdit,
+      onPreviewReplay,
+      onToggle,
+      pending,
+      requestDeleteImpact,
+      sources,
+      t,
+    ],
   );
 
   return (
@@ -167,6 +186,7 @@ export function RoutesSection({
 function RouteActions({
   route,
   pending,
+  requestDeleteImpact,
   onEdit,
   onPreviewReplay,
   onToggle,
@@ -174,6 +194,7 @@ function RouteActions({
 }: {
   route: RouteSummary;
   pending: boolean;
+  requestDeleteImpact: DeletionImpactLoader;
   onEdit: (routeId: string) => void;
   onPreviewReplay: (route: RouteSummary) => void;
   onToggle: (route: RouteSummary) => void;
@@ -182,6 +203,7 @@ function RouteActions({
   const t = useTranslations();
   const [disableDialogOpen, setDisableDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const historyImpact = useDeletionImpact(requestDeleteImpact);
   const editLabel = t("routing.table.actions.edit");
   const replayLabel = t("routing.table.actions.replayPreview");
   const toggleLabel = route.enabled
@@ -287,8 +309,15 @@ function RouteActions({
       <AlertDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {
-          if (!pending) {
-            setDeleteDialogOpen(open);
+          if (pending) {
+            return;
+          }
+
+          setDeleteDialogOpen(open);
+          if (open) {
+            historyImpact.request(route.id);
+          } else {
+            historyImpact.reset();
           }
         }}
       >
@@ -313,12 +342,25 @@ function RouteActions({
             <AlertDialogDescription>
               {t("routing.delete.confirmDescription", { routeName: route.name })}
             </AlertDialogDescription>
+            <DeletionImpactNotice
+              impact={historyImpact.impact}
+              state={historyImpact.state}
+              confirmed={historyImpact.confirmed}
+              onConfirmedChange={historyImpact.setConfirmed}
+            />
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>{t("routing.delete.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={pending}
+              disabled={
+                pending ||
+                deletionImpactBlocksConfirm(
+                  historyImpact.impact,
+                  historyImpact.state,
+                  historyImpact.confirmed,
+                )
+              }
               onClick={() => {
                 setDeleteDialogOpen(false);
                 onDelete(route);

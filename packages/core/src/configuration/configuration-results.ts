@@ -47,6 +47,28 @@ export interface AppSettings {
   lastDeliveryPause: DeliveryPauseRecord | null;
 }
 
+/**
+ * History rows one configuration delete would remove through SQLite's
+ * `ON DELETE CASCADE` foreign keys.
+ *
+ * The console discloses this before an irreversible delete so an operator can
+ * see how much troubleshooting evidence the cascade takes with it. It is a
+ * preview, not a receipt: the delete itself re-computes nothing and keeps the
+ * hard-delete semantics described in `docs/prd/post-mvp-planning.md`.
+ */
+export const DeletionImpactSchema = z.strictObject({
+  /** Events received by the source; 0 for route and destination deletes. */
+  eventCount: z.number().int().nonnegative(),
+  /** Deliveries carrying the deleted source, route, or destination. */
+  deliveryCount: z.number().int().nonnegative(),
+  /** Attempt rows of those deliveries. */
+  attemptCount: z.number().int().nonnegative(),
+  /** Urgent-call records attached to those deliveries or events. */
+  oncallPingCount: z.number().int().nonnegative(),
+});
+
+export type DeletionImpact = z.infer<typeof DeletionImpactSchema>;
+
 /** Template-only alias kept for older call sites; prefer DestinationEditorDraftResult. */
 export const DestinationTemplateDraftResultSchema = DestinationEditorDraftResultSchema;
 export type DestinationTemplateDraftResult = DestinationEditorDraftResult;

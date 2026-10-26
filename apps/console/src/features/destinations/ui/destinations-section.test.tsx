@@ -15,6 +15,14 @@ import { AppIntlProvider } from "#/i18n/provider";
 type DestinationActionHandler = (destination: DestinationListItem) => void;
 type DestinationEditHandler = (destinationId: string) => void;
 
+/** Tables without history still open a delete dialog, just without a gate. */
+const noDeletionImpact = async () => ({
+  eventCount: 0,
+  deliveryCount: 0,
+  attemptCount: 0,
+  oncallPingCount: 0,
+});
+
 // The real registry catalog, so the identity column resolves the same icon
 // names production ships instead of a test-only mapping.
 const defaultDestinationCatalog = createDefaultDestinationRegistry().toCatalog();
@@ -40,6 +48,7 @@ describe("destinations section table", () => {
           destinationCatalog={defaultDestinationCatalog}
           routes={[]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onTest={vi.fn<DestinationActionHandler>()}
           onPreview={vi.fn<DestinationActionHandler>()}
           onEdit={vi.fn<DestinationEditHandler>()}
@@ -67,7 +76,7 @@ describe("destinations section table", () => {
     expect(screen.queryByText("Destination 10")).toBeNull();
   });
 
-  it("discloses the route cascade before deleting a destination", () => {
+  it("discloses the route cascade before deleting a destination", async () => {
     const onDelete = vi.fn<DestinationActionHandler>();
 
     render(
@@ -81,6 +90,7 @@ describe("destinations section table", () => {
             routeFixture("other-route", "Other route", ["destination-3"], true),
           ]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onTest={vi.fn<DestinationActionHandler>()}
           onPreview={vi.fn<DestinationActionHandler>()}
           onEdit={vi.fn<DestinationEditHandler>()}
@@ -96,6 +106,7 @@ describe("destinations section table", () => {
     const deleteDialog = screen.getByRole("alertdialog");
     expect(within(deleteDialog).getByText("This also deletes 1 route")).toBeTruthy();
     expect(within(deleteDialog).getByText("This narrows 1 route")).toBeTruthy();
+    expect(await within(deleteDialog).findByText("No history will be deleted")).toBeTruthy();
 
     fireEvent.click(within(deleteDialog).getByRole("button", { name: "Delete destination" }));
 
@@ -110,6 +121,7 @@ describe("destinations section table", () => {
           destinationCatalog={defaultDestinationCatalog}
           routes={[]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onTest={vi.fn<DestinationActionHandler>()}
           onPreview={vi.fn<DestinationActionHandler>()}
           onEdit={vi.fn<DestinationEditHandler>()}
@@ -137,6 +149,7 @@ describe("destinations section table", () => {
             routeFixture("route-3", "Secondary paging", ["destination-2"], true),
           ]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onTest={vi.fn<DestinationActionHandler>()}
           onPreview={vi.fn<DestinationActionHandler>()}
           onEdit={vi.fn<DestinationEditHandler>()}
@@ -164,6 +177,7 @@ describe("destinations section table", () => {
           destinationCatalog={defaultDestinationCatalog}
           routes={[]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onTest={vi.fn<DestinationActionHandler>()}
           onPreview={vi.fn<DestinationActionHandler>()}
           onEdit={vi.fn<DestinationEditHandler>()}
@@ -199,6 +213,7 @@ describe("destinations section table", () => {
           destinationCatalog={defaultDestinationCatalog}
           routes={[]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onTest={onTest}
           onPreview={onPreview}
           onEdit={onEdit}
@@ -246,6 +261,7 @@ describe("destinations section table", () => {
           destinationCatalog={defaultDestinationCatalog}
           routes={[]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onTest={vi.fn<DestinationActionHandler>()}
           onPreview={vi.fn<DestinationActionHandler>()}
           onEdit={vi.fn<DestinationEditHandler>()}
@@ -275,6 +291,7 @@ describe("destinations section table", () => {
           destinationCatalog={defaultDestinationCatalog}
           routes={[]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onTest={vi.fn<DestinationActionHandler>()}
           onPreview={vi.fn<DestinationActionHandler>()}
           onEdit={vi.fn<DestinationEditHandler>()}

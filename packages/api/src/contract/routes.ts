@@ -7,6 +7,7 @@ import {
 
 import { dashboardAuth } from "../errors/dashboard-auth";
 import { resourceErrors } from "../errors/resources";
+import { DeletionImpactOutputSchema } from "../schemas/deletion-impact";
 import {
   RouteDeleteOutputSchema,
   RouteListOutputSchema,
@@ -36,6 +37,14 @@ export const routes = {
     .errors(dashboardErrors)
     .errors(resourceErrors.error)
     .output(RouteOutputSchema),
+
+  // Read-only disclosure of the fan-out a route delete cascades to; events
+  // survive, so only deliveries, attempts, and urgent pings are counted.
+  previewDelete: oc
+    .input(DeleteRouteCommandSchema)
+    .errors(dashboardErrors)
+    .errors(resourceErrors.error)
+    .output(DeletionImpactOutputSchema),
 
   delete: oc
     .input(DeleteRouteCommandSchema)

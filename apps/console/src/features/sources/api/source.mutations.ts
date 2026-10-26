@@ -10,6 +10,7 @@ export function useSourceMutations() {
   return {
     createSource: orpc.sources.create.call,
     deleteSource: orpc.sources.delete.call,
+    previewDeleteSource: orpc.sources.previewDelete.call,
     updateSource: orpc.sources.update.call,
     rotateSourceToken: orpc.sources.rotateToken.call,
     invalidateSources: () =>

@@ -13,6 +13,14 @@ type DestinationSummary = ComponentProps<typeof SourcesSection>["destinations"][
 type SourceActionHandler = (source: SourceSummary) => void;
 type SourceEditHandler = (sourceId: string) => void;
 
+/** Tables without history still open a delete dialog, just without a gate. */
+const noDeletionImpact = async () => ({
+  eventCount: 0,
+  deliveryCount: 0,
+  attemptCount: 0,
+  oncallPingCount: 0,
+});
+
 vi.mock("#/lib/browser", () => ({
   copyText: vi.fn<() => Promise<void>>(async () => {}),
   urlFromCurrentOrigin: (path: string) => `http://localhost${path}`,
@@ -39,6 +47,7 @@ describe("sources section table", () => {
           routes={[]}
           destinations={[]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={vi.fn<SourceActionHandler>()}
           onRotateToken={vi.fn<SourceActionHandler>()}
@@ -74,6 +83,7 @@ describe("sources section table", () => {
           ]}
           destinations={[destinationFixture("destination-1", true)]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={vi.fn<SourceActionHandler>()}
           onRotateToken={vi.fn<SourceActionHandler>()}
@@ -102,6 +112,7 @@ describe("sources section table", () => {
           ]}
           destinations={[destinationFixture("destination-1", false)]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={vi.fn<SourceActionHandler>()}
           onRotateToken={vi.fn<SourceActionHandler>()}
@@ -129,6 +140,7 @@ describe("sources section table", () => {
             destinationFixture("destination-off", false),
           ]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={vi.fn<SourceActionHandler>()}
           onRotateToken={vi.fn<SourceActionHandler>()}
@@ -157,6 +169,7 @@ describe("sources section table", () => {
           ]}
           destinations={[destinationFixture("destination-1", true)]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={onToggle}
           onRotateToken={vi.fn<SourceActionHandler>()}
@@ -177,7 +190,7 @@ describe("sources section table", () => {
     expect(onToggle).toHaveBeenCalledWith(expect.objectContaining({ id: "source-2" }));
   });
 
-  it("discloses the route cascade before deleting a source", () => {
+  it("discloses the route cascade before deleting a source", async () => {
     const onDelete = vi.fn<SourceActionHandler>();
 
     render(
@@ -191,6 +204,7 @@ describe("sources section table", () => {
           ]}
           destinations={[destinationFixture("destination-1", true)]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={vi.fn<SourceActionHandler>()}
           onRotateToken={vi.fn<SourceActionHandler>()}
@@ -205,8 +219,61 @@ describe("sources section table", () => {
     const deleteDialog = screen.getByRole("alertdialog");
     expect(within(deleteDialog).getByText("This also deletes 1 route")).toBeTruthy();
     expect(within(deleteDialog).getByText("This narrows 1 route")).toBeTruthy();
+    expect(await within(deleteDialog).findByText("No history will be deleted")).toBeTruthy();
 
     fireEvent.click(within(deleteDialog).getByRole("button", { name: "Delete source" }));
+
+    expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: "source-1" }));
+  });
+
+  it("gates the delete on an acknowledgement when history would be destroyed", async () => {
+    const onDelete = vi.fn<SourceActionHandler>();
+    const requestDeleteImpact = vi.fn(async () => ({
+      eventCount: 12,
+      deliveryCount: 3,
+      attemptCount: 4,
+      oncallPingCount: 1,
+    }));
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <SourcesSection
+          sources={[sourceFixture(1)]}
+          routes={[]}
+          destinations={[]}
+          pending={false}
+          requestDeleteImpact={requestDeleteImpact}
+          onEdit={vi.fn<SourceEditHandler>()}
+          onToggle={vi.fn<SourceActionHandler>()}
+          onRotateToken={vi.fn<SourceActionHandler>()}
+          onDelete={onDelete}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete source" }));
+
+    expect(requestDeleteImpact).toHaveBeenCalledWith("source-1");
+
+    const deleteDialog = screen.getByRole("alertdialog");
+    const confirm = within(deleteDialog).getByRole("button", { name: "Delete source" });
+
+    // The counts reach the operator before the destructive action unlocks.
+    expect(await within(deleteDialog).findByText("Events: 12")).toBeTruthy();
+    expect(within(deleteDialog).getByText("Deliveries: 3")).toBeTruthy();
+    expect(within(deleteDialog).getByText("Delivery attempts: 4")).toBeTruthy();
+    expect(within(deleteDialog).getByText("Urgent calls: 1")).toBeTruthy();
+    expect(confirm.hasAttribute("disabled")).toBe(true);
+
+    fireEvent.click(
+      within(deleteDialog).getByRole("checkbox", {
+        name: "I understand this history will be deleted too",
+      }),
+    );
+
+    expect(confirm.hasAttribute("disabled")).toBe(false);
+
+    fireEvent.click(confirm);
 
     expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: "source-1" }));
   });
@@ -221,6 +288,7 @@ describe("sources section table", () => {
           routes={[]}
           destinations={[]}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onEdit={vi.fn<SourceEditHandler>()}
           onToggle={onToggle}
           onRotateToken={vi.fn<SourceActionHandler>()}

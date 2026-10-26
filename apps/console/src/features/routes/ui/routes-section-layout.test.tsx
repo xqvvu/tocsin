@@ -16,6 +16,14 @@ vi.mock("#/features/operations/ui/queued-deliveries-notice", () => ({
 
 const noop = () => {};
 
+/** Routes without history still open a delete dialog, just without a gate. */
+const noDeletionImpact = async () => ({
+  eventCount: 0,
+  deliveryCount: 0,
+  attemptCount: 0,
+  oncallPingCount: 0,
+});
+
 const route: RouteDefinition = {
   id: "route-1",
   name: "Critical alerts",
@@ -62,6 +70,7 @@ function renderSection(
           destinations={destinations}
           editingRoute={null}
           pending={false}
+          requestDeleteImpact={noDeletionImpact}
           onEdit={noop}
           onCancelEdit={noop}
           onPreviewReplay={noop}

@@ -3,6 +3,7 @@ import type {
   DeliveryReceiptFilter,
   DeliveryState,
   DeliveryTimeField,
+  DeletionImpact,
   DestinationKind,
   EventDeliveryOutcome,
   EventDetail,
@@ -29,7 +30,19 @@ export interface HistoryRepository {
    */
   getEventFingerprintContext(eventId: string): Promise<EventFingerprintContext | null>;
   listDeliveries(query?: DeliveryListQuery): Promise<NumberedPage<DeliveryListItem>>;
+  /**
+   * History rows one source, route, or destination delete would remove through
+   * the database's cascade. Counts the foreign keys SQLite acts on, so the
+   * preview cannot drift from what the delete actually destroys.
+   */
+  countDeletionImpact(target: DeletionImpactTarget): Promise<DeletionImpact>;
 }
+
+/** Exactly one entity per preview, mirroring the single-row delete commands. */
+export type DeletionImpactTarget =
+  | { sourceId: string }
+  | { routeId: string }
+  | { destinationId: string };
 
 export interface EventListQuery {
   sourceId?: string;

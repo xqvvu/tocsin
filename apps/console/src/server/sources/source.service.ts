@@ -5,11 +5,13 @@ import {
   UpdateSourceCommandSchema,
   type CreateSourceCommand,
   type DeleteSourceCommand,
+  type DeletionImpact,
   type RotateSourceTokenCommand,
   type SourceSummary,
   type UpdateSourceCommand,
 } from "@tocsin/core";
 
+import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import type { SqliteStore } from "#/infra/sqlite/store";
 import {
   generateSourceToken as defaultGenerateSourceToken,
@@ -71,6 +73,21 @@ export class SourceService {
     });
 
     return { source, token };
+  }
+
+  /**
+   * History rows a source delete would cascade to. Read-only: the delete itself
+   * keeps its existing hard-delete semantics.
+   */
+  async previewDeleteSource(command: DeleteSourceCommand): Promise<DeletionImpact> {
+    const input = DeleteSourceCommandSchema.parse(command);
+    const source = await this.store.sources.get(input.id);
+
+    if (!source) {
+      throw new RecordNotFoundError("Source", input.id);
+    }
+
+    return this.store.history.countDeletionImpact({ sourceId: input.id });
   }
 
   async deleteSource(command: DeleteSourceCommand): Promise<{ id: string }> {

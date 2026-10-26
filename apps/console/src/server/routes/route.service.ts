@@ -4,10 +4,12 @@ import {
   UpdateRouteCommandSchema,
   type CreateRouteCommand,
   type DeleteRouteCommand,
+  type DeletionImpact,
   type RouteDefinition,
   type UpdateRouteCommand,
 } from "@tocsin/core";
 
+import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import {
   requireExistingDestinationIds,
   requireExistingSourceIds,
@@ -56,6 +58,21 @@ export class RouteService {
       rule: input.rule,
       destinationIds: input.destinationIds,
     });
+  }
+
+  /**
+   * History rows a route delete would cascade to. Events survive a route
+   * delete, so its impact only covers the fan-out the route produced.
+   */
+  async previewDeleteRoute(command: DeleteRouteCommand): Promise<DeletionImpact> {
+    const input = DeleteRouteCommandSchema.parse(command);
+    const route = await this.store.routes.get(input.id);
+
+    if (!route) {
+      throw new RecordNotFoundError("Route", input.id);
+    }
+
+    return this.store.history.countDeletionImpact({ routeId: input.id });
   }
 
   async deleteRoute(command: DeleteRouteCommand): Promise<{ id: string }> {

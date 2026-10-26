@@ -15,6 +15,7 @@ export function useDestinationMutations() {
   return {
     createDestination: orpc.destinations.create.call,
     deleteDestination: orpc.destinations.delete.call,
+    previewDeleteDestination: orpc.destinations.previewDelete.call,
     previewDestination: orpc.destinations.preview.call,
     previewDestinationDraft: orpc.destinations.previewDraft.call,
     previewDestinationUpdate: orpc.destinations.previewUpdate.call,

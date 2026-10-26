@@ -93,6 +93,7 @@ const expectedProcedures: Record<
       "create",
       "update",
       "delete",
+      "previewDelete",
       "test",
       "preview",
       "previewDraft",
@@ -129,7 +130,7 @@ const expectedProcedures: Record<
     ],
   },
   portability: { public: [], private: ["exportToml", "exportJson", "importToml", "importJson"] },
-  routes: { public: [], private: ["list", "create", "update", "delete"] },
+  routes: { public: [], private: ["list", "create", "update", "delete", "previewDelete"] },
   suppressions: {
     public: [],
     private: ["list", "get", "hits", "create", "update", "setEnabled", "delete"],
@@ -140,7 +141,7 @@ const expectedProcedures: Record<
   },
   sources: {
     public: [],
-    private: ["list", "create", "update", "rotateToken", "delete"],
+    private: ["list", "create", "update", "rotateToken", "delete", "previewDelete"],
   },
 };
 
@@ -169,6 +170,7 @@ const procedureArgs: Record<string, unknown> = {
   },
   update: { id: "destination-missing", rawPayloadRetentionDays: 1 },
   delete: { id: "destination-missing" },
+  previewDelete: { id: "destination-missing" },
   rotateToken: { id: "source-missing" },
   listFeishuApps: undefined,
   createFeishuApp: { name: "probe", appId: "cli_probe", appSecret: "probe-secret" },

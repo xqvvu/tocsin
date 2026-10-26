@@ -36,6 +36,7 @@ vi.mock("#/lib/orpc", () => {
     importJson: procedure,
     importToml: procedure,
     preview: procedure,
+    previewDelete: procedure,
     previewDraft: procedure,
     previewUpdate: procedure,
     rotateToken: procedure,

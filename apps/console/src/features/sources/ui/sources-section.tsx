@@ -6,6 +6,7 @@ import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin
 import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
 import { OperationsTable } from "#/components/common/operations-table";
 import type { ConsoleTableFeatures } from "#/components/common/table-features";
+import type { DeletionImpactLoader } from "#/components/common/use-deletion-impact";
 import { routeReferenceImpact } from "#/features/routes/model/route-reference-impact";
 import { sourceRouteCoverage } from "#/features/sources/model/source-route-coverage";
 import { SourceActions } from "#/features/sources/ui/source-actions";
@@ -20,6 +21,7 @@ export interface SourcesSectionProps {
   routes: RouteDefinition[];
   destinations: DestinationSummary[];
   pending: boolean;
+  requestDeleteImpact: DeletionImpactLoader;
   onEdit: (sourceId: string) => void;
   onToggle: (source: SourceSummary) => void;
   onRotateToken: (source: SourceSummary) => void;
@@ -31,6 +33,7 @@ export function SourcesSection({
   routes,
   destinations,
   pending,
+  requestDeleteImpact,
   onEdit,
   onToggle,
   onRotateToken,
@@ -79,6 +82,7 @@ export function SourcesSection({
               row.original.id,
             )}
             pending={pending}
+            requestDeleteImpact={requestDeleteImpact}
             onEdit={onEdit}
             onToggle={onToggle}
             onRotateToken={onRotateToken}
@@ -87,7 +91,17 @@ export function SourcesSection({
         ),
       },
     ],
-    [destinations, onDelete, onEdit, onRotateToken, onToggle, pending, routes, t],
+    [
+      destinations,
+      onDelete,
+      onEdit,
+      onRotateToken,
+      onToggle,
+      pending,
+      requestDeleteImpact,
+      routes,
+      t,
+    ],
   );
 
   return (

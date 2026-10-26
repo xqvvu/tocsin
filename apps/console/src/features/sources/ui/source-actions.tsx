@@ -7,8 +7,14 @@ import {
 } from "@remixicon/react";
 import * as React from "react";
 
+import { DeletionImpactNotice } from "#/components/common/deletion-impact-notice";
 import { IconTooltip } from "#/components/common/icon-tooltip";
 import { powerActionButtonClassName } from "#/components/common/power-action-button";
+import {
+  deletionImpactBlocksConfirm,
+  type DeletionImpactLoader,
+  useDeletionImpact,
+} from "#/components/common/use-deletion-impact";
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import {
   AlertDialog,
@@ -32,6 +38,7 @@ export function SourceActions({
   enabledRouteCount,
   deleteImpact,
   pending,
+  requestDeleteImpact,
   onEdit,
   onToggle,
   onRotateToken,
@@ -41,6 +48,7 @@ export function SourceActions({
   enabledRouteCount: number;
   deleteImpact: RouteReferenceImpact;
   pending: boolean;
+  requestDeleteImpact: DeletionImpactLoader;
   onEdit: (sourceId: string) => void;
   onToggle: (source: SourceSummary) => void;
   onRotateToken: (source: SourceSummary) => void;
@@ -50,6 +58,7 @@ export function SourceActions({
   const [disableDialogOpen, setDisableDialogOpen] = React.useState(false);
   const [rotateDialogOpen, setRotateDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const historyImpact = useDeletionImpact(requestDeleteImpact);
   const editLabel = t("sources.table.actions.edit");
   const rotateTokenLabel = t("sources.table.actions.rotateToken");
   const toggleLabel = source.enabled
@@ -191,8 +200,15 @@ export function SourceActions({
       <AlertDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {
-          if (!pending) {
-            setDeleteDialogOpen(open);
+          if (pending) {
+            return;
+          }
+
+          setDeleteDialogOpen(open);
+          if (open) {
+            historyImpact.request(source.id);
+          } else {
+            historyImpact.reset();
           }
         }}
       >
@@ -237,12 +253,25 @@ export function SourceActions({
                 <AlertDescription>{t("sources.delete.routeNarrowedDescription")}</AlertDescription>
               </Alert>
             ) : null}
+            <DeletionImpactNotice
+              impact={historyImpact.impact}
+              state={historyImpact.state}
+              confirmed={historyImpact.confirmed}
+              onConfirmedChange={historyImpact.setConfirmed}
+            />
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>{t("sources.delete.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={pending}
+              disabled={
+                pending ||
+                deletionImpactBlocksConfirm(
+                  historyImpact.impact,
+                  historyImpact.state,
+                  historyImpact.confirmed,
+                )
+              }
               onClick={() => {
                 setDeleteDialogOpen(false);
                 onDelete(source);

@@ -12,6 +12,7 @@ import {
 
 import { dashboardAuth } from "../errors/dashboard-auth";
 import { resourceErrors } from "../errors/resources";
+import { DeletionImpactOutputSchema } from "../schemas/deletion-impact";
 import {
   DestinationCatalogOutputSchema,
   DestinationDeleteOutputSchema,
@@ -58,6 +59,14 @@ export const destinations = {
     .errors(dashboardErrors)
     .errors(resource)
     .output(DestinationOutputSchema),
+
+  // Read-only disclosure of the deliveries a destination delete cascades to;
+  // events survive, so only the fan-out sent to this target is counted.
+  previewDelete: oc
+    .input(DeleteDestinationCommandSchema)
+    .errors(dashboardErrors)
+    .errors(resource)
+    .output(DeletionImpactOutputSchema),
 
   delete: oc
     .input(DeleteDestinationCommandSchema)

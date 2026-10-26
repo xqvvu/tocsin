@@ -1,4 +1,5 @@
 export * from "./auth";
+export * from "./deletion-impact";
 export * from "./destinations";
 export * from "./health";
 export * from "./i18n";
