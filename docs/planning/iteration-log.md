@@ -2,6 +2,60 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 107 轮）
+
+- 时间：2026-10-26 08:48 CST 起。
+- 基线：本轮开始时 `origin/main` @ `41914ee`；main CI success（`40243928580`、`40243928611`）；无 open PR。
+- 类型：**需求切片（UI-53）+ 安全复核 + 发布**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 ≥27 分 candidate，按第 1.5 步继续，不重跑全量审计。
+- 车道：`requirements`（窄化 brief，10 分钟硬上限）、`ui-triage`（必跑）、`security-exposure`（轮转）。
+- `ui-triage`：**`defer`** —— `last_ui_review_at` 2026-10-26 01:15 CST，距今约 7.6h（<48h）；自上次评审 UI 提交仅 1 条（#448）；未解决 UI candidate 33 条，但其中 7 条是第 105 轮刚产出的结论，重复评审只会复读；建议本轮直接实现 UI-53。
+- `last_ui_review_at`：**2026-10-26 01:15 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证与镜像构建在会话工作树 `objective-thompson-faaeaf`。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+- 环境注记：会话工作树 `node_modules` 为半删残留（根目录只剩 3 个包），`vp install --frozen-lockfile --force` 5.5s 修复；修复前 `vp -C apps/console test` 与 `vp run -r test` 均报 `@rolldown/plugin-babel` 缺失。
+
+### 本轮交付
+
+- **PR #450 `fix(console): keep the create-route form when the save fails`（UI-53，27 分；rebase 合并 `8b051f3`）**：
+  - `CreateRouteForm` / `RouteForm` 提交回调支持 `boolean | Promise<boolean>`，只有非 `false` 才 `form.reset()`。
+  - `RouteAddDialog` 等待提交结果，失败保持弹窗与已填条件，成功才关闭。
+  - `routes-page.tsx` 的 `onCreate` 返回保存结果，并保留成功后的重放提示。
+  - 新增 `route-add-dialog.test.tsx`（失败保留 / 成功关闭）与 PRD `docs/prd/route-create-failure-preserves-form.md`。
+  - 验证：`vp check` 0 error（22 条既有 warning）；`vp run -r test` 185 文件 / 1029 tests；`vp run -r build` 通过；PR CI check/test/build + playwright 全绿。
+
+### 专家发现
+
+- `requirements`（窄化 brief，首次 10 分钟内返回「无新候选」）：post-MVP 方向 4 与 RC checklist 的未交付项均已存在于 backlog（REQ-6/207/34/209、REL-22/24、REQ-29/260/28）。附带：REQ-14 应缩为「折叠/复制」，因 `docs/prd/post-mvp-planning.md:143-145` 已把 raw/debug JSON 排除出搜索范围。
+- `ui-triage`：见上，`defer`。
+- `security-exposure`（轮转）：
+  - SEC-26 **PARTIAL**：userinfo 密码已剥离（`destination.helpers.ts:63,346-361`），但 Slack/Feishu path token 与 generic `?token=` 仍原样进入列表 DTO/SSR（`destination-operational-config-cell.tsx:36-37`、`_dashboard.destinations.tsx:11-18`）。可 AUTO_FIX 的窄子项：列表投影 endpoint 套 `redactText`。
+  - SEC-22 **CONFIRMED**：编辑草稿 `destination.helpers.ts:116,129` 仍返回明文 userinfo 密码（测试 `destination.helpers.test.ts:207-211` 断言），仅投影层打码会覆盖真密码 → 仍 EXPERT_PANEL。
+  - SEC-23 **CONFIRMED**：fingerprint 在展示（`event-normalized-tab.tsx:45-48`、`history.repository.ts:245`）与外发（`template.ts:152,383`）均未脱敏；展示侧可 AUTO_FIX，外发侧需 EXPERT_PANEL。
+  - 新候选 **SEC-30（25）**：`isSensitiveKey` 缺 `sig`/`hmac`/`x-hub-signature`/`ticket`（`packages/core/src/redaction.ts:13-66,87-88`）。
+- 发布三专家（第 9.5 步）：发布经理、阻断审计员、运维/回滚专家**一致建议发布**；无阻断项（main CI success、无 open PR、无高优 blocked-autonomous、无 migration、最近 10 个 tag 均有 Release）。
+
+### EXPERT_PANEL
+
+- 本轮无新裁决。Q-225（= Q-8）仍待下轮专家小组裁决「发送成功后落库失败」的终态。
+
+### 发布评估与发布记录
+
+- 发布依据：自 `v0.1.0-beta.82` 起两个用户可见修复 #448（UI-52）与 #450（UI-53）；版本 PR #451 `chore(release): v0.1.0-beta.83`（rebase 合并 `bba09e4`）；main CI success。
+- tag `v0.1.0-beta.83` 指向 `bba09e4`；GitHub Release 为 prerelease 且 body 非空（989 chars）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.83`（linux/amd64 + linux/arm64，`--provenance=false --sbom=false`，index digest `sha256:4d06848ec66bf37a9e38573f65be2b476f5e68ab25f021bf4553314901b3b040`）；回滚 `0.1.0-beta.82`。
+- 无迁移、无镜像 / entrypoint / 配置变化。
+
+### 下一轮优先项
+
+1. Q-228（小修复）+ Q-229（同批测试）：webhook 流错误分类与搜索测试缺口。
+2. Q-230（24）：抑制命中表时间列跟随排序口径（service 传 `timeField: "updated"`）。
+3. REQ-265（27）：投递详情目标配置的「读取时」语义。
+4. SEC-30（25）+ SEC-26 列表投影 `redactText` 子项：纯增量脱敏。
+5. Q-226：批次逐条隔离（需决定 `errored` 计数口径）。
+6. Q-225：EXPERT_PANEL 裁决后实现。
+7. UI-54/55/57：空态与分页文案一致性。
+
 ## 2026-10-26（第 106 轮）
 
 - 时间：2026-10-26 01:01 CST 起。本机负载极高（load 峰值 ≈34），全量测试耗时 32 分钟、工作区构建约 40 分钟，单轮时间预算被动超出。
