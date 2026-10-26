@@ -2,6 +2,56 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-26（第 112 轮）
+
+- 时间：2026-10-26 13:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `68ce8d7`；main CI success（`40271900482`、`40271900489`）；无 open PR。
+- 类型：**P0 语义修复 + EXPERT_PANEL + 发布**（非 full-audit）。
+- 全量审计时间戳：**2026-10-23 18:22 CST（未变，第 98 轮）**；backlog 有多个 ≥23 分 candidate 且 Q-232 为第 111 轮指定第一优先，按第 1.5 步继续，不重跑全量审计。
+- 车道：3 个并发名额全部给 **Q-232 的 EXPERT_PANEL**（安全与可靠性 / 产品与运维 / 独立评估者）。
+  - `requirements` 未单独启动：第 111 轮窄化 brief 刚跑过且无新候选，backlog 仍有 100+ 项；配额留给最高优先的阻断项。
+  - `ui-triage` 由编排者按日志事实裁决：**`defer`**。`last_ui_review_at` 2026-10-26 10:35 CST（距本轮约 3h），自上次评审仅 1 个 UI 合并（#463）；未解决 UI candidate 均为第 109 轮刚产出的结论，再评只会复读。无 ≥48h / ≥3 合并的强信号。
+- `last_ui_review_at`：**2026-10-26 10:35 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证在会话工作树 `strange-murdock-3d604b`。轮末已清理。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 本轮交付
+
+- **PR #468 `fix(console): report an unknown delivery outcome instead of a timeout`（Q-232，P0）**：
+  - 事实纠偏：backlog 的「reclaim 覆盖哨兵」不成立。哨兵写入成功时投递已是 `failed`，reclaim 只选 `running`；兜底失败时没有哨兵可覆盖。真正缺陷是「目标已受理」的证据从未落库，5 分钟后被当作普通超时。
+  - 修法：`@tocsin/core` 新增 `DELIVERY_OUTCOME_UNKNOWN_RETRY_ERROR` / `_FINAL_ERROR`；`reclaimStaleRunning` 按是否还有重试预算选择文案；兜底 `markFailed` 最多写 2 次（与 `recordSucceeded` 一致）；两个新常量都不匹配 `isDeliveryAcceptedUnrecorded`，结果未知仍可人工重试。
+  - 测试：兜底首抛后成功（恰 2 次写、哨兵与响应证据保留）、兜底两次都抛（不外抛、恰 2 次）、reclaim 两种文案、耗尽行的 `lastError` 落库断言、`retryNow` 对结果未知仍放行、常量经 `redactText` 不变。
+  - PRD `docs/prd/delivery-outcome-unknown.md`；决策记录 `docs/planning/decisions/delivery-outcome-unknown.md`。
+  - 验证：`vp check` 0 error（22 条既有 warning）、`vp run -r test`（188 文件 / 1048 测试）、`vp run -r build` 通过；PR CI 双绿（check 2m1s、playwright 1m15s，`40276438676` / `40276438590`）。
+  - rebase 合并 `d49105a`；main CI success（`40276838470`、`40276838502`）。
+
+### EXPERT_PANEL
+
+三位专家一致选 **A（无迁移）**，仅文案措辞有分歧：
+
+- 安全与可靠性：失效模式排序漏呼 > 重复呼叫 > 重复消息；B（stale 一律终态）会把 worker 崩溃系统性转成漏呼；A 爆炸半径是一个常量加一个重试循环，`markFailed` 按 id 更新、重试幂等。纠偏：ping 去重窗口 5 分钟与 stale 超时 5 分钟恰好相等，重发后的呼叫是否被去重属边界抖动，不能当作已解决。
+- 产品与运维：凌晨 3 点视角，B 把每次升级留下的 `running` 行变成人工核实队列，运维无从分辨；文案分两版（将自动重发 / 已停止自动重发），不复用哨兵常量。
+- 独立评估者：复核「覆盖说」不成立；A 可完全用现有 fake/内存库确定性断言；B 会推翻既有 reclaim 恢复语义，C 无法消除歧义且需迁移；不可确定性验收标准必须改写为状态/调用次数/文案断言。
+- 分歧处理：文案是否断言「目标可能已收到」——采用「may or may not have received」，保留不确定性且不做无证据断言。决策记录 `docs/planning/decisions/delivery-outcome-unknown.md`。
+
+### 发布评估与发布记录
+
+- 发布经理：RELEASE（#468 合入后）。`v0.1.0-beta.87..origin/main` 仅 1 条 docs 提交；#468 合入后构成唯一用户可见变更（失败文案 + 兜底重写）。
+- 阻断审计：APPROVE_RELEASE。6 项门禁 PASS —— 目标 main CI 绿、#468 双检查绿、无第三方 open PR、`blocked-autonomous` 仅法律/仓库设置类、零迁移、`v0.1.0-beta.88` 无冲突。
+- 运维/回滚：APPROVE_DEPLOY。无迁移/环境变量/配置格式/启动参数/Dockerfile/compose 变化；回滚换回 `0.1.0-beta.87`，旧镜像对新文案按普通失败处理、可人工重试。
+- 版本 PR #469 `chore(release): v0.1.0-beta.88`（rebase 合并 `82262b8`）；main CI 双绿（`40277260921`、`40277260936`）。
+- tag `v0.1.0-beta.88` 指向 `82262b8`（= `origin/main`）；GitHub Release 为 prerelease，body 非空。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.88`（linux/amd64 + linux/arm64，index digest `sha256:69fd2b4b3d2eb4b2d981718bcf27b1aa5bf83dbf57dcf61b11ab18d2925c1aeb`）；回滚 `0.1.0-beta.87`。构建在 tag 对应的干净检出中进行，`--provenance=false --sbom=false`。
+- 最近 10 个 tag 与 GitHub Release 一一对应（全量 79/79），无需补建。
+
+### 下一轮优先项
+
+1. Q-234：重领重发后的加急去重窗口与 stale 超时同为 5 分钟，重复呼叫无保证（EXPERT_PANEL）。
+2. UI-67：「结果未知」终态徽标与重试确认框（需 core 环境中立谓词，且绝不能接入 `retryNow` 封锁）。
+3. UI-61：无通知目标时「创建路由」禁用原因首屏可见；UI-63：路由名称原生校验绕过 `FieldError`。
+4. Q-228/Q-229：webhook 读取失败分类与搜索空白 q 测试补齐（均已 CONFIRMED，可 AUTO_FIX）。
+5. 恢复 `requirements` 车道，按轮转选下一个方向（避免重复方向 4）。
+
 ## 2026-10-26（第 111 轮）
 
 - 时间：2026-10-26 12:25 CST 起。
