@@ -2,6 +2,93 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 128 轮）
+
+- 时间：2026-10-27 06:38 CST 起。
+- 基线：本轮开始时 `origin/main` @ `229847d`；CI 与 E2E 均 success；无 open PR。
+- 类型：**全量审计 + UI 评审（review_now）+ 需求切片 + 语义修复 + 发布**。
+- 全量审计时间戳：**2026-10-27 06:40 CST（本轮更新）**；距上次（2026-10-26 21:45）约 8h55m ≥ 6h，且 backlog 无达门槛（≥27）候选，按第 1.5 步展开全量审计。
+- 车道（3 并发）：`ui-review`（浏览器实测，主交付）、`requirements`（窄化 brief，10 分钟上限）、`quality`（定向复核 Q-279 / REQ-271 + 新缺陷）。`ui-triage` 沿用第 127 轮的前瞻决策（当时明确写下「下一轮应直接 `review_now`」），未重复 spawn。
+- `last_ui_review_at`：**2026-10-27 06:45 CST**（隔离实例 `localhost:6193`，1440×900 与 390×844）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树 `awesome-saha-ce484e`。
+
+### 专家发现
+
+**ui-review（浏览器实测，3 条）**
+
+- **UI-80（27，高影响 / S）**：中文界面里解析失败事件仍显示英文兜底标题与消息
+  （`Provider parser rejected webhook payload`），与中文「解析失败」徽标并列；文案硬编码在
+  `server/intake/intake.service.ts:206-207`（错误文案 `:309`）。截图
+  `/tmp/tocsin-ui-r128/events-list-parsefail-1440-zh.png`、`event-detail-parsefail-1440-zh.png`。
+- **UI-81（24，S）**：中文界面半翻译术语（Raw payload 保留期、Worker 间隔/批量、raw debug 数据）。
+- **UI-78 复核成立**：390×844 账号安全表格 773px vs 容器 348px，IP/最近活动/状态全部在屏外。
+- 已验证正常：/settings 面板顺序与首屏按钮、/events 解析失败徽标密度、详情提示层级、
+  /destinations 投递健康列（仅排队态）。
+
+**requirements（窄化 brief）：无新候选。** 只读 `docs/prd/post-mvp-planning.md` 与
+`docs/release/mvp-rc-checklist.md`，所有未交付项均已登记（REQ-3/25/29/6/33/34/14/209/260、
+REL-22/24/46、REQ-107/273 等），逐条给出 backlog 行号映射。
+
+**quality（定向复核）**
+
+- **Q-279 CONFIRMED**：`deliveries` 只有 `(state,next_attempt_at)`、`event_id` 两条索引
+  （`migrate/schema.ts:260-269`、`ensure-complete-schema.ts:238-243`）；`destinationDeliveryHealth`
+  的 `since` 只在 `SUM(CASE ...)` 内（`history.repository.ts:447-475`），无法下推 WHERE，每次
+  `destinations.list` 全表建临时 B-tree；`better-sqlite3` 同步驱动会阻塞事件循环。另核实
+  `deliveries` 无保留/清理实现，「保留期限制表大小」的注释不成立。
+- **REQ-271 CONFIRMED**：`server.ts:10-27` 顶层 `await getSqliteStore()` 无 try/catch，迁移失败
+  在模块加载期 reject；`routes/api/ready.ts:18-48` 只有运行期 checks 的 try/catch，响应无
+  `code`（`server/runtime/health.types.ts:6-14`）。
+- **Q-280（新缺陷，S）**：Uptime Kuma 数值 `status 2/3` 被判 critical firing
+  （`packages/providers/src/uptime-kuma/parse.ts:68-69,124-130`），维护窗口可能触发加急呼叫；
+  字符串 `"pending"/"maintenance"` 却落到 unknown。
+
+### 本轮交付
+
+- **PR #518 `feat(console): move account security above settings diagnostics`**（UI-77，rebase
+  合并 `8bc84bb`）：账号安全面板移到投递暂停之后、运行时限之前；新增源码结构测试锁定顺序；
+  PRD `docs/prd/settings-security-panel-order.md`。浏览器实测 1440 首屏可见「退出其他设备」，
+  390 无页面级横向溢出。
+- **PR #519 `fix(providers): stop escalating Uptime Kuma maintenance to critical`**（Q-280，rebase
+  合并 `e16bc81`）：`0→firing`、`1→resolved`、`2/3/其它→unknown`；新增 13 条断言；决策记录
+  `docs/planning/decisions/uptime-kuma-maintenance-status.md`，PRD
+  `docs/prd/uptime-kuma-maintenance-status.md`。
+- 验证：两个 PR 均 `vp check` 0 error（23 条既有 warning）、`vp run -r test` 4/4、`vp run -r build`
+  通过；CI 与 E2E 均 success。（本轮一次全量 `vp run -r test` 因系统 load avg 17 出现
+  `Timeout starting forks runner`，空闲后重跑 4/4 全绿，非代码问题。）
+
+### EXPERT_PANEL
+
+- **Q-280**：三位专家独立评审，一致选 **A**（数值 `0→firing`、`1→resolved`、`2/3/其它→unknown`）。
+  安全专家认为误报呼叫最终导致更大漏报；产品专家认为解析器应忠实归一化、unknown 不丢可观察性；
+  评估者确认可测并锁定既有 0/1 断言与 `parserVersion: 1`。B（2→warning 仍 firing）被判为半修复，
+  C（保持现状）不可接受。决策记录已落盘（路径见上）。
+
+### 发布评估与发布记录
+
+- 三位发布专家独立评估，**一致放行**（`v0.1.0-beta.100..origin/main`）：
+  - **发布经理**：4 个提交中 2 个用户可见（#518 设置页面板、#519 Uptime Kuma 维护状态），
+    建议 `0.1.0-beta.101`。
+  - **阻断审计**：`e16bc81`/`8bc84bb` 的 CI/E2E 均 success；0 open PR；迁移目录零 diff；
+    `v0.1.0-beta.101` 未被占用；`blocked-autonomous` 仅 REL-13/16/23（法务/仓库设置），不阻断。
+  - **运维/回滚**：Dockerfile、compose、workflows、依赖、迁移均无改动；回滚只需切回
+    `0.1.0-beta.100` 镜像，无需数据库操作；已入库事件与已发通知不可逆。
+- PR **#520 `chore(release): v0.1.0-beta.101`**（rebase 合并 `0dd8dd6`）；CI 与 E2E 均 success。
+- tag `v0.1.0-beta.101` @ `0dd8dd6`；GitHub Release 为 prerelease，body 1561 字符。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.101`（linux/amd64 + linux/arm64，
+  index digest `sha256:9f126e75d4a60beb23f6c8a8e88036a4af9d231571588ca0b028a8a72c28f674`；
+  `--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.100`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 下一轮优先项
+
+1. **UI-80（27）**：解析失败兜底标题/消息在中文界面本地化（高影响、成本 S）。
+2. **Q-279（25）**：`deliveries(destination_id)` forward-only 加法迁移 + 迁移测试（EXPERT_PANEL）。
+3. **REQ-271（22）**：`/api/ready` 启动失败原因机器可读 code（M）。
+4. UI-81 / Q-281：中文术语统一、飞书 FastGPT 卡片 unknown 三态文案。
+5. UI-78/79：窄屏会话表与撤销确认框影响数量。
+6. 车道轮转：下一轮非必跑车道为 **`security-exposure`**（自第 124 轮未跑）；`ui-review` 视新 UI 合并数决定。
+
 ## 2026-10-27（第 127 轮）
 
 - 时间：2026-10-27 05:52 CST 起。
