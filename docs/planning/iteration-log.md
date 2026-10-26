@@ -55,8 +55,9 @@
 
 ### 发布评估与发布记录
 
-- **本轮不发布**：唯一用户可见变更是 #499 的三个界面/文案修复；按发布门槛需等 main CI 绿且无 open PR 后再评估。
-  本轮结束时 #499 仍在等待 CI（`playwright · chromium` 已 pass），若在收尾前合入，发布与否交下一轮专家小组按第 9.5 步重新评估。
+- **本轮不发布**：#499 在收尾时 rebase 合入（`playwright · chromium` 与 `check · test · build` 均 pass），
+  但合并后的 main CI 在本轮结束时尚未完成，不满足「目标 commit CI 为 success」门槛。
+  本轮唯一用户可见变更就是 #499 的三个界面/文案修复，交下一轮专家小组按第 9.5 步评估发版。
 - 最近 tag 仍为 `v0.1.0-beta.95`（`1b32971`），与 `gh release list` 对齐，无缺 release 的 tag。
 
 ### 下一轮优先项
