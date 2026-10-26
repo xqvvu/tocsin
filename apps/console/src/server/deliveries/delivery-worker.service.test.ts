@@ -683,6 +683,9 @@ describe("delivery worker", () => {
     });
     expect(recovered?.job.state).toBe("failed");
     expect(recovered?.job.finishedAt).toBe("2026-06-09T08:06:00.000Z");
+    // This is the field the list and detail screens show: it must carry the
+    // outcome-unknown wording, not a plain timeout that reads as "not sent".
+    expect(recovered?.job.lastError).toBe(DELIVERY_OUTCOME_UNKNOWN_FINAL_ERROR);
     expect(recovered?.attempts).toMatchObject([
       {
         attemptNumber: 1,
