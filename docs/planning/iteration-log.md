@@ -42,7 +42,7 @@
 - 运维/回滚：APPROVE_DEPLOY。零 migration、零环境变量/配置格式/启动参数/Dockerfile/compose/锁文件变更；升级直接换镜像；回滚换回 `0.1.0-beta.88`，无需数据库操作。
 - 版本 PR #472 `chore(release): v0.1.0-beta.89`（rebase 合并 `6ba2c63`）；main CI 双绿（`40283538944`、`40283539043`）。
 - tag `v0.1.0-beta.89` 指向 `6ba2c63`（= `origin/main`）；GitHub Release 为 prerelease（body 819 chars）。
-- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.89`（linux/amd64 + linux/arm64）；回滚 `0.1.0-beta.88`。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.89`（linux/amd64 + linux/arm64，index digest `sha256:478ea0c5f8fc1eee6477618739b1d24807e0f3331e4de0a9908fc3b0f0103e6c`）；回滚 `0.1.0-beta.88`。构建在 tag 对应的干净临时工作树中进行，`--provenance=false --sbom=false`。
 
 ### 下一轮优先项
 
