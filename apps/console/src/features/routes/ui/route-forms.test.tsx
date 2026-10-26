@@ -191,6 +191,25 @@ describe("edit route form", () => {
     expect(screen.getByRole("combobox", { name: "Operator 2" }).textContent).toContain("Contains");
   });
 
+  it("keeps every add-condition button at its own size inside the field", () => {
+    renderEditForm(emptyRuleRoute());
+
+    const addButtons = screen.getAllByRole("button", { name: /^Add condition: / });
+
+    expect(addButtons).toHaveLength(6);
+
+    for (const button of addButtons) {
+      // A vertical Field forces every direct child to full width, which used to
+      // render this xs button as an empty-looking bar. The button must sit one
+      // level deeper so a wrapper absorbs that width instead.
+      expect(button.parentElement).not.toBe(button.closest('[data-slot="field"]'));
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "Add condition: Title contains" }));
+
+    expect(screen.getByRole("textbox", { name: "Title contains 1" })).toBeTruthy();
+  });
+
   it("warns that recovery notifications are dropped when resolved is not selected", () => {
     renderEditForm({
       ...multiConditionRoute(),
