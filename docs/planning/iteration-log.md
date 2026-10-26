@@ -80,11 +80,21 @@
   TanStack Router/Start 补丁、pnpm 12.15.0）；建议 `0.1.0-beta.94`，`git tag -l` 无同名 tag。
 - 阻断审计：**APPROVE_RELEASE**。`b74a317` 的 CI（check/test/build）success；open PR 0；
   `migrate/` 自 beta.93 零 diff；`blocked-autonomous` 仅 REL-13/16/23（法务与仓库设置）；
-  第 119 轮新发现 UI-70/71/72 为候选改进，非本轮引入的回归。main 上的 E2E 首跑卡在安装系统依赖，
-  已 cancel + rerun。
+  第 119 轮新发现 UI-70/71/72 为候选改进，非本轮引入的回归。main 上 `b74a317` 的 E2E 首跑卡在
+  安装系统依赖（基础设施问题），cancel 请求未能终止该 run；同一代码树的发布 PR #490 E2E 1m28s
+  通过，合并后 `2d73a7c` 的 CI 与 E2E 均 success，未据此阻断发布。
 - 运维/回滚：**APPROVE_DEPLOY**。Dockerfile、compose、环境变量、启动参数零 diff；锁文件为补丁升级；
   回滚到 `0.1.0-beta.93` 无需数据库操作；建议镜像 tag `0.1.0-beta.94`。
-- 版本 PR `chore(release): v0.1.0-beta.94`；tag、GitHub Release 与镜像 digest 在发布完成后补记。
+- 版本 PR #490 `chore(release): v0.1.0-beta.94`（rebase 合并 `2d73a7c`）；main CI 与 E2E 均 success。
+- tag `v0.1.0-beta.94` 指向 `2d73a7c`（= `origin/main`）；GitHub Release 为 prerelease，
+  body 来自 `/tmp/tocsin-release-notes-v0.1.0-beta.94.md`（已硬校验非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.94`（linux/amd64 + linux/arm64，
+  index digest `sha256:929b39963962878dd10145013e82cff772db651845a770e8980f5489fe5ff7ba`）；
+  回滚 `0.1.0-beta.93`，无需数据库操作。构建在 tag 对应的干净检出 `/tmp/tocsin-beta94-build` 中进行，
+  `--provenance=false --sbom=false`；`imagetools inspect` 确认两个平台都在。
+- 工作树：`/tmp/tocsin-beta94-build` 与 `agent-iteration` 已删除；`inspiring-benz-466558`（干净、
+  非运行中）已回收；`distracted-bhabha-bd305a` 有真实未提交改动（`.github/workflows/ci.yml`），
+  按规则跳过。
 
 ### 下一轮优先项
 
