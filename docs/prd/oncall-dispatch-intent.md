@@ -87,7 +87,18 @@
 
 ## 回滚
 
-代码回滚即可，列保留：nullable 列对旧代码惰性，旧代码只 claim `scheduled`，
-已落 `failed` 的行不会回溯重拨。**不要**从 `migrate/plan.ts` 删除 `0004`——
-一旦某个库记录了该版本，删掉计划会触发 `assertNoUnknownAppliedMigrations`
-（`apps/console/src/infra/sqlite/migrate/runner.ts:177-190`）导致启动失败。
+分两种情形，不能混用：
+
+- **代码回滚（同一版本线内 revert 提交）**：保留 `0004` 在 `migrate/plan.ts` 里。
+  删掉它会让任何已记录该版本的库在启动时被 `assertNoUnknownAppliedMigrations`
+  （`apps/console/src/infra/sqlite/migrate/runner.ts:177-190`）拒绝。
+- **镜像回滚（换回 `0.1.0-beta.89` 等旧镜像）**：旧镜像的计划只到 `0003`，
+  同样会被那条断言挡住，`/api/ready` 会永久 503。必须先删台账行：
+
+  ```sql
+  DELETE FROM schema_migrations WHERE version = '0004';
+  ```
+
+  列本身可以保留（nullable、旧代码 `selectAll()` + 手工映射会忽略未知列），
+  旧代码只 claim `scheduled`，已落 `failed` 的行不会回溯重拨。再次升级会幂等重跑 `0004`
+  （`ensureColumn` 先查 `PRAGMA table_info`）。
