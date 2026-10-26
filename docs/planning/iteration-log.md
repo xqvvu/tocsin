@@ -49,6 +49,17 @@
 
 - 本轮无新裁决事项；执行第 123 轮已落盘的 `docs/planning/decisions/req-274-session-surface.md` 结论（最小切片、直接查 SQLite、self-only、不用 BA `listSessions`）。
 
+### 发布评估与发布记录
+
+- 三位发布专家一致放行（`v0.1.0-beta.96..origin/main`）：
+  - **发布经理**：唯一用户可见变更是 #503（`a1d0127` 账号安全面板 + 设置布局滚动、`4ad548b` 空 IP/客户端容错、`04a9ef4` 设置路由预取），建议 `0.1.0-beta.97`；其余为 docs。
+  - **阻断审计**：`origin/main` @ `4ad548b` 的 CI 与 E2E 均 success；0 open PR；迁移目录零 diff；`v0.1.0-beta.97` 未被占用；最近 10 个 tag 均有 release；`blocked-autonomous` 仅 REL-13/16/23（仓库设置/法务项），不阻断。
+  - **运维/回滚**：`Dockerfile`、compose、`env.ts`、迁移 plan、lockfile 零 diff；回滚只需换回 `0.1.0-beta.96`，无需数据库操作；被撤销的会话保持撤销，重新登录即可。
+- 版本 PR **#504 `chore(release): v0.1.0-beta.97`**（rebase 合并 `f24851b`）；`check · test · build` 8m8s pass；E2E 首次在 `playwright · chromium` 卡住约 13 分钟，cancel + rerun 后 1m19s pass。
+- tag **`v0.1.0-beta.97`** → `f24851b`（= 合并后的 `origin/main`）；GitHub Release 为 prerelease，body 715 字符（`/tmp/tocsin-release-notes-v0.1.0-beta.97.md`）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.97`（linux/amd64 + linux/arm64，index digest `sha256:3e31741194071d4305df6f1c91f8b234905ed34c386bd586409aa4b39446a5c3`）；回滚 `0.1.0-beta.96`，无需数据库操作。
+- 工作树回收：`stoic-poincare-7eedbe` 已清理；`distracted-bhabha-bd305a` 有真实未提交改动（`.github/workflows/ci.yml`），跳过并保留。
+
 ### 下一轮优先项
 
 1. **REQ-58（27）**：失败投递区分「等待重试」与「重试耗尽」，纯展示 + DTO 字段。
