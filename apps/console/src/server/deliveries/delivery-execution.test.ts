@@ -463,31 +463,144 @@ describe("delivery execution", () => {
       },
     ]);
   });
+
+  it("retries the success write once instead of resending a delivered alert", async () => {
+    const succeeded: Parameters<DeliveryRepository["markSucceeded"]>[0][] = [];
+    const failed: Parameters<DeliveryRepository["markFailed"]>[0][] = [];
+    let writes = 0;
+    const store = createExecutionStore({
+      succeeded,
+      failed,
+      markSucceeded: async (command) => {
+        writes += 1;
+        if (writes === 1) {
+          throw new Error("database is locked");
+        }
+        succeeded.push(command);
+        return deliveryJob({ state: "succeeded", finishedAt: command.finishedAt ?? now });
+      },
+    });
+    const triggered: unknown[] = [];
+    const execution = new DeliveryExecution({
+      store,
+      destinations: sendOkWithReference(),
+      triggerPings: async (input) => {
+        triggered.push(input);
+      },
+    });
+
+    await expect(execution.execute(createClaimedDelivery(), now)).resolves.toBe("succeeded");
+
+    expect(writes).toBe(2);
+    expect(failed).toEqual([]);
+    expect(triggered).toHaveLength(1);
+  });
+
+  it("records a delivered alert as a terminal failure when the success write keeps failing", async () => {
+    const failed: Parameters<DeliveryRepository["markFailed"]>[0][] = [];
+    let writes = 0;
+    const store = createExecutionStore({
+      succeeded: [],
+      failed,
+      markSucceeded: async () => {
+        writes += 1;
+        throw new Error("database is locked");
+      },
+    });
+    const triggered: unknown[] = [];
+    const execution = new DeliveryExecution({
+      store,
+      destinations: sendOkWithReference(),
+      triggerPings: async (input) => {
+        triggered.push(input);
+      },
+    });
+
+    await expect(execution.execute(createClaimedDelivery(), now)).resolves.toBe("failed");
+
+    expect(writes).toBe(2);
+    // Never re-queue: the target already received the alert.
+    expect(failed).toEqual([
+      expect.objectContaining({
+        deliveryId: "delivery-1",
+        attemptId: "attempt-1",
+        retryAt: null,
+        error: expect.stringContaining("already delivered"),
+      }),
+    ]);
+    expect(triggered).toHaveLength(1);
+  });
+
+  it("keeps the batch alive when the terminal failure write also throws", async () => {
+    const store = createExecutionStore({
+      succeeded: [],
+      failed: [],
+      markSucceeded: async () => {
+        throw new Error("database is locked");
+      },
+      markFailed: async () => {
+        throw new Error("database is still locked");
+      },
+    });
+    const triggered: unknown[] = [];
+    const execution = new DeliveryExecution({
+      store,
+      destinations: sendOkWithReference(),
+      triggerPings: async (input) => {
+        triggered.push(input);
+      },
+    });
+
+    await expect(execution.execute(createClaimedDelivery(), now)).resolves.toBe("failed");
+    expect(triggered).toHaveLength(1);
+  });
 });
+
+function sendOkWithReference(): Pick<DestinationRegistry, "send"> {
+  return {
+    async send() {
+      return {
+        ok: true,
+        statusCode: 200,
+        responseBody: null,
+        renderedPayload: {},
+        providerReference: { type: "feishu_message_id", value: "om_abc123" },
+      };
+    },
+  };
+}
 
 function createExecutionStore(input: {
   succeeded: Parameters<DeliveryRepository["markSucceeded"]>[0][];
   failed: Parameters<DeliveryRepository["markFailed"]>[0][];
   failedState?: DeliveryJob["state"];
+  /** Overrides the success write to model a database that refuses the update. */
+  markSucceeded?: DeliveryExecutionStore["deliveries"]["markSucceeded"];
+  /** Overrides the failure write, including the post-send fallback. */
+  markFailed?: DeliveryExecutionStore["deliveries"]["markFailed"];
 }): DeliveryExecutionStore {
   return {
     deliveries: {
-      async markSucceeded(command) {
-        input.succeeded.push(command);
-        return deliveryJob({
-          state: "succeeded",
-          finishedAt: command.finishedAt ?? now,
-        });
-      },
-      async markFailed(command) {
-        input.failed.push(command);
-        return deliveryJob({
-          state: input.failedState ?? "failed",
-          nextAttemptAt: command.retryAt,
-          lastError: command.error,
-          finishedAt: command.retryAt === null ? (command.finishedAt ?? now) : null,
-        });
-      },
+      markSucceeded:
+        input.markSucceeded ??
+        (async (command) => {
+          input.succeeded.push(command);
+          return deliveryJob({
+            state: "succeeded",
+            finishedAt: command.finishedAt ?? now,
+          });
+        }),
+      markFailed:
+        input.markFailed ??
+        (async (command) => {
+          input.failed.push(command);
+          return deliveryJob({
+            state: input.failedState ?? "failed",
+            nextAttemptAt: command.retryAt,
+            lastError: command.error,
+            finishedAt: command.retryAt === null ? (command.finishedAt ?? now) : null,
+          });
+        }),
     },
   };
 }
