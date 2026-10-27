@@ -2,6 +2,86 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 145 轮）
+
+- 时间：2026-10-28 06:26 CST 起，约 07:15 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `dedc4ad`（main CI success；唯一 open PR #582 属 docs-site routine，非本 routine）。
+- 类型：**skip（廉价闸门）+ 定向实现 + 发布**。距上次全量审计 2026-10-28 00:30 CST 约 5h56m
+  （< 6 小时），按第 1.5 步不展开全量审计；backlog 有达到门槛的候选（REQ-285 / REQ-2，27 分），
+  按第 144 轮「下一轮优先项」做定向实现。
+- 全量审计时间戳：不变，仍为 **2026-10-28 00:30 CST**（下一轮开始时已 ≥6 小时，应展开全量审计）。
+- 车道轮转位置：不变，下一非必跑车道仍为 **`quality`**（随后 `release-infra`）。
+- `ui-triage`：本轮**未 spawn**。距上一轮结束约 20 分钟，main 在上一轮后只有 docs 提交，
+  `last_ui_review_at` = 2026-10-27 23:50 CST（约 6.6 小时，远低于 48 小时），重跑只会重复相邻轮次结论
+  （第 129 轮规则）。`requirements` 同样未 spawn：第 141 轮的 REQ-295/297 仍在 backlog，本轮直接续做已存在的 REQ-285。
+- `last_ui_review_at`：不变，**2026-10-27 23:50 CST**。
+- 范围取舍：SEC-26（18，AUTO_FIX）与 ARCH-40/41（20/18）未做，留作下一轮小修复；本轮只交付需求切片。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `busy-wing-46da4b`（写入隔离）。
+
+### 专家发现
+
+本轮未 spawn 审计车道；发布评估由三位专家子代理完成（见下）。
+
+### 本轮交付
+
+- **PR #583 `feat(console): filter suppression rules by state, kind, and keyword`**（REQ-285 + REQ-2，AUTO_SHIP）
+  - `/suppressions` 新增 `state` / `kind` / `q` URL 参数；`SuppressionListSearchSchema` 对非法值
+    `.catch("")` 回退为「不限」，手改 URL 不报错（`routes/_dashboard.suppressions.tsx`）。
+  - 纯客户端过滤：`filterSuppressions` 复用 `suppressionStateAt` 派生状态，不新增存储列、不改 `suppressions.list` 契约；
+    关键字按空格 AND，覆盖名称、原因、用途、指纹、标签键值、标题/内容包含、严重级别/状态、匹配器 id
+    及**解析后的告警源 / 通知目标名称**（`model/suppression-search.ts`）。
+  - `SuppressionFilters` 工具栏：300ms 防抖关键字、状态/用途下拉、可移除 chip、一键清空；
+    空态区分「暂无规则」与「当前筛选没有匹配（带清空按钮）」（`ui/suppression-filters.tsx`、`ui/suppressions-section.tsx`）。
+  - 顶栏 `ActiveSuppressionIndicator` 链接改为 `/suppressions?state=active`。
+  - 防抖草稿钩子抽到 `components/common/use-debounced-search-draft.ts`，Events / Deliveries / 静默共用
+    （逐行搬迁、行为不变，原过滤器测试继续覆盖）。
+  - 中文 PRD：`docs/prd/suppression-list-filters.md`。
+  - 测试：filter model（状态/用途/关键字/名称解析/组合）、URL 剪裁·合并·schema 回退、
+    过滤器交互（防抖提交、chip、清空）、两种空态、徽标 href；console 213 文件 / 1202 tests。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 4/4 包、`vp run -r build` 通过；
+    PR CI `check · test · build` + `playwright · chromium` 通过后 rebase 合并 → `306d9eb`（planning 提交 `9d9a564`）。
+  - 未做浏览器实测：无本地 dev 目标运行，交互由 jsdom 覆盖；浏览器评审留给 ui-review 车道。
+- SEC-26 未做：本轮为单切片轮，PEM 截断块/小写标签补齐留作下一轮小修复。
+
+### EXPERT_PANEL：发布评估
+
+三位专家一致：**发布**。
+
+- **发布经理**：区间内 1 个用户可见 feat（#583 / `306d9eb`），其余 5 条为 docs/planning；
+  与本项目「每个用户可见变更切一个 beta」的节奏一致；建议 `0.1.0-beta.114`。
+- **阻断审计**：main `9d9a564` CI + E2E 双绿；无 `agent/*` open PR（#582 属 docs-site routine）；
+  区间 `migrate/` 零 diff；backlog 无 ≥27 分 `blocked-autonomous`；`v0.1.0-beta.114` 未占用 → 六项全 PASS。
+- **运维/回滚**：Dockerfile / compose / 端口 / 卷 / env / 启动参数 / 迁移 / 依赖零 diff；
+  纯前端列表筛选，不改投递/路由/鉴权/抑制匹配语义；回滚只需换回 `0.1.0-beta.113`，无需数据库操作。
+- 决策记录：常规发布，无新增长期决策文档；本节即三位专家意见摘要。
+
+### 发布
+
+- 版本：**0.1.0-beta.114**，PR #584 `chore(release): v0.1.0-beta.114` rebase 合入 → `2dfbd52`。
+- tag `v0.1.0-beta.114` → `2dfbd52`（main CI + E2E 均 success）。
+- Release：`Tocsin v0.1.0-beta.114`（prerelease，正文非空，含镜像、变更、升级与回滚说明）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.114`
+  （linux/amd64 + linux/arm64，index digest `sha256:71576a95210cc05e70cf6121989147723fa74d3eded13576e2b7c6c27d79486b`，
+  amd64 `sha256:aec19530…`，arm64 `sha256:049a377a…`；`--provenance=false --sbom=false`）。
+- 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.113`。
+- Obsidian 同步：本轮只改 `docs/planning` 与 `docs/prd`；`obsidian-vault` skill 未在本会话暴露，
+  按 AGENTS.md 允许的 fallback 跳过同步。
+
+### 工作树回收
+
+- 回收 1 个已结束 session worktree（`agitated-nobel-ccf903`，18M，`git status` 干净）；
+  `.claude/worktrees` 总量 2.1G → 2.1G（其中约 1.9G 是本 session 工作树的 `node_modules`/`.output`，
+  收尾时清除）。其余目录分属本 session、`agent-iteration` 与运行中的 docs-site session，不在回收范围。
+
+### 下一轮优先项
+
+1. **全量审计**（本轮开始时距 00:30 已 ≥6 小时）：`requirements` + `ui-triage` + `quality` 车道。
+2. **SEC-26（18）** 截断 PEM 块与小写标签补齐（AUTO_FIX）。
+3. **ARCH-40/41（20/18）** `runDeliveryWorker` 与 session/i18n procedure 编排收进 service。
+4. **REQ-295（27）** 事件 raw 载荷保全（forward-only 迁移，走 EXPERT_PANEL）。
+5. `last_ui_review_at` 将在 2026-10-29 23:50 后超过 48 小时，届时 ui-triage 倾向 `review_now`。
+
 ## 2026-10-28（第 144 轮）
 
 - 时间：2026-10-28 05:38 CST 起，约 06:30 CST 结束。
