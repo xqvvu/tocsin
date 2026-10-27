@@ -137,6 +137,7 @@ export type TemplateStaticPath =
   | "presentation.labels.probeError"
   | "presentation.labels.probeRecovered"
   | "presentation.labels.probeFailed"
+  | "presentation.labels.probeUnknown"
   | "tocsin.eventUrl";
 
 type TemplateStaticPathResolver = (context: TemplateContext) => string;
@@ -195,6 +196,7 @@ const TemplateStaticPathResolvers = {
   "presentation.labels.probeError": (context) => context.presentation.labels.probeError,
   "presentation.labels.probeRecovered": (context) => context.presentation.labels.probeRecovered,
   "presentation.labels.probeFailed": (context) => context.presentation.labels.probeFailed,
+  "presentation.labels.probeUnknown": (context) => context.presentation.labels.probeUnknown,
   "tocsin.eventUrl": (context) => context.tocsin.eventUrl,
 } satisfies Record<TemplateStaticPath, TemplateStaticPathResolver>;
 
