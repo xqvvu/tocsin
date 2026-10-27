@@ -53,10 +53,12 @@ export function PortableConfigForm(props: PortableConfigFormProps) {
     format === "toml"
       ? t("configuration.portableConfig.tomlDescription")
       : t("configuration.portableConfig.jsonDescription");
+  // The JSON sample contains braces, which ICU reads as an argument and rejects
+  // as malformed, so it is read raw: it is literal text, not a template.
   const placeholder =
     format === "toml"
       ? t("configuration.portableConfig.tomlPlaceholder")
-      : t("configuration.portableConfig.jsonPlaceholder");
+      : (t.raw("configuration.portableConfig.jsonPlaceholder") as string);
   const confirmImportTitle =
     format === "toml"
       ? t("configuration.portableConfig.confirmImportTitle")
