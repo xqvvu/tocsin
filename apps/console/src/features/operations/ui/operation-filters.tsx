@@ -796,6 +796,17 @@ function activeFilterChips(
     });
   }
 
+  if (scope === "deliveries" && search.eventId) {
+    // The chip only carries the id: the deliveries page does not load event
+    // titles, and inventing a label would misreport which event is filtered.
+    chips.push({
+      key: "eventId",
+      label: t("operations.filters.event"),
+      valueLabel: search.eventId,
+      clear: { eventId: "" },
+    });
+  }
+
   if (scope === "deliveries" && search.receipt) {
     chips.push({
       key: "receipt",

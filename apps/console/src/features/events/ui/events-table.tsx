@@ -79,6 +79,7 @@ export function EventsTable({
         header: t("events.table.headers.deliveries"),
         cell: ({ row }) => (
           <EventDeliveryCountsCell
+            eventId={row.original.id}
             counts={row.original.deliveryCounts}
             routeMatchCount={row.original.routeMatchCount}
           />

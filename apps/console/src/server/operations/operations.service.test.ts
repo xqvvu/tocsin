@@ -95,6 +95,17 @@ describe("operations service", () => {
     expect(unmatchedRoute.deliveries.total).toBe(0);
     expect(unmatchedRoute.events.total).toBe(1);
 
+    // The events table links its count badge with an exact event id. The
+    // filter has to survive the service hop, narrow only the delivery list,
+    // and report an honest zero for an event that produced no delivery.
+    const byEvent = await service.listOperations({ limit: 10, eventId: event.id });
+    expect(byEvent.deliveries.items.map((item) => item.id)).toEqual([delivery.id]);
+    expect(byEvent.deliveries.total).toBe(1);
+    expect(byEvent.events.total).toBe(1);
+    const otherEvent = await service.listOperations({ limit: 10, eventId: "event-missing" });
+    expect(otherEvent.deliveries.total).toBe(0);
+    expect(otherEvent.events.total).toBe(1);
+
     // Destination kind narrows deliveries only, like the other delivery-only
     // filters, and it agrees with the row it keeps.
     const byKind = await service.listOperations({

@@ -54,6 +54,9 @@ export const DashboardOperationSearchSchema = z.object({
     .catch("")
     .optional(),
   routeId: z.string().catch("").optional(),
+  // Delivery-only: one event's fan-out. The events table links its count
+  // badges here, so the value arrives as an exact id rather than a search term.
+  eventId: z.string().catch("").optional(),
   // Delivery-only: whether the target returned a message reference. The URL is
   // user-editable, so an unknown value means "any receipt" instead of an error.
   receipt: z
@@ -100,6 +103,7 @@ export interface DashboardOperationSearch {
   destinationMatch?: EventDestinationMatch | "";
   destinationKind?: DestinationKind | "";
   routeId?: string;
+  eventId?: string;
   receipt?: DeliveryReceiptFilter | "";
   deliveryState?: DeliveryState | "";
   minAttempts?: number;
@@ -120,6 +124,7 @@ export type OperationFilterData = {
   destinationMatch?: EventDestinationMatch;
   destinationKind?: DestinationKind;
   routeId?: string;
+  eventId?: string;
   receipt?: DeliveryReceiptFilter;
   deliveryState?: DeliveryState;
   minAttempts?: number;
@@ -148,6 +153,7 @@ export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
   destinationMatch: "",
   destinationKind: "",
   routeId: "",
+  eventId: "",
   receipt: "",
   deliveryState: "",
   minAttempts: 0,
@@ -171,6 +177,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.destinationId ||
     search.destinationKind ||
     search.routeId ||
+    search.eventId ||
     search.receipt ||
     search.deliveryState ||
     search.minAttempts ||
@@ -244,6 +251,7 @@ export function mergeOperationSearch(
     "destinationMatch",
     "destinationKind",
     "routeId",
+    "eventId",
     "receipt",
     "deliveryState",
     "minAttempts",

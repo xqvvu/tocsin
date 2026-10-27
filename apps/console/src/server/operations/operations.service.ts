@@ -61,6 +61,7 @@ export class OperationsService {
         destinationId: input.destinationId,
         destinationKind: input.destinationKind,
         routeId: input.routeId,
+        eventId: input.eventId,
         receipt: input.receipt,
         state: input.deliveryState,
         minAttempts: input.minAttempts,

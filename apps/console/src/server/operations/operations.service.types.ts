@@ -43,6 +43,8 @@ export interface ListOperationsInput {
   /** Delivery-only: one destination adapter kind. */
   destinationKind?: DestinationKind;
   routeId?: string;
+  /** Delivery-only: the exact event a count badge was clicked from. */
+  eventId?: string;
   /** Delivery-only: target message reference present or missing. */
   receipt?: DeliveryReceiptFilter;
   deliveryState?: DeliveryState;

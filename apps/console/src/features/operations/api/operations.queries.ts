@@ -184,6 +184,7 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
       : {}),
     ...(filters.destinationKind ? { destinationKind: filters.destinationKind } : {}),
     ...(filters.routeId ? { routeId: filters.routeId } : {}),
+    ...(filters.eventId ? { eventId: filters.eventId } : {}),
     ...(filters.receipt ? { receipt: filters.receipt } : {}),
     ...(filters.deliveryState ? { deliveryState: filters.deliveryState } : {}),
     ...(filters.minAttempts && filters.minAttempts > 0 ? { minAttempts: filters.minAttempts } : {}),
