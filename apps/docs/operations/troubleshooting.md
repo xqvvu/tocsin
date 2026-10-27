@@ -37,6 +37,7 @@
 2. 先使用 Destination 的测试操作验证端点、凭证和模板，再检查目标服务是否可从 Tocsin 容器网络访问。字段与模板约束见[通知目标参考](/integrations/destinations)。
 3. `pending` 或 `running` 不是最终结果。投递由进程内 Worker 异步处理；查看 Worker readiness 与运行日志，确认容器没有反复重启或 SQLite 写入错误。若 `/api/ready` 提示数据库迁移失败，先保全数据库与日志，并按升级/回滚流程处置，不要直接删改 `schema_migrations`。
 4. 修复配置后，可在 Delivery detail 对可重试的失败投递执行手动 retry。若界面说明目标已接受消息但成功状态记录失败，不要盲目重发，以免通知重复。
+5. 卡片已送达但没有人接到电话：查看投递详情「电话加急」表与「为什么没有自动加急」，核对目标是否开启自动加急、严重程度门槛与呼叫对象。启用条件、5 分钟去重和错误码处置见[飞书应用与电话加急](/integrations/feishu-app#常见错误)。
 
 ::: tip HTTP 202 的含义
 Webhook 返回 `202 Accepted` 表示接入已接受。它不确认 Route 已命中，也不确认任何 Destination 已完成发送；最终结果以 Event 与 Delivery history 为准。
