@@ -2,6 +2,87 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 139 轮）
+
+- 时间：2026-10-27 17:43 CST 起。
+- 基线：本轮开始时 `origin/main` @ `9d0a7f3`；main CI success；无 open PR。
+- 类型：**需求切片 + 小修复 + UI 评审（非 full-audit）**。距上次全量审计 2026-10-27 13:26 CST
+  约 4h17m，未达 6 小时闸门；backlog 有 27 分候选（REQ-240/253/294），按「继续」分支交付，
+  **全量审计时间戳保持 2026-10-27 13:26 CST**。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`security-exposure`（按第 138 轮记录的轮转位置）。
+  `ui-triage` 判 `review_now` 后追加 `ui-review`（在 `ui-triage` 返回后串行启动，始终 ≤3 并发）。
+- `ui-triage` 决策：**`review_now`**（限缩范围）。第 138 轮设定的升级条件成立：`24ca21b`
+  （beta.110 配置导入差异弹层）仍无浏览器验证记录；另有 4 个 UI 路径合并、其中 2 个未评审。
+  评审限缩为 Settings 导入弹层的双视口实测，不做发现扫荡。
+- `last_ui_review_at`：**2026-10-27 18:20 CST**（本轮完成真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `keen-grothendieck-bd79db`（会话写入隔离）。
+
+### 专家发现
+
+**ui-review（Chromium 1440×900 + 390×844，真实浏览器）**
+
+- 导入弹层全部交互点 PASS：无变更态、多段差异摘要（含「还有 N 项」截断）、
+  非法 TOML 内联错误 + 确认禁用、取消 / Esc / 确认三路径、导入结果面板 390 不破版。
+  两视口 `documentElement.scrollWidth == innerWidth`；弹层 rect 均在视口内；无 pageerror。
+  截图 `/tmp/tocsin-r139/*.png`，量化数据 `/tmp/tocsin-r139/report.json`。
+  早前一轮 `390/import-notice` 的 `fitsViewport:false` 判定为关闭动画期间的测量假象：
+  最终轮在 popover 隐藏后测量，结果面板是独立 Alert，无横向溢出。
+- **既有缺陷（本轮已修，FIX-17）**：JSON 标签页占位符把裸 JSON 存成 ICU 消息
+  （`apps/console/src/i18n/messages/{en-US,zh-Hans}.json` 的
+  `configuration.portableConfig.jsonPlaceholder`），use-intl 把 `{ "settings": ... }`
+  解析为畸形参数，每次打开 JSON 页都打 `IntlError: INVALID_MESSAGE: MALFORMED_ARGUMENT`。
+  占位符回退为原文所以长期无人发现。修复：`portable-config-form.tsx` 用 `t.raw` 读取；
+  新增回归测试并先证实在旧实现下失败。
+- **UI-83（新）**：差异预览把「省略默认值的手写配置」误报为 updated
+  （`portable-config-diff.ts:145` 直接比较未归一化 config；服务端归一化在
+  `server/configuration/configuration-support.ts:35-40`）。
+- **UI-84（新，低置信）**：批量导入后的 token 结果面板无高度上限/关闭入口，
+  1440×900 下导入按钮被推到视口外（`settings-page.tsx:31-35`、`import-notice-panel.tsx:26-56`）。
+
+**security-exposure**
+
+- **SEC-1 / SEC-35 复核：已修复**（`packages/core/src/redaction.ts:13-66,82-83,207-211`；
+  `redaction.test.ts:93-140` 逐键断言；读投影与 test-send 已按 `DestinationKindSchema.options`
+  参数化）。未发现新的 HIGH。
+- 导入保护标记未发现缺口：17 个 server-only / 9 个 client-only 均落在直接使用
+  `node:*`、SQLite、`process.env`、better-auth server runtime 的模块上；
+  `features/`、`components/`、`shell/` 无 `#/server` / `#/infra` 导入。
+- 无失效 `xqvvu/vane` 引用（仅合法 ACR 坐标与历史 planning 叙述）。
+- 既有开放项经代码复核仍成立，全部留在 backlog：SEC-37（目标编辑草稿 URL 内嵌密码，需
+  EXPERT_PANEL）、SEC-30/31/38（签名类与厂商前缀键未覆盖，可 AUTO_FIX 增量）、
+  SEC-33（复数/限定词形态，需 EXPERT_PANEL）、SEC-26（endpoint 凭据可见性取舍）、
+  SEC-9（请求上下文保留原始认证头，可 AUTO_FIX）、SEC-32（转义 JSON 文本漏脱敏，可 AUTO_FIX）。
+
+**requirements / quality**：本轮未跑（并发名额让给 ui-review；quality 已在第 138 轮覆盖）。
+
+### 本轮交付
+
+- **PR #557 `feat(console): filter events by notification destination`**（rebase 合入 `b06b599`）：
+  - 事件仓储新增 `destinationId` + `destinationMatch`（`delivered` 默认 / `missing`），
+    列表与 `total` 共用 `EXISTS` / `NOT EXISTS` 相关子查询；复用 `idx_deliveries_event_id`，无迁移。
+  - Events 筛选面板渲染「通知目标」，选中后出现「目标投递」；chip、内联重置、页面级重置与
+    页码重置同步；Deliveries 不渲染、不消费该键。
+  - PRD `docs/prd/event-destination-filter.md`；更新 `operation-filter-scope.md` 的过时非目标与验收。
+  - 验证：`vp check` 0 error（23 条既有 warning）、`vp run -r test` 207 文件 / 1166 tests、
+    `vp run -r build` 通过；PR CI（check/test/build + playwright）全绿。
+- **FIX-17（本 PR）**：JSON 占位符 ICU 解析错误；`t.raw` + 回归测试 + 本轮浏览器实测记录。
+- 文档：本轮日志与 backlog（REQ-240 → shipped；新增 UI-83/UI-84、FIX-17）。
+
+### EXPERT_PANEL
+
+- 本轮没有新增 EXPERT_PANEL 决策。SEC-37 / SEC-33 维持 backlog 的「需专家小组」标记，
+  下一轮按车道轮转处理。
+
+### 下一轮优先项
+
+1. **REQ-253（27）**：运维搜索覆盖告警源名称（事件/投递两侧，复用 `escapeLikeTerm`）。
+2. **REQ-294（27）**：投递按事件精确过滤 + Events 计数下钻。
+3. **SEC-30/31/38（25）**：签名类与厂商前缀键的精确键族 + 正反例测试（AUTO_FIX）。
+4. **UI-83**：导入差异预览先按服务端归一化再比较，消除「省略默认值 = updated」误报。
+5. 车道轮转：下一非必跑车道为 **`release-infra`**（随后 `architecture`）。
+6. 防复发：给 messages 加一层「机器语法样例不得走 ICU」的解析守卫（可与 FIX-17 测试合并）。
+
 ## 2026-10-27（第 138 轮）
 
 - 时间：2026-10-27 16:59 CST 起。
