@@ -24,7 +24,7 @@ Provider 会生成规范化字段，如标题、消息、严重程度、状态�
 
 ## 接收与投递语义
 
-- Webhook 使用告警源 Token，或该告警源配置的额外共享密钥进行认证；当前实现接受任一有效凭据，不要求两者同时提供。浏览器 dashboard session 与 webhook 认证彼此独立。
+- Webhook 使用告警源 Token，或该告警源配置的额外共享密钥进行认证；当前实现接受任一有效凭据，不要求两者同时提供。浏览器 dashboard session 与 webhook 认证彼此独立，细节见[认证与账号安全](/operations/authentication)。
 - Event 记录接收事实；告警 fingerprint 表示告警身份，不能替代请求幂等键。重复 webhook 请求可保留 Event 供审计，同时在短幂等窗口内避免重复创建投递。
 - Webhook 被接受后，投递由 SQLite 支撑的进程内 Worker 异步执行。`202 Accepted` 只表示接入已接受，不代表目标已送达。
 - Delivery 可能处于 `pending`、`running`、`succeeded`、`failed` 或 `suppressed`。失败记录可自动退避重试，也可在详情页手动重试；创建时即被抑制的投递没有发送尝试，重试退避中被抑制的记录会保留既有尝试但不再发送。

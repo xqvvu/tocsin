@@ -26,6 +26,8 @@ docker compose ps
 
 在开放外部访问前立即完成 `/setup`。第一个注册用户成为 owner；实例不提供「让公网访问者先注册、稍后再关」的安全缓冲。首次 setup 完成后再通过 TLS 代理开放 dashboard 与 webhook。
 
+首个 owner 的创建条件、登录会话管理与密码边界见[认证与账号安全](/operations/authentication)。
+
 ## 反向代理与限制
 
 - 代理终止 TLS，并将 HTTP 请求转发到容器端口。应用没有内置 TLS 终止。
@@ -63,4 +65,4 @@ docker compose ps
 一个实例对应一个 SQLite 数据库和进程内 Worker。不要运行多个副本争用同一数据卷，也不要把这个部署形态当作高可用集群。
 :::
 
-下一步：[备份、恢复与升级](/operations/backup-restore) · [健康检查和告警链路排障](/operations/troubleshooting)
+下一步：[认证与账号安全](/operations/authentication) · [备份、恢复与升级](/operations/backup-restore) · [健康检查和告警链路排障](/operations/troubleshooting)

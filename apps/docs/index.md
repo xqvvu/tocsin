@@ -31,7 +31,8 @@ features:
 5. [配置路由匹配](/guide/routes)
 6. [在变更窗口内静默告警](/operations/suppressions)
 7. [生产 Docker 部署](/operations/deploy-docker)
-8. [备份、恢复与升级](/operations/backup-restore)
+8. [完成首个 owner 与账号安全设置](/operations/authentication)
+9. [备份、恢复与升级](/operations/backup-restore)
 
 ::: warning 发布状态
 Tocsin 当前是可试用的自托管 MVP，尚非稳定发布版。生产使用前请评估单实例限制，并先演练备份与恢复。
