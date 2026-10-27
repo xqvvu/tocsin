@@ -103,7 +103,7 @@ export TOCSIN_DEST_DESTINATION_RELAY_URL='https://relay.example.test/tocsin'
 export TOCSIN_DEST_DESTINATION_RELAY_HEADERS_AUTHORIZATION='Bearer <relay token>'
 ```
 
-如果导入发生在另一个容器或实例，环境变量也必须注入那个实例。可移植配置的 `secret_refs` 只读取 Tocsin 进程的 `process.env`；不支持 `_FILE` 间接读取，`BETTER_AUTH_SECRET_FILE` 也不适用于这些引用。
+如果导入发生在另一个容器或实例，环境变量也必须注入那个实例。可移植配置的 `secret_refs` 只读取 Tocsin 进程的 `process.env`；不支持 `_FILE` 间接读取，`BETTER_AUTH_SECRET_FILE` 也不适用于这些引用。运行时变量与 secret 注入边界见[环境变量与运行时配置](/operations/configuration)。
 
 ## 顶层结构
 

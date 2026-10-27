@@ -61,4 +61,4 @@ curl -i -X POST 'http://localhost:3000/api/sources/<source-id>/webhook' \
 告警源 Token 可放在 `Authorization: Bearer ...` 或 `X-Tocsin-Source-Token` 请求头中。也可使用该告警源配置的 Tocsin 侧共享密钥，通过 `X-Tocsin-Provider-Secret` 请求头认证；当前实现接受有效 Token 或有效共享密钥，不要求两者同时提供。Webhook 不使用 dashboard 登录 session。
 :::
 
-下一步：[查看各 Provider 的载荷契约](/integrations/providers) · [配置并测试通知目标](/integrations/destinations) · [理解事件、路由和抑制](/guide/concepts) · [掌握路由匹配规则](/guide/routes) · [管理 owner 与登录会话](/operations/authentication) · [排查接入或投递问题](/operations/troubleshooting)
+下一步：[查看各 Provider 的载荷契约](/integrations/providers) · [配置并测试通知目标](/integrations/destinations) · [理解事件、路由和抑制](/guide/concepts) · [掌握路由匹配规则](/guide/routes) · [核对环境变量与运行时限制](/operations/configuration) · [管理 owner 与登录会话](/operations/authentication) · [排查接入或投递问题](/operations/troubleshooting)

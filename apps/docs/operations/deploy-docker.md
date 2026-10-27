@@ -38,26 +38,16 @@ docker compose ps
 
 ## 运行时配置
 
-| 变量 | 用途 | 默认/约束 |
-| --- | --- | --- |
-| `HOST` / `PORT` | 应用监听地址与端口 | 容器默认为 `0.0.0.0:3000`；Compose 固定容器端口 `3000`。 |
-| `TOCSIN_HTTP_PORT` | Compose 主机映射端口 | 默认 `3000`；只改主机侧端口，不改容器监听端口。 |
-| `BETTER_AUTH_SECRET` | dashboard session 签名密钥 | 生产必需且至少 32 字符；生成后持久保存，轮换会使 session 失效。 |
-| `BETTER_AUTH_SECRET_FILE` | 从挂载文件读取上述密钥 | 仅当内联变量为空时使用；文件须是单行裸值、≤4 KiB 且容器 uid 1000 可读。 |
-| `BETTER_AUTH_URL` | Better Auth 对外 base URL | Compose 默认 `http://localhost:3000` 仅适合本机试跑；生产显式设置 HTTPS 地址。 |
-| `BETTER_AUTH_ALLOWED_HOSTS` | Better Auth 允许的 Host 列表 | 可选，逗号或换行分隔；当前 Compose 未透传，需在 override 中加入。 |
-| `BETTER_AUTH_TRUSTED_ORIGINS` | 额外可信 Origin 列表 | 可选，逗号或换行分隔；当前 Compose 未透传，需在 override 中加入。 |
-| `SERVER_URL` | 实例對外 URL 与事件链接 | Compose 默认 `http://localhost:3000`；生产显式设置为代理后的 HTTPS 地址。 |
-| `TOCSIN_DATABASE_PATH` | SQLite 文件位置 | Compose 容器内为 `/data/tocsin.sqlite`。 |
-| `TOCSIN_DATA_DIR` | entrypoint 管理属主的目录 | 可选，默认取数据库目录，未提供时回落到 `/data`；Compose 未透传。 |
-| `TOCSIN_DESTINATION_TIMEOUT_MS` | 出站 HTTP 请求超时 | 应用默认 `10000` ms，允许 `1`–`30000`；Compose 未透传。 |
-| `TOCSIN_MAX_WEBHOOK_BYTES` | 入站请求体字节上限 | Compose 默认 `1048576`（1 MiB）；最大 `10485760`（10 MiB）。 |
-| `TOCSIN_WORKER_BATCH_SIZE` | 每批处理的队列项数 | 默认 `10`；最大 `100`。 |
-| `TOCSIN_WORKER_INTERVAL_MS` | Worker 轮询间隔 | 默认 `5000` ms；最大 `60000` ms。 |
-| `TOCSIN_WORKER_STALE_RUNNING_MS` | 回收过期 running 项的窗口 | 默认 `300000` ms；最大 `3600000` ms。 |
-| `TOCSIN_LOG_LEVEL` / `TOCSIN_LOG_FORMAT` | 日志级别与格式 | Compose 默认 `info` / `auto`；生产 `auto` 为 JSON Lines。字段与采集方式见[日志与可观测性](/operations/observability)。 |
+生产启动至少要明确认证 secret、外部 URL 和数据库位置：
 
-`BETTER_AUTH_SECRET_FILE` 仅支持认证密钥，不意味着所有配置 secret 都支持 `_FILE`。完整变量约束以所部署版本的 release notes 与仓库运行时配置为准。不要将真实密钥写入公开配置文件或文档。
+| 变量 | 用途 | 生产约束 |
+| --- | --- | --- |
+| `BETTER_AUTH_SECRET` / `_FILE` | Dashboard session 签名密钥 | 必须提供至少 32 字符的实例专属值；内联值优先于文件。 |
+| `BETTER_AUTH_URL` | Better Auth 对外 base URL | 设为代理后的最终 HTTPS 地址。 |
+| `SERVER_URL` | 公开实例 URL 与事件直链 | 通常与 `BETTER_AUTH_URL` 相同。 |
+| `TOCSIN_DATABASE_PATH` | SQLite 文件位置 | Compose 容器内为 `/data/tocsin.sqlite`。 |
+
+超时、Webhook 上限、Worker、日志、Host/Origin、Compose 透传差异与 override 示例统一见[环境变量与运行时配置](/operations/configuration)。`BETTER_AUTH_SECRET_FILE` 仅支持认证密钥，不意味着所有配置 secret 都支持 `_FILE`。不要将真实密钥写入公开配置文件或文档。
 
 通过设置页导入 TOML/JSON 时，`secret_refs` 指向的变量也必须在 Tocsin 进程环境中存在；它们不会从浏览器读取，也不支持 `_FILE`。字段与合并语义见[可移植配置参考](/operations/portable-config)。
 
@@ -65,4 +55,4 @@ docker compose ps
 一个实例对应一个 SQLite 数据库和进程内 Worker。不要运行多个副本争用同一数据卷，也不要把这个部署形态当作高可用集群。
 :::
 
-下一步：[认证与账号安全](/operations/authentication) · [备份、恢复与升级](/operations/backup-restore) · [健康检查和告警链路排障](/operations/troubleshooting)
+下一步：[环境变量与运行时配置](/operations/configuration) · [认证与账号安全](/operations/authentication) · [备份、恢复与升级](/operations/backup-restore) · [健康检查和告警链路排障](/operations/troubleshooting)
