@@ -14,7 +14,7 @@ Tocsin 把告警接收与通知发送分开处理，便于定位「收到什么�
 | Destination | 一个出站通知渠道及其端点、模板和凭证配置。凭证保留在服务端；目标可测试、启停。 | 通知目标配置与测试结果 |
 | Delivery | 一次向指定目标发送的工作记录，包含状态、尝试次数、错误与重试信息。 | [投递生命周期与重试](/operations/deliveries)与 attempt history |
 | Suppression | 有范围和时间窗的临时静默或维护时段。事件仍会记录，命中的 Delivery 标为 `suppressed` 且不发送。 | [告警静默与维护时段](/operations/suppressions)与投递详情 |
-| Integration | 可复用的外部应用资源。目前包括飞书应用，供应用发送模式与可选电话加急使用。 | 飞书应用页面及相关投递详情 |
+| Integration | 可复用的外部应用资源。目前包括飞书应用，供应用发送模式与可选电话加急使用。 | [飞书应用与电话加急](/integrations/feishu-app)及相关投递详情 |
 
 ## Provider 与 Destination
 
