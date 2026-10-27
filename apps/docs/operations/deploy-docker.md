@@ -55,7 +55,7 @@ docker compose ps
 | `TOCSIN_WORKER_BATCH_SIZE` | 每批处理的队列项数 | 默认 `10`；最大 `100`。 |
 | `TOCSIN_WORKER_INTERVAL_MS` | Worker 轮询间隔 | 默认 `5000` ms；最大 `60000` ms。 |
 | `TOCSIN_WORKER_STALE_RUNNING_MS` | 回收过期 running 项的窗口 | 默认 `300000` ms；最大 `3600000` ms。 |
-| `TOCSIN_LOG_LEVEL` / `TOCSIN_LOG_FORMAT` | 日志级别与格式 | Compose 默认 `info` / `auto`；生产 `auto` 为 JSON Lines。 |
+| `TOCSIN_LOG_LEVEL` / `TOCSIN_LOG_FORMAT` | 日志级别与格式 | Compose 默认 `info` / `auto`；生产 `auto` 为 JSON Lines。字段与采集方式见[日志与可观测性](/operations/observability)。 |
 
 `BETTER_AUTH_SECRET_FILE` 仅支持认证密钥，不意味着所有配置 secret 都支持 `_FILE`。完整变量约束以所部署版本的 release notes 与仓库运行时配置为准。不要将真实密钥写入公开配置文件或文档。
 

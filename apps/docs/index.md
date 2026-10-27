@@ -35,6 +35,7 @@ features:
 9. [生产 Docker 部署](/operations/deploy-docker)
 10. [完成首个 owner 与账号安全设置](/operations/authentication)
 11. [备份、恢复与升级](/operations/backup-restore)
+12. [查看日志、健康检查与 Worker 状态](/operations/observability)
 
 ::: warning 发布状态
 Tocsin 当前是可试用的自托管 MVP，尚非稳定发布版。生产使用前请评估单实例限制，并先演练备份与恢复。
