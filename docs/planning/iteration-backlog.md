@@ -14,6 +14,7 @@
 
 | id | 标题 | 来源 | 评分 | 状态 | PR | 备注 |
 |---|---|---|---|---|---|---|
+| REL-68 | 发布 `0.1.0-beta.106` | release panel（第 133 轮） | — | shipped | #537 | tag `v0.1.0-beta.106` @ `87ade74`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.106`（amd64+arm64，index digest `sha256:66ae21ba7500b0d2602881cf990f00d2ccce29c35b35ef3d6afc6d8cb8566e1a`）；回滚 `0.1.0-beta.105`，**无需数据库操作**；用户可见变更 #536（REQ-52 事件直链，含 `SERVER_URL`→`BETTER_AUTH_URL` 回落与合成样例不死链）；无迁移、无依赖、无 env 变化 |
 | Q-282 | 容器对 `publicBaseUrl` 的 env 注入无测试 | review（第 133 轮，standards 评审） | 17 | candidate | — | `container.ts:216` 解析 `env.SERVER_URL ?? env.BETTER_AUTH_URL` 并注入 `createDestinationService` / `createDeliveryWorker`，但两个新测试都直接构造服务并传 `publicBaseUrl`，`container.test.ts` 未断言该透传；若注入被删，CI 仍绿而告警链接静默消失。建议容器选项支持覆盖，并用预览路径做一次端到端断言；成本 M |
 | Q-283 | `testDestination` 对合成事件不生成直链无直接测试 | review（第 133 轮，spec 评审） | 15 | candidate | — | `destination.service.ts:218` 仅在 `sample` 存在时传 `eventUrl`；预览侧同规则已有集成断言（内置样例 → 空串），测试发送侧只有代码审查覆盖。补一条带 fetch stub 的集成断言；成本 S |
 | REL-67 | 发布 `0.1.0-beta.105` | release panel（第 132 轮） | — | shipped | #534 | tag `v0.1.0-beta.105` @ `06a70c7`；GitHub Release（prerelease，body 1159 字符）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.105`（amd64+arm64，index digest `sha256:f8e5634913016889dd6cc154b7ebfc3e29a5dc51c4e8ddba8f39704d402a1f63`）；回滚 `0.1.0-beta.104`，**无需数据库操作**；用户可见变更 #533（中文运维术语统一）；无迁移、无依赖、无 env 变化 |

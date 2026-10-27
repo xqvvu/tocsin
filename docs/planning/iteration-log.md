@@ -2,6 +2,84 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 133 轮）
+
+- 时间：2026-10-27 11:27 CST 起。
+- 基线：本轮开始时 `origin/main` @ `cbaa89b`（第 132 轮日志提交）；CI success；无 open PR。
+- 类型：**需求切片 + 发布（非 full-audit）**。最近全量审计为 2026-10-27 06:40 CST，距本轮约
+  4h47m < 6h；backlog 有 ≥27 分候选（REQ-52/24/13 均为 28），按第 1.5 步继续。
+- 全量审计时间戳：**2026-10-27 06:40 CST（未变）**。
+- 车道：本轮**未 spawn requirements / ui-triage**。第 132 轮 11:25 刚结束且轮间代码零变化，
+  重跑只会重复结论；按第 132 轮「下一轮优先项」第 5 条直接选 REQ-52（28 分）。车道轮转位置
+  **仍为 `release-infra`**（连续未跑，下一轮优先）。
+- `ui-triage` 决策：**`defer`**（`last_ui_review_at` = 2026-10-27 06:45 CST，未变；自评审以来
+  无新增 UI 发现；三项强信号均不成立）。
+- `last_ui_review_at`：**2026-10-27 06:45 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `great-cori-b6f45e`。
+- 浏览器验证：本轮为模板渲染与服务接线，无 UI 布局/交互变化；未起浏览器实例。
+
+### 专家发现（`review` skill 双轴，自查 PR #536）
+
+- **standards（AGENTS.md）**：无硬性违规。judgement / correctness：
+  - 只读 `SERVER_URL` 时，按部署文档只设 `BETTER_AUTH_URL` 的部署拿不到链接（`container.ts`）；
+    已改为 `SERVER_URL ?? BETTER_AUTH_URL`。
+  - 预览/测试发送用合成 id（`preview-event`、`test-<时间戳>`）会拼出 404 链接
+    （`destination.service.ts`）；已改为仅真实入库事件生成链接。
+  - 容器 env→service 透传无测试（`container.test.ts` 未断言）；记为 Q-282。
+  - 架构文档未记录新依赖；已补 `docs/architecture/application-container.md`。
+- **spec（PRD）**：验收项全部满足、无越界；测试发送侧缺少直接断言 → Q-283。
+
+### 本轮交付
+
+- **PR #536 `feat(console): link alert notifications back to the Tocsin event`**
+  （rebase 合并 `881d835`、`99c3588`、`6bbb054`）：
+  - `packages/destinations`：`DestinationRenderInput` 增可选 `eventUrl`，模板引擎回落
+    （`packages/destinations/src/template.ts:403`）。
+  - 新增纯函数 `eventDetailUrl`（`apps/console/src/lib/event-url.ts`）；容器把
+    `env.SERVER_URL ?? env.BETTER_AUTH_URL` 作为 `publicBaseUrl` 注入 `createDestinationService`
+    与 `createDeliveryWorker`（`container.ts:216`）。
+  - 投递发送、预览、测试发送三条路径带事件直链；内置样例与无样例测试发送保持空串。
+  - 测试：console 1135（+8）、destinations 191（+2）；`vp check` 0 error；`vp run -r build` 4/4。
+  - 文档：PRD `docs/prd/event-url-in-notifications.md`；README 与部署文档补公开地址用途；
+    架构文档补接线说明。
+- backlog：REQ-52 → `shipped`；新增 Q-282、Q-283。
+
+### 发布评估与发布记录
+
+- 三位发布专家独立评估，**一致放行**：
+  - **发布经理**：`v0.1.0-beta.105..origin/main` 有 2 个用户可见提交（#536 事件直链、回落与
+    死链修复），建议 `0.1.0-beta.106`。
+  - **阻断审计**：五项 PASS（`6bbb054` 的 CI 与 E2E 均 success；无 open PR；区间无 migration；
+    `blocked-autonomous` 仅 REL-13/16/23；`v0.1.0-beta.106` 未被占用）。
+  - **运维/回滚**：风险 **LOW**；无 env/迁移/配置格式变化；回滚只需换回 `0.1.0-beta.105`
+    镜像。唯一提示：若 `SERVER_URL` 被设成内部地址，链接对收件人不可达。
+- PR #537 `chore(release): v0.1.0-beta.106`（rebase 合并 `87ade74`）。
+- tag `v0.1.0-beta.106` @ `87ade74`；GitHub Release 为 prerelease，body 非空（硬校验通过）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.106`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:66ae21ba7500b0d2602881cf990f00d2ccce29c35b35ef3d6afc6d8cb8566e1a`，
+  `--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.105`，
+  无需数据库操作。
+- 补建检查：最近 10 个 tag 与 `gh release list` 一一对应，无需补建。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，按 AGENTS.md 允许的 fallback 跳过。
+
+### 工作树清理
+
+- 回收 1 个：`gifted-cerf-98d851`（干净）。跳过 `distracted-bhabha-bd305a`
+  （有真实未提交改动）。其余会话候选目录已不存在（app 已回收）。
+- `.claude/worktrees` 从 **916M** 降到 **899M**；本会话收尾删除 `node_modules` 与专用
+  `agent-iteration` 后进一步下降。
+- 本地 `agent/*` 分支按 PR 状态清理（当前分支由 rebase 合并，保留到会话结束）。
+
+### 下一轮优先项
+
+1. **UI-79（26）**：撤销其他会话的确认框显示影响数量、零会话禁用时说明原因。
+2. **SEC-37（25）/ SEC-38（21）**：交 EXPERT_PANEL。
+3. **Q-282（17）/ Q-283（15）**：事件链接接线的容器透传与测试发送断言。
+4. 车道轮转：**`release-infra`**（连续未跑；RC 剩余 gate）。
+5. 高价值候选：REQ-24（28）抑制窗口汇总；REQ-13（28）接入自检 dry-run。
+
 ## 2026-10-27（第 132 轮）
 
 - 时间：2026-10-27 10:41 CST 起。
