@@ -503,7 +503,8 @@
 | SEC-17 | providerMetadata 入库/出站前无统一脱敏兜底 | security lane（第 25 轮） | 24 | shipped | #180 | 第 27 轮随 SEC-7 落地：`redactEventRecord` 在读取边界对 providerMetadata 走 `redactJsonValue`（key + 值形态），grafana/alertmanager `externalURL` 的 userinfo 被投影；存储仍为原文（决策已接受） |
 | SEC-18 | raw payload 字符串叶子不做值形态扫描 | security lane（第 25 轮） | 22 | shipped | #176 | `redactJsonValue` 对字符串叶子应用 `redactCredentialText`；parser 仍读取原值，解析/匹配/去重语义不变 |
 | SEC-19 | 脱敏正则二次复杂度可被 Webhook 触发 | security lane（第 31 轮） | 24 | shipped | #204 | **已由第 34 轮 EXPERT_PANEL 一致裁决 A+**：assignment 与 URL userinfo 均改为线性扫描器，覆盖不变（冻结旧正则作差分 oracle，10,000 例 fuzz 0 差异）；新增 40KiB ≤100ms / 1MiB ≤2s 性能闸门。安全专家实测旧 userinfo 分支在 1MiB 上 233s，且位于同步 intake 路径。决策记录 `docs/planning/decisions/linear-redaction-scan.md` |
-| SEC-20 | 私钥 PEM 正文与 `privateKeyPem`/`tls.key` 键不脱敏 | security lane（第 42 轮） | 22 | candidate | — | LOW（代码核实）：`redaction.ts:13,46,63,637` 的精确键与后缀规则均不命中 `privateKeyPem`（归一 `privatekeypem`）与 `tls.key`（归一 `tlskey`），值形态规则也不识别 `-----BEGIN PRIVATE KEY-----`；上游载荷在中性键下携带 PEM 正文时会原样进入 DTO/日志投影。SEC-1 本轮复核已修复。建议 AUTO_FIX：补 PEM 值形态规则与回归测试，保持 `privateKeyId` 等运营字段可见 ；第 54 轮复核：仍无 `BEGIN … PRIVATE KEY` 值形态规则，`privateKeyPem`/`tls.key` 键名也不命中（`redaction.ts:63-88`）；第 87 轮复核：PEM 正文与 `tls.key` 仍未覆盖（`redaction.ts:99-124`），AUTO_FIX 仍开放，保持 `privateKeyId` 可见；第 141 轮复核（security-exposure）：`CREDENTIAL_VALUE_REDACTORS`（`redaction.ts:105-140`）仍无 `-----BEGIN … PRIVATE KEY-----` 值形态；`normalizeKey` 把 `tls.key` 归一为 `tlskey`，既不命中精确键（`:12-70`）也不匹配后缀正则（`:96-97`）。最小修复：精确键加 `tlskey` + 一条 PEM 值形态替换 + 两条单测（键名、裸 PEM），可在单轮内 AUTO_FIX |
+| SEC-20 | 私钥 PEM 正文与 `privateKeyPem`/`tls.key` 键不脱敏 | security lane（第 42 轮） | 22 | shipped | #578 | 第 144 轮交付：8 类 PEM 私钥块值形态 + `tlskey` 精确键 + 4 条用例。LOW（代码核实）：`redaction.ts:13,46,63,637` 的精确键与后缀规则均不命中 `privateKeyPem`（归一 `privatekeypem`）与 `tls.key`（归一 `tlskey`），值形态规则也不识别 `-----BEGIN PRIVATE KEY-----`；上游载荷在中性键下携带 PEM 正文时会原样进入 DTO/日志投影。SEC-1 本轮复核已修复。建议 AUTO_FIX：补 PEM 值形态规则与回归测试，保持 `privateKeyId` 等运营字段可见 ；第 54 轮复核：仍无 `BEGIN … PRIVATE KEY` 值形态规则，`privateKeyPem`/`tls.key` 键名也不命中（`redaction.ts:63-88`）；第 87 轮复核：PEM 正文与 `tls.key` 仍未覆盖（`redaction.ts:99-124`），AUTO_FIX 仍开放，保持 `privateKeyId` 可见；第 141 轮复核（security-exposure）：`CREDENTIAL_VALUE_REDACTORS`（`redaction.ts:105-140`）仍无 `-----BEGIN … PRIVATE KEY-----` 值形态；`normalizeKey` 把 `tls.key` 归一为 `tlskey`，既不命中精确键（`:12-70`）也不匹配后缀正则（`:96-97`）。最小修复：精确键加 `tlskey` + 一条 PEM 值形态替换 + 两条单测（键名、裸 PEM），可在单轮内 AUTO_FIX。第 144 轮已交付 #578（PEM 块值形态 + `tlskey`） |
+| SEC-26 | 截断 PEM 块与小写标签仍漏脱敏 | 发布评估（第 144 轮） | 18 | candidate | — | 第 144 轮交付的 PEM 规则只认「首尾配对」的完整块：只有 `-----BEGIN …-----` 没有对应 END 的截断块仍会漏出 base64 正文；标签按大写枚举，`-----begin rsa private key-----` 等小写/未枚举形式不命中（`redaction.ts` 的 `PEM_PRIVATE_KEY_MARKERS`）。范围：无 END 时按「header 行 + 后续纯 base64 行」收紧、标签大小写不敏感；非目标：任意非 PEM 二进制、猜测性截断恢复。评分 18（4/3/4/5/4/2） |
 | SEC-20 | `configurationToTomlDocument` 无自防护 | security lane（第 31 轮） | 20 | candidate | — | 当前唯一调用链已 sanitize 且 `include_secrets` 恒 false，无实际泄漏；但函数直接输出 `app_secret`（`packages/core/src/config.ts:184-202`），未来直连 store 会明文导出；AUTO_FIX：断言拒绝未 sanitize 输入 |
 | SEC-21 | `auth.client.ts` 以 type import 引用 `.server` | security lane（第 31 轮） | 18 | candidate | — | 类型导入会被擦除、无运行时泄漏；但违反 AGENTS「`.server` 不得被另一环境导入」字面规则（`apps/console/src/lib/auth.client.ts:4`）；AUTO_FIX：`Auth` 类型移到共享模块 ；第 54 轮复核仍存在（`auth.client.ts:4`）；AUTO_FIX：把 `Auth` 类型移到共享模块或用 `typeof authClient` 反推 |
 | UI-1 | 列表搜索吞字符与空格、逐键请求 | ui-review（第 23 轮，浏览器实测） | 29 | shipped | #171 | 本地草稿 + 300ms 防抖后才写 URL；`pruneSearch` 保留空格，仅服务端过滤 trim；清除 chip/重置会取消未提交草稿；同时闭环 REQ-78 |
@@ -920,6 +921,11 @@
 
 ## 下一轮优先项
 
+- **第 144 轮更新（2026-10-28）**：交付 SEC-20（#578，PEM 私钥块值形态 + `tlskey` 精确键）。
+  下一优先：**SEC-26（18）** 截断 PEM 块与小写标签残余、**ARCH-40/41（20/18）** 编排收进 service、
+  **REQ-295（27）** 事件 raw 载荷保全（forward-only 迁移，走 EXPERT_PANEL）、**DOC-95/96/58** 文档更正。
+  车道轮转：下一非必跑车道仍为 **`quality`**。`last_ui_review_at` = 2026-10-27 23:50 CST，
+  将在 2026-10-29 23:50 后超过 48 小时，届时 ui-triage 倾向 `review_now`。
 - **第 86 轮更新（2026-10-23）**：交付 REQ-232 投递按尝试次数筛选（#382）与 6 条 docs 漂移更正
   （#383，DOC-67..72）。下一优先：**REQ-233（27）** Events/Deliveries 同条件切换（纯前端、成本最低）、
   **REQ-235（27，新）** 投递暂停记录原因、**REQ-227（27）** 失效筛选引用、**Q-224** 老库索引迁移评估、
