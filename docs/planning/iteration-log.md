@@ -2,6 +2,98 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 146 轮）
+
+- 时间：2026-10-28 07:25 CST 起，约 09:20 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `daf35b1`（main CI success；无 open PR）。
+- 类型：**full-audit + UI 切片 + 发布**。距上次全量审计 2026-10-28 00:30 CST 约 6h56m（≥6 小时），
+  按第 1.5 步展开全量审计；backlog 仍有 27 分候选（REQ-295）与 28 分候选（REQ-177）亦可续做。
+- 全量审计时间戳：**2026-10-28 08:20 CST**。
+- 车道轮转位置：`quality` 本轮已跑；下一非必跑车道为 **`release-infra`**（随后 `docs-drift`）。
+- `ui-triage`：**`review_now`**。理由：自上次 UI 评审（2026-10-27 23:50）以来有 **3 个用户可见 UI 合并
+  （#567 路由重叠提示、#573 投递数下钻、#583 静默筛选条）且均无浏览器验证记录**，命中强信号；
+  距上次评审 7h40m（<48h）与 43 条未解决 UI 发现属稳定基线，未作为依据。
+  按 routine，UI 评审取代 requirements 成为本轮主交付。
+- `last_ui_review_at`：**2026-10-28 08:20 CST**（隔离实例 `localhost:6206` + 临时 SQLite，真实浏览器）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `musing-bartik-2a667a`（写入隔离）。
+- 环境：会话工作树 node_modules 曾出现「半删」残留，`vp install --frozen-lockfile --force` 修复（仅 node_modules）。
+
+### 专家发现
+
+**ui-review（真实浏览器 + 代码核实，隔离实例 6206）**
+
+- **UI-85（28，已交付）**：`/suppressions` 表格 980px 置于 348px 容器，横向滚动前**状态与操作整列在
+  390px 视口外**且无滚动提示（`features/suppressions/ui/suppressions-section.tsx` 的
+  `suppressionsColumnClassName`）。截图 `/tmp/tocsin-r146/08-suppressions-mobile-390-true.png`。
+- **UI-86（22）**：投递下钻「事件」chip 只有 36 位 UUID，390px `truncate` 且触屏无 title
+  （`features/operations/ui/operation-filters.tsx:799`）。
+- **UI-87（21）**：路由重叠提示「另有 N 对」无展开/跳转（`features/routes/ui/route-overlap-notice.tsx:52`）。
+- **UI-88（18）**：静默筛选 chip 的 `aria-label` 不含被清除的值
+  （`features/suppressions/ui/suppression-filters.tsx:145`、`zh-Hans.json:1270`）。
+- **UI-89（16）**：重叠提示用 `space-y-0.5`，违反 shadcn `gap` 约定（`route-overlap-notice.tsx:39`）。
+- 已验证无问题：300ms 防抖只提交一次 URL；状态/用途下拉与 chip 同步；两种空态区分正确；
+  顶栏徽标深链 `?state=active` 后 chip 可见；投递徽标计数与列表 total 同谓词（代码核实）。
+- 未覆盖：`/routes` 重叠提示实际渲染与 `/events` 徽标实际计数（隔离实例无 Source/Route/Event 数据），
+  仅代码证据。
+
+**requirements（需求发现，查重后新增 5 条）**
+
+- **REQ-298（29）**：事件列表精确指纹过滤——`q` 是跨字段 LIKE（`history.repository.ts:776-806`），
+  同指纹页只给计数与前 5 条（`event-fingerprint-context-tab.tsx:55-80`）；补 `fingerprint` URL 维度，
+  复用已有索引。**下一轮首选**。
+- **REQ-299（27）**：迁移前自动 SQLite 快照（`migrate/runner.ts:17-60`、`store.ts:259`），
+  `VACUUM INTO` + 保留 N 份；涉启动/磁盘 → EXPERT_PANEL。
+- **REQ-300（26）** 重试预算筛选（`deliveries-table.tsx:215-217` 仅前端派生）；
+  **REQ-301（26）** 列表标注目标配置已变更（列表 DTO 缺 `destinationUpdatedAt`）；
+  **REQ-302（25）** Email cc/bcc（`packages/destinations/src/email/schema.ts:23-25`）。
+
+**quality（质量审计，全量测试 213 文件 / 1202 tests 全绿）**
+
+- **Q-288（高）**：目标编辑清空可选字段被静默保留——patch 只收非空值
+  （`destination-form.ts:470-543,591`）+ 服务端深合并（`destination.service.ts:114-119`），
+  清空加急接收人后仍会拨号；`urgent` 残留还会阻止改回 webhook 模式（`feishu/schema.ts:174`）。
+  涉配置删除契约 → EXPERT_PANEL。
+- **Q-289（高）**：投递/呼叫结果回写无归属栅栏（`delivery.repository.ts:396-435,437-479`、
+  `oncall.repository.ts:234-277`），重领后迟到写入可覆盖终态造成重复发送/重复呼叫。
+  涉投递状态机 → EXPERT_PANEL。
+- **Q-290（中）**：引用已删除源/目标的抑制规则不可编辑（`suppression-forms.tsx:547-566,254-261`
+  只渲染现存选项，悬空 id 仍提交 → BAD_REQUEST）。纯 UI 修复，**下一轮小修复候选**。
+- **Q-291（低）**：暂停/恢复多键写入无事务（`settings.repository.ts:94-135`）。
+
+### 本轮交付
+
+- **PR #587 `fix(console): pin suppression actions column on narrow screens`**（UI-85，AUTO_SHIP）
+  - `actions` 列复用 `stickyActionsColumnClassName` + `w-[12%] min-w-24`，与 Events/Deliveries 一致。
+  - 布局测试断言操作列表头与每个行单元格带 `sticky right-0 min-w-24`。
+  - 中文 mini-PRD `docs/prd/suppression-actions-sticky.md`。
+  - 浏览器实测（390×844）：表格 980px / 容器 348px、scrollMax 632；`scrollLeft=0` 时操作单元右缘 369、
+    三个按钮 x=294/322/350 全部在视口内；滚到最右位置不变；1440×900 表宽 1238、无横向滚动、列宽不变。
+    截图 `/tmp/tocsin-r146/r146-after-suppressions-390-sticky.png`。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 4/4 包（console 213 文件 / 1203 tests）、
+    `vp run -r build` 通过；PR CI `check · test · build` + `playwright · chromium` 通过后 rebase 合并 → `dae1b0d`。
+  - 自查：diff 仅 2 行实现 + 布局测试 + PRD，人工复核 sticky 列与既有 events/deliveries 实现同源。
+
+### EXPERT_PANEL：发布评估
+
+三位专家一致：**发布**。
+
+- **发布经理**：区间 4 个提交，仅 `dae1b0d` 用户可见（窄屏操作列），其余 3 条为 docs；
+  建议预发布递增 `0.1.0-beta.115`。
+- **阻断审计**：`dae1b0d` 的 CI 与 E2E 双绿、无 open PR、backlog 无 ≥27 分 `blocked-autonomous`、
+  区间 `migrate/` 零 diff、`v0.1.0-beta.115` 未占用、近 3 轮无未修复高优回归 → 六项全 PASS。
+- **运维/回滚**：Dockerfile/compose/env/端口/卷/启动参数/依赖/迁移零 diff；纯前端布局，
+  不改投递/路由/鉴权/抑制匹配语义；回滚只需换回 `0.1.0-beta.114` 镜像，无需数据库操作。
+
+### 下一轮优先项
+
+1. **REQ-298（29）** 事件列表精确指纹过滤（无迁移、单轮可交付）。
+2. **Q-290（24）** 抑制表单把已删除的源/目标渲染为可取消条目（AUTO_FIX）。
+3. **REQ-177（28）** 原始载荷保留窗口结束时间（纯前端，仍为 candidate）。
+4. EXPERT_PANEL：**Q-288 / Q-289**（配置删除语义、投递状态机栅栏）与 **REQ-299**（迁移前快照）。
+5. 车道轮转：`requirements` + `ui-triage` 必跑；第三名额 **`release-infra`**。
+6. `last_ui_review_at` = 2026-10-28 08:20 CST，48 小时到期点 2026-10-30 08:20。
+
 ## 2026-10-28（第 145 轮）
 
 - 时间：2026-10-28 06:26 CST 起，约 07:15 CST 结束。
