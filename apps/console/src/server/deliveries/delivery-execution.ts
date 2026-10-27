@@ -2,6 +2,7 @@ import { getLogger } from "@logtape/logtape";
 
 import {
   DELIVERY_ACCEPTED_UNRECORDED_ERROR,
+  type DeliveryJob,
   redactJsonText,
   redactNormalizedEvent,
   redactText,
@@ -15,6 +16,7 @@ import type {
   DestinationSendResult,
 } from "@tocsin/destinations";
 
+import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import type {
   ClaimedDelivery,
   DeliveryRepository,
@@ -297,16 +299,45 @@ export class DeliveryExecution {
     },
   ): Promise<"retrying" | "failed"> {
     const retryAt = this.nextRetryAt(delivery, input.finishedAt, input.retryHint);
-    const updated = await this.store.deliveries.markFailed({
-      deliveryId: delivery.job.id,
-      attemptId: delivery.attempt.id,
-      error: redactText(input.error),
-      retryAt,
-      responseStatus: input.responseStatus,
-      responseBody: redactOptionalText(input.responseBody),
-      startedAt: input.startedAt,
-      finishedAt: input.finishedAt,
-    });
+    let updated: DeliveryJob;
+
+    try {
+      updated = await this.store.deliveries.markFailed({
+        deliveryId: delivery.job.id,
+        attemptId: delivery.attempt.id,
+        error: redactText(input.error),
+        retryAt,
+        responseStatus: input.responseStatus,
+        responseBody: redactOptionalText(input.responseBody),
+        startedAt: input.startedAt,
+        finishedAt: input.finishedAt,
+      });
+    } catch (error) {
+      // A delivery row that a concurrent event deletion cascaded away has
+      // nothing left to record. That is terminal, not a reason to abort the
+      // batch. Transient write failures keep throwing: the caller's retry (the
+      // post-send evidence write) and the stale attempt reclaim both depend on
+      // seeing them.
+      if (!(error instanceof RecordNotFoundError)) {
+        throw error;
+      }
+
+      deliveryLogger.error("Delivery {deliveryId} failure was not recorded", {
+        deliveryId: delivery.job.id,
+        attemptId: delivery.attempt.id,
+        attemptNumber: delivery.attempt.attemptNumber,
+        eventId: delivery.event.id,
+        sourceId: delivery.source.id,
+        destinationId: delivery.destination.id,
+        destinationKind: delivery.destination.kind,
+        errorKind: input.errorKind,
+        retryHint: input.retryHint ?? "retryable",
+        ...safeErrorProperties(error),
+      });
+
+      return "failed";
+    }
+
     const outcome = updated.state === "pending" ? "retrying" : "failed";
 
     deliveryLogger.warn("Delivery {deliveryId} is {outcome} via {destinationKind}", {

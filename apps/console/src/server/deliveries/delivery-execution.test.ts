@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { DELIVERY_ACCEPTED_UNRECORDED_ERROR, type DeliveryJob } from "@tocsin/core";
 import type { DestinationRegistry, DestinationSendContext } from "@tocsin/destinations";
 
+import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import type {
   ClaimedDelivery,
   DeliveryRepository,
@@ -650,6 +651,35 @@ describe("delivery execution", () => {
     await expect(execution.execute(createClaimedDelivery(), now)).resolves.toBe("failed");
     expect(failureWrites).toBe(2);
     expect(triggered).toHaveLength(1);
+  });
+
+  it("ends the delivery instead of throwing when its row is gone before the failure write", async () => {
+    const store = createExecutionStore({
+      succeeded: [],
+      failed: [],
+      markFailed: async () => {
+        throw new RecordNotFoundError("Delivery");
+      },
+    });
+    const destinations = {
+      async send() {
+        return {
+          ok: false,
+          statusCode: 502,
+          responseBody: null,
+          renderedPayload: {},
+          errorMessage: "upstream unavailable",
+          errorKind: "network_error",
+          retryHint: "retryable",
+        };
+      },
+    } satisfies Pick<DestinationRegistry, "send">;
+    const execution = new DeliveryExecution({ store, destinations });
+
+    // A concurrent event deletion cascades the delivery away, so `markFailed`
+    // finds nothing to update. There is no row left to record against, but the
+    // throw must still not escape into the worker's batch loop.
+    await expect(execution.execute(createClaimedDelivery(), now)).resolves.toBe("failed");
   });
 });
 
