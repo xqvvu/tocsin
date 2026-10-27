@@ -12,7 +12,13 @@ export default defineConfig({
       { text: "事件", link: "/guide/events" },
       { text: "路由", link: "/guide/routes" },
       { text: "告警接入", link: "/integrations/providers" },
-      { text: "通知目标", link: "/integrations/destinations" },
+      {
+        text: "通知目标",
+        items: [
+          { text: "通知目标参考", link: "/integrations/destinations" },
+          { text: "飞书应用与电话加急", link: "/integrations/feishu-app" },
+        ],
+      },
       { text: "运维", link: "/operations/deploy-docker" },
       { text: "GitHub", link: "https://github.com/xqvvu/tocsin" },
     ],
@@ -34,6 +40,7 @@ export default defineConfig({
         items: [
           { text: "告警源接入参考", link: "/integrations/providers" },
           { text: "通知目标参考", link: "/integrations/destinations" },
+          { text: "飞书应用与电话加急", link: "/integrations/feishu-app" },
         ],
       },
       {
