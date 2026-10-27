@@ -42,6 +42,7 @@ export default defineConfig({
           { text: "认证与账号安全", link: "/operations/authentication" },
           { text: "可移植配置参考", link: "/operations/portable-config" },
           { text: "备份、恢复与升级", link: "/operations/backup-restore" },
+          { text: "投递生命周期与重试", link: "/operations/deliveries" },
           { text: "告警静默与维护时段", link: "/operations/suppressions" },
           { text: "故障排查", link: "/operations/troubleshooting" },
         ],
