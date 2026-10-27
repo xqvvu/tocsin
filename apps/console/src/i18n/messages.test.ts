@@ -39,6 +39,32 @@ describe("i18n messages", () => {
     expect(suppressionCopy).not.toContain("静默一切");
   });
 
+  it("keeps operator-facing Chinese free of mixed English implementation jargon", () => {
+    const jargon: Array<[string, RegExp]> = [
+      ["raw payload", /\braw payload\b/i],
+      ["raw header", /\braw headers?\b/i],
+      ["raw debug", /\braw debug\b/i],
+      ["worker", /\bworker\b/i],
+    ];
+
+    const violations = Object.entries(zhHansMessages).flatMap(([key, value]) => {
+      const message = value as string;
+
+      if (isNonProseValue(message)) {
+        return [];
+      }
+
+      const matched = jargon.filter(([, pattern]) => pattern.test(message)).map(([term]) => term);
+
+      return matched.length > 0 ? [`${key}: ${message} (${matched.join(", ")})`] : [];
+    });
+
+    // The console speaks to on-call operators. `Worker`, `raw payload`, and
+    // `raw debug` are implementation vocabulary; the Chinese copy says
+    // 工作进程 / 原始载荷 / 原始调试 instead of mixing the English token in.
+    expect(violations).toEqual([]);
+  });
+
   it("expands flat source files for use-intl runtime lookup", () => {
     expect(getMessages("en-US")).toMatchObject({
       common: {
