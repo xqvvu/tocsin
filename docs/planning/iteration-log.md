@@ -2,6 +2,80 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 142 轮）
+
+- 时间：2026-10-28 03:25 CST 起，约 04:20 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `0f954c9`（main CI success，无本 routine 的 open PR）。
+- 类型：**skip（廉价闸门）+ 定向实现 + 发布**。距上次全量审计 2026-10-28 00:30 CST 仅 2h55m
+  （< 6 小时），按第 1.5 步不展开全量审计；backlog 有达到门槛的 `candidate`（REQ-295/296 均为 27 分），
+  因此按上一轮「下一轮优先项」做定向实现，并执行积压的发布评估。
+- 全量审计时间戳：不变，仍为 **2026-10-28 00:30 CST**（下一轮最早 06:30 CST 后）。
+- 车道轮转位置：不变，下一非必跑车道仍为 **`quality`**（随后 `release-infra`）。
+- `ui-triage`：本轮**未 spawn**。距上一轮结束仅 35 分钟、仓库代码在上一轮后无变化、
+  `last_ui_review_at` = 2026-10-27 23:50 CST（3.6 小时前，远低于 48 小时），重跑只会重复上一轮结论
+  （第 129 轮确立的相邻轮次规则）。`requirements` 同样未 spawn：上一轮刚产出 REQ-295..297，仍在 backlog。
+- `last_ui_review_at`：不变，**2026-10-27 23:50 CST**。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `nostalgic-bardeen-e39138`（写入隔离）。
+
+### 专家发现
+
+本轮未 spawn 审计车道；发布评估由三位专家子代理完成（见下）。
+
+### 本轮交付
+
+- **PR #567 `feat(console): flag routes that may notify the same destination twice`**（REQ-296，27 分）
+  - `@tocsin/core` 新增纯函数 `findPotentialRouteOverlaps`（`packages/core/src/route/route-overlap.ts`）：
+    空条件数组视为通配；`sourceIds`/`severities`/`statuses` 取交集；`labels` 同 key 仅在
+    「equals 值不同」或「equals 值不包含 contains 子串」时判为互斥；`titleContains`/`messageContains`
+    是子串要求，始终可能同时满足；只返回共享通知目标非空的**启用**路由对。
+  - Routes 列表表格上方提示（最多展开 3 对，其余折叠计数）；受影响行名称旁显示琥珀色「重叠 N」徽标，
+    tooltip 列出对端路由名；停用目标不参与（不会产生重复投递）。
+  - 新增中文 PRD `docs/prd/route-overlap-preview.md`；中英文案同步。
+  - 测试：core 新增 16 条单测、console 新增 2 条 UI 测试。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 4/4 包（console 209 文件 /
+    1174 tests）、`vp run -r build` 通过；PR CI `check · test · build` 8m51s +
+    `playwright · chromium` 1m26s 通过。
+  - 说明：未做浏览器实测（定向实现轮，UI 由 jsdom 测试覆盖；浏览器评审留给 ui-review 车道）。
+- **PR #568 `chore(release): v0.1.0-beta.111`**：根 `package.json` 0.1.0-beta.110 → 0.1.0-beta.111，
+  同步 `docs/release/release-checklist.md` 版本引用。
+- 依赖修复：本轮开始时会话工作树 `node_modules` 只剩 3 个顶层链接，`vp check` 报 4395 个错误
+  （含 `Cannot find type definition file for 'node'`）；`vp install --frozen-lockfile --force`
+  5.4s 重建 844 个包后恢复。
+
+### EXPERT_PANEL：发布评估
+
+三位专家结论一致：**发布**（唯一初始阻断是 CI 尚未完成，等待后满足）。
+
+- **发布经理**：区间内 6 个用户可见变更（#553 抑制创建确认、#557 Events 按通知目标筛选、#559 JSON
+  示例按原始文本、#562 批量导入 Token 视口、#563 投递批次韧性、#567 路由重叠提示），建议 prerelease
+  递增。
+- **阻断审计员**：main CI 绿、无本 routine open PR（#565 已由 docs-site routine 合并且仅改 `apps/docs`）、
+  REL-13/16/23 属外部/仓库设置项不构成回归、区间无迁移、tag 未被占用 → 通过。
+- **运维/回滚**：升级风险低；无迁移/环境变量/端口/卷变化；回滚只需换回 `0.1.0-beta.110` 镜像；
+  镜像必须包含 `77afae3` 的 Dockerfile 修正（本 tag 已包含）。
+- 决策记录：常规发布，无新增长期决策文档；三份评估摘要即本节。
+
+### 发布
+
+- 版本：**0.1.0-beta.111**，tag `v0.1.0-beta.111` → `5a89837`（main CI + E2E 均 success）。
+- Release：`Tocsin v0.1.0-beta.111`（prerelease），含镜像地址、变更、升级与回滚说明。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.111`（linux/amd64 + linux/arm64，
+  index digest `sha256:2e1cb62d617e53df6baf121241701db1908f37f26dbb4b2200916d32536d07bc`，
+  amd64 `sha256:c251b8c9…`，arm64 `sha256:d16fdf9f…`）。
+- 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.110`。
+- 时序说明：打 tag 后 docs-site routine 新开 #569（仅 `apps/docs` 文档），不影响已冻结的 tag 与镜像；
+  发布评审时点无 open PR。
+
+### 下一轮优先项
+
+1. **SEC-20**：`tls.key` 精确键 + PEM 值形态脱敏 + 两条单测（AUTO_FIX）。
+2. **ARCH-40/41**：`runDeliveryWorker` 与 session/i18n procedure 的编排收进 service。
+3. **REQ-295（27）** 事件 raw 载荷保全（forward-only 迁移，走 EXPERT_PANEL）。
+4. **DOC-95/96/58** 一批文档更正。
+5. 车道轮转 **`quality`**；`last_ui_review_at` 将在 2026-10-29 23:50 后超过 48 小时，届时 ui-triage
+   倾向 `review_now`。
+
 ## 2026-10-28（第 141 轮）
 
 - 时间：2026-10-28 00:30 CST 起，约 02:50 CST 结束（**约 2h20m，超出 75 分钟预算**：`requirements`
