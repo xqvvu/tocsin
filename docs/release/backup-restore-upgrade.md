@@ -193,6 +193,17 @@ docker compose logs --tail=100 console     # 启动日志里的 tocsin.runtime �
    列本身可以保留；下次升级会被 `0004` 的 `ensureColumn` 幂等补回并重新记录。无法确认兼容性时走第 2 种
    方式恢复备份。
 
+   另一个实例：从 `0.1.0-beta.103` 回滚到 `0.1.0-beta.102` 及更早版本时，数据库里已有
+   `0005_deliveries_destination_id_health`。该步只建覆盖索引、不改任何数据，**冷备份之后**删除
+   台账行即可：
+
+   ```sql
+   DELETE FROM schema_migrations WHERE version = '0005';
+   ```
+
+   索引本身可以保留：旧镜像不按名字引用它，其投递健康聚合反而会用上这个覆盖索引；下次升级由
+   `CREATE INDEX IF NOT EXISTS` 幂等补回并重新记录。
+
 2. **恢复备份**（数据回滚，唯一可靠方式）：按第 4 节恢复升级前的冷备份。代价是丢掉备份之后写入的全部
    数据（Event、Delivery、配置改动、session）。
 
