@@ -11,6 +11,8 @@
 | dashboard 登录或回调异常 | 确认 `BETTER_AUTH_URL` 与实际外部 URL 一致；代理后使用 HTTPS，并按多 Host/Origin 场景设置允许列表。应用不自行推断代理后的外部地址。 |
 | 数据库无法写入 | 核对 `/data` 对容器进程可写、卷挂载到预期位置、磁盘空间充足。不要通过删除 SQLite 文件尝试“重置”生产实例。 |
 
+首个 owner 抢注、登录循环、session 撤销与认证密钥轮换见[认证与账号安全](/operations/authentication)。
+
 ## Webhook 没有 Event
 
 1. 确认请求目标是告警源自己的 `/api/sources/<source-id>/webhook` URL，而不是 dashboard 页面或通用 `/api` 路径。
@@ -38,4 +40,4 @@
 Webhook 返回 `202 Accepted` 表示接入已接受。它不确认 Route 已命中，也不确认任何 Destination 已完成发送；最终结果以 Event 与 Delivery history 为准。
 :::
 
-相关页面：[快速开始与验证首条 Delivery](/guide/quick-start) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [健康检查与 Docker 限制](/operations/deploy-docker) · [可移植配置与 `secret_refs`](/operations/portable-config) · [备份与回滚](/operations/backup-restore)
+相关页面：[快速开始与验证首条 Delivery](/guide/quick-start) · [认证与账号安全](/operations/authentication) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [健康检查与 Docker 限制](/operations/deploy-docker) · [可移植配置与 `secret_refs`](/operations/portable-config) · [备份与回滚](/operations/backup-restore)

@@ -16,11 +16,13 @@ docker compose up -d --build
 curl -fsS http://localhost:3000/api/ready
 ```
 
-`/api/ready` 返回成功后，先在本机打开 `http://localhost:3000/setup` 并创建 owner。第一个注册用户成为 owner；在首次 setup 完成前，不要把实例暴露给公网。Compose 默认使用名为 `tocsin-data` 的持久卷。
+`/api/ready` 返回成功后，先在本机打开 `http://localhost:3000/setup` 并创建 owner。第一个注册用户成为 owner，后续注册会被拒绝；在首次 setup 完成前，不要把实例暴露给公网。Compose 默认使用名为 `tocsin-data` 的持久卷。
 
 ::: warning 保存认证密钥
 示例通过当前 shell 注入密钥。请将生成的值保存到受保护的部署环境或 secret store，以便容器重建后继续使用；轮换密钥会使现有 dashboard session 失效。
 :::
+
+首个 owner、登录会话与密码恢复边界见[认证与账号安全](/operations/authentication)。
 
 ## 建立投递路径
 
@@ -59,4 +61,4 @@ curl -i -X POST 'http://localhost:3000/api/sources/<source-id>/webhook' \
 告警源 Token 可放在 `Authorization: Bearer ...` 或 `X-Tocsin-Source-Token` 请求头中。也可使用该告警源配置的 Tocsin 侧共享密钥，通过 `X-Tocsin-Provider-Secret` 请求头认证；当前实现接受有效 Token 或有效共享密钥，不要求两者同时提供。Webhook 不使用 dashboard 登录 session。
 :::
 
-下一步：[查看各 Provider 的载荷契约](/integrations/providers) · [配置并测试通知目标](/integrations/destinations) · [理解事件、路由和抑制](/guide/concepts) · [掌握路由匹配规则](/guide/routes) · [排查接入或投递问题](/operations/troubleshooting)
+下一步：[查看各 Provider 的载荷契约](/integrations/providers) · [配置并测试通知目标](/integrations/destinations) · [理解事件、路由和抑制](/guide/concepts) · [掌握路由匹配规则](/guide/routes) · [管理 owner 与登录会话](/operations/authentication) · [排查接入或投递问题](/operations/troubleshooting)
