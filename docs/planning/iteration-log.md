@@ -67,6 +67,9 @@
 - 时序说明：打 tag 后 docs-site routine 新开 #569（仅 `apps/docs` 文档），不影响已冻结的 tag 与镜像；
   发布评审时点无 open PR。
 - Obsidian 同步：`obsidian-vault` skill 在本会话不可用，按 AGENTS.md 允许的 fallback 跳过。
+- 工作树回收：回收 1 个已合并 session worktree（`loving-mcclintock-0a64f2`，18M），删除 3 个已合并
+  `agent/*` 分支；本 session 工作树删除 `node_modules`/`.output`/`.vite` 后 967M → 18M。
+  `.claude/worktrees` 总量 1.0G → 702M，其中 674M 属同期运行中的 docs-site session（不在回收范围）。
 
 ### 下一轮优先项
 
