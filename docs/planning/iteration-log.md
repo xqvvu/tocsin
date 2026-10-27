@@ -87,6 +87,13 @@
 - 补建检查：最近 10 个 tag 与 `gh release list` 一一对应，无需补建。
 - Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
 
+### 工作树清理
+
+- 回收 2 个：`affectionate-meninsky-f2ee1c`（已合并会话）与专用的 `agent-iteration`；
+  跳过 `distracted-bhabha-bd305a`（`.github/workflows/ci.yml` 与 `.node-version` 有真实未提交改动）。
+- `.claude/worktrees` 从 **984M** 降到 **24M**；本会话 worktree 已删除 `node_modules` 与构建产物。
+- 会话结束前删除并发锁；本地已合并的 `agent/*` 分支按 PR 状态清理 4 个。
+
 ### 下一轮优先项
 
 1. **UI-81（24）**：中文控制台半翻译术语统一（`zh-Hans.json` 11 个键 + 守卫测试）。
