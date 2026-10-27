@@ -2,6 +2,70 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 135 轮）
+
+- 时间：2026-10-27 13:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `9c54ba6`（第 134 轮日志提交）；main CI success；无 open PR。
+- 类型：**full-audit（ui-review 触发）**。全量审计时间戳：**2026-10-27 13:26 CST**（距上次
+  06:40 约 6h46m，按第 1.5 步展开全量）。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`docs-drift`；`ui-triage` 判定 `review_now`
+  后，第三个名额由 `ui-review` 的浏览器验证承担（未再启动额外车道）。
+- `ui-triage` 决策：**`review_now`**（限缩为浏览器验证，不做发现扫荡）——`last_ui_review_at`
+  = 06:45 CST（6h41m < 48h）；自评审以来 3 个真实 UI 合并（`8bc84bb` 设置页顺序、`a93c3f9`
+  解析失败兜底标题、`273766f` 静默到期徽标），其中后两个未做浏览器实测；42 条 `UI-*`
+  属数量饱和，未单独作为触发理由。聚焦 Events 页顶栏静默徽标在 390×844 的溢出风险。
+- `last_ui_review_at`：**2026-10-27 13:55 CST**（本轮浏览器实测后更新）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `dazzling-hermann-017c2b`（会话写入隔离）。依赖：会话工作树 `node_modules` 存在但缺 pnpm
+  链接（`@rolldown/plugin-babel`），`vp install --frozen-lockfile --force` 5s 重建后恢复。
+
+### 专家发现
+
+- **requirements**（5 条新候选，均已代码核实，见 backlog REQ-279..283）：
+  - **REQ-279（25）** 事件列表 24h 高频指纹排行：`listOperations` 无聚合
+    （`operations.service.ts:35-70`、`history.repository.ts:92-110`），但两个指纹/来源索引
+    （`migrate/schema.ts:246-255`）已能支撑，无迁移；方向见 `post-mvp-planning.md:138-157`。
+  - **REQ-280（26）** Settings 一键下载脱敏诊断包：三块只读面板各自为政
+    （`settings-page.tsx:37-43`），证据包只覆盖单条记录（`evidence-bundle.ts:27-34`）。
+  - **REQ-281（26）** 后台标签页失败计数写入 `document.title`：标题固定
+    （`routes/__root.tsx:22-27`），失败信号只在页头徽标（`delivery-failure-indicator.tsx:19-44`）。
+  - **REQ-282（22）** 投递退避参数可配置：默认硬编码 30s/15min
+    （`delivery-execution.ts:77-78`），容器不传 `backoff`（`container.ts:351-369`）。
+  - **REQ-283（20）** 目标级语言/时区：渲染只用全局设置（`delivery-worker.service.ts:88`）。
+- **docs-drift**（6 条 AUTO_FIX，见 backlog DOC-88..93，全部读过代码核实）：
+  迁移 step 数量在 `sqlite-store.md:303-307`、`backup-restore-upgrade.md:52-55,291`、
+  `mvp-rc-checklist.md:104` 仍停在 0004 及以前（实际 `migrate/plan.ts:4-14` 有 0001–0005）；
+  `docker-production-deployment.md:76-78` 与 `docker-compose.yml:16,24` 对
+  `BETTER_AUTH_URL` 默认值矛盾（有运维风险）；`destination-template-engine.md:3-4` 仍称
+  Email HTML 不在范围；`mvp-rc-checklist.md:27-29,36-38,204-206` 漏记 beta.106/107 能力。
+- **ui-review（浏览器验证）**：隔离实例 `localhost:6193` + 全新临时 SQLite，写入一条非
+  catch-all、now-10min → now+15min 的静默规则，使徽标同时携带「生效中 + 即将到期」两段文案：
+  1440×900 两个 span `display: block`、`aria-label` 完整，`documentElement.scrollWidth=1440=innerWidth`，
+  header `scrollWidth=clientWidth=1184`；390×844 两个 span `display: none`（只剩图标）、
+  `aria-label` 不变，`scrollWidth=390=innerWidth`，header `scrollWidth=clientWidth=390`；
+  无控制台 error。截图 `/tmp/tocsin-r135/events-1440.png`、`events-390.png`；dev server 已停止、
+  临时库已删除。
+
+### 本轮交付
+
+- **PR #542 `feat(console): collapse the active-suppression badge on phones`**：
+  - `active-suppression-indicator.tsx`：主标签与到期后缀改为 `hidden sm:inline`，链接加
+    `aria-label` 携带完整文案（含到期数量），与暂停/失败徽标一致；`title` 仍展示规则名列表。
+  - 测试 +1（收缩 span 数量与可访问名称），console 1139 全绿；`vp check` 0 error（23 条既有
+    warning）；`vp fmt --check` 通过；`vp run -r build` 4/4。
+  - PRD `docs/prd/compact-header-indicators.md`；backlog：新增 UI-82 → `shipped`、REQ-279..283、
+    DOC-88..93。
+- 自查：`code-review`（low，本上下文内逐角度）无留存发现。
+- 本轮未做 DOC-88..93 的文档更正：6 条均属 AUTO_FIX，但与 UI 切片不属同一关注点，且剩余
+  时间要留给 PR CI 与发布评估；已按优先级写入 backlog，下一轮可直接批量交付。
+
+### 下一轮优先项
+
+1. **REQ-10（27）**：Event/Delivery 三处互链（投递列表事件列、投递详情、事件投递表）。
+2. **DOC-88..93**：一次 `docs(release): align migration steps and deployment defaults` 批量更正。
+3. **REQ-280 / REQ-281（26）**：诊断包下载、后台标签页失败计数。
+4. 车道轮转：**`architecture`**（本轮已跑 requirements / ui-triage / docs-drift + ui-review）。
+
 ## 2026-10-27（第 134 轮）
 
 - 时间：2026-10-27 12:39 CST 起。
