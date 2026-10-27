@@ -2,6 +2,8 @@
 
 Tocsin 的持久状态集中在 SQLite 数据库中，Docker Compose 默认文件为 `/data/tocsin.sqlite`。数据库里包含告警源共享密钥、通知目标凭证、配置、dashboard 用户与会话等，因此备份文件应视同 secret 管理：限制访问、加密传输与存储，并设置受控保留期。
 
+如果目标只是迁移告警源、通知目标、路由、飞书应用与基础设置，可使用[可移植配置参考](/operations/portable-config)导出 TOML 或 JSON。它不会包含历史事件、投递、告警静默、用户、session 或 Source Token，因此不能替代数据库备份。
+
 ## 冷备份
 
 最容易审计的方式是在维护窗口停止应用，再复制数据库文件。以下示例将数据库从 Compose 服务复制到主机；先确认本机已安装 `sqlite3`。
