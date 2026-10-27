@@ -2,6 +2,99 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 134 轮）
+
+- 时间：2026-10-27 12:39 CST 起。
+- 基线：本轮开始时 `origin/main` @ `4ea86a5`（第 133 轮日志提交）；CI success；无 open PR。
+- 类型：**需求切片 + 发布（非 full-audit）**。全量审计仍为 **2026-10-27 06:40 CST**（距本轮约
+  6 小时，处于闸门边缘）；backlog 有大量 ≥27 分候选，按第 1.5 步继续，不重跑全量审计。
+- 车道（并发 ≤3）：`requirements`（窄 brief：只复核 4 条 28 分候选 + 最多 1 条新候选，12 分钟）、
+  `ui-triage`（8 分钟）、`release-infra`（15 分钟，轮转位）。
+- `ui-triage` 决策：**`defer`**（`last_ui_review_at` = 2026-10-27 06:45 CST，仅 5h55m，
+  48h 门槛未到；自评审以来真实 UI 合并 2 个 < 3；42 条 `UI-*` candidate 已有截图/代码证据，
+  缺的是实现而不是发现）。`last_ui_review_at`：**2026-10-27 06:45 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR、镜像构建都在会话工作树
+  `adoring-curran-650897`。
+- 浏览器验证：未起 dev server（改动为既有徽标内的文案追加，组件测试覆盖；已在 PR 与发布说明
+  中如实标注「未做浏览器实测」）。
+
+### 专家发现
+
+- **requirements**（`file:line` 均代码核实）：
+  - **REQ-110** 证据成立、单轮可交付：`suppression-summary.ts:52-80` 只产出
+    `activeCount`/`catchAllCount`/`names`；指示器只消费这两个计数
+    （`active-suppression-indicator.tsx:28-45`），挂载于 `shell/dashboard-header.tsx:27`。
+  - **REQ-138** 证据成立但改动面更大：覆盖率只看 `route.enabled`
+    （`destination-route-coverage.ts:11-29`），需给 Destinations 页与 loader 新增 sources 查询
+    （`destinations-page.tsx:50-56`、`_dashboard.destinations.tsx:14-16`），并复用
+    `route-source-reachability.ts:19-37` 重写语义。
+  - **REQ-177** 只能诚实表述为「最早可清理时间」：清理是 intake 有界批 + 非阻塞 sweep
+    （`intake.service.ts:133-136,236-238`），不是定时任务，不建议本轮。
+  - **REQ-10** 三处互链仍全是纯文本（`delivery-event-cell.tsx:24-25,41-42`、
+    `delivery-summary-tab.tsx:34-37`、`event-detail-deliveries-table.tsx:68-74`）；已有三个
+    可照抄先例（`suppression-hits-table.tsx:84-92` 等）。requirements 推荐它为本轮首选。
+  - **REQ-15 纠偏**：原证据 `settings.ts:5-9` 不存在，能力已由 NEW-AT #338 交付
+    （`settings-storage-panel.tsx`、`SqliteStore.storageHealth()` `store.ts:76,156`）→ 关闭。
+  - **编排取舍**：REQ-110 评分 28 > REQ-10 的 27，且改动面最小、已先落实现，本轮交付 REQ-110；
+    REQ-10 列为下一轮首选。新候选 **REQ-278**（26，同指纹历史 5 条上限无出口）已登记。
+- **ui-triage**：两条已知落差（`destination-actions.tsx:74` 操作列 390px 挤压、
+  `destinations-empty-state.tsx:12-21` 空态无下一步动作）已在 backlog（UI-30/51/37），不新开条目。
+- **release-infra**：5 项逐条核实**无漂移**——E2E workflow 已存在（`.github/workflows/e2e.yml:16-18`）；
+  provider fixtures 与 provider 贡献指南确实缺失；CI 门禁描述与代码一致；98 个 tag 与 98 条
+  Release 一一对应。仅 3 条措辞级文档澄清建议，低于实现门槛，未做。
+
+### 本轮交付
+
+- **PR #539 `feat(console): flag suppressions that expire within 30 minutes`**
+  （rebase 合并 `273766f`、`0281b42`）：
+  - `summarizeActiveSuppressions` 增 `expiringSoonCount`，阈值常量
+    `SUPPRESSION_EXPIRING_SOON_MS` = 30 分钟；只统计当前生效且 `endsAt - now <= 30 分钟` 的规则。
+  - 顶栏徽标追加「{count} 条 30 分钟内到期」/「{count} expiring within 30 min」；全量静默标签
+    同样追加。时间戳不可解析时保持静默，不误报。
+  - 测试 +3（模型边界/状态 1、组件两种标签形态 2），console **1138 全绿**；`vp check` 0 error
+    （23 条既有 warning）；`vp run -r build` 4/4。
+  - PRD `docs/prd/suppression-expiring-soon.md`；backlog：REQ-110 → `shipped`、
+    REQ-15 → `shipped`（证据过期）、新增 REQ-278。
+- 自查：`code-review` skill（low）无留存发现；自查中把中文后缀从「其中 {count} 条…」改为
+  「{count} 条…」，避免 catch-all 标签下「其中」指代不清。
+
+### 发布评估与发布记录
+
+- 三位发布专家独立评估，**一致放行**：
+  - **发布经理**：`v0.1.0-beta.106..origin/main` 唯一用户可见提交为 #539；建议 `0.1.0-beta.107`；
+    `v0.1.0-beta.107` 未被占用。
+  - **阻断审计**：5 项 PASS（`0281b42a` 的 CI 与 E2E 均 success；无 open PR；区间无 migration；
+    `blocked-autonomous` 仅 REL-13/16/23 仓库治理项）。
+  - **运维/回滚**：风险 **LOW**；无 schema/env/依赖/启动参数变化；回滚只需换回 `0.1.0-beta.106`，
+    无需数据库操作。
+- PR #540 `chore(release): v0.1.0-beta.107`（rebase 合并 `c4d6aac`）；确认 `c4d6aac` 的 main CI
+  两项均 success 后才打 tag。
+- tag `v0.1.0-beta.107` @ `c4d6aac`；GitHub Release 为 prerelease，body 非空（硬校验通过）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.107`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:0ec7e56955422fbf7ffbec3cc40738d705e9d7bc3e2877a5fc1de3420953ca54`，
+  `--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.106`。
+- 补建检查：release-infra 核实 98 个 tag 与 98 条 Release 一一对应；本轮后为 99 对，无缺口。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用（其 SKILL.md 硬编码 WSL 路径，在 macOS
+  无效），按 AGENTS.md 允许的 fallback 跳过。
+
+### 工作树清理
+
+- 会话回收（第 10.2 步）：`list_sessions` 里 96 个候选，实际只回收 **1 个**（`great-cori-b6f45e`，
+  PR #536，工作区干净）；另 38 个候选目录 app 已提前回收；跳过 `distracted-bhabha-bd305a`
+  （有真实未提交改动）。`git worktree prune` 后只剩 2 个目录。
+- 专用工作树（第 10.3 步）：删除 `agent-iteration`（含本轮 `node_modules`，634M）与并发锁；
+  `.claude/worktrees` **1.3G → 720M**，收尾删除本会话 `node_modules` / `.output` 后进一步下降。
+- `agent/*` 分支按 PR 状态清理：`agent/suppression-expiring-soon`、`agent/release-0-1-0-beta-107`
+  均已 MERGED；本地分支因 rebase 合并与 origin 无祖先关系，按日志惯例保留到会话结束。
+
+### 下一轮优先项
+
+1. **REQ-10（27）**：Event/Delivery 三处互链（投递列表事件列、投递详情、事件投递表）。
+2. **UI-79（26）**：撤销其他会话的确认框显示影响数量、零会话禁用时说明原因。
+3. **SEC-37（25）/ SEC-38（21）**：仍待 EXPERT_PANEL。
+4. 车道轮转：**`docs-drift`**（本轮已跑 requirements / ui-triage / release-infra）。
+
 ## 2026-10-27（第 133 轮）
 
 - 时间：2026-10-27 11:27 CST 起。
