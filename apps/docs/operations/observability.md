@@ -14,7 +14,7 @@ Tocsin 是单实例、单进程服务。运行日志只写 stdout/stderr：不�
 | 变量 | 取值 | 默认 | 行为 |
 | --- | --- | --- | --- |
 | `TOCSIN_LOG_FORMAT` | `auto` / `json` / `text` | `auto` | `auto` 在生产构建输出 JSON Lines，在开发模式输出带颜色的文本。 |
-| `TOCSIN_LOG_LEVEL` | `trace` / `debug` / `info` / `warning` / `error` / `fatal` / `off` | `info` | 低于阈值的记录被丢弃；`off` 关闭 `tocsin.*` 业务日志。 |
+| `TOCSIN_LOG_LEVEL` | `trace` / `debug` / `info` / `warning` / `error` / `fatal` / `off` | `info` | 低于阈值的记录被丢弃；`off` 关闭 `tocsin.*` 业务日志，LogTape 自身的 meta 告警仍可能输出。 |
 
 - Compose 在生产模式下显式传入 `info` / `auto`，见 [Docker 生产部署](/operations/deploy-docker#运行时配置)。
 - 设置页「运行时与生效参数」里的「日志格式」显示配置原值。`auto` 不告诉你当前最终输出哪种格式；生产镜像下 `auto` 即 JSON Lines。
@@ -30,7 +30,7 @@ Tocsin 是单实例、单进程服务。运行日志只写 stdout/stderr：不�
 每行一个 JSON 对象：
 
 ```json
-{"@timestamp":"2026-10-28T03:54:31.000Z","level":"INFO","message":"Delivery d-123 succeeded via feishu","logger":"tocsin.delivery","properties":{"requestId":"7f3c0d2e-…","deliveryId":"d-123","attemptNumber":1,"eventId":"e-123","sourceId":"s-123","destinationId":"dest-123","destinationKind":"feishu","responseStatus":200}}
+{"@timestamp":"2026-10-28T03:54:31.000Z","level":"INFO","message":"Delivery d-123 succeeded via feishu","logger":"tocsin.delivery","properties":{"deliveryId":"d-123","attemptNumber":1,"eventId":"e-123","sourceId":"s-123","destinationId":"dest-123","destinationKind":"feishu","responseStatus":200}}
 ```
 
 | 字段 | 含义 |
