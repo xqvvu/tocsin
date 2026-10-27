@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { createSqliteDatabase } from "#/infra/sqlite/connection";
 import { SqliteRepositoryContext } from "#/infra/sqlite/context";
-import { SqliteMigrationError } from "#/infra/sqlite/errors";
+import { SqliteMigrationCompatibilityError, SqliteMigrationError } from "#/infra/sqlite/errors";
 import {
   defineSqliteMigration,
   getAppliedMigrationVersions,
@@ -683,7 +683,7 @@ describe("sqlite schema plan", () => {
         })
         .execute();
 
-      await expect(migrateSqliteDatabase(db)).rejects.toThrow(SqliteMigrationError);
+      await expect(migrateSqliteDatabase(db)).rejects.toThrow(SqliteMigrationCompatibilityError);
     } finally {
       await db.destroy();
     }
