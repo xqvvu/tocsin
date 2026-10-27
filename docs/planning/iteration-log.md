@@ -2,6 +2,77 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 131 轮）
+
+- 时间：2026-10-27 09:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `0a0b35d`（第 130 轮日志提交）；CI success；无 open PR。
+- 类型：**既有优先项切片 + 小修复（非 full-audit）**。最近全量审计为 2026-10-27 06:40 CST，距本轮
+  2h46m < 6h；backlog 有第 130 轮列出的「下一轮优先项」，按第 1.5 步不展开全量审计。
+- 全量审计时间戳：**2026-10-27 06:40 CST（未变）**；距上次约 2h46m。
+- 车道：`requirements` + `ui-triage` + `security-exposure`（轮转车道；自第 124 轮未跑）。
+- `ui-triage` 决策 **`defer`**：`last_ui_review_at` = 2026-10-27 06:45 CST，距本轮 2h41m < 48h；
+  自评审以来 UI 路径仅 1 个实质合并（#522 / `a93c3f9`）；新未解决 UI 发现 1 条（UI-81）；三项
+  强信号均不成立。
+- `last_ui_review_at`：**2026-10-27 06:45 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `inspiring-panini-08f8e7`。
+- 浏览器验证：Q-281 只改投递文案；REQ-271 用真实 dev 进程 + 临时 SQLite 库验证（见下），
+  未做 UI 截图。
+
+### 专家发现
+
+**requirements（窄化 brief：核实在办项 + 方向 4 / RC gate 去重）**
+
+- REQ-271 在 main 上仍成立：`apps/console/src/server.ts:22-27` 顶层 `await` 无 try/catch；
+  `apps/console/src/routes/api/ready.ts:29-49` 只有运行期 checks；
+  `apps/console/src/server/runtime/health.types.ts:7-14` 无失败原因字段；
+  `apps/console/src/server/runtime/container.ts:500-505` 永久缓存失败 promise。
+- Q-281 在 main 上成立，且比原描述更严重：FastGPT 解析失败事件以 `status: "unknown"` 入库
+  （`apps/console/src/server/intake/intake.service.ts:209`），仍走 FastGPT 卡
+  （`packages/destinations/src/feishu/payload.ts:22`），正文误称「模型已恢复响应」。backlog 原归因
+  的 Uptime Kuma 维护事件其实不会选中该卡。
+- UI-81 在 main 上成立：`apps/console/src/i18n/messages/zh-Hans.json:90,146-148,167,192,195,203,208,663,771`
+  等键仍混用 Raw payload / Worker / raw debug；留待下一轮。
+- 方向 4 与 RC 开放 gate **无新候选**：fingerprint 聚合、绝对时间窗、筛选导出、失败分类、E2E、
+  provider fixture、抑制汇总等均已有 backlog id。
+
+**security-exposure（轮转车道）**
+
+- 无 HIGH。脱敏 denylist 已覆盖 `appSecret` / `clientSecret` / `apiSecret` / `privateKey` /
+  `X-Auth-Token`（`packages/core/src/redaction.ts:11-83`）；四类 destination 的脱敏测试均按
+  `DestinationKindSchema.options` 参数化；`xqvvu/vane` 只剩有意的 ACR 镜像前缀与历史 planning 记录。
+- MEDIUM：`apps/console/src/infra/sqlite/repositories/destination/destination.helpers.ts:136` 的
+  编辑草稿把 URL 内嵌密码带回浏览器（`server/destinations/destination.service.ts:177`），与
+  AGENTS「password 不进 query data」冲突；当前是文档化取舍，建议下一轮交 EXPERT_PANEL 做
+  preserve-on-blank。
+- LOW：`packages/core/src/redaction.ts:82-83` 的 key 后缀不含 `subscriptionkey`，
+  `Ocp-Apim-Subscription-Key` 这类厂商前缀 header 只能靠值形状脱敏；建议 EXPERT_PANEL。
+
+### 本轮交付
+
+- **PR #528 `fix(destinations): stop claiming recovery for unknown FastGPT probe status`**
+  - 三态渲染 FastGPT 探测结论；新增 `probeUnknown` 中英文案与模板静态路径；三态 × 双语参数化测试。
+  - 验证：`vp check` 0 error；`vp -C packages/destinations test run` 17 files / 189 tests；
+    `vp run -r build` 通过。
+- **PR #529 `feat(console): expose machine-readable startup failure codes on /api/ready`**
+  - `/api/ready` 503 新增 `code`（`migration_unknown` / `migration_failed` /
+    `store_unavailable` / `worker_unavailable`）与固定安全 `message`；启动期存储失败只改变探针响应，
+    应用请求仍按原错误失败。
+  - 新增 `SqliteMigrationCompatibilityError`、`server/runtime/readiness.ts`、
+    `server/runtime/startup-failure.ts` 及测试；PRD
+    `docs/prd/ready-startup-failure-codes.md`；更新升级/回滚文档第 5、6 节。
+  - 真实进程验证：正常库 `/api/ready` 200；注入 `9999` 台账行后 503
+    `{"code":"migration_unknown",...}`，同进程 `/api/health` 与 `/` 仍 500。
+  - 验证：`vp check` 0 error；`vp run -r test` 4/4（console 203 files / 1126 tests）；
+    `vp run -r build` 4/4。
+
+### 下一轮优先项
+
+1. **UI-81（24）**：中文控制台半翻译术语统一（`zh-Hans.json` 11 个键 + 守卫测试）。
+2. **UI-79（26）/ UI-78（23）**：撤销会话确认框影响数量、390px 会话表。
+3. `security-exposure` 的 M1/L1 交 EXPERT_PANEL（URL 密码草稿、subscription-key 脱敏）。
+4. 车道轮转：下一轮非必跑车道为 **`release-infra`**（RC 剩余 gate：E2E 接入 CI、provider fixture）。
+
 ## 2026-10-27（第 130 轮）
 
 - 时间：2026-10-27 08:31 CST 起。
