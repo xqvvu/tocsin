@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { EventRecord, SourceSummary } from "@tocsin/core";
+import type { EventRecord, SourceSummary, Suppression } from "@tocsin/core";
 
 import { ConfigurationDialogContent } from "#/components/common/configuration-dialog-content";
 import { Button } from "#/components/ui/button";
@@ -23,6 +23,7 @@ import {
   suppressionDefaultsFromLabel,
   suppressionDefaultsFromText,
 } from "#/features/suppressions/model/suppression-form";
+import { SuppressionCreatedNotice } from "#/features/suppressions/ui/suppression-created-notice";
 import {
   CreateSuppressionForm,
   type SuppressionFormSubmission,
@@ -67,6 +68,7 @@ export function SuppressionFromEventDialog({
   const timeZone = useTimeZone() ?? fallbackTimeZone;
   const [open, setOpen] = React.useState(false);
   const [pending, setPending] = React.useState(false);
+  const [created, setCreated] = React.useState<Suppression | null>(null);
   const { createSuppression, invalidateSuppressions } = useSuppressionMutations();
   const sourcesQuery = useQuery({ ...sourcesQueryOptions(), enabled: open });
   const destinationsQuery = useQuery({ ...destinationsQueryOptions(), enabled: open });
@@ -124,10 +126,12 @@ export function SuppressionFromEventDialog({
     setPending(true);
 
     try {
-      await createSuppression(input);
+      const suppression = await createSuppression(input);
       await invalidateSuppressions();
       toast.success(t("suppressions.fromEvent.toast.success"));
-      setOpen(false);
+      // Same confirmation contract as the list rows: the dialog keeps the
+      // created rule, its window, and a link instead of closing on the toast.
+      setCreated(suppression);
     } catch (error) {
       toast.error(t("suppressions.fromEvent.toast.failed"), {
         description: error instanceof Error ? error.message : String(error),
@@ -142,6 +146,12 @@ export function SuppressionFromEventDialog({
       open={open}
       onOpenChange={(nextOpen) => {
         if (!pending) {
+          // The dialog mounts with the page, so a previous success notice must
+          // not greet the operator the next time they open it.
+          if (nextOpen) {
+            setCreated(null);
+          }
+
           setOpen(nextOpen);
         }
       }}
@@ -199,7 +209,9 @@ export function SuppressionFromEventDialog({
                 })}
         </p>
 
-        {loadError ? (
+        {created ? (
+          <SuppressionCreatedNotice suppression={created} onDone={() => setOpen(false)} />
+        ) : loadError ? (
           <p className="text-destructive text-xs">{t("suppressions.fromEvent.loadFailed")}</p>
         ) : ready ? (
           <CreateSuppressionForm

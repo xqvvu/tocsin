@@ -2,9 +2,15 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import type { DestinationListItem, RouteDefinition, SourceSummary } from "@tocsin/core";
+import type {
+  DestinationListItem,
+  RouteDefinition,
+  SourceSummary,
+  Suppression,
+} from "@tocsin/core";
 
 import { SuppressionFromRouteDialog } from "#/features/suppressions/ui/suppression-from-route-dialog";
 import { AppIntlProvider } from "#/i18n/provider";
@@ -12,6 +18,38 @@ import { AppIntlProvider } from "#/i18n/provider";
 const state = vi.hoisted(() => ({
   createSuppression: vi.fn<(input: unknown) => Promise<unknown>>(async (_input: unknown) => ({})),
   invalidateSuppressions: vi.fn<() => Promise<void>>(async () => {}),
+}));
+
+/** The instant the dialog is opened; remaining time is derived against it. */
+const NOW = new Date("2026-10-27T00:30:00.000Z");
+
+const createdSuppression: Suppression = {
+  id: "suppression-created",
+  name: "Silence: Critical alerts",
+  kind: "silence",
+  enabled: true,
+  reason: null,
+  matcher: {
+    sourceIds: ["source-grafana"],
+    destinationIds: ["destination-ops"],
+    severities: ["critical"],
+    statuses: [],
+    fingerprints: [],
+    labels: [],
+    titleContains: [],
+    messageContains: [],
+  },
+  startsAt: "2026-10-27T00:00:00.000Z",
+  endsAt: "2026-10-27T02:00:00.000Z",
+  createdBy: "admin@example.test",
+  createdAt: "2026-10-27T00:00:00.000Z",
+  updatedAt: "2026-10-27T00:00:00.000Z",
+};
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, params }: { children: ReactNode; params?: { suppressionId?: string } }) => (
+    <a href={`/suppressions/${params?.suppressionId ?? ""}`}>{children}</a>
+  ),
 }));
 
 const sources: SourceSummary[] = [
@@ -73,6 +111,7 @@ describe("suppression from route dialog", () => {
         mutations: { retry: false },
       },
     });
+    state.createSuppression.mockResolvedValue(createdSuppression);
   });
 
   afterEach(() => {
@@ -85,7 +124,7 @@ describe("suppression from route dialog", () => {
   it("prefills the route's rule and targets and saves a route-scoped rule", async () => {
     render(
       <QueryClientProvider client={queryClient}>
-        <AppIntlProvider locale="en-US">
+        <AppIntlProvider locale="en-US" now={NOW}>
           <SuppressionFromRouteDialog route={route} />
         </AppIntlProvider>
       </QueryClientProvider>,
@@ -121,6 +160,17 @@ describe("suppression from route dialog", () => {
       },
     });
     await waitFor(() => expect(state.invalidateSuppressions).toHaveBeenCalledOnce());
+
+    // Success keeps the dialog on the created rule instead of closing it.
+    expect(await screen.findByText("Suppression rule created")).toBeTruthy();
+    expect(screen.getByText(/1h 30m remaining/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "View rule" }).getAttribute("href")).toBe(
+      "/suppressions/suppression-created",
+    );
+    expect(screen.queryByRole("button", { name: "Create suppression" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByText("Suppression rule created")).toBeNull());
   });
 
   it("keeps the dialog open and shows the error when saving fails", async () => {
@@ -128,7 +178,7 @@ describe("suppression from route dialog", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <AppIntlProvider locale="en-US">
+        <AppIntlProvider locale="en-US" now={NOW}>
           <SuppressionFromRouteDialog route={route} />
         </AppIntlProvider>
       </QueryClientProvider>,

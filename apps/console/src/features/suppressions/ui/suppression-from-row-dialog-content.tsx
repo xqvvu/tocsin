@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { DestinationListItem } from "@tocsin/core";
+import type { DestinationListItem, Suppression } from "@tocsin/core";
 
 import { ConfigurationDialogContent } from "#/components/common/configuration-dialog-content";
 import { DialogDescription, DialogHeader, DialogTitle } from "#/components/ui/dialog";
@@ -11,6 +11,7 @@ import { destinationsQueryOptions } from "#/features/destinations/api/destinatio
 import { sourcesQueryOptions } from "#/features/sources/api/source.queries";
 import { useSuppressionMutations } from "#/features/suppressions/api/suppression.mutations";
 import type { SuppressionFormValues } from "#/features/suppressions/model/suppression-form";
+import { SuppressionCreatedNotice } from "#/features/suppressions/ui/suppression-created-notice";
 import {
   CreateSuppressionForm,
   type SuppressionFormSubmission,
@@ -62,6 +63,7 @@ export function SuppressionFromRowDialogContent({
   onSaved: () => void;
 }) {
   const timeZone = useTimeZone() ?? fallbackTimeZone;
+  const [created, setCreated] = React.useState<Suppression | null>(null);
   const { createSuppression, invalidateSuppressions } = useSuppressionMutations();
   const sourcesQuery = useQuery(sourcesQueryOptions());
   const destinationsQuery = useQuery(destinationsQueryOptions());
@@ -83,10 +85,13 @@ export function SuppressionFromRowDialogContent({
     onPendingChange(true);
 
     try {
-      await createSuppression(input);
+      const suppression = await createSuppression(input);
       await invalidateSuppressions();
       toast.success(copy.toastSuccess);
-      onSaved();
+      // Keep the dialog open on the created rule: the operator triaging here
+      // needs the generated window and a way back to the rule, not a toast
+      // that disappears before they can check either.
+      setCreated(suppression);
     } catch (error) {
       toast.error(copy.toastFailed, {
         description: error instanceof Error ? error.message : String(error),
@@ -106,7 +111,9 @@ export function SuppressionFromRowDialogContent({
         {copy.context}
       </p>
 
-      {loadError ? (
+      {created ? (
+        <SuppressionCreatedNotice suppression={created} onDone={onSaved} />
+      ) : loadError ? (
         <p className="text-destructive text-xs">{copy.loadFailed}</p>
       ) : ready ? (
         <CreateSuppressionForm
