@@ -2,6 +2,91 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 143 轮）
+
+- 时间：2026-10-28 04:42 CST 起，约 05:12 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `4ffad59`（main CI success，无本 routine 的 open PR）。
+- 类型：**skip（廉价闸门）+ 定向实现 + 发布**。距上次全量审计 2026-10-28 00:30 CST 约 4h12m
+  （< 6 小时），按第 1.5 步不展开全量审计；backlog 有达到门槛的 `candidate`（REQ-294，27 分），
+  因此按上一轮「下一轮优先项」做定向实现。
+- 全量审计时间戳：不变，仍为 **2026-10-28 00:30 CST**（下一轮最早 06:30 CST 后）。
+- 车道轮转位置：不变，下一非必跑车道仍为 **`quality`**（随后 `release-infra`）。
+- `ui-triage`：本轮**未 spawn**。距上一轮结束约 22 分钟，仓库代码自上一轮后无变化（本轮开始时
+  main 只多出 planning 提交），`last_ui_review_at` = 2026-10-27 23:50 CST（约 4.9 小时前，远低于
+  48 小时），重跑只会重复相邻轮次结论（第 129 轮规则）。`requirements` 同样未 spawn：
+  上一轮刚产出 REQ-295..297 且仍在 backlog，本轮直接续做已 `planned` 的 REQ-294。
+- `last_ui_review_at`：不变，**2026-10-27 23:50 CST**。
+- 范围取舍：SEC-20（22）与 ARCH-40/41（20/18）未做，留作下一轮小修复；本轮按
+  「1 需求切片 + 至多 1 小修复」只交付需求切片。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `brave-shannon-9efcf1`（写入隔离）。
+
+### 专家发现
+
+本轮未 spawn 审计车道；发布评估由三位专家子代理完成（见下）。
+
+### 本轮交付
+
+- **PR #573 `feat(console): drill from event delivery counts into the filtered delivery list`**
+  （REQ-294，27 分）
+  - `DeliveryListQuery.eventId`：`listDeliveries` 与 `countDeliveries` 使用同一精确谓词，
+    复用既有 `idx_deliveries_event_id`，无迁移
+    （`apps/console/src/infra/sqlite/repositories/history/history.repository.ts`）。
+  - `ListOperationsInputSchema` / `ListOperationsInput` 新增 delivery-only `eventId`，service 透传；
+    Events 列表不受影响。
+  - URL 新增 `eventId`：计入 `hasOperationFilters`、包含在共享 `clearedOperationSearch` 中、
+    变更时两个列表回到第 1 页、空值不写入 URL
+    （`apps/console/src/features/operations/model/operation-search.ts`）。
+  - Events 列表非零投递徽标链接到 `/deliveries?eventId=…&deliveryState=…`；0 与「未匹配路由」
+    保持不可点击（`apps/console/src/features/events/ui/event-delivery-counts-cell.tsx`）。
+  - Deliveries 页新增可清除的「事件」chip；中英文案同步；新增中文 PRD
+    `docs/prd/delivery-event-filter.md`。
+  - 测试：仓储事件过滤（页面 + total、状态组合、未知事件、无过滤）、service 透传、
+    URL 状态与 chip、徽标 href、events-table 路由 mock。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 4/4 包
+    （console 210 文件 / 1184 tests）、`vp run -r build` 通过；PR CI
+    `check · test · build` + `playwright · chromium` 通过后 rebase 合并。
+  - 未做浏览器实测（定向实现轮，UI 由 jsdom 测试覆盖，浏览器评审留给 ui-review 车道）。
+
+### EXPERT_PANEL：发布评估
+
+三位专家一致：**发布**。
+
+- **发布经理**：区间内 1 个用户可见变更（#573），10 个 docs/planning 提交不计入；建议
+  `0.1.0-beta.112`。
+- **阻断审计**：main CI（f1fc9fc 两条 run）success、无 open PR、无阻塞回归
+  （REL-13/16/23 属仓库治理项）、区间 `migrate/` 无 diff、`v0.1.0-beta.112` 未占用 → 通过。
+- **运维/回滚**：无迁移、无 Docker/配置/端口/卷/环境变量变化；回滚只需把镜像 tag 切回
+  `0.1.0-beta.111`；需先做版本 bump PR 并等 CI 绿。
+- 决策记录：常规发布，无新增长期决策文档；本节即三位专家意见摘要。
+
+### 发布
+
+- 版本：**0.1.0-beta.112**，PR #574 `chore(release): v0.1.0-beta.112` rebase 合入 → `1ac8bd0`。
+- tag `v0.1.0-beta.112` → `1ac8bd0`（main CI success）。
+- Release：`Tocsin v0.1.0-beta.112`（prerelease），含镜像地址/digest、变更、升级与回滚说明。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.112`
+  （linux/amd64 + linux/arm64，index digest `sha256:494bd08949240e3624fc1178b7853532bed347a1b4a0182c36c359ec6b47e8d6`，
+  amd64 `sha256:db4e53d4…`，arm64 `sha256:e7cdfed5…`）。
+- 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.111`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，按 AGENTS.md 允许的 fallback 跳过。
+
+### 工作树回收
+
+- 回收 1 个已结束 session worktree（`nostalgic-bardeen-e39138`，18M，status clean），
+  删除已合并 `agent/delivery-event-filter`、`agent/release-beta-112` 分支。
+- 本 session 工作树清除 `node_modules`/`.output`/`.vite` 后由 987M 降到约 20M；
+  `.claude/worktrees` 总量收尾后重测（其中 674M 属同期运行中的 docs-site session，不在回收范围）。
+
+### 下一轮优先项
+
+1. **SEC-20（22）**：`privateKeyPem` / `tls.key` 精确键 + PEM 值形态脱敏 + 两条单测（AUTO_FIX）。
+2. **ARCH-40/41（20/18）**：`runDeliveryWorker` 与 session/i18n procedure 的编排收进 service。
+3. **REQ-295（27）** 事件 raw 载荷保全（forward-only 迁移，走 EXPERT_PANEL）。
+4. **DOC-95/96/58** 一批文档更正。
+5. 车道轮转 **`quality`**；`last_ui_review_at` 将在 2026-10-29 23:50 后超过 48 小时，届时
+   ui-triage 倾向 `review_now`。
+
 ## 2026-10-28（第 142 轮）
 
 - 时间：2026-10-28 03:25 CST 起，约 04:20 CST 结束。
