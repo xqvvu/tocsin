@@ -867,6 +867,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.115` | `7f5e2e7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.115`（linux/amd64 + linux/arm64，index digest `sha256:752a6c0c72e7…`，amd64 `sha256:17bf6f1d…`，arm64 `sha256:1a63c65c…`） | 静默列表窄屏固定操作列（#587，UI-85）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.114` |
 | `0.1.0-beta.114` | `2dfbd52` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.114`（linux/amd64 + linux/arm64，index digest `sha256:71576a95…`，amd64 `sha256:aec19530…`，arm64 `sha256:049a377a…`） | 静默列表按状态/用途/关键字筛选 + 顶栏徽标下钻（#583，REQ-285 / REQ-2）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.113` |
 | `0.1.0-beta.113` | `2ac2de5` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.113`（linux/amd64 + linux/arm64，index digest `sha256:f08ee834…`，amd64 `sha256:7fa1e6b2…`，arm64 `sha256:3fe3e0cb…`） | PEM 私钥块值形态脱敏 + `tls.key` 敏感键（#578，SEC-20）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.112` |
 | `0.1.0-beta.112` | `1ac8bd0` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.112`（linux/amd64 + linux/arm64，index digest `sha256:494bd089…`，amd64 `sha256:db4e53d4…`，arm64 `sha256:e7cdfed5…`） | 事件投递计数一键下钻 + 投递列表按事件精确过滤（#573，REQ-294）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.111` |
