@@ -36,6 +36,7 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: "Docker 生产部署", link: "/operations/deploy-docker" },
+          { text: "可移植配置参考", link: "/operations/portable-config" },
           { text: "备份、恢复与升级", link: "/operations/backup-restore" },
           { text: "故障排查", link: "/operations/troubleshooting" },
         ],

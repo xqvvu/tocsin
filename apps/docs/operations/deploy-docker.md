@@ -57,6 +57,8 @@ docker compose ps
 
 `BETTER_AUTH_SECRET_FILE` 仅支持认证密钥，不意味着所有配置 secret 都支持 `_FILE`。完整变量约束以所部署版本的 release notes 与仓库运行时配置为准。不要将真实密钥写入公开配置文件或文档。
 
+通过设置页导入 TOML/JSON 时，`secret_refs` 指向的变量也必须在 Tocsin 进程环境中存在；它们不会从浏览器读取，也不支持 `_FILE`。字段与合并语义见[可移植配置参考](/operations/portable-config)。
+
 ::: danger 不支持横向扩容
 一个实例对应一个 SQLite 数据库和进程内 Worker。不要运行多个副本争用同一数据卷，也不要把这个部署形态当作高可用集群。
 :::

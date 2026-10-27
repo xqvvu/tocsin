@@ -38,4 +38,4 @@
 Webhook 返回 `202 Accepted` 表示接入已接受。它不确认 Route 已命中，也不确认任何 Destination 已完成发送；最终结果以 Event 与 Delivery history 为准。
 :::
 
-相关页面：[快速开始与验证首条 Delivery](/guide/quick-start) · [通知目标参考](/integrations/destinations) · [健康检查与 Docker 限制](/operations/deploy-docker) · [备份与回滚](/operations/backup-restore)
+相关页面：[快速开始与验证首条 Delivery](/guide/quick-start) · [通知目标参考](/integrations/destinations) · [健康检查与 Docker 限制](/operations/deploy-docker) · [可移植配置与 `secret_refs`](/operations/portable-config) · [备份与回滚](/operations/backup-restore)
