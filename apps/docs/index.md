@@ -27,9 +27,10 @@ features:
 1. [部署并完成首次 setup](/guide/quick-start)
 2. [理解告警处理链路](/guide/concepts)
 3. [选择并验证通知目标](/integrations/destinations)
-4. [生产 Docker 部署](/operations/deploy-docker)
-5. [备份、恢复与升级](/operations/backup-restore)
-6. [在变更窗口内静默告警](/operations/suppressions)
+4. [配置路由匹配](/guide/routes)
+5. [在变更窗口内静默告警](/operations/suppressions)
+6. [生产 Docker 部署](/operations/deploy-docker)
+7. [备份、恢复与升级](/operations/backup-restore)
 
 ::: warning 发布状态
 Tocsin 当前是可试用的自托管 MVP，尚非稳定发布版。生产使用前请评估单实例限制，并先演练备份与恢复。
