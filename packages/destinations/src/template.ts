@@ -397,7 +397,10 @@ export class DestinationTemplateEngine {
         labels: destinationCopy(presentation).labels,
       },
       tocsin: {
-        eventUrl: options.eventUrl ?? "",
+        // Callers may pass the link explicitly (tests, previews with an ad-hoc
+        // base); otherwise the send input carries the URL resolved from the
+        // deployment's public address.
+        eventUrl: options.eventUrl ?? input.eventUrl ?? "",
       },
       payload: redactJsonText(input.payload ?? {}),
       bindings: {},

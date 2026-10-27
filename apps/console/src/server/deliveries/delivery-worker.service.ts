@@ -33,6 +33,7 @@ export class DeliveryWorker {
       sendContext: options.sendContext,
       backoff: options.backoff,
       resolveDestinationConfig: options.resolveDestinationConfig,
+      publicBaseUrl: options.publicBaseUrl,
       triggerPings: options.triggerPings,
     });
     this.now = options.now ?? (() => new Date().toISOString());

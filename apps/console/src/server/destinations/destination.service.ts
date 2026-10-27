@@ -41,6 +41,7 @@ import {
   destinationOperationalConfigFromRuntime,
   destinationSummaryFromRuntime,
 } from "#/infra/sqlite/repositories/destination/destination.helpers";
+import { eventDetailUrl } from "#/lib/event-url";
 import {
   createTestNormalizedEvent,
   mergeJsonObjects,
@@ -58,6 +59,7 @@ export class DestinationService {
   private readonly destinations: DestinationServiceOptions["destinations"];
   private readonly destinationSendContext: DestinationServiceOptions["destinationSendContext"];
   private readonly resolveDestinationConfig: DestinationServiceOptions["resolveDestinationConfig"];
+  private readonly publicBaseUrl: string | undefined;
   private readonly now: () => string;
 
   constructor(options: DestinationServiceOptions) {
@@ -65,6 +67,7 @@ export class DestinationService {
     this.destinations = options.destinations;
     this.destinationSendContext = options.destinationSendContext;
     this.resolveDestinationConfig = options.resolveDestinationConfig;
+    this.publicBaseUrl = options.publicBaseUrl;
     this.now = options.now ?? (() => new Date().toISOString());
   }
 
@@ -207,10 +210,12 @@ export class DestinationService {
           config: destination.config,
         })
       : destination.config;
+    const eventId = sample?.metadata.eventId ?? `test-${Date.now()}`;
     const result = await this.destinations.send(
       destination.kind,
       {
-        eventId: sample?.metadata.eventId ?? `test-${Date.now()}`,
+        eventId,
+        eventUrl: eventDetailUrl(this.publicBaseUrl, eventId),
         source,
         destination: summary,
         normalizedEvent,
@@ -328,6 +333,7 @@ export class DestinationService {
     const settings = await this.store.settings.get();
     const input = {
       eventId: sample.metadata.eventId,
+      eventUrl: eventDetailUrl(this.publicBaseUrl, sample.metadata.eventId),
       source: sample.metadata.source,
       destination,
       normalizedEvent: sample.normalizedEvent,

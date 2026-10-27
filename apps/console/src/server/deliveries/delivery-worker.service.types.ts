@@ -15,6 +15,8 @@ export interface DeliveryWorkerOptions {
   backoff?: DeliveryBackoffOptions;
   /** Resolves server-side references (for example a Feishu app credential) before each send. */
   resolveDestinationConfig?: DestinationConfigResolver;
+  /** Deployment address used to build `tocsin.eventUrl` in outbound messages. */
+  publicBaseUrl?: string;
   /** Auto-paging hook invoked after a successful send that carries a provider reference. */
   triggerPings?: OncallPingTrigger;
 }

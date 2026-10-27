@@ -19,6 +19,7 @@ import type {
   ClaimedDelivery,
   DeliveryRepository,
 } from "#/infra/sqlite/repositories/delivery/delivery.interface";
+import { eventDetailUrl } from "#/lib/event-url";
 import type { DestinationConfigResolver } from "#/server/integrations/destination-config-resolver";
 import type { OncallPingTrigger } from "#/server/oncall/oncall.service.types";
 import { DomainValidationError } from "#/server/runtime/domain-errors";
@@ -38,6 +39,11 @@ export interface DeliveryExecutionOptions {
   /** Resolves server-side references (for example a Feishu app credential) before the send. */
   resolveDestinationConfig?: DestinationConfigResolver;
   /**
+   * Deployment address used to build `tocsin.eventUrl`. Empty or missing keeps
+   * the template variable empty, which is the pre-existing behavior.
+   */
+  publicBaseUrl?: string;
+  /**
    * Auto-paging hook: called after a successful send that carries a provider
    * reference. A trigger failure never fails the delivery.
    */
@@ -56,6 +62,7 @@ export class DeliveryExecution {
   private readonly destinations: Pick<DestinationRegistry, "send">;
   private readonly sendContext?: DestinationSendContext;
   private readonly resolveDestinationConfig?: DestinationConfigResolver;
+  private readonly publicBaseUrl?: string;
   private readonly triggerPings?: OncallPingTrigger;
   private readonly initialDelayMs: number;
   private readonly maxDelayMs: number;
@@ -65,6 +72,7 @@ export class DeliveryExecution {
     this.destinations = options.destinations;
     this.sendContext = options.sendContext;
     this.resolveDestinationConfig = options.resolveDestinationConfig;
+    this.publicBaseUrl = options.publicBaseUrl;
     this.triggerPings = options.triggerPings;
     this.initialDelayMs = options.backoff?.initialDelayMs ?? 30_000;
     this.maxDelayMs = options.backoff?.maxDelayMs ?? 15 * 60_000;
@@ -100,6 +108,7 @@ export class DeliveryExecution {
         delivery.destination.kind,
         {
           eventId: delivery.event.id,
+          eventUrl: eventDetailUrl(this.publicBaseUrl, delivery.event.id),
           source: delivery.source,
           destination: delivery.destination,
           // Routing and suppression already decided against the raw event; the

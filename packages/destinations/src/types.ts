@@ -32,6 +32,12 @@ export interface DestinationPresentation {
 
 export interface DestinationRenderInput<Config> {
   eventId: string;
+  /**
+   * Absolute dashboard link for this Event. Rendering sites fill it from the
+   * deployment's public URL so `tocsin.eventUrl` links back to Tocsin; it stays
+   * empty when no public URL is configured.
+   */
+  eventUrl?: string;
   source: SourceSummary;
   destination: DestinationSummary;
   normalizedEvent: NormalizedEvent;

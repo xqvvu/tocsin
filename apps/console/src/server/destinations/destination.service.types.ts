@@ -16,6 +16,11 @@ export interface DestinationServiceOptions {
   destinationSendContext?: DestinationSendContext;
   /** Resolves server-side references (for example a Feishu app credential) before a test send. */
   resolveDestinationConfig?: DestinationConfigResolver;
+  /**
+   * Deployment address used to build `tocsin.eventUrl` for previews and test
+   * sends. Empty or missing keeps the template variable empty.
+   */
+  publicBaseUrl?: string;
   /** Injectable clock so tests can pin the delivery-health window boundary. */
   now?: () => string;
 }
