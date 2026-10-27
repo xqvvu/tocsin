@@ -102,6 +102,9 @@ describe("redaction", () => {
     "private_key",
     "privateKeyPem",
     "private_key_pem",
+    "tls.key",
+    "tlsKey",
+    "TLS.KEY",
     "X-Auth-Token",
     "x-auth-token",
     "X-API-Key",
@@ -142,6 +145,7 @@ describe("redaction", () => {
   it.each([
     "tokenCount",
     "maxTokens",
+    "tlsVersion",
     "privateKeyId",
     "aws_access_key_id",
     "account_key_id",
@@ -275,6 +279,47 @@ describe("redaction", () => {
 
     expect(redactText(once)).toBe(once);
     expect(redactCredentialText(once)).toBe(once);
+  });
+
+  // Assembled from parts so push protection does not read the fixture as a
+  // real key. Only the PEM framing matters here, not the fake body.
+  const pemBlock = [
+    "-----BEGIN RSA PRIVATE KEY-----",
+    "MIIBOgIBAAJBAKfakebodyN0trealkeymaterial0000000000",
+    "-----END RSA PRIVATE KEY-----",
+  ].join("\n");
+
+  it("redacts a PEM private key wherever it appears", () => {
+    expect(redactText(`upstream note ${pemBlock} end`)).toBe(`upstream note ${REDACTED_VALUE} end`);
+    expect(redactCredentialText(pemBlock)).toBe(REDACTED_VALUE);
+    expect(redactJsonValue({ value: pemBlock, monitors: ["checkout"] })).toEqual({
+      value: REDACTED_VALUE,
+      monitors: ["checkout"],
+    });
+  });
+
+  it("redacts the body of an unquoted multi-line key assignment", () => {
+    const output = redactText(`privateKeyPem=${pemBlock}`);
+
+    expect(output).toBe(`privateKeyPem=${REDACTED_VALUE}`);
+    expect(output).not.toContain("fakebody");
+  });
+
+  it("redacts a JSON-escaped PEM block carried under a neutral key", () => {
+    const escaped = pemBlock.replaceAll("\n", "\\n");
+
+    expect(redactText(`{"note":"${escaped}"}`)).toBe(`{"note":"${REDACTED_VALUE}"}`);
+  });
+
+  it("keeps public key blocks and TLS versions visible", () => {
+    const publicKey = [
+      "-----BEGIN PUBLIC KEY-----",
+      "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A",
+      "-----END PUBLIC KEY-----",
+    ].join("\n");
+
+    expect(redactText(publicKey)).toBe(publicKey);
+    expect(redactText("tlsVersion: TLSv1.3")).toBe("tlsVersion: TLSv1.3");
   });
 
   it("redacts credential-shaped strings inside JSON payloads", () => {
