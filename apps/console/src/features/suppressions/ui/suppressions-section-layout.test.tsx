@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
@@ -56,6 +56,47 @@ describe("suppressions section layout", () => {
     expect(section?.className).toContain("flex-col");
     expect(tableRegion?.className).toContain("flex-1");
     expect(tableRegion?.className).toContain("min-h-0");
+  });
+
+  it("pins the actions column so it stays reachable on a narrow viewport", () => {
+    render(
+      <AppIntlProvider locale="en-US">
+        <SuppressionsSection
+          suppressions={[
+            suppressionFixture({ enabled: true, name: "Nightly maintenance" }),
+            suppressionFixture({ id: "sup-2", enabled: false, name: "Legacy silence" }),
+          ]}
+          sources={[]}
+          destinations={[]}
+          editingSuppression={null}
+          pending={false}
+          hasActiveFilters={false}
+          onResetFilters={noop}
+          onEdit={noop}
+          onCancelEdit={noop}
+          onToggle={noop}
+          onDelete={noop}
+          onSubmitEdit={noop}
+        />
+      </AppIntlProvider>,
+    );
+
+    // The table keeps a 980px floor, so on a 390px viewport the action
+    // buttons would otherwise sit outside the first screen with no affordance.
+    // Pinning the column mirrors the events and deliveries tables.
+    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
+    expect(actionsHeader.className).toContain("sticky");
+    expect(actionsHeader.className).toContain("right-0");
+    expect(actionsHeader.className).toContain("min-w-24");
+
+    const bodyRows = screen.getAllByRole("row").slice(1);
+    expect(bodyRows).toHaveLength(2);
+    for (const row of bodyRows) {
+      const cells = within(row).getAllByRole("cell");
+      const actionCell = cells.at(-1);
+      expect(actionCell?.className).toContain("sticky");
+      expect(actionCell?.className).toContain("right-0");
+    }
   });
 
   it("names the suppression in its toggle control instead of showing a raw key", () => {
