@@ -17,7 +17,7 @@ WORKDIR /app
 # Copy manifests first so the dependency layer stays cached across source edits.
 # `--parents` keeps the workspace layout, so every package manifest comes from
 # one instruction instead of one per package.
-COPY --parents --chown=vp:vp package.json pnpm-lock.yaml pnpm-workspace.yaml .node-version ./apps/console/package.json ./packages/*/package.json /app/
+COPY --parents --chown=vp:vp package.json pnpm-lock.yaml pnpm-workspace.yaml .node-version ./apps/console/package.json ./apps/docs/package.json ./packages/*/package.json /app/
 
 # Provision the pinned Node.js runtime, then install dependencies.
 # `vp env install` reads .node-version, so the runtime never drifts from it.
