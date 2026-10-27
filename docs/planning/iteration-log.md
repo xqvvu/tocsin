@@ -43,6 +43,25 @@
 
 - 本轮未触发：改动是纯展示层本地化，无 schema/迁移/投递/路由/auth 语义变化，可整文件回滚。
 
+### 发布评估与发布记录
+
+- 三位发布专家独立评估，**一致放行**（`v0.1.0-beta.101..origin/main`）：
+  - **发布经理**：2 个提交中 1 个用户可见（#522 `a93c3f9`，解析失败兜底标题/消息本地化），
+    `90f78e5` 仅 planning 文档；建议 `0.1.0-beta.102`。
+  - **阻断审计**：`a93c3f9` 的 PR 检查 2/2 通过（`check · test · build` 2m56s、
+    `playwright · chromium` 16m32s）；唯一 open PR 是本轮 planning PR；迁移目录零 diff；
+    Dockerfile/compose/workflows/依赖/`package.json` 零 diff；`blocked-autonomous` 仅
+    REL-13/16/23（LICENSE 与仓库设置），不阻断。
+  - **运维/回滚**：自 beta.101 起无基础设施变化，升级只需拉镜像；回滚到 `0.1.0-beta.101`
+    仅换镜像，无需数据库操作。
+- PR **#524 `chore(release): v0.1.0-beta.102`**（rebase 合并 `67b66df`）；
+  `check · test · build` 8m14s、`playwright · chromium` 5m19s 均 success。
+- tag `v0.1.0-beta.102` @ `67b66df`；GitHub Release 为 prerelease，body 1009 字符。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.102`（linux/amd64 + linux/arm64，
+  index digest `sha256:c4af8bb8f60bb23c2662ac2a4c15b7db5e4c437b8320d4ce0dd46039abc98f92`；
+  `--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.101`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
 ### 下一轮优先项
 
 1. **Q-279（25）**：`deliveries(destination_id)` forward-only 加法迁移 + 迁移测试（EXPERT_PANEL）。
