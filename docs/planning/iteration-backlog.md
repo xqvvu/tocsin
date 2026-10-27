@@ -14,6 +14,8 @@
 
 | id | 标题 | 来源 | 评分 | 状态 | PR | 备注 |
 |---|---|---|---|---|---|---|
+| Q-282 | 容器对 `publicBaseUrl` 的 env 注入无测试 | review（第 133 轮，standards 评审） | 17 | candidate | — | `container.ts:216` 解析 `env.SERVER_URL ?? env.BETTER_AUTH_URL` 并注入 `createDestinationService` / `createDeliveryWorker`，但两个新测试都直接构造服务并传 `publicBaseUrl`，`container.test.ts` 未断言该透传；若注入被删，CI 仍绿而告警链接静默消失。建议容器选项支持覆盖，并用预览路径做一次端到端断言；成本 M |
+| Q-283 | `testDestination` 对合成事件不生成直链无直接测试 | review（第 133 轮，spec 评审） | 15 | candidate | — | `destination.service.ts:218` 仅在 `sample` 存在时传 `eventUrl`；预览侧同规则已有集成断言（内置样例 → 空串），测试发送侧只有代码审查覆盖。补一条带 fetch stub 的集成断言；成本 S |
 | REL-67 | 发布 `0.1.0-beta.105` | release panel（第 132 轮） | — | shipped | #534 | tag `v0.1.0-beta.105` @ `06a70c7`；GitHub Release（prerelease，body 1159 字符）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.105`（amd64+arm64，index digest `sha256:f8e5634913016889dd6cc154b7ebfc3e29a5dc51c4e8ddba8f39704d402a1f63`）；回滚 `0.1.0-beta.104`，**无需数据库操作**；用户可见变更 #533（中文运维术语统一）；无迁移、无依赖、无 env 变化 |
 | REL-66 | 发布 `0.1.0-beta.104` | release panel（第 131 轮） | — | shipped | #530 | tag `v0.1.0-beta.104` @ `ed3bb1a`；GitHub Release（prerelease）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.104`（amd64+arm64，index digest `sha256:908da918a44f6e45e33bf88079760101d9da66381eab5945471c163d17aff48d`）；回滚 `0.1.0-beta.103`，**无需数据库操作**；用户可见变更 #528（FastGPT unknown 文案）、#529（/api/ready 失败码）；无迁移、无依赖、无 env 变化 |
 | REL-65 | 发布 `0.1.0-beta.103` | release panel（第 130 轮） | — | shipped | #526 | tag `v0.1.0-beta.103` @ `6b781f4`；GitHub Release（prerelease，body 1776 字符）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.103`（amd64+arm64，index digest `sha256:dcc7acf02ef9ddf67dde8b468d97489ddcac75f6257cc6ca27461632c63bd7f3`）；回滚 `0.1.0-beta.102`，**需冷备份后删除 `schema_migrations` 的 `0005` 行或恢复备份**；用户可见变更 #525（Q-279 投递健康覆盖索引）；含迁移 `0005`（纯加法索引） |
@@ -272,7 +274,7 @@
 | Q-17 | 投递详情页 null / 重试门槛无测试 | quality lane | 25 | candidate | — | `delivery-detail-page.tsx:25-35,58`；仓库无 `delivery-detail-page.test.tsx` |
 | Q-18 | 抑制提示降级数据分支未测 | quality lane | 22 | candidate | — | `delivery-suppression-notice.tsx:33,36-45`；现有测试只覆盖字段齐全的数据 |
 | Q-19 | 列表页重试/手动 worker 错误路径无测试 | quality lane | 24 | candidate | — | `deliveries-page.tsx:75-90` 的 catch；`DeliveryActions` 无测试文件 |
-| REQ-52 | 模板 `tocsin.eventUrl` 生产恒为空 | requirements lane | 28 | candidate | — | 所有渲染调用点未传 `eventUrl`，且无公开访问地址配置；建议新增 `TOCSIN_PUBLIC_URL`；`template.ts:369-399`、`feishu/payload.ts:18`、`destination.service.ts:299` |
+| REQ-52 | 模板 `tocsin.eventUrl` 生产恒为空 | requirements lane | 28 | shipped | #536 | 第 133 轮实现：`DestinationRenderInput` 增可选 `eventUrl`，模板引擎回落（`packages/destinations/src/template.ts:403`）；新增纯函数 `eventDetailUrl`（`apps/console/src/lib/event-url.ts`），容器以 `env.SERVER_URL ?? env.BETTER_AUTH_URL` 注入 `createDestinationService` / `createDeliveryWorker`（`container.ts:216`），投递发送、预览、测试发送三条路径均带上；内置样例与无样例测试发送用合成 id，保持空串不产生死链。**未新增 `TOCSIN_PUBLIC_URL`**（复用既有公开地址配置，见 PRD）。PRD `docs/prd/event-url-in-notifications.md`；无迁移 |
 | REQ-53 | 加急记录缺触发人/呼叫时间/下次重试 | requirements lane | 29 | shipped | #140 | 触发方式下显示 `initiatedBy`；新增呼叫时间/下次重试两列；PRD `docs/prd/oncall-ping-audit-fields.md` |
 | REQ-54 | 告警源覆盖无法区分无路由与仅停用路由 | requirements lane | 27 | candidate | — | Source 侧无 `disabledRouteCount`，0 条统一显示「未匹配路由」；`source-route-coverage.ts:11-27`、`source-route-coverage-cell.tsx:22-30` |
 | REQ-55 | 全静默事件摘要未计入已抑制 | requirements lane | 27 | shipped | #230 | 第 48 轮复核：`event-detail-stats.ts:5-19` 已统计全部五个状态（含 suppressed），`event-detail-summary.tsx:75-85` 渲染所有非零状态；UI-20（#230）已覆盖该行为 |
