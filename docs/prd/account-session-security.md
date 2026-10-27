@@ -1,6 +1,10 @@
 # 账号安全：登录会话可见性与「退出其他设备」
 
-REQ-274（第 124 轮，决策见 `docs/planning/decisions/req-274-session-surface.md`）
+REQ-274（第 124 轮，决策见 `docs/planning/decisions/req-274-session-surface.md`）。
+
+状态：已交付（beta.97）。活跃会话列表、最近登录记录与「退出其他设备」位于设置页安全面板
+（`apps/console/src/features/configuration/ui/settings-security-panel.tsx`），契约见
+`packages/api/src/contract/session.ts`。
 
 ## 问题
 
@@ -10,7 +14,7 @@ REQ-274（第 124 轮，决策见 `docs/planning/decisions/req-274-session-surfa
 
 Better Auth 已经把会话写进 SQLite 的 `session` 表（`id` / `ip_address` / `user_agent` /
 `expires_at`，见 `apps/console/src/infra/sqlite/schema.ts` 的 `BetterAuthSessionTable`），但控制台
-从未读取它。
+当时从未读取它（现已由本切片读取，见上）。
 
 不能直接调用 Better Auth 的 `listSessions`：它返回 `session.token`，并被 24 小时
 `freshSessionMiddleware` 包住，登录超过一天的运维打开页面会得到 `SESSION_NOT_FRESH`。也不能用

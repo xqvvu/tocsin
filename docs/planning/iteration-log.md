@@ -2,6 +2,74 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 137 轮）
+
+- 时间：2026-10-27 15:40 CST 起。
+- 基线：本轮开始时 `origin/main` @ `44ac52a`（第 136 轮日志提交）；main CI success；无 open PR。
+- 类型：**需求切片 + 小修复（非 full-audit）**。距上次全量审计 2026-10-27 13:26 CST 约 2h14m，
+  未达第 1.5 步的 6 小时展开条件；backlog 有达门槛候选 REQ-284（28），按「继续」分支交付，
+  **全量审计时间戳保持 2026-10-27 13:26 CST**。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`docs-drift`（按第 136 轮记录的轮转位置）。
+- `ui-triage` 决策：**`defer`**——`last_ui_review_at` = 2026-10-27 13:55 CST（仅 1h45m，远未达 48h）；
+  自评审以来 UI 路径合并仅 2 个（`73371f5` 已被第 135 轮双视口浏览器实测、`870623a` 只是把文本换成
+  `Link`，无布局/样式变化）；42 条未解决 `UI-*` 为存量饱和队列，非本轮新增发现。
+- `last_ui_review_at`：不变，**2026-10-27 13:55 CST**（本轮未做 UI 评审）；建议下次评审复看
+  `870623a` 的三处互链导航。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `zen-noyce-654e92`（会话写入隔离）。`vp install --frozen-lockfile` 仅会话工作树安装一次。
+
+### 专家发现
+
+- **requirements**（REQ-284 证据复核 + 4 条新候选，均有 `file:line` 证据）：
+  - 复核 REQ-284 成立，并纠正 backlog 的代码引用：`parsePortableConfigurationToml/Json`
+    不在 `packages/core/src/config.ts`，而在 server-only 的
+    `server/configuration/config-portability.ts:108-114`；客户端 diff 需自带 parse helper。
+  - 新候选：REQ-290 目标投递健康下钻（26）、REQ-291 导入预览的名称冲突与高风险提示（26）、
+    REQ-292 导出不覆盖编辑器草稿 + 显式重置（25）、REQ-293 按分组选择性导入（21）。
+  - REQ-286 成本纠偏 23 → 22：共享表未注册 grouping feature
+    （`components/common/table-features.ts:16-20`），且投递列表服务端分页，页内分组计数为 page-local。
+  - REQ-20 的客户端摘要部分由 REQ-284（#549）覆盖，剩余服务端 env/adapter 预检并入 REQ-291 评估。
+- **docs-drift**（16 个重复 id + 7 条确认漂移）：
+  - 去重：REQ-278/260/261 的旧行改为 REQ-287/288/289（保留较新行、旧行留「原 ID 重号」备注）；
+    DOC-21、DOC-63、FIX-16 的旧重复行删除。剩余 10 个 id 冲突（REL-47/43/42/33、SEC-30/33/20、
+    Q-14/15/16）记为 DOC-94，下一轮处理。
+  - 已修复 6 条文档漂移：`route-explain-delivery-gap.md`（migration 0001–0005）、
+    `compact-header-indicators.md`（UI-82 已交付）、`history-retention-and-snapshots.md`
+    （容量信号已实现）、`event-delivery-cross-links.md`（#545 已交付）、
+    `event-url-in-notifications.md`（REQ-52/beta.106 已交付）、`account-session-security.md`
+    （REQ-274/beta.97 已交付）。
+  - `delivery-resume-disclosure.md:56` 部分漂移（排队数量已交付、受影响目标统计仍未做）留待后续，
+    不阻塞本轮。
+
+### 本轮交付
+
+- **PR #549 `feat(console): preview configuration import changes before applying`**（已 rebase 合入）：
+  - 新增 `features/configuration/model/portable-config-diff.ts` + 单测：用 `smol-toml` 与
+    `@tocsin/core` 解析编辑器内容，与上次导出的当前配置按 id 比对，输出新增/更新/未变化/未列出
+    四类结果与基础设置变更；键顺序不影响判定。
+  - `use-settings-workspace.ts` 为每种格式保留 `baseline`，载入文件不覆盖；确认弹层展示差异摘要
+    （`portable-config-diff-summary.tsx`），解析失败显示紧凑错误并禁用「确认导入」。
+  - 中英文案改为「更新文件中列出的配置，未列出的现有配置保持不变」。
+  - PRD `docs/prd/configuration-import-diff-preview.md`。
+  - 验证：`vp check` 0 error（23 条既有 warning）、`vp run -r test` 205 文件 / 1154 tests、
+    `vp run -r build` 4/4；PR CI 全绿后 rebase 合并。
+- **docs PR**：6 条文档漂移更正 + backlog 去重（3 处改号、3 处删重）+ REQ-290..293 新候选 +
+  DOC-94 剩余冲突记账 + 本轮日志。
+- 观察：`requirements` 车道耗时约 35 分钟，超出单车道预期；本轮仍在其返回后完成归档，
+  后续轮次应把 requirements 的 fan-out 规模压小，避免挤占实现窗口。
+
+### 发布评估与发布记录
+
+- （见下方补记）
+
+### 下一轮优先项
+
+1. **REQ-285（26）**：静默列表筛选 + 顶栏徽标 `?state=active` 下钻。
+2. **REQ-290（26）**：目标健康下钻到投递列表。
+3. **REQ-291（26）**：导入预览的名称冲突阻断与高风险变更提示（承接 REQ-284）。
+4. **DOC-94（26）**：剩余 10 个 backlog id 冲突去重。
+5. 车道轮转：下一非必跑车道为 **`quality`**（随后 `security-exposure`、`release-infra`）。
+
 ## 2026-10-27（第 136 轮）
 
 - 时间：2026-10-27 14:20 CST 起。

@@ -1,8 +1,11 @@
 # 告警消息里的事件直链（`tocsin.eventUrl`）
 
+状态：已交付（REQ-52，beta.106）。投递执行器与目标预览都会从部署地址
+（`apps/console/src/lib/event-url.ts`）生成 `eventUrl`；以下“问题”描述保留为切片背景。
+
 ## 问题
 
-模板变量面板一直列出 `tocsin.eventUrl`，但生产路径上它恒为空字符串：
+模板变量面板一直列出 `tocsin.eventUrl`，但生产路径上它当时恒为空字符串：
 
 - 模板引擎只在调用方显式传入 `eventUrl` 时才渲染它
   （`packages/destinations/src/template.ts:200,373,400`）。

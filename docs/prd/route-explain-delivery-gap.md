@@ -87,6 +87,7 @@
 
 1. **不承诺解释每一条缺口。** 去重证据被清理后的缺口就是解释不了，UI 会这么说。
 2. **不改写入路径。** `enqueueForEvent` 不新增落库字段，`delivered`/`deduped`/`skippedExisting` 的返回值语义不变。
-3. **不加表、不做迁移。** 本切片仍不加表；当前 migration plan 已有 `0001`–`0003`，但本切片的解释数据全部来自既有表。
+3. **不加表、不做迁移。** 本切片仍不加表；当前 migration plan 已有 `0001`–`0005`
+   （`apps/console/src/infra/sqlite/migrate/plan.ts:1-14`），但本切片的解释数据全部来自既有表。
 4. **抑制不进入本表。** 抑制已实现为投递状态 `suppressed`；被抑制的投递是真实投递行，因此 `routeMatchGaps` 不会把它算作「命中但未投递」的缺口。
 5. **不承诺 `suppressed` 之后补投能救回。** 已核实 `listExistingTargetsForEvent` 不过滤 state（`delivery.repository.ts:446-447`），所以抑制行会让该目标永远算「已存在」；这是抑制 PRD 的语义决定（见决策备忘 OQ1），不是本切片能修的。

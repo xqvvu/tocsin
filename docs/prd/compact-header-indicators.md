@@ -8,11 +8,12 @@
 
 投递暂停（`delivery-pause-indicator.tsx:35`）与投递失败（`delivery-failure-indicator.tsx:43`）
 都把文案放进 `hidden sm:inline` 的 `<span>`，窄屏只留图标，并用 `aria-label` 保留可读名称。
-静默指示器（`active-suppression-indicator.tsx:49-53`）仍无条件渲染全文案，且第 134 轮之后
+静默指示器此前（`active-suppression-indicator.tsx:49-53`）无条件渲染全文案，第 134 轮之后
 又追加了「{count} 条 30 分钟内到期」后缀，窄屏顶栏的文字量进一步增加。
 
-结果：同一排指示器在 390px 宽的运维手机/窄窗口上表现不一致——两个是图标，一个是长句，
-顶栏因此横向溢出或把图标挤出可视区。
+**状态：已交付（UI-82，PR #542）。** 静默指示器的文案与到期后缀已改成 `hidden sm:inline`，
+链接补 `aria-label` 保留完整可读名称，并在 1440×900 / 390×844 双视口浏览器实测无溢出。
+以下问题描述保留为切片背景。
 
 ## 用户故事
 
