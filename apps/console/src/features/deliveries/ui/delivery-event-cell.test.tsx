@@ -1,11 +1,30 @@
 // @vitest-environment jsdom
 
 import { cleanup, render as renderRaw, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import type { AnchorHTMLAttributes, ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { DeliveryEventCell } from "#/features/deliveries/ui/delivery-event-cell";
 import { AppIntlProvider } from "#/i18n/provider";
+
+// The cell only needs Link's destination; rendering a plain anchor keeps this
+// unit test free of a router.
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    to,
+    params,
+    ...rest
+  }: {
+    children: ReactNode;
+    to: string;
+    params?: Record<string, string>;
+  } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={to.replace(/\$(\w+)/g, (_, key: string) => params?.[key] ?? "")} {...rest}>
+      {children}
+    </a>
+  ),
+}));
 
 function render(ui: ReactNode) {
   return renderRaw(<AppIntlProvider locale="en-US">{ui}</AppIntlProvider>);
@@ -40,6 +59,24 @@ describe("delivery event cell", () => {
     );
     expect(screen.getByText("evt-7f3a").getAttribute("title")).toBe("evt-7f3a");
     expect(container.textContent).toContain("·");
+  });
+
+  it("links the alert title back to the event", () => {
+    render(
+      <DeliveryEventCell
+        eventId="evt-7f3a"
+        eventTitle="Disk full on web-01"
+        eventSeverity="critical"
+        eventStatus="firing"
+        sourceName="Prometheus"
+      />,
+    );
+
+    // Without the link the delivery list was a dead end: operators had to copy
+    // the opaque event id and search again.
+    expect(screen.getByRole("link", { name: "Disk full on web-01" }).getAttribute("href")).toBe(
+      "/events/evt-7f3a",
+    );
   });
 
   it("marks a resolved alert without the firing emphasis", () => {

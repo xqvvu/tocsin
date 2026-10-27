@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
+import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { DeliveryAttempt } from "@tocsin/core";
@@ -11,6 +12,25 @@ import { AppIntlProvider } from "#/i18n/provider";
 
 vi.mock("#/features/operations/ui/operation-timestamp", () => ({
   OperationTimestamp: ({ value }: { value: string }) => <span>{value}</span>,
+}));
+
+// The summary only needs Link's destination; rendering a plain anchor keeps this
+// unit test free of a router.
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    to,
+    params,
+    ...rest
+  }: {
+    children: ReactNode;
+    to: string;
+    params?: Record<string, string>;
+  } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={to.replace(/\$(\w+)/g, (_, key: string) => params?.[key] ?? "")} {...rest}>
+      {children}
+    </a>
+  ),
 }));
 
 describe("delivery summary tab", () => {
@@ -64,6 +84,22 @@ describe("delivery summary tab", () => {
     // Machine-readable type stays untranslated so it matches adapter output.
     expect(screen.getByText("feishu_message_id")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Copy external reference" })).toBeTruthy();
+  });
+
+  it("links the event id back to the alert it was rendered from", () => {
+    renderSummary(
+      detailFixture({
+        createdAt: "2026-10-12T10:00:00.000Z",
+        finishedAt: "2026-10-12T10:00:20.000Z",
+      }),
+      [],
+    );
+
+    // "Why was this sent?" is answered on the event page; the raw id is the
+    // only handle the delivery detail shows.
+    expect(screen.getByRole("link", { name: "event-1" }).getAttribute("href")).toBe(
+      "/events/event-1",
+    );
   });
 
   it("does not offer a copy action when the delivery has no message reference", () => {

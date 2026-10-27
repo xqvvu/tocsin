@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+
 import {
   Table,
   TableBody,
@@ -68,7 +70,16 @@ export function EventDetailDeliveriesTable({
               orderedDeliveries.map((delivery) => (
                 <TableRow key={delivery.id} className="align-top">
                   <TableCell className="truncate font-medium" title={delivery.destinationName}>
-                    {delivery.destinationName}
+                    {/* The row already carries retry; opening the delivery is
+                        the other half of the on-call lookup, so the target name
+                        itself is the link. */}
+                    <Link
+                      to="/deliveries/$deliveryId"
+                      params={{ deliveryId: delivery.id }}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      {delivery.destinationName}
+                    </Link>
                   </TableCell>
                   <TableCell className="truncate" title={delivery.routeName ?? undefined}>
                     {delivery.routeName ?? t("events.detail.manual")}

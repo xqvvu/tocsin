@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+
 import { SeverityBadge } from "#/features/events/ui/severity-badge";
 import type { Operations } from "#/features/operations/model/operation-types";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -21,9 +23,16 @@ export function DeliveryEventCell({
     <div className="min-w-0">
       <div className="mb-1 flex min-w-0 items-center gap-1.5">
         <SeverityBadge severity={eventSeverity} />
-        <span className="truncate font-medium" title={eventTitle}>
+        {/* The title is the handle an operator recognises; keep it clickable so
+            the delivery list can lead back to the alert it belongs to. */}
+        <Link
+          to="/events/$eventId"
+          params={{ eventId }}
+          className="truncate font-medium underline-offset-4 hover:underline"
+          title={eventTitle}
+        >
           {eventTitle}
-        </span>
+        </Link>
       </div>
       <div className="text-muted-foreground flex min-w-0 items-center gap-1 text-[11px]">
         <span className="truncate" title={sourceName}>

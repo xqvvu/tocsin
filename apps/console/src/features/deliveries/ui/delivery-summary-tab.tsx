@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+
 import { summarizeDeliveryTiming } from "#/features/deliveries/model/delivery-diagnostics";
 import { DeliveryDetailSectionHeader } from "#/features/deliveries/ui/delivery-detail-section-header";
 import { DeliveryDetailTerm } from "#/features/deliveries/ui/delivery-detail-term";
@@ -42,7 +44,16 @@ export function DeliverySummaryTab({ detail }: { detail: DeliveryDetailData }) {
           />
           <DeliveryDetailTerm
             label={t("deliveries.detail.terms.eventId")}
-            value={detail.event.id}
+            value={
+              <Link
+                to="/events/$eventId"
+                params={{ eventId: detail.event.id }}
+                className="underline-offset-4 hover:underline"
+                title={detail.event.id}
+              >
+                {detail.event.id}
+              </Link>
+            }
             mono
           />
           <DeliveryDetailTerm

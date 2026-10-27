@@ -1,11 +1,31 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
+import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { DeliveriesTable } from "#/features/deliveries/ui/deliveries-table";
 import type { DeliveryTimeField, Operations } from "#/features/operations/model/operation-types";
 import { AppIntlProvider } from "#/i18n/provider";
+
+// The event cell links back to the event; rendering a plain anchor keeps this
+// table test free of a router.
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    children,
+    to,
+    params,
+    ...rest
+  }: {
+    children: ReactNode;
+    to: string;
+    params?: Record<string, string>;
+  } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={to.replace(/\$(\w+)/g, (_, key: string) => params?.[key] ?? "")} {...rest}>
+      {children}
+    </a>
+  ),
+}));
 
 vi.mock("#/features/operations/ui/operation-timestamp", () => ({
   OperationTimestamp: ({ value }: { value: string }) => <span>{value}</span>,
