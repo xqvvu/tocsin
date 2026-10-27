@@ -2,6 +2,101 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 141 轮）
+
+- 时间：2026-10-28 00:30 CST 起，约 02:50 CST 结束（**约 2h20m，超出 75 分钟预算**：`requirements`
+  单次运行约 2h08m、`docs-drift` 约 1h36m、`security-exposure` 约 1h25m）。超预算后按第 3 步规则
+  只收尾当前 PR，未再开需求切片。
+- 基线：本轮开始时 `origin/main` @ `4e8cec0`（main CI success，无本 routine 的 open PR）。
+- 类型：**full-audit**。距上次全量审计 2026-10-27 13:26 CST 约 **11h04m**，达到第 1.5 步 6 小时闸门。
+- 全量审计时间戳：**2026-10-28 00:30 CST**（下一轮最早 06:30 CST 之后）。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`architecture` 同时启动；后两个返回后追加
+  `docs-drift`、`security-exposure`，全程未超过 3 并发。
+- `ui-triage` 决策：**`defer`**——`last_ui_review_at` = 2026-10-27 23:50 CST（仅 40 分钟，远低于 48h）；
+  自上次评审只有 1 个 UI 合并（第 140 轮自己的 #562）；UI-83 证据仍成立但属纯逻辑缺陷，
+  适合直接实现而非再开评审轮；无新 UI 面。
+- `last_ui_review_at`：不变，**2026-10-27 23:50 CST**。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `loving-mcclintock-0a64f2`（写入隔离）。
+
+### 专家发现
+
+**requirements（3 条新候选，均无重复）**
+
+- **REQ-295（27）** 事件 raw 载荷「保全」：两处 prune 只按全局保留期判断
+  （`intake.repository.ts:105-137,143`），`events` 表无 hold 字段（`migrate/schema.ts:77-79`），
+  Raw 页签只在已清理后提示（`event-raw-tab.tsx:9`），证据导出必须赶在到期前手工执行。
+- **REQ-296（27）** 路由规则重叠与重复投递预览：条件数组空即通配（`packages/core/src/route/route.ts:19-30`），
+  全仓无重叠判断；投递去重键含 `route_id`（`delivery.helpers.ts:105-119`），重叠规则会各投一次。
+- **REQ-297（24）** 搜索命中证据：`q` 逐词 LIKE 8+ 字段（`history.repository.ts:768-806,808-840`），
+  但 `EventListItem` 不含 message/labels/idempotency（`packages/api/src/schemas/operations.ts:42-63`），
+  前端无法解释命中原因。
+
+**architecture（PASS 为主，4 项 AUTO_FIX 级偏离）**
+
+- PASS：service 纯度（无 `ORPCError`）、无模块级 service 单例、容器仍是唯一装配点、
+  repository 三件套、`packages/core`/`api` 无 console 引用、import protection 标记无违规、
+  `features/*` 形状合格、`components/common` 零业务规则。
+- DRIFT：`operations/router.ts:72-86` 在 handler 内建 worker/runOnce/拼 health（ARCH-40）；
+  `session/router.ts:40-43`、`i18n/router.ts:13-23` 直连容器并内联计算（ARCH-41）；
+  `route-forms.tsx`（1076 行 6 组件）、`suppression-forms.tsx`（739 行 5 组件）（ARCH-42）。
+
+**docs-drift（7 项，均已写入 backlog）**
+
+- 仍需改：ADR 0008 注记 `setup-vp@v1.21.2` vs `ci.yml:32` 的 1.22.0（DOC-95）；
+  `frontend-architecture.md:108-122` 缺 `server/security/`（DOC-96）；DOC-58（`import-boundaries:84`
+  的 auth namespace）仍成立。
+- 已过期、本轮关闭：DOC-6、DOC-27（剩余子项拆为 DOC-95）、DOC-53、DOC-54、DOC-60——
+  证据见各自 backlog 行。`next-round.md` 已自标过期存档，保留。
+- RC checklist 未勾 gate 仍成立（E2E 仅单流程、provider 无 fixture、迁移到 0005、Docker smoke 本地）。
+
+**security-exposure（无发布阻断；1 项 MEDIUM）**
+
+- **SEC-20 仍开放**：`CREDENTIAL_VALUE_REDACTORS`（`redaction.ts:105-140`）无
+  `-----BEGIN … PRIVATE KEY-----` 值形态；`tls.key` 归一为 `tlskey` 后不命中精确键（`:12-70`）
+  也不匹配后缀正则（`:96-97`）。最小修复形状已写进 backlog。
+- 其余 PASS：新 DTO 面无 raw config/header/token 泄出（`destination.helpers.ts:65-106` 走
+  `withoutUrlPassword` + header 名白名单 + `signingConfigured` 布尔）；一次性 Source token 仅在
+  React state；日志与 worker health 二次脱敏；旧仓库名在非 docs 代码中已清零。
+
+**ui-triage**：`defer`（理由见上），第三名额给 `architecture`。
+
+### 本轮交付
+
+- **PR #563 `fix(console): keep a delivery batch alive when one failure cannot be recorded`**
+  （Q-226，第 102/105/106/138 轮反复复核的 HIGH 项）：
+  - `delivery-execution.ts`：`markFailed` 只把 `RecordNotFoundError` 视为终态（行已被级联删除，
+    无对象可记账），返回 `failed` 而不抛出；**瞬时写失败仍抛出**，保住「目标已接收但证据写入失败」
+    的重试路径（`recordSuccess` 的两写语义）。
+  - `delivery-worker.service.ts`：认领循环逐条 try/catch，`safeErrorProperties` 记录脱敏原因后继续，
+    该行计入 `failed`；未新增 `errored` 计数，公开 DTO（`DeliveryWorkerRunResult` /
+    `packages/api/src/schemas/worker.ts`）形状不变。
+  - 测试：+2（投放行消失时 `execute` 收敛为 `failed`；一批中一条不可记账时兄弟行仍记账并重排）。
+    已用「还原旧实现 → 新测试失败 → 恢复」验证回归有效性。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 209 文件 / **1172 tests**、
+    `vp run -r build` 通过。
+  - 流程说明：diff 约 180 行且由本轮编写，采用人工自查 + 本地全量门禁 + PR CI，未另跑
+    `code-review` skill（与第 140 轮一致）。
+
+### 发布评估
+
+**本轮不发布**（未启动三专家面板：门槛已可先验失败，且时间预算已超）：
+
+- 门槛「没有 open PR」不满足：**#561 `docs(site): document route matching and suppression boundaries`**
+  （docs-site routine，`mergeable: CONFLICTING`）仍 open，属阻塞项。
+- 本轮交付 #563 为 fix，合并后才有用户可见变化；批次再评估 `0.1.0-beta.111`。
+- 未 bump 版本、未打 tag、未建 Release、未推镜像。
+
+### 下一轮优先项
+
+1. **SEC-20（MEDIUM，AUTO_FIX）**：`tlskey` 精确键 + PEM 值形态替换 + 两条单测。
+2. **ARCH-40/41（AUTO_FIX）**：`runDeliveryWorker` 与 session/i18n procedure 收编排进 service。
+3. **REQ-295（27）** 事件 raw 载荷保全（需 forward-only 迁移，先走 EXPERT_PANEL 或按加法迁移规则）；
+   **REQ-296（27）** 路由重叠预览（纯前端 + core 纯函数，成本最低）。
+4. **DOC-95/96/58（AUTO_FIX）** 一批文档更正，可合并为一个 `docs:` PR。
+5. 发布阻断：确认 #561 归属（合并或关闭）后评估 `0.1.0-beta.111`。
+6. 车道轮转：下一非必跑车道为 **`quality`**（随后 `release-infra`）；`requirements` 继续必跑。
+
 ## 2026-10-27（第 140 轮）
 
 - 时间：2026-10-27 22:14 CST 起。
