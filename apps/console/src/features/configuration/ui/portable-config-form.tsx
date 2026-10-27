@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { JsonEditor } from "#/components/codemirror/json-editor";
 import { TomlEditor } from "#/components/codemirror/toml-editor";
+import { Alert, AlertDescription } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import {
@@ -16,11 +17,15 @@ import {
   PopoverTrigger,
 } from "#/components/ui/popover";
 import { Textarea } from "#/components/ui/textarea";
+import { previewPortableConfigChange } from "#/features/configuration/model/portable-config-diff";
+import { PortableConfigDiffSummary } from "#/features/configuration/ui/portable-config-diff-summary";
 import { useTranslations } from "#/i18n/use-i18n";
 
 interface PortableConfigFormProps {
   format: "toml" | "json";
   value: string;
+  /** Last exported current configuration; used for the pre-import diff preview. */
+  baseline: string;
   pending: boolean;
   onChange: (value: string) => void;
   onLoadFile: (file: File) => void;
@@ -29,11 +34,17 @@ interface PortableConfigFormProps {
 }
 
 export function PortableConfigForm(props: PortableConfigFormProps) {
-  const { format, value, pending, onChange, onLoadFile, onExport, onImport } = props;
+  const { format, value, baseline, pending, onChange, onLoadFile, onExport, onImport } = props;
   const t = useTranslations();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [confirmImportOpen, setConfirmImportOpen] = React.useState(false);
   const canImport = !pending && value.trim().length > 0;
+  const preview = React.useMemo(
+    () =>
+      confirmImportOpen && canImport ? previewPortableConfigChange(format, value, baseline) : null,
+    [baseline, canImport, confirmImportOpen, format, value],
+  );
+  const previewError = preview?.status === "unparsable" ? preview.detail : null;
   const formatLabel =
     format === "toml"
       ? t("configuration.portableConfig.tomlLabel")
@@ -186,16 +197,34 @@ export function PortableConfigForm(props: PortableConfigFormProps) {
               <RiUploadLine data-icon="inline-start" aria-hidden />
               {t("configuration.portableConfig.applyImport")}
             </PopoverTrigger>
-            <PopoverContent align="end" side="top" sideOffset={6} className="w-80">
+            <PopoverContent
+              align="end"
+              side="top"
+              sideOffset={6}
+              className="w-96 max-w-[calc(100vw-2rem)]"
+            >
               <PopoverHeader>
                 <PopoverTitle>{confirmImportTitle}</PopoverTitle>
                 <PopoverDescription>{confirmImportDescription}</PopoverDescription>
               </PopoverHeader>
+              {preview?.status === "ok" ? <PortableConfigDiffSummary diff={preview.diff} /> : null}
+              {previewError ? (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    {t("configuration.portableConfig.previewParseFailed", { detail: previewError })}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
               <div className="flex justify-end gap-2">
                 <PopoverClose render={<Button type="button" variant="outline" size="sm" />}>
                   {t("configuration.portableConfig.cancelImport")}
                 </PopoverClose>
-                <Button type="button" size="sm" disabled={!canImport} onClick={confirmImport}>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!canImport || previewError !== null}
+                  onClick={confirmImport}
+                >
                   <RiUploadLine data-icon="inline-start" aria-hidden />
                   {t("configuration.portableConfig.confirmImport")}
                 </Button>

@@ -205,6 +205,20 @@ describe("settings workspace", () => {
     expect(result.current.importNotice).toBeNull();
   });
 
+  it("keeps the exported baseline when a file replaces the editor draft", async () => {
+    testState.exportConfigurationToml.mockResolvedValueOnce({ toml: "current\n" });
+    testState.readTextFile.mockResolvedValue("imported\n");
+    const { result } = renderHook(() => useSettingsWorkspace());
+
+    act(() => result.current.setActiveTab("toml"));
+    await vi.waitFor(() => expect(result.current.portable.toml.baseline).toBe("current\n"));
+
+    act(() => result.current.portable.toml.onLoadFile(new File(["imported\n"], "tocsin.toml")));
+
+    await vi.waitFor(() => expect(result.current.portable.toml.value).toBe("imported\n"));
+    expect(result.current.portable.toml.baseline).toBe("current\n");
+  });
+
   it("rejects oversized config files before reading them", async () => {
     const { result } = renderHook(() => useSettingsWorkspace());
     const oversized = new File(["x"], "huge.toml");
