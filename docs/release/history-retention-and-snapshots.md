@@ -79,7 +79,7 @@ apps/console/src/infra/sqlite/repositories/destination/destination.repository.ts
 
 需要投递行上存**当时的名字快照**（与 `suppress_reason` 同一手法：快照而非外键解引用）。注意约束：
 
-- 这要**改 schema**，而当前 migration plan 是 `0001` baseline + `0002`/`0003`/`0004` forward step（`migrate/plan.ts`），迁移器按版本号跳过已应用步骤——**修改已提交的 migration 对已部署实例等于没改**。因此应新增 forward-only step，而不是编辑 `0001`。
+- 这要**改 schema**，而当前 migration plan 是 `0001` baseline + `0002`/`0003`/`0004`/`0005` forward step（`migrate/plan.ts`），迁移器按版本号跳过已应用步骤——**修改已提交的 migration 对已部署实例等于没改**。因此应新增 forward-only step，而不是编辑 `0001`。
 - 且应同时决定：快照缺失的**老投递**显示什么（回落到实时名字并在 UI 标注"名字为当前值"，还是显示占位）。
 
 **本轮不修的理由**：它是 schema 变更 + 显示语义决策，两者都属于发布决策而非本切片范围。已按检查项要求完成评估并记录。

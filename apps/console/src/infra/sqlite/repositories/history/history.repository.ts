@@ -447,9 +447,11 @@ export class SqliteHistoryRepository implements HistoryRepository {
   async destinationDeliveryHealth(
     query: DestinationDeliveryHealthQuery,
   ): Promise<DestinationDeliveryHealthRow[]> {
-    // One grouped pass over deliveries, not a query per destination. The list
-    // is the only caller and history retention bounds the table, so a full
-    // scan here is cheaper than D correlated subqueries.
+    // One grouped pass over deliveries, not a query per destination.
+    // `idx_deliveries_destination_id_health` covers every column read here, so
+    // the planner scans index-only instead of building a temp B-tree. Delivery
+    // rows have no retention/cleanup yet, so the scan cost still grows with the
+    // table: the index lowers the constant, it does not bound growth.
     const rows = await this.context.db
       .selectFrom("deliveries")
       .select([

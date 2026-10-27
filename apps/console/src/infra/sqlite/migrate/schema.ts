@@ -268,6 +268,11 @@ export async function createAppIndexes(db: Kysely<SqliteDatabaseSchema>): Promis
     .column("event_id")
     .execute();
   await db.schema
+    .createIndex("idx_deliveries_destination_id_health")
+    .on("deliveries")
+    .columns(["destination_id", "state", "finished_at", "created_at"])
+    .execute();
+  await db.schema
     .createIndex("idx_delivery_attempts_delivery_id")
     .on("delivery_attempts")
     .column("delivery_id")

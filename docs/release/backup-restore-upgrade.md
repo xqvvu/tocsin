@@ -2,9 +2,9 @@
 
 > 一句话结论：要备份的只有 `/data` 里的一个 SQLite 文件（外加 WAL/SHM 两个伴生文件）；升级与回滚的正确
 > 顺序是“先冷备份、再换镜像”。当前 migration plan 是 `0001_initial_schema` baseline +
-> `0002_suppressions`、`0003_complete_legacy_schema` 与 `0004_oncall_dispatch_started_at` 三个
-> forward step；runner 会跳过已应用的版本，所以**原地修改已提交的 migration 对任何已有数据库都是
-> no-op**，schema 变更必须新增 forward step。
+> `0002_suppressions`、`0003_complete_legacy_schema`、`0004_oncall_dispatch_started_at` 与
+> `0005_deliveries_destination_id_health` 四个 forward step；runner 会跳过已应用的版本，所以
+> **原地修改已提交的 migration 对任何已有数据库都是 no-op**，schema 变更必须新增 forward step。
 
 核实时间 2026-10-26，核实基线 `origin/main` @ `5161911`。相关文件：
 `apps/console/src/infra/sqlite/connection.ts`、`apps/console/src/infra/sqlite/migrate/{plan,runner}.ts`、
@@ -29,16 +29,21 @@
   1. 已经记录过的 version → **跳过**，不重跑。
   2. 库里存在当前构建不认识的 version → 直接抛错
      `SQLite database has applied migrations not present in this build: <versions>`，进程启动失败。
-- 当前 plan 有四个条目（`migrate/plan.ts`）：`0001_initial_schema`、`0002_suppressions`、
-  `0003_complete_legacy_schema`、`0004_oncall_dispatch_started_at`。
+- 当前 plan 有五个条目（`migrate/plan.ts`）：`0001_initial_schema`、`0002_suppressions`、
+  `0003_complete_legacy_schema`、`0004_oncall_dispatch_started_at`、
+  `0005_deliveries_destination_id_health`。
 
 ## 2. Migration 现状：baseline + forward repair
 
 `0001_initial_schema.ts` 是全新数据库的完整 baseline；`0002_suppressions.ts` 是新增抑制表的 forward
 step；`0003_complete_legacy_schema.ts` 对已应用过 `0001` 的旧库做幂等 repair（补 Feishu apps、on-call
 表、抑制列与索引等）；`0004_oncall_dispatch_started_at.ts` 为 `oncall_pings` 增加 nullable 的
-`dispatch_started_at` 列（拨号意图证据，无默认值、不回填）。`0003` 与 `0004` 的补列都通过
-`ensureColumn` 实现，可以重复执行，只补缺失对象，不覆盖已有数据。
+`dispatch_started_at` 列（拨号意图证据，无默认值、不回填）；
+`0005_deliveries_destination_id_health.ts` 用 `CREATE INDEX IF NOT EXISTS` 为 `deliveries`
+补 `idx_deliveries_destination_id_health (destination_id, state, finished_at, created_at)`
+（覆盖索引，建索引期间同步阻塞启动路径，耗时随投递行数增长）。`0003` 与 `0004` 的补列都通过
+`ensureColumn` 实现，`0005` 与旧库索引修复都用 `IF NOT EXISTS`，可以重复执行，只补缺失对象，
+不覆盖已有数据。
 
 因此升级行为分四种：
 
