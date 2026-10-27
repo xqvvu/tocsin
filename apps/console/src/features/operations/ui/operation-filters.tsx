@@ -1,5 +1,4 @@
 import { RiCloseLine, RiFilter3Line, RiSearchLine } from "@remixicon/react";
-import * as React from "react";
 
 import {
   type DestinationSummary,
@@ -13,6 +12,7 @@ import {
   splitOperationSearchTerms,
 } from "@tocsin/core";
 
+import { useDebouncedSearchDraft } from "#/components/common/use-debounced-search-draft";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
 import { Field as UiField, FieldGroup, FieldLabel } from "#/components/ui/field";
@@ -84,7 +84,7 @@ export function OperationFilters({
   );
   const activeCount = chips.length;
   const resolvedLayout = layout === "grid" ? "toolbar" : layout;
-  const searchDraft = useOperationSearchDraft(search.q ?? "", (q) => onChange({ q }));
+  const searchDraft = useDebouncedSearchDraft(search.q ?? "", (q) => onChange({ q }));
   // Follow the draft, not the committed query: the operator sees the warning
   // while still typing, before the debounce writes the truncated query to the
   // URL and the list comes back broader than the text suggests.
@@ -874,68 +874,6 @@ function currentRangeAnchor(): string {
   return new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
 }
 
-/**
- * Search text is typed locally and committed after a pause.
- *
- * Writing every keystroke to the URL used to do two things at once: each
- * navigation re-rendered the input from the trimmed URL value (so "Disk usage"
- * collapsed to "diskusage"), and each key fired a server query. The draft keeps
- * the operator's exact text — including a trailing space — while the debounce
- * collapses a burst of typing into one navigation.
- */
-const SEARCH_DEBOUNCE_MS = 300;
-
-/**
- * The draft lives with the filter bar, not inside the input, because "Reset
- * filters" and the query chip both clear the committed value. Clearing has to
- * cancel an uncommitted draft at the same time, and only this scope sees both.
- */
-function useOperationSearchDraft(value: string, commit: (next: string) => void) {
-  const [draft, setDraft] = React.useState(value);
-  // The last value this draft sent to the URL. An incoming `value` that matches
-  // it is our own commit echoing back, so it must not overwrite characters the
-  // operator typed while the navigation was in flight.
-  const committed = React.useRef(value);
-  const timer = React.useRef<number | null>(null);
-  const commitRef = React.useRef(commit);
-
-  React.useEffect(() => {
-    commitRef.current = commit;
-  }, [commit]);
-
-  React.useEffect(() => {
-    if (value === committed.current) {
-      return;
-    }
-
-    // An external change — browser history, or a filter the operator applied
-    // elsewhere — wins over an uncommitted draft.
-    committed.current = value;
-    setDraft(value);
-    cancelPending(timer);
-  }, [value]);
-
-  React.useEffect(() => () => cancelPending(timer), []);
-
-  function update(next: string): void {
-    setDraft(next);
-    cancelPending(timer);
-    timer.current = window.setTimeout(() => {
-      timer.current = null;
-      committed.current = next;
-      commitRef.current(next);
-    }, SEARCH_DEBOUNCE_MS);
-  }
-
-  function clear(): void {
-    cancelPending(timer);
-    committed.current = "";
-    setDraft("");
-  }
-
-  return { draft, update, clear };
-}
-
 function OperationSearchInput({
   value,
   pending,
@@ -961,11 +899,4 @@ function OperationSearchInput({
       aria-label={ariaLabel}
     />
   );
-}
-
-function cancelPending(timer: React.MutableRefObject<number | null>): void {
-  if (timer.current !== null) {
-    window.clearTimeout(timer.current);
-    timer.current = null;
-  }
 }

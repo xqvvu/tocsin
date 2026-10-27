@@ -32,13 +32,23 @@ vi.mock("#/features/suppressions/api/suppression.queries", () => ({
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     to,
+    search,
     children,
     ...props
-  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { to: string }) => (
-    <a href={to} {...props}>
-      {children}
-    </a>
-  ),
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+    to: string;
+    search?: Record<string, string>;
+  }) => {
+    // Serialize the typed search object the way the real Link does, so the test
+    // can assert the badge drills into the active-rules view.
+    const query = search ? `?${new URLSearchParams(Object.entries(search)).toString()}` : "";
+
+    return (
+      <a href={`${to}${query}`} {...props}>
+        {children}
+      </a>
+    );
+  },
 }));
 
 /**
@@ -127,7 +137,7 @@ describe("active suppression indicator", () => {
     });
   });
 
-  it("counts active rules and links to the suppressions page", async () => {
+  it("counts active rules and links to the filtered active rules list", async () => {
     renderIndicator([
       suppression({
         id: "first",
@@ -148,7 +158,9 @@ describe("active suppression indicator", () => {
 
     const link = await screen.findByRole("link", { name: "Active suppressions: 2" });
 
-    expect(link.getAttribute("href")).toBe("/suppressions");
+    // Opening the bare list could land on a page of expired rules even while a
+    // rule is silencing alerts, so the badge carries the state filter.
+    expect(link.getAttribute("href")).toBe("/suppressions?state=active");
     expect(link.getAttribute("title")).toBe("Database migration · Network maintenance");
   });
 

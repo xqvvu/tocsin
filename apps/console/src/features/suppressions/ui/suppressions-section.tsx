@@ -1,4 +1,10 @@
-import { RiDeleteBinLine, RiEditLine, RiShieldCheckLine, RiShutDownLine } from "@remixicon/react";
+import {
+  RiDeleteBinLine,
+  RiEditLine,
+  RiFilter3Line,
+  RiShieldCheckLine,
+  RiShutDownLine,
+} from "@remixicon/react";
 import { Link } from "@tanstack/react-router";
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
@@ -54,6 +60,9 @@ export interface SuppressionsSectionProps {
   destinations: DestinationListItem[];
   editingSuppression: Suppression | null;
   pending: boolean;
+  /** Whether the page narrowed the list, which changes the empty state. */
+  hasActiveFilters: boolean;
+  onResetFilters: () => void;
   onEdit: (suppressionId: string) => void;
   onCancelEdit: () => void;
   onToggle: (suppression: Suppression) => void;
@@ -76,6 +85,8 @@ export function SuppressionsSection({
   destinations,
   editingSuppression,
   pending,
+  hasActiveFilters,
+  onResetFilters,
   onEdit,
   onCancelEdit,
   onToggle,
@@ -149,7 +160,13 @@ export function SuppressionsSection({
         data={data}
         columns={columns}
         pageSize={suppressionsPageSize}
-        emptyState={<SuppressionsEmptyState />}
+        emptyState={
+          hasActiveFilters ? (
+            <SuppressionsFilteredEmptyState onResetFilters={onResetFilters} />
+          ) : (
+            <SuppressionsEmptyState />
+          )
+        }
         getRowId={(suppression) => suppression.id}
         columnClassName={suppressionsColumnClassName}
         isPrimaryColumn={(columnId) => columnId === "name"}
@@ -427,6 +444,32 @@ function SuppressionsEmptyState() {
         <EmptyDescription>{t("suppressions.table.empty.description")}</EmptyDescription>
       </EmptyHeader>
       <EmptyContent>{t("suppressions.table.empty.content")}</EmptyContent>
+    </Empty>
+  );
+}
+
+/**
+ * A filtered list that matched nothing is not an empty product: without this
+ * distinction an operator who typed the wrong name reads "no rules" and may
+ * believe the silence protecting them is gone.
+ */
+function SuppressionsFilteredEmptyState({ onResetFilters }: { onResetFilters: () => void }) {
+  const t = useTranslations();
+
+  return (
+    <Empty className="border-none p-4">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <RiFilter3Line aria-hidden />
+        </EmptyMedia>
+        <EmptyTitle>{t("suppressions.table.emptyFiltered.title")}</EmptyTitle>
+        <EmptyDescription>{t("suppressions.table.emptyFiltered.description")}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button type="button" variant="outline" size="sm" onClick={onResetFilters}>
+          {t("common.actions.clearAllFilters")}
+        </Button>
+      </EmptyContent>
     </Empty>
   );
 }
