@@ -117,8 +117,8 @@ docker compose logs --no-log-prefix --since=30m console \
 | `code` | 含义 | 下一步 |
 | --- | --- | --- |
 | `store_unavailable` | SQLite 无法打开 | 检查数据卷、权限与磁盘空间 |
-| `migration_failed` | 迁移执行失败 | 保全数据库与日志，按[备份、恢复与升级](/operations/backup-restore)处置 |
-| `migration_unknown` | 数据库包含当前版本不认识的迁移 | 可能是版本回退或镜像不匹配；不要手工修改 `schema_migrations` |
+| `migration_failed` | 迁移执行失败 | 保全数据库与日志，按[版本升级与回滚](/operations/upgrade-rollback#回滚决策)处置 |
+| `migration_unknown` | 数据库包含当前版本不认识的迁移 | 可能是版本回退或镜像不匹配；按[升级兼容性](/operations/upgrade-rollback#兼容性模型)判断，不要直接修改 `schema_migrations` |
 | `worker_unavailable` | 后台 Worker 无法启动 | 查看启动日志与 `tocsin.worker.*` 错误 |
 
 ::: warning 探针端点不校验登录
@@ -166,7 +166,7 @@ sink 会把敏感键（如 `authorization`、`token`、`password`、`secret`、`
 - 日志只写 stdout/stderr。Docker 部署由日志驱动保存，`docker compose logs` 直接读取；不要在容器内另建日志文件。
 - 轮转与保留周期由部署平台决定（Docker 日志驱动、journald 或 Kubernetes 采集器），Tocsin 不管理日志文件生命周期。
 - 业务数据不依赖日志：Event、Delivery 和尝试记录保存在 SQLite 中；日志用于解释过程，不用于恢复数据。
-- 备份与升级前先保全相关时间段的日志，尤其是在数据库迁移失败或需要回滚时，见[备份、恢复与升级](/operations/backup-restore)。
+- 备份与升级前先保全相关时间段的日志，尤其是在数据库迁移失败或需要回滚时，见[备份与恢复](/operations/backup-restore)与[版本升级与回滚](/operations/upgrade-rollback)。
 
 ## 值班检查清单
 
@@ -179,4 +179,4 @@ sink 会把敏感键（如 `authorization`、`token`、`password`、`secret`、`
 | Delivery 停在 `pending` | 设置页 Worker 状态与暂停开关 | `tocsin.worker.delivery` 批次摘要与最后错误 |
 | 电话没有拨出 | 加急 Worker 状态 | `tocsin.oncall` 的入队、退避与失败行 |
 
-相关页面：[故障排查](/operations/troubleshooting) · [投递生命周期与重试](/operations/deliveries) · [飞书应用与电话加急](/integrations/feishu-app) · [Docker 生产部署](/operations/deploy-docker) · [备份、恢复与升级](/operations/backup-restore) · [认证与账号安全](/operations/authentication)
+相关页面：[故障排查](/operations/troubleshooting) · [投递生命周期与重试](/operations/deliveries) · [飞书应用与电话加急](/integrations/feishu-app) · [Docker 生产部署](/operations/deploy-docker) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [认证与账号安全](/operations/authentication)

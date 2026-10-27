@@ -55,4 +55,4 @@ docker compose ps
 一个实例对应一个 SQLite 数据库和进程内 Worker。不要运行多个副本争用同一数据卷，也不要把这个部署形态当作高可用集群。
 :::
 
-下一步：[环境变量与运行时配置](/operations/configuration) · [认证与账号安全](/operations/authentication) · [备份、恢复与升级](/operations/backup-restore) · [健康检查和告警链路排障](/operations/troubleshooting)
+下一步：[环境变量与运行时配置](/operations/configuration) · [认证与账号安全](/operations/authentication) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [健康检查和告警链路排障](/operations/troubleshooting)
