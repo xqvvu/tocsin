@@ -7,7 +7,7 @@ description: 面向 SRE 与运维人员的 Delivery 状态、自动重试与退�
 
 Delivery 记录一次「把某个 Event 发送到某个通知目标」的工作。它保存发送结果、尝试记录和错误，是判断「告警有没有真正送达」的唯一依据。
 
-先分清三个对象：Event 记录收到什么，Route 决定为哪些目标产生投递，Delivery 记录发送结果。`pending` 不是失败，`suppressed` 也不是网络故障。本页说明投递状态、重试、暂停和积压处置；路由为何命中见[路由规则与匹配](/guide/routes#查看匹配证据)，通知目标的字段与模板见[通知目标参考](/integrations/destinations#投递与重试)。
+先分清三个对象：Event 记录收到什么，Route 决定为哪些目标产生投递，Delivery 记录发送结果。`pending` 不是失败，`suppressed` 也不是网络故障。本页说明投递状态、重试、暂停和积压处置；路由为何命中见[路由规则与匹配](/guide/routes#查看匹配证据)，通知目标的字段与模板见[通知目标参考](/integrations/destinations)。
 
 ## 一条投递从哪里来
 
