@@ -851,6 +851,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.112` | `1ac8bd0` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.112`（linux/amd64 + linux/arm64，index digest `sha256:494bd089…`，amd64 `sha256:db4e53d4…`，arm64 `sha256:e7cdfed5…`） | 事件投递计数一键下钻 + 投递列表按事件精确过滤（#573，REQ-294）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.111` |
 | `0.1.0-beta.111` | `5a89837` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.111`（linux/amd64 + linux/arm64，index digest `sha256:2e1cb62d…`，amd64 `sha256:c251b8c9…`，arm64 `sha256:d16fdf9f…`） | Routes 重叠与重复投递提示（#567，REQ-296）；投递批次韧性（#563，Q-226）；Events 按通知目标筛选（#557）；抑制创建确认（#553）；批量导入 Token 视口（#562）；JSON 示例按原始文本（#559）；无迁移/配置/环境变量变化；回滚镜像 `0.1.0-beta.110` |
 | `0.1.0-beta.98` | `3bfe441` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.98`（linux/amd64 + linux/arm64，index digest `sha256:fd3301afea06…`） | 投递列表显示重试预算 `n/max` 与「重试耗尽」（#506，REQ-58）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.97` |
 | `0.1.0-beta.97` | `f24851b` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.97`（linux/amd64 + linux/arm64，index digest `sha256:3e317411…`） | 设置页「账号安全」会话列表 + 退出其他设备（#503，REQ-274）；设置 UI 标签页全断点滚动；空 IP/客户端容错；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.96` |
