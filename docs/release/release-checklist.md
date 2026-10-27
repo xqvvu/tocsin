@@ -57,7 +57,8 @@
 5. **文档与版本一致。** 版本号、README 状态段落、部署/备份文档、`mvp-rc-checklist.md` 的结论日期要对齐
    本次 tag 的事实；不要留下“尚无部署文档”这类已经过时的说法。
 6. **数据兼容性自查。** 当前 migration plan 为 `0001_initial_schema` + `0002_suppressions` +
-   `0003_complete_legacy_schema` + `0004_oncall_dispatch_started_at`。runner 会跳过已应用的版本，所以
+   `0003_complete_legacy_schema` + `0004_oncall_dispatch_started_at` +
+   `0005_deliveries_destination_id_health`。runner 会跳过已应用的版本，所以
    **修改已提交的 migration 对任何已有数据库都是 no-op**；本次发布若改 schema，必须新增 forward step
    并在 `migrate/plan.ts` 注册。判断方法与后果见 `docs/release/backup-restore-upgrade.md`。
 

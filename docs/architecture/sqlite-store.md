@@ -76,6 +76,8 @@ apps/console/src/infra/sqlite/
     0001_initial_schema.ts      # 全新库 baseline，编排下列 builder
     0002_suppressions.ts        # forward step：suppressions 表
     0003_complete_legacy_schema.ts # forward repair：对齐旧库的完整 schema
+    0004_oncall_dispatch_started_at.ts # forward step：oncall 拨号意图标记
+    0005_deliveries_destination_id_health.ts # forward step：投递健康聚合覆盖索引
     ensure-complete-schema.ts   # 0002/0003 共享的幂等 schema 修复
     schema.ts                   # Tocsin 业务表和索引
     better-auth.schema.ts       # Better Auth 表和索引的 Kysely builder

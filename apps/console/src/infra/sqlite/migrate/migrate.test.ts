@@ -21,6 +21,7 @@ describe("sqlite schema plan", () => {
       "0002_suppressions.ts",
       "0003_complete_legacy_schema.ts",
       "0004_oncall_dispatch_started_at.ts",
+      "0005_deliveries_destination_id_health.ts",
     ]);
   });
 
@@ -46,6 +47,120 @@ describe("sqlite schema plan", () => {
     }
   });
 
+  it("adds the covering destination-health index to databases recorded before it", async () => {
+    const db = createSqliteDatabase({ databasePath: ":memory:" });
+
+    try {
+      await migrateSqliteDatabase(db, { plan: sqliteSchemaPlan.slice(0, 4) });
+      await db
+        .insertInto("sources")
+        .values({
+          id: "source-1",
+          name: "Prometheus",
+          provider: "generic",
+          token_hash: "hash",
+          created_at: "2026-10-14T00:00:00.000Z",
+          updated_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+      await db
+        .insertInto("destinations")
+        .values({
+          id: "destination-1",
+          name: "Pager",
+          kind: "generic_webhook",
+          created_at: "2026-10-14T00:00:00.000Z",
+          updated_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+      await db
+        .insertInto("events")
+        .values({
+          id: "event-1",
+          source_id: "source-1",
+          fingerprint: "fingerprint-1",
+          severity: "critical",
+          status: "firing",
+          title: "CPU high",
+          message: "CPU high",
+          labels_json: "{}",
+          normalized_json: "{}",
+          provider_metadata_json: "{}",
+          raw_payload_json: "{}",
+          raw_headers_json: "{}",
+          received_at: "2026-10-14T00:00:00.000Z",
+          occurred_at: "2026-10-14T00:00:00.000Z",
+          created_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+      await db
+        .insertInto("deliveries")
+        .values({
+          id: "delivery-1",
+          event_id: "event-1",
+          destination_id: "destination-1",
+          state: "pending",
+          attempt_count: 1,
+          max_attempts: 3,
+          created_at: "2026-10-14T00:00:00.000Z",
+          updated_at: "2026-10-14T00:00:00.000Z",
+        })
+        .execute();
+      // A database that recorded 0001..0004 before this index existed never
+      // gets it from the 0003 repair: that step is already in its ledger.
+      await sql`DROP INDEX IF EXISTS idx_deliveries_destination_id_health`.execute(db);
+
+      const result = await migrateSqliteDatabase(db);
+
+      expect(result.applied.map((migration) => migration.version)).toEqual(["0005"]);
+      const indexColumns = await sql<{ name: string }>`
+        PRAGMA index_info("idx_deliveries_destination_id_health")
+      `.execute(db);
+      expect(indexColumns.rows.map((row) => row.name)).toEqual([
+        "destination_id",
+        "state",
+        "finished_at",
+        "created_at",
+      ]);
+
+      // The aggregate reads every indexed column, so the planner must scan the
+      // index itself instead of building a temp B-tree over the table.
+      const queryPlan = await sql<{ detail: string }>`
+        EXPLAIN QUERY PLAN
+        SELECT destination_id,
+               MAX(CASE WHEN state = 'succeeded' THEN finished_at END),
+               MAX(CASE WHEN state = 'failed' THEN finished_at END),
+               SUM(CASE WHEN state IN ('pending', 'running') THEN 1 ELSE 0 END),
+               SUM(CASE WHEN state = 'failed' AND created_at >= '2026-10-14T00:00:00.000Z' THEN 1 ELSE 0 END)
+        FROM deliveries
+        GROUP BY destination_id
+      `.execute(db);
+      const planDetails = queryPlan.rows.map((row) => row.detail).join("\n");
+      expect(planDetails).toContain("USING COVERING INDEX idx_deliveries_destination_id_health");
+      expect(planDetails).not.toContain("TEMP B-TREE");
+
+      expect(
+        await db
+          .selectFrom("deliveries")
+          .selectAll()
+          .where("id", "=", "delivery-1")
+          .executeTakeFirst(),
+      ).toMatchObject({
+        id: "delivery-1",
+        event_id: "event-1",
+        destination_id: "destination-1",
+        state: "pending",
+        attempt_count: 1,
+      });
+
+      const rerun = await migrateSqliteDatabase(db);
+      expect(rerun.applied).toHaveLength(0);
+      expect(rerun.skipped.map((migration) => migration.version)).toContain("0005");
+    } finally {
+      await db.destroy();
+    }
+  });
+
   it("keeps the Better Auth generated SQL snapshot beside the Kysely builders", () => {
     expect(betterAuthGeneratedSql).toContain('create table "user"');
     expect(betterAuthGeneratedSql).toContain('"email_verified"');
@@ -66,13 +181,14 @@ describe("sqlite schema plan", () => {
         "0002",
         "0003",
         "0004",
+        "0005",
       ]);
       expect(await getAppliedMigrationVersions(db)).toEqual(
-        new Set(["0001", "0002", "0003", "0004"]),
+        new Set(["0001", "0002", "0003", "0004", "0005"]),
       );
       const store = new OpenedSqliteStore(db, new SqliteRepositoryContext({ db }));
 
-      expect(await store.schemaVersion()).toBe("0004");
+      expect(await store.schemaVersion()).toBe("0005");
       expect((await store.settings.get()).rawPayloadRetentionDays).toBe(30);
 
       const tables = (
@@ -279,9 +395,13 @@ describe("sqlite schema plan", () => {
 
       const result = await migrateSqliteDatabase(db);
 
-      expect(result.applied.map((migration) => migration.version)).toEqual(["0003", "0004"]);
+      expect(result.applied.map((migration) => migration.version)).toEqual([
+        "0003",
+        "0004",
+        "0005",
+      ]);
       expect(await getAppliedMigrationVersions(db)).toEqual(
-        new Set(["0001", "0002", "0003", "0004"]),
+        new Set(["0001", "0002", "0003", "0004", "0005"]),
       );
       expect(
         await db
@@ -403,6 +523,8 @@ describe("sqlite schema plan", () => {
       expect(indexNames.has("idx_oncall_pings_state_next_attempt_at")).toBe(true);
       expect(indexNames.has("idx_oncall_pings_delivery_id")).toBe(true);
       expect(indexNames.has("idx_oncall_ping_dedupe_created_at")).toBe(true);
+      // 0005 lands on legacy databases too, not just on a fresh baseline.
+      expect(indexNames.has("idx_deliveries_destination_id_health")).toBe(true);
       expect(
         await db
           .selectFrom("settings")
@@ -458,6 +580,7 @@ describe("sqlite schema plan", () => {
         "0002",
         "0003",
         "0004",
+        "0005",
       ]);
     } finally {
       await db.destroy();

@@ -242,6 +242,9 @@ async function createCurrentIndexes(db: Kysely<SqliteDatabaseSchema>) {
   await sql`CREATE INDEX IF NOT EXISTS idx_deliveries_event_id ON deliveries (event_id)`.execute(
     db,
   );
+  await sql`CREATE INDEX IF NOT EXISTS idx_deliveries_destination_id_health ON deliveries (destination_id, state, finished_at, created_at)`.execute(
+    db,
+  );
   await sql`CREATE INDEX IF NOT EXISTS idx_oncall_pings_state_next_attempt_at ON oncall_pings (state, next_attempt_at)`.execute(
     db,
   );
