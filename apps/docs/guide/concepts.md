@@ -9,7 +9,7 @@ Tocsin 把告警接收与通知发送分开处理，便于定位「收到什么�
 | 概念 | 运维含义 | 排障入口 |
 | --- | --- | --- |
 | 告警源（Source） | 一个上游发送方及其 Provider 解析器；每个告警源独立认证，可单独禁用或轮换 Token。 | [告警源生命周期](/guide/sources)与一次性 Token 提示 |
-| Event | 每次通过认证的入站请求及其规范化结果。不同 Provider 的 payload 被映射为共同告警字段。 | 事件详情中的 normalized fields、原始调试信息与 route matches |
+| Event | 每次通过认证的入站请求及其规范化结果。不同 Provider 的 payload 被映射为共同告警字段。 | [事件检索与证据](/guide/events)中的 normalized fields、原始调试信息与 route matches |
 | Route | 用 source、severity、status、labels、title 或 message 条件匹配事件，并指定一个或多个通知目标。规则可检查，不执行任意代码。 | 路由列表与事件详情中的匹配证据 |
 | Destination | 一个出站通知渠道及其端点、模板和凭证配置。凭证保留在服务端；目标可测试、启停。 | 通知目标配置与测试结果 |
 | Delivery | 一次向指定目标发送的工作记录，包含状态、尝试次数、错误与重试信息。 | [投递生命周期与重试](/operations/deliveries)与 attempt history |
