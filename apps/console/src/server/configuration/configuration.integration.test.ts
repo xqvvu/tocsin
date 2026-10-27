@@ -1143,6 +1143,12 @@ describe("configuration capabilities", () => {
       "https://tocsin.example.test/events/event-url-sample",
     );
 
+    // The built-in sample is not a stored Event, so it must not produce a link
+    // that would 404 in a real notification.
+    const builtIn = await services.destinations.previewDestination({ id: destination.id });
+
+    expect(builtIn.context.tocsin.eventUrl).toBe("");
+
     await store.close();
   });
 

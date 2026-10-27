@@ -33,9 +33,9 @@ export interface DestinationPresentation {
 export interface DestinationRenderInput<Config> {
   eventId: string;
   /**
-   * Absolute dashboard link for this Event. Rendering sites fill it from the
-   * deployment's public URL so `tocsin.eventUrl` links back to Tocsin; it stays
-   * empty when no public URL is configured.
+   * Absolute dashboard link for this Event, filled by rendering sites from the
+   * deployment's public URL. The template renders an empty string when it is
+   * absent, which is also the behavior for samples with no stored Event.
    */
   eventUrl?: string;
   source: SourceSummary;
