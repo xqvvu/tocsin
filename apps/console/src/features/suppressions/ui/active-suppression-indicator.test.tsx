@@ -164,6 +164,38 @@ describe("active suppression indicator", () => {
     expect(await screen.findByRole("link", { name: "All alerts are silenced" })).toBeTruthy();
   });
 
+  it("says when an active silence is about to expire", async () => {
+    renderIndicator([
+      suppression({
+        id: "ending",
+        name: "Database migration",
+        endsAt: at(15),
+        matcher: matcher({ sourceIds: ["source-1"] }),
+      }),
+      suppression({
+        id: "steady",
+        name: "Network maintenance",
+        matcher: matcher({ severities: ["critical"] }),
+      }),
+    ]);
+
+    expect(
+      await screen.findByRole("link", {
+        name: "Active suppressions: 2 · 1 expiring within 30 min",
+      }),
+    ).toBeTruthy();
+  });
+
+  it("adds the expiry warning to a catch-all rule too", async () => {
+    renderIndicator([suppression({ id: "catch-all", name: "Freeze", endsAt: at(5) })]);
+
+    expect(
+      await screen.findByRole("link", {
+        name: "All alerts are silenced · 1 expiring within 30 min",
+      }),
+    ).toBeTruthy();
+  });
+
   it("stays hidden when the suppression query fails", async () => {
     testState.fail = true;
 

@@ -48,6 +48,9 @@ export function ActiveSuppressionIndicator() {
     >
       <RiNotificationOffLine aria-hidden />
       {label}
+      {summary.expiringSoonCount > 0
+        ? ` · ${t("suppressions.indicator.expiringSoon", { count: summary.expiringSoonCount })}`
+        : null}
     </Badge>
   );
 }

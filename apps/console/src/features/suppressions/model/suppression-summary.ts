@@ -48,10 +48,20 @@ export function describeSuppressionMatcher(chips: string[], copy: SuppressionSum
   return chips.length === 0 ? copy.everything : chips.join("; ");
 }
 
+/**
+ * How long before `endsAt` a rule is flagged as about to expire.
+ *
+ * Thirty minutes is long enough to extend a maintenance window before alerts
+ * resume, and short enough that the flag does not sit on screen all day.
+ */
+export const SUPPRESSION_EXPIRING_SOON_MS = 30 * 60_000;
+
 export interface ActiveSuppressionSummary {
   activeCount: number;
   /** Active rules whose matcher has no conditions and therefore silences everything. */
   catchAllCount: number;
+  /** Active rules whose window ends within `SUPPRESSION_EXPIRING_SOON_MS` of `now`. */
+  expiringSoonCount: number;
   names: string[];
 }
 
@@ -62,6 +72,8 @@ export interface ActiveSuppressionSummary {
  * longer silence, and a disabled one is intentionally off. `catchAllCount` is
  * reported separately because an unconditional rule is the case that makes the
  * rest of the console look healthy while nothing is delivered.
+ * `expiringSoonCount` is the other half of that honesty: an active rule is not
+ * permanent, and its end is when delivery resumes.
  */
 export function summarizeActiveSuppressions(
   suppressions: readonly Suppression[],
@@ -70,12 +82,24 @@ export function summarizeActiveSuppressions(
   const active = suppressions.filter(
     (suppression) => suppressionStateAt(suppression, now) === "active",
   );
+  const nowMs = Date.parse(now);
 
   return {
     activeCount: active.length,
     catchAllCount: active.filter((suppression) =>
       isUnconditionalSuppressionMatcher(suppression.matcher),
     ).length,
+    // An unparsable clock is already handled by the state fallback; do not also
+    // claim a rule is about to expire on evidence we could not read.
+    expiringSoonCount: Number.isNaN(nowMs)
+      ? 0
+      : active.filter((suppression) => endsWithin(suppression.endsAt, nowMs)).length,
     names: active.map((suppression) => suppression.name),
   };
+}
+
+function endsWithin(endsAt: string, nowMs: number): boolean {
+  const endsAtMs = Date.parse(endsAt);
+
+  return !Number.isNaN(endsAtMs) && endsAtMs - nowMs <= SUPPRESSION_EXPIRING_SOON_MS;
 }
