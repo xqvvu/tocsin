@@ -52,12 +52,13 @@ const enabledDestination: DestinationSummary = {
 function renderSection(
   destinations: DestinationSummary[] = [enabledDestination],
   onToggle: () => void = noop,
+  routes: RouteDefinition[] = [route],
 ) {
   return render(
     <AppIntlProvider locale="en-US">
       <div className="flex h-dvh flex-col">
         <RoutesSection
-          routes={[route]}
+          routes={routes}
           sources={[
             { id: "source-1", name: "Grafana", provider: "grafana", enabled: true } as never,
             {
@@ -125,6 +126,29 @@ describe("routes section table layout", () => {
     expect(screen.getByText("team=sre, service~api")).toBeTruthy();
     expect(screen.getByText("LatencyHigh, DiskFull")).toBeTruthy();
     expect(screen.getByText("timeout, volume")).toBeTruthy();
+  });
+
+  it("warns when two enabled routes can both notify one destination", () => {
+    renderSection([enabledDestination], noop, [
+      route,
+      { ...route, id: "route-2", name: "Secondary alerts" },
+    ]);
+
+    // The dedupe key includes the route id, so these two routes both queue a
+    // delivery for the same alert — the operator is paged twice.
+    expect(screen.getByText("Routes may notify twice")).toBeTruthy();
+    expect(screen.getByText("Critical alerts and Secondary alerts share Pager")).toBeTruthy();
+    expect(screen.getAllByText("1 overlaps")).toHaveLength(2);
+  });
+
+  it("does not flag a pair that only meets on a disabled destination", () => {
+    renderSection([{ ...enabledDestination, enabled: false }], noop, [
+      route,
+      { ...route, id: "route-2", name: "Secondary alerts" },
+    ]);
+
+    // A disabled target never receives a delivery, so it cannot duplicate one.
+    expect(screen.queryByText("Routes may notify twice")).toBeNull();
   });
 
   it("marks a target list that includes a disabled destination", () => {
