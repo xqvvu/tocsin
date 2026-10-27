@@ -1359,6 +1359,7 @@
   "suppressions.hits.pagination.range": "{total, plural, one {# delivery} other {# deliveries}}",
   "suppressions.indicator.active": "Active suppressions: {count}",
   "suppressions.indicator.catchAll": "All alerts are silenced",
+  "suppressions.indicator.expiringSoon": "{count} expiring within 30 min",
   "suppressions.kind.maintenance_window": "Maintenance window",
   "suppressions.kind.silence": "Silence",
   "suppressions.matcher.destination": "Destination",
