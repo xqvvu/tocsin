@@ -1,4 +1,5 @@
 import {
+  RiAlertLine,
   RiDeleteBinLine,
   RiEditLine,
   RiErrorWarningLine,
@@ -9,7 +10,12 @@ import {
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 
-import type { DestinationSummary, RouteDefinition, SourceSummary } from "@tocsin/core";
+import {
+  findPotentialRouteOverlaps,
+  type DestinationSummary,
+  type RouteDefinition,
+  type SourceSummary,
+} from "@tocsin/core";
 
 import { DeletionImpactNotice } from "#/components/common/deletion-impact-notice";
 import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
@@ -52,6 +58,7 @@ import {
 import { routeRuleSummaryCopy } from "#/features/routes/model/route-rule-summary-copy";
 import { routeSourceReachability } from "#/features/routes/model/route-source-reachability";
 import { EditRouteForm } from "#/features/routes/ui/route-forms";
+import { RouteOverlapNotice } from "#/features/routes/ui/route-overlap-notice";
 import { RouteSourceReachabilityBadge } from "#/features/routes/ui/route-source-reachability-badge";
 import { SuppressionFromRouteDialog } from "#/features/suppressions/ui/suppression-from-route-dialog";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -95,12 +102,45 @@ export function RoutesSection({
 }: RoutesSectionProps) {
   const t = useTranslations();
   const data = React.useMemo(() => routes, [routes]);
+  // A disabled destination never receives a delivery, so a pair that only meets
+  // there is not a duplicate-notification risk — drop it before the badge and
+  // the notice count it.
+  const { overlaps, overlappingRouteNamesById } = React.useMemo(() => {
+    const enabledDestinationIds = new Set(
+      destinations
+        .filter((destination) => destination.enabled)
+        .map((destination) => destination.id),
+    );
+    const liveOverlaps = findPotentialRouteOverlaps(routes)
+      .map((overlap) => ({
+        ...overlap,
+        sharedDestinationIds: overlap.sharedDestinationIds.filter((destinationId) =>
+          enabledDestinationIds.has(destinationId),
+        ),
+      }))
+      .filter((overlap) => overlap.sharedDestinationIds.length > 0);
+    const byRouteId = new Map<string, string[]>();
+
+    for (const overlap of liveOverlaps) {
+      const [leftId, rightId] = overlap.routeIds;
+      const [leftName, rightName] = overlap.routeNames;
+      byRouteId.set(leftId, [...(byRouteId.get(leftId) ?? []), rightName]);
+      byRouteId.set(rightId, [...(byRouteId.get(rightId) ?? []), leftName]);
+    }
+
+    return { overlaps: liveOverlaps, overlappingRouteNamesById: byRouteId };
+  }, [destinations, routes]);
   const columns = React.useMemo<Array<ColumnDef<ConsoleTableFeatures, RouteSummary>>>(
     () => [
       {
         id: "name",
         header: t("routing.table.headers.name"),
-        cell: ({ row }) => <RouteIdentityCell route={row.original} />,
+        cell: ({ row }) => (
+          <RouteIdentityCell
+            route={row.original}
+            overlappingRouteNames={overlappingRouteNamesById.get(row.original.id) ?? []}
+          />
+        ),
       },
       {
         id: "rule",
@@ -144,6 +184,7 @@ export function RoutesSection({
       onEdit,
       onPreviewReplay,
       onToggle,
+      overlappingRouteNamesById,
       pending,
       requestDeleteImpact,
       sources,
@@ -153,6 +194,11 @@ export function RoutesSection({
 
   return (
     <section className="bg-background flex min-h-0 min-w-0 flex-1 flex-col">
+      {overlaps.length > 0 ? (
+        <div className="px-2 pt-2">
+          <RouteOverlapNotice overlaps={overlaps} destinations={destinations} />
+        </div>
+      ) : null}
       <OperationsTable
         data={data}
         columns={columns}
@@ -376,11 +422,38 @@ function RouteActions({
   );
 }
 
-function RouteIdentityCell({ route }: { route: RouteSummary }) {
+function RouteIdentityCell({
+  route,
+  overlappingRouteNames,
+}: {
+  route: RouteSummary;
+  overlappingRouteNames: string[];
+}) {
+  const t = useTranslations();
+
   return (
     <div className="min-w-0">
-      <div className="truncate font-medium" title={route.name}>
-        {route.name}
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="truncate font-medium" title={route.name}>
+          {route.name}
+        </span>
+        {/* The list-level warning explains every pair; this badge keeps the
+            affected rows findable once the table is longer than the notice. */}
+        {overlappingRouteNames.length > 0 ? (
+          <IconTooltip
+            label={t("routing.overlap.badgeHint", {
+              routeNames: overlappingRouteNames.join(t("routing.overlap.nameSeparator")),
+            })}
+          >
+            <Badge
+              variant="outline"
+              className="shrink-0 gap-1 border-amber-600/30 bg-amber-50 px-1 text-amber-700"
+            >
+              <RiAlertLine aria-hidden />
+              {t("routing.overlap.badge", { count: overlappingRouteNames.length })}
+            </Badge>
+          </IconTooltip>
+        ) : null}
       </div>
       <div className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]" title={route.id}>
         {route.id.slice(0, 12)}
