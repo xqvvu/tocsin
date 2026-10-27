@@ -69,7 +69,8 @@
     `0.1.0-beta.108` 镜像，无需数据库操作。
 - tag `v0.1.0-beta.109` @ `941ad5c`；GitHub Release 为 prerelease，body 非空（硬校验通过）。
 - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.109`
-  （linux/amd64 + linux/arm64，`--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；
+  （linux/amd64 + linux/arm64，index digest `sha256:85be898494c6af5b3fd88900ce348cdda7139c8bb0b0ae9a89f05fba3d5b65a7`，
+  `--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；
   回滚 `0.1.0-beta.108`。
 - Obsidian 同步：`obsidian-vault` skill 在本会话不可用（其 SKILL.md 硬编码 WSL 路径，在 macOS
   无效），按 AGENTS.md 允许的 fallback 跳过。
