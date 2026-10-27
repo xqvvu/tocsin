@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 import { sql } from "kysely";
 
-import { SqliteMigrationError } from "#/infra/sqlite/errors";
+import { SqliteMigrationCompatibilityError, SqliteMigrationError } from "#/infra/sqlite/errors";
 import { sqliteSchemaPlan } from "#/infra/sqlite/migrate/plan";
 import type { MigrationResult, SqliteMigration } from "#/infra/sqlite/migrate/types";
 import type { SqliteKysely } from "#/infra/sqlite/schema";
@@ -185,7 +185,7 @@ function assertNoUnknownAppliedMigrations(
     return;
   }
 
-  throw new SqliteMigrationError(
+  throw new SqliteMigrationCompatibilityError(
     `SQLite database has applied migrations not present in this build: ${unknownVersions.join(", ")}`,
   );
 }
