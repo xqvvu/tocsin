@@ -92,7 +92,7 @@ Worker 只领取同时满足以下条件的 `pending` 投递：
 
 ## Worker 与手动运行
 
-投递由应用进程内的投递 Worker 异步执行，没有独立服务。默认每 5 秒轮询一次，每批最多领取 10 条；超过 5 分钟仍处于 `running` 的尝试会被视为进程中断，回收为失败并注明发送结果未知。若还有剩余尝试次数，会立即重新排队。相关阈值可用 `TOCSIN_WORKER_INTERVAL_MS`、`TOCSIN_WORKER_BATCH_SIZE` 和 `TOCSIN_WORKER_STALE_RUNNING_MS` 调整，约束见 [Docker 生产部署](/operations/deploy-docker#运行时配置)。
+投递由应用进程内的投递 Worker 异步执行，没有独立服务。默认每 5 秒轮询一次，每批最多领取 10 条；超过 5 分钟仍处于 `running` 的尝试会被视为进程中断，回收为失败并注明发送结果未知。若还有剩余尝试次数，会立即重新排队。相关阈值可用 `TOCSIN_WORKER_INTERVAL_MS`、`TOCSIN_WORKER_BATCH_SIZE` 和 `TOCSIN_WORKER_STALE_RUNNING_MS` 调整，范围与取舍见[环境变量与运行时配置](/operations/configuration)。
 
 投递页的「运行投递工作进程」会立即执行一批（最多 10 条），用于验证配置或推动积压。它不改变队列规则：全局暂停时按钮禁用，待发送投递仍受目标/路由启停和静默约束。
 

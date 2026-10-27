@@ -12,6 +12,7 @@
 | 数据库无法写入 | 核对 `/data` 对容器进程可写、卷挂载到预期位置、磁盘空间充足。不要通过删除 SQLite 文件尝试“重置”生产实例。 |
 
 首个 owner 抢注、登录循环、session 撤销与认证密钥轮换见[认证与账号安全](/operations/authentication)。
+环境变量默认值、Compose 透传差异与修改后的生效步骤见[环境变量与运行时配置](/operations/configuration)。
 
 ## Webhook 没有 Event
 

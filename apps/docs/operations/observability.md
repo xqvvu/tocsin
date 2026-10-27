@@ -16,7 +16,7 @@ Tocsin 是单实例、单进程服务。运行日志只写 stdout/stderr：不�
 | `TOCSIN_LOG_FORMAT` | `auto` / `json` / `text` | `auto` | `auto` 在生产构建输出 JSON Lines，在开发模式输出带颜色的文本。 |
 | `TOCSIN_LOG_LEVEL` | `trace` / `debug` / `info` / `warning` / `error` / `fatal` / `off` | `info` | 低于阈值的记录被丢弃；`off` 关闭 `tocsin.*` 业务日志，LogTape 自身的 meta 告警仍可能输出。 |
 
-- Compose 在生产模式下显式传入 `info` / `auto`，见 [Docker 生产部署](/operations/deploy-docker#运行时配置)。
+- Compose 在生产模式下显式传入 `info` / `auto`，完整范围与生效方式见[环境变量与运行时配置](/operations/configuration#日志)。
 - 设置页「运行时与生效参数」里的「日志格式」显示配置原值。`auto` 不告诉你当前最终输出哪种格式；生产镜像下 `auto` 即 JSON Lines。
 - 级别沿用 console 语义：`warning`、`error`、`fatal` 写入 stderr，`info`、`debug`、`trace` 写入 stdout。`docker compose logs` 会合并两路输出。
 - 启动时 `tocsin.runtime` 会输出 `Logging initialized with … output at …`，可用来确认实际生效的格式与级别。
