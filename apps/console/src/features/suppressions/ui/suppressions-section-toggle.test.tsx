@@ -162,6 +162,8 @@ function renderSection({
         destinations={[]}
         editingSuppression={null}
         pending={false}
+        hasActiveFilters={false}
+        onResetFilters={noop}
         onEdit={noop}
         onCancelEdit={noop}
         onToggle={onToggle}

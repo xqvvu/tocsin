@@ -44,10 +44,12 @@ export function ActiveSuppressionIndicator() {
       : null;
   const accessibleLabel = expiry ? `${label} · ${expiry}` : label;
 
+  // The badge reports rules silencing alerts right now, so it must not drop the
+  // operator into a list whose first page may hold expired rules.
   return (
     <Badge
       variant={catchAll ? "destructive" : "outline"}
-      render={<Link to="/suppressions" aria-label={accessibleLabel} />}
+      render={<Link to="/suppressions" search={{ state: "active" }} aria-label={accessibleLabel} />}
       title={summary.names.join(" · ")}
       className="mr-1"
     >

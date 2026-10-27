@@ -9,13 +9,27 @@ import { destinationsQueryOptions } from "#/features/destinations/api/destinatio
 import { sourcesQueryOptions } from "#/features/sources/api/source.queries";
 import { useSuppressionMutations } from "#/features/suppressions/api/suppression.mutations";
 import { suppressionsQueryOptions } from "#/features/suppressions/api/suppression.queries";
+import {
+  clearedSuppressionSearch,
+  filterSuppressions,
+  hasSuppressionFilters,
+  type SuppressionListSearch,
+} from "#/features/suppressions/model/suppression-search";
 import { SuppressionAddDialog } from "#/features/suppressions/ui/suppression-add-dialog";
+import { SuppressionFilters } from "#/features/suppressions/ui/suppression-filters";
 import { SuppressionsSection } from "#/features/suppressions/ui/suppressions-section";
 import { useTranslations } from "#/i18n/use-i18n";
+import { useOperationalNow } from "#/i18n/use-operational-now";
 import { DashboardContentLayout } from "#/shell/dashboard-layout";
 
-export function SuppressionsPage() {
+export interface SuppressionsPageProps {
+  search: SuppressionListSearch;
+  onSearchChange: (next: Partial<SuppressionListSearch>) => void;
+}
+
+export function SuppressionsPage({ search, onSearchChange }: SuppressionsPageProps) {
   const t = useTranslations();
+  const now = useOperationalNow();
   const [{ data: suppressions }, { data: sources }, { data: destinations }] = useSuspenseQueries({
     queries: [suppressionsQueryOptions(), sourcesQueryOptions(), destinationsQueryOptions()],
   });
@@ -32,6 +46,21 @@ export function SuppressionsPage() {
     ? (suppressions.find((suppression) => suppression.id === editingSuppressionId) ?? null)
     : null;
   const pending = pendingAction !== null;
+  const hasActiveFilters = hasSuppressionFilters(search);
+  // The rule list is loaded whole (the page is client-paginated), so narrowing
+  // it needs no request. Resolving matcher ids to names lets "grafana" find a
+  // rule scoped to a source whose id the operator never sees.
+  const visibleSuppressions = React.useMemo(() => {
+    const sourceNames = new Map(sources.map((source) => [source.id, source.name]));
+    const destinationNames = new Map(
+      destinations.map((destination) => [destination.id, destination.name]),
+    );
+
+    return filterSuppressions(suppressions, search, now.toISOString(), {
+      sourceName: (sourceId) => sourceNames.get(sourceId),
+      destinationName: (destinationId) => destinationNames.get(destinationId),
+    });
+  }, [destinations, now, search, sources, suppressions]);
 
   async function refreshSuppressions(): Promise<boolean> {
     try {
@@ -94,12 +123,15 @@ export function SuppressionsPage() {
               </>
             }
           />
+          <SuppressionFilters search={search} pending={pending} onChange={onSearchChange} />
           <SuppressionsSection
-            suppressions={suppressions}
+            suppressions={visibleSuppressions}
             sources={sources}
             destinations={destinations}
             editingSuppression={editingSuppression}
             pending={pending}
+            hasActiveFilters={hasActiveFilters}
+            onResetFilters={() => onSearchChange(clearedSuppressionSearch)}
             onEdit={setEditingSuppressionId}
             onCancelEdit={() => setEditingSuppressionId(null)}
             onToggle={(suppression) =>
