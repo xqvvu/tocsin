@@ -129,6 +129,57 @@ describe("destination kind filter in the operation search", () => {
   });
 });
 
+describe("destination filter in the operation search", () => {
+  it("only keeps the destination match next to a destination", () => {
+    // `destinationMatch` describes how events relate to the selected target;
+    // without one it would be a filter that silently does nothing, so it never
+    // reaches the URL on its own.
+    expect(pruneSearch({ destinationMatch: "missing" }).destinationMatch).toBeUndefined();
+    expect(
+      pruneSearch({ destinationId: "destination-1", destinationMatch: "missing" }).destinationMatch,
+    ).toBe("missing");
+
+    // Clearing the destination drops the match with it for the same reason.
+    const cleared = mergeOperationSearch(
+      { destinationId: "destination-1", destinationMatch: "missing" },
+      { destinationId: "" },
+    );
+
+    expect(cleared.destinationMatch).toBeUndefined();
+  });
+
+  it("keeps the default match out of the URL", () => {
+    // `delivered` is what the server applies when the key is absent, so writing
+    // it on every link would only make the URL longer.
+    expect(
+      pruneSearch({ destinationId: "destination-1", destinationMatch: "delivered" })
+        .destinationMatch,
+    ).toBeUndefined();
+  });
+
+  it("resets both lists when the destination match changes", () => {
+    const merged = mergeOperationSearch(
+      { eventPage: 4, deliveryPage: 3, destinationId: "destination-1" },
+      { destinationMatch: "missing" },
+    );
+
+    expect(merged.destinationMatch).toBe("missing");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+
+  it("falls back to any match instead of throwing on an unknown value", () => {
+    // The URL is user-editable; an unknown value must mean "no extra filter"
+    // rather than an error at the router.
+    expect(
+      DashboardOperationSearchSchema.parse({ destinationMatch: "sent" }).destinationMatch,
+    ).toBe("");
+    expect(
+      DashboardOperationSearchSchema.parse({ destinationMatch: "missing" }).destinationMatch,
+    ).toBe("missing");
+  });
+});
+
 describe("minimum attempt count in the operation search", () => {
   it("parses the bound from the URL as a number", () => {
     // Search params arrive as strings; the route validates with this schema.
@@ -377,6 +428,7 @@ describe("clearing the operation search", () => {
       "deliveryState",
       "destinationId",
       "destinationKind",
+      "destinationMatch",
       "minAttempts",
       "q",
       "range",

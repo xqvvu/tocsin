@@ -4,6 +4,11 @@
 输入：`docs/prd/post-mvp-planning.md` 方向 4「搜索、过滤与历史排障」；
 backlog `REQ-5`。
 
+> 后续：本文 §4 的「Events 按通知目标过滤」非目标与 §5 第 1–2 条验收，
+> 已由 `docs/prd/event-destination-filter.md`（REQ-240）取代——
+> Events 页现在渲染「通知目标」与「目标投递」，
+> `/events?destinationId=` 不再是静默 no-op。路由与投递状态维度仍只在 Deliveries 页。
+
 ## 一句话结论
 
 Events 页面只展示它真正能过滤的字段；Deliveries 页面新增按路由过滤。
@@ -55,7 +60,9 @@ Events 和 Deliveries 两个页面复用同一个筛选面板
   会改变事件列表的语义与成本，另行决策）。
   **后续**：事件侧的「投递结果」维度已由
   `docs/prd/event-delivery-outcome-filter.md`（REQ-21）单独交付；
-  按通知目标过滤仍未做。
+  按通知目标过滤已由 `docs/prd/event-destination-filter.md`（REQ-240）交付。
+  按投递状态过滤仍不做——Events 用「投递结果」表达扇出结果，
+  精确状态留在 Deliveries 页。
 - 在 Events 页按路由过滤。
 - 保存筛选预设、跨页面共享筛选状态、筛选条件收藏。
 - 为 `deliveries.route_id` 新增索引或迁移（MVP 数据量下先不加）。
@@ -64,8 +71,10 @@ Events 和 Deliveries 两个页面复用同一个筛选面板
 ## 5. 验收标准
 
 1. Events 页面渲染的筛选字段不含目标、路由、投递状态；Deliveries 页面三者齐全。
-2. 在 Events 页手工构造带 `destinationId` / `deliveryState` 的 URL 时，
-   面板不显示对应 chip，也不会让人误以为事件列表被这些条件过滤。
+   （目标字段随后由 REQ-240 加入 Events，见 `event-destination-filter.md`；
+   路由与投递状态仍只在 Deliveries。）
+2. 在 Events 页手工构造带 `deliveryState` 的 URL 时，
+   面板不显示对应 chip；`destinationId` 已由 REQ-240 改为真实生效。
 3. `routeId=<route>` 时，Deliveries 只返回该路由的投递，`total` 与 `items` 一致；
    不存在的路由返回空列表而不是报错。
 4. 清空路由筛选后恢复全量；切换路由时 `eventPage` / `deliveryPage` 回到 1。

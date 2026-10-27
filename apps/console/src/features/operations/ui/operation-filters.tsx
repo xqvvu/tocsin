@@ -245,6 +245,12 @@ function OperationFiltersPanel({
       label: destination.name,
     })),
   ];
+  // Only the non-default half earns a control: `delivered` is what the server
+  // does anyway, and the URL never writes it.
+  const destinationMatchItems = [
+    { value: "delivered", label: t("operations.filters.destinationMatchOptions.delivered") },
+    { value: "missing", label: t("operations.filters.destinationMatchOptions.missing") },
+  ];
   const destinationKindItems = [
     { value: null, label: t("operations.filters.anyDestinationKind") },
     ...DestinationKindSchema.options.map((kind) => ({
@@ -408,34 +414,65 @@ function OperationFiltersPanel({
           </Select>
         </UiField>
       ) : null}
+      <UiField>
+        <FieldLabel htmlFor="operation-destination">
+          {t("operations.filters.destination")}
+        </FieldLabel>
+        <Select
+          id="operation-destination"
+          items={destinationItems}
+          value={search.destinationId || null}
+          disabled={pending}
+          onValueChange={(value) => onChange({ destinationId: value ?? "" })}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={t("operations.filters.anyDestination")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value={null}>{t("operations.filters.anyDestination")}</SelectItem>
+              {configuration.destinations.map((destination) => (
+                <SelectItem key={destination.id} value={destination.id}>
+                  {destination.name}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </UiField>
+      {scope === "events" && search.destinationId ? (
+        <UiField>
+          <FieldLabel htmlFor="operation-destination-match">
+            {t("operations.filters.destinationMatch")}
+          </FieldLabel>
+          <Select
+            id="operation-destination-match"
+            items={destinationMatchItems}
+            value={search.destinationMatch || "delivered"}
+            disabled={pending}
+            onValueChange={(value) =>
+              onChange({
+                destinationMatch: (value ?? "") as DashboardOperationSearch["destinationMatch"],
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("operations.filters.anyDestinationMatch")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {destinationMatchItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </UiField>
+      ) : null}
       {scope === "deliveries" ? (
         <>
-          <UiField>
-            <FieldLabel htmlFor="operation-destination">
-              {t("operations.filters.destination")}
-            </FieldLabel>
-            <Select
-              id="operation-destination"
-              items={destinationItems}
-              value={search.destinationId || null}
-              disabled={pending}
-              onValueChange={(value) => onChange({ destinationId: value ?? "" })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={t("operations.filters.anyDestination")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value={null}>{t("operations.filters.anyDestination")}</SelectItem>
-                  {configuration.destinations.map((destination) => (
-                    <SelectItem key={destination.id} value={destination.id}>
-                      {destination.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </UiField>
           <UiField>
             <FieldLabel htmlFor="operation-destination-kind">
               {t("operations.filters.destinationKind")}
@@ -721,13 +758,22 @@ function activeFilterChips(
     });
   }
 
-  if (scope === "deliveries" && search.destinationId) {
+  if (search.destinationId) {
     const destination = configuration.destinations.find((item) => item.id === search.destinationId);
     chips.push({
       key: "destinationId",
       label: t("operations.filters.destination"),
       valueLabel: destination?.name ?? search.destinationId,
       clear: { destinationId: "" },
+    });
+  }
+
+  if (scope === "events" && search.destinationMatch === "missing") {
+    chips.push({
+      key: "destinationMatch",
+      label: t("operations.filters.destinationMatch"),
+      valueLabel: t(`operations.filters.destinationMatchOptions.${search.destinationMatch}`),
+      clear: { destinationMatch: "" },
     });
   }
 

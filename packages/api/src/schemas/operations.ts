@@ -7,6 +7,7 @@ import {
   DeliveryTimeFieldSchema,
   DestinationKindSchema,
   EventDeliveryOutcomeSchema,
+  EventDestinationMatchSchema,
   EVENT_FINGERPRINT_CHANGE_FIELDS,
   DestinationSummarySchema,
   EventRecordSchema,
@@ -276,6 +277,13 @@ export const ListOperationsInputSchema = z
     severity: AlertSeveritySchema.optional(),
     status: AlertStatusSchema.optional(),
     destinationId: z.string().min(1).optional(),
+    /**
+     * Events-only: whether the alert reached the selected `destinationId`
+     * (`delivered`, the default) or never produced a delivery to it
+     * (`missing`). Ignored without `destinationId`, and by the delivery list,
+     * which already has the exact `deliveryState` dimension.
+     */
+    destinationMatch: EventDestinationMatchSchema.optional(),
     /**
      * Restricts the events list to alerts whose fan-out produced no delivery
      * (`none`) or at least one delivery in the given state. Ignored by the

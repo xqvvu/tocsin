@@ -42,6 +42,21 @@ export const EventDeliveryOutcomeSchema = z.union([z.literal("none"), DeliverySt
 export type EventDeliveryOutcome = z.infer<typeof EventDeliveryOutcomeSchema>;
 
 /**
+ * Narrows the events list by whether the alert reached one destination.
+ *
+ * `delivered` means at least one delivery of the event targets the selected
+ * destination — any state, including a silenced one, because the question is
+ * "was this target covered", not "did the message arrive". `missing` is the
+ * reverse, and it is the case no delivery-level filter can show: the alert
+ * never reached that target, whether because no route matched, the route
+ * carried a different target, or the target was disabled. Absence means "any",
+ * like every other operation filter.
+ */
+export const EventDestinationMatchSchema = z.enum(["delivered", "missing"]);
+
+export type EventDestinationMatch = z.infer<typeof EventDestinationMatchSchema>;
+
+/**
  * Narrows the deliveries list by whether the target returned a message
  * reference.
  *

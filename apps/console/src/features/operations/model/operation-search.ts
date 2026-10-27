@@ -9,6 +9,7 @@ import type {
   DeliveryTimeField,
   DestinationKind,
   EventDeliveryOutcome,
+  EventDestinationMatch,
   OperationTimeRange,
 } from "@tocsin/core";
 import {
@@ -19,6 +20,7 @@ import {
   DeliveryTimeFieldSchema,
   DestinationKindSchema,
   EventDeliveryOutcomeSchema,
+  EventDestinationMatchSchema,
   OperationTimeRangeSchema,
   OPERATION_SEARCH_MAX_LENGTH,
 } from "@tocsin/core";
@@ -40,6 +42,13 @@ export const DashboardOperationSearchSchema = z.object({
     .catch("")
     .optional(),
   destinationId: z.string().catch("").optional(),
+  // Events-only: whether the alert reached the selected destination. Empty
+  // means the server default (`delivered`); the URL only carries `missing`,
+  // which is the case no delivery-level filter can find.
+  destinationMatch: z
+    .union([EventDestinationMatchSchema, z.literal("")])
+    .catch("")
+    .optional(),
   destinationKind: z
     .union([DestinationKindSchema, z.literal("")])
     .catch("")
@@ -88,6 +97,7 @@ export interface DashboardOperationSearch {
   status?: AlertStatus | "";
   deliveryOutcome?: EventDeliveryOutcome | "";
   destinationId?: string;
+  destinationMatch?: EventDestinationMatch | "";
   destinationKind?: DestinationKind | "";
   routeId?: string;
   receipt?: DeliveryReceiptFilter | "";
@@ -107,6 +117,7 @@ export type OperationFilterData = {
   status?: AlertStatus;
   deliveryOutcome?: EventDeliveryOutcome;
   destinationId?: string;
+  destinationMatch?: EventDestinationMatch;
   destinationKind?: DestinationKind;
   routeId?: string;
   receipt?: DeliveryReceiptFilter;
@@ -134,6 +145,7 @@ export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
   status: "",
   deliveryOutcome: "",
   destinationId: "",
+  destinationMatch: "",
   destinationKind: "",
   routeId: "",
   receipt: "",
@@ -189,6 +201,13 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
       // Spacing is preserved: the search input is backed by this value, and
       // trimming on every keystroke used to eat the space in "Disk usage".
       q: search.q?.slice(0, OPERATION_SEARCH_MAX_LENGTH),
+      // A match only means something next to the destination it describes, and
+      // `delivered` is the server default. Keeping either would make the URL
+      // claim a filter that changes nothing.
+      destinationMatch:
+        search.destinationId && search.destinationMatch === "missing"
+          ? search.destinationMatch
+          : undefined,
       // An anchor only means something together with the window it was captured
       // for; keeping it after the window is cleared would attach a stale instant
       // to the next window the operator picks.
@@ -222,6 +241,7 @@ export function mergeOperationSearch(
     "status",
     "deliveryOutcome",
     "destinationId",
+    "destinationMatch",
     "destinationKind",
     "routeId",
     "receipt",

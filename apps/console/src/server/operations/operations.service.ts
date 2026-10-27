@@ -44,6 +44,11 @@ export class OperationsService {
         // Events-only: answers "did this alert reach anyone". The delivery
         // list keeps its exact `deliveryState` dimension instead.
         deliveryOutcome: input.deliveryOutcome,
+        // Events share the destination dimension with the delivery list now;
+        // `missing` is what makes "which alerts never reached this target"
+        // answerable without opening each event.
+        destinationId: input.destinationId,
+        destinationMatch: input.destinationMatch,
         q: input.q,
         since,
         page: input.eventPage ?? 1,

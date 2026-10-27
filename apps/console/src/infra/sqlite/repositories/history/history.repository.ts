@@ -7,6 +7,7 @@ import type {
   DeletionImpact,
   DestinationKind,
   EventDeliveryOutcome,
+  EventDestinationMatch,
   EventDetail,
   EventFingerprintContext,
   EventListItem,
@@ -127,6 +128,12 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.deliveryOutcome) {
       builder = builder.where(eventDeliveryOutcomePredicate(query.deliveryOutcome));
+    }
+
+    if (query.destinationId) {
+      builder = builder.where(
+        eventDestinationPredicate(query.destinationId, query.destinationMatch ?? "delivered"),
+      );
     }
 
     if (query.since) {
@@ -598,6 +605,12 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where(eventDeliveryOutcomePredicate(query.deliveryOutcome));
     }
 
+    if (query.destinationId) {
+      builder = builder.where(
+        eventDestinationPredicate(query.destinationId, query.destinationMatch ?? "delivered"),
+      );
+    }
+
     if (query.since) {
       builder = builder.where("events.received_at", ">=", query.since);
     }
@@ -851,6 +864,28 @@ function eventDeliveryOutcomePredicate(outcome: EventDeliveryOutcome) {
     WHERE outcome_deliveries.event_id = events.id
       AND outcome_deliveries.state = ${outcome}
   )`;
+}
+
+/**
+ * Restricts events by whether they reached one destination.
+ *
+ * `delivered` is `EXISTS` over the event's deliveries to that destination, so
+ * any state — failed, silenced, still queued — counts: the filter answers "was
+ * this target covered", and the state dimension belongs to `deliveryOutcome`
+ * and the delivery list. `missing` is the negation, including events that
+ * produced no delivery at all; that is the half a delivery-level filter can
+ * never show. A correlated `EXISTS` keyed on `idx_deliveries_event_id` keeps
+ * the count query's shape unchanged and cannot duplicate an event row the way a
+ * second join would.
+ */
+function eventDestinationPredicate(destinationId: string, match: EventDestinationMatch) {
+  const reached = sql<boolean>`EXISTS (
+    SELECT 1 FROM deliveries AS destination_deliveries
+    WHERE destination_deliveries.event_id = events.id
+      AND destination_deliveries.destination_id = ${destinationId}
+  )`;
+
+  return match === "missing" ? sql<boolean>`NOT ${reached}` : reached;
 }
 
 /**
