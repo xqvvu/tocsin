@@ -9,6 +9,7 @@ export default defineConfig({
     nav: [
       { text: "快速开始", link: "/guide/quick-start" },
       { text: "概念", link: "/guide/concepts" },
+      { text: "路由", link: "/guide/routes" },
       { text: "告警接入", link: "/integrations/providers" },
       { text: "通知目标", link: "/integrations/destinations" },
       { text: "运维", link: "/operations/deploy-docker" },
@@ -21,6 +22,7 @@ export default defineConfig({
         items: [
           { text: "快速开始", link: "/guide/quick-start" },
           { text: "处理链路与概念", link: "/guide/concepts" },
+          { text: "路由规则与匹配", link: "/guide/routes" },
         ],
       },
       {

@@ -53,10 +53,10 @@ curl -i -X POST 'http://localhost:3000/api/sources/<source-id>/webhook' \
 
 打开「事件」，按时间找到新 Event，检查规范化字段及路由匹配证据。再打开关联的 Delivery：Worker 在后台处理投递，状态可能先是 `pending` 或 `running`，之后变为 `succeeded` 或 `failed`。失败时查看尝试记录与脱敏后的错误信息，修复通知目标配置后可从投递详情手动重试。
 
-若没有 Delivery，先确认 Route 已启用、条件确实匹配且通知目标已启用。Delivery 状态为 `suppressed` 表示命中了有效的告警静默或维护时段；这不是发送失败。创建、核对和结束这类规则见[告警静默与维护时段](/operations/suppressions)。
+若没有 Delivery，先确认 Route 已启用、条件确实匹配且通知目标已启用；条件组合与多路由语义见[路由规则与匹配](/guide/routes)。Delivery 状态为 `suppressed` 表示命中了有效的告警静默或维护时段；这不是发送失败。创建、核对和结束这类规则见[告警静默与维护时段](/operations/suppressions)。
 
 ::: tip 请求认证
 告警源 Token 可放在 `Authorization: Bearer ...` 或 `X-Tocsin-Source-Token` 请求头中。也可使用该告警源配置的 Tocsin 侧共享密钥，通过 `X-Tocsin-Provider-Secret` 请求头认证；当前实现接受有效 Token 或有效共享密钥，不要求两者同时提供。Webhook 不使用 dashboard 登录 session。
 :::
 
-下一步：[查看各 Provider 的载荷契约](/integrations/providers) · [配置并测试通知目标](/integrations/destinations) · [理解事件、路由和抑制](/guide/concepts) · [排查接入或投递问题](/operations/troubleshooting)
+下一步：[查看各 Provider 的载荷契约](/integrations/providers) · [配置并测试通知目标](/integrations/destinations) · [理解事件、路由和抑制](/guide/concepts) · [掌握路由匹配规则](/guide/routes) · [排查接入或投递问题](/operations/troubleshooting)

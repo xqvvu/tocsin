@@ -34,4 +34,4 @@ Provider 会生成规范化字段，如标题、消息、严重程度、状态�
 默认运行形态是一个 Tocsin 进程与一个本地 SQLite 文件。它不是多副本集群；不要让多个实例共享同一个 SQLite 文件，也不要把数据库放在不适合 SQLite 的网络文件系统上。
 :::
 
-更多：[快速开始](/guide/quick-start) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [Docker 部署与持久化](/operations/deploy-docker)
+更多：[快速开始](/guide/quick-start) · [路由规则与匹配](/guide/routes) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [Docker 部署与持久化](/operations/deploy-docker)

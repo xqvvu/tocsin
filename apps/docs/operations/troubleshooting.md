@@ -22,10 +22,10 @@
 
 ## Event 没有预期投递
 
-- 在 Event detail 检查 route matches 和逐项匹配条件。常见原因是 Source、severity、status、label 或文本条件与规范化后的值不一致。
+- 在 Event detail 检查 route matches 和逐项匹配条件。常见原因是 Source、severity、status、label 或文本条件与规范化后的值不一致；条件组合与多路由语义见[路由规则与匹配](/guide/routes)。
 - 确认 Route 已启用，并且选择了至少一个通知目标；再检查该目标是否启用。
 - 如果匹配证据显示规则命中但没有投递，查看是否是重复请求的幂等去重或目标/路由状态导致。配置删除也可能影响关联历史，执行前阅读 dashboard 的删除影响提示。
-- 如果 Delivery 为 `suppressed`，查看抑制原因与时间窗。此状态代表按规则跳过发送，不代表网络失败；事件本身仍保留。核对规则、提前结束静默和审计证据见[告警静默与维护时段](/operations/suppressions)。
+- 如果 Delivery 为 `suppressed`，查看抑制原因与时间窗。此状态代表按规则跳过发送，不代表网络失败；事件本身仍保留。静默同时会阻止自动和手动电话提醒，核对规则、提前结束静默和审计证据见[告警静默与维护时段](/operations/suppressions)。
 
 ## Delivery 失败或停滞
 
