@@ -60,7 +60,21 @@
 
 ### 发布评估与发布记录
 
-- （见下方补记）
+- 三位发布专家独立评估，结论一致放行：
+  - **发布经理**：`v0.1.0-beta.109..origin/main` 仅 `24ca21b`（#549）一个用户可见变更，
+    建议 `0.1.0-beta.110`；tag 未被占用。
+  - **阻断审计**：五项 PASS（main CI success；除本轮 docs PR 外无 open PR；区间无
+    migration/schema；`blocked-autonomous` 仅 REL-13/16/23 仓库治理项；无未修复回归）。
+  - **运维/回滚**：风险 **LOW**；无 Docker/env/依赖/migration 变化；回滚只需换回
+    `0.1.0-beta.109` 镜像，无需数据库操作。
+- 版本 PR #551 `chore(release): v0.1.0-beta.110` 已 rebase 合入；tag `v0.1.0-beta.110`
+  @ `ba48c16`；GitHub Release 为 prerelease，body 非空（硬校验通过）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.110`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:264b872dfea58342e7a6f46f76427f4beee714782b96f5c3b4a3655243309729`，
+  `--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.109`。
+- 插曲：docs PR #550 的 `playwright · chromium` 首次运行卡在「Install Chromium」约 35 分钟，
+  取消并重跑后 3 分钟内通过；判断为 GitHub 网络抖动，非代码问题。
 
 ### 下一轮优先项
 
