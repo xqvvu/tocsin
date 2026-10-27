@@ -35,9 +35,9 @@ description: Tocsin 镜像升级、SQLite forward-only migration、readiness 失
 | --- | --- | --- |
 | `0001` | 初始 schema baseline | 只能由包含 `0001` 的镜像读取 |
 | `0002` | 告警静默表 | 旧镜像必须认识 `0002` |
-| `0003` | 修复旧库缺失的表、列和索引 | 可重复执行的 repair step |
-| `0004` | 加急呼叫新增 nullable 的拨号意图列 | beta.89 及更早版本不认识该台账 |
-| `0005` | 投递健康聚合的覆盖索引，不修改数据 | beta.102 及更早版本不认识该台账 |
+| `0003` | 修复旧库缺失的表、列和索引；旧投递表结构过旧时会保留数据重建 | 可重复执行；旧表缺少必需列时 migration 失败 |
+| `0004` | 加急呼叫新增 nullable 的拨号意图列，不回填；null 表示未确认拨号，可安全重试 | beta.89 及更早版本不认识该台账 |
+| `0005` | 投递健康聚合的覆盖索引，不修改数据；启动阶段同步建索引，耗时随投递行数增长 | beta.102 及更早版本不认识该台账 |
 
 根据已发布 release notes，一个简化版本边界是：
 
@@ -73,6 +73,10 @@ docker compose up -d
 ```
 
 修改镜像或环境映射后使用 `up -d`，不要只用 `docker compose restart`。后者不会应用 Compose 文件中的新镜像或环境值。
+
+::: warning 不要用 `up -d --build` 升级
+`--build` 会从当前源码重建并覆盖本地镜像 tag，绕过你记录的版本镜像，回滚时没有旧镜像可用。
+:::
 
 首次启动可能执行 migration。大表上的索引构建会延长就绪时间；在确认日志仍在推进前，不要反复重启或并发启动第二个容器。
 
@@ -149,7 +153,22 @@ DELETE FROM schema_migrations WHERE version = '0005';
 | `store_unavailable` | SQLite 无法打开 | 检查数据卷、属主、权限和磁盘空间 |
 | `worker_unavailable` | 数据库已就绪但 Worker 无法启动 | 查看启动日志与 `tocsin.worker.*` 错误，不要只重启容器 |
 
-启动阶段 storage bootstrap 失败时，容器可能仍在 running；readiness 会返回 `503`，但 `restart: unless-stopped` 不会因为 unhealthy 自动重启。不要等待它自愈，也不要并发启动第二个实例。
+启动阶段 storage bootstrap 失败时，容器可能仍在 running。普通请求返回 `500`，只有 `/api/ready` 返回结构化 `503`；原始错误（含数据库路径与 migration 版本）只写日志，不进入响应。`code` 与 `checks` 的对应关系是固定的：
+
+| `code` | `checks` |
+| --- | --- |
+| `migration_unknown` | `sqlite: ok`、`migrations: error`、`worker: skipped` |
+| `migration_failed` | `sqlite: ok`、`migrations: error`、`worker: skipped` |
+| `store_unavailable` | `sqlite: error`、`migrations: skipped`、`worker: skipped` |
+| `worker_unavailable` | `sqlite: ok`、`migrations: ok`、`worker: error` |
+
+`migration_unknown` 时，日志会给出具体版本，可直接用于回滚判断：
+
+```text
+SQLite database has applied migrations not present in this build: 0004
+```
+
+`restart: unless-stopped` 不会因为 unhealthy 自动重启。不要等待它自愈，也不要并发启动第二个实例。
 
 ::: tip 记录演练结果
 至少记录当前版本、目标版本、备份位置、migration 前后台账、readiness 响应、旧镜像 tag 和验收时间。没有在隔离环境验证过恢复时，不要把“备份文件存在”当作可回滚证明。
