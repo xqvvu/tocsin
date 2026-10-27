@@ -68,9 +68,11 @@
 - **功能可逆**：`DROP INDEX IF EXISTS idx_deliveries_destination_id_health`，数据无损。
 - **发布后不可用旧镜像直接回滚**：`assertNoUnknownAppliedMigrations`
   （`migrate/runner.ts:177-191`）会让不认识 `0005` 的构建启动失败。
-  - 正确路径：恢复升级前冷备份，再启动旧镜像。
-  - 若必须原地降级：不要手工删除 `schema_migrations` 行；应发布一个包含 `0005` 但功能
-    等价的回退构建。
+  - 唯一可靠路径：恢复升级前冷备份，再启动旧镜像。
+  - 原地降级（**必须先冷备份**）：`DELETE FROM schema_migrations WHERE version = '0005'`，
+    再启动旧镜像。索引可以保留——旧代码不按名字引用它，其投递健康聚合反而会受益；下次升级由
+    `CREATE INDEX IF NOT EXISTS` 幂等补回并重新记账。这与 `0004` 的既有演练结论一致，
+    见 `docs/release/backup-restore-upgrade.md` 第 6 节。
 - 升级影响：`CREATE INDEX` 在启动路径同步执行，期间服务未就绪；耗时与 `deliveries`
   行数线性相关（20 万行约 0.1 s，推断每 200 万行约 1 s）。
 
