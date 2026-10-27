@@ -99,7 +99,7 @@ export SERVER_URL="https://tocsin.example.com"
 
 - 若还有已登录设备，可从该设备进入设置页并核对会话。
 - 若没有任何可用 session，恢复范围应由备份与发布流程决定。优先使用经过验证的数据库备份；不要在未演练、未备份的生产库上直接修改 Better Auth 用户或密码表。
-- 恢复数据库会回退到备份时间点，可能丢失之后的配置、Event 和 Delivery。先保全当前数据库与日志，再按 [备份、恢复与升级](/operations/backup-restore) 执行。
+- 恢复数据库会回退到备份时间点，可能丢失之后的配置、Event 和 Delivery。先保全当前数据库与日志，再按 [备份与恢复](/operations/backup-restore) 执行。
 
 ### 轮换认证密钥
 
@@ -135,4 +135,4 @@ export SERVER_URL="https://tocsin.example.com"
 6. 为上游告警分别创建告警源 Token，不复用 dashboard 密码。
 7. 将用户、session 和账号安全数据纳入数据库备份范围，并演练恢复。
 
-相关页面：[环境变量与运行时配置](/operations/configuration) · [Docker 生产部署](/operations/deploy-docker) · [备份、恢复与升级](/operations/backup-restore) · [故障排查](/operations/troubleshooting) · [告警源接入参考](/integrations/providers)
+相关页面：[环境变量与运行时配置](/operations/configuration) · [Docker 生产部署](/operations/deploy-docker) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [故障排查](/operations/troubleshooting) · [告警源接入参考](/integrations/providers)

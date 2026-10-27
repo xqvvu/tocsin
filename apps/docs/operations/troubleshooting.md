@@ -6,7 +6,7 @@
 
 | 现象 | 检查与处理 |
 | --- | --- |
-| `/api/health` 成功，`/api/ready` 失败 | `/api/health` 只检查进程存活。检查 `/api/ready` 的 HTTP 状态与响应，再查看 `docker compose logs --tail=100 console`；重点看 SQLite 打开、migration、Worker 与数据卷权限错误。当前就绪检查以 HTTP `503` 和固定错误代码区分 `store_unavailable`、`migration_failed`、`migration_unknown`、`worker_unavailable`。 |
+| `/api/health` 成功，`/api/ready` 失败 | `/api/health` 只检查进程存活。检查 `/api/ready` 的 HTTP 状态与响应，再查看 `docker compose logs --tail=100 console`；重点看 SQLite 打开、migration、Worker 与数据卷权限错误。当前就绪检查以 HTTP `503` 和固定错误代码区分 `store_unavailable`、`migration_failed`、`migration_unknown`、`worker_unavailable`；升级期间按[版本升级与回滚](/operations/upgrade-rollback#readiness-判读)处置。 |
 | 容器 unhealthy，认证密钥报错 | 确认 production 环境设置了有效 `BETTER_AUTH_SECRET`，或正确挂载并设置 `BETTER_AUTH_SECRET_FILE`。内联值非空时文件回退不会生效；修改 secret 后重启容器。 |
 | dashboard 登录或回调异常 | 确认 `BETTER_AUTH_URL` 与实际外部 URL 一致；代理后使用 HTTPS，并按多 Host/Origin 场景设置允许列表。应用不自行推断代理后的外部地址。 |
 | 数据库无法写入 | 核对 `/data` 对容器进程可写、卷挂载到预期位置、磁盘空间充足。不要通过删除 SQLite 文件尝试“重置”生产实例。 |
@@ -44,4 +44,4 @@
 Webhook 返回 `202 Accepted` 表示接入已接受。它不确认 Route 已命中，也不确认任何 Destination 已完成发送；最终结果以 Event 与 Delivery history 为准。
 :::
 
-相关页面：[快速开始与验证首条 Delivery](/guide/quick-start) · [认证与账号安全](/operations/authentication) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [健康检查与 Docker 限制](/operations/deploy-docker) · [可移植配置与 `secret_refs`](/operations/portable-config) · [备份与回滚](/operations/backup-restore)
+相关页面：[快速开始与验证首条 Delivery](/guide/quick-start) · [认证与账号安全](/operations/authentication) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [健康检查与 Docker 限制](/operations/deploy-docker) · [可移植配置与 `secret_refs`](/operations/portable-config) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback)

@@ -157,7 +157,7 @@ Delivery 详情的「电话加急」表按呼叫对象逐行显示：
 
 应用凭证、`App secret`、tenant access token 与完整请求头都不得写入工单、文档或浏览器存储。呼叫对象 ID 是值班排障所需的运维标识，可以出现在已认证 dashboard 与投递证据中。
 
-可移植配置导出会把飞书应用密钥替换成环境变量引用，不输出明文 secret；数据库备份仍包含应用凭证，必须按 secret 材料保护。格式见[可移植配置参考](/operations/portable-config#飞书应用)，备份要求见[备份、恢复与升级](/operations/backup-restore)。
+可移植配置导出会把飞书应用密钥替换成环境变量引用，不输出明文 secret；数据库备份仍包含应用凭证，必须按 secret 材料保护。格式见[可移植配置参考](/operations/portable-config#飞书应用)，备份要求见[备份与恢复](/operations/backup-restore)。
 
 ## 上线验收
 
