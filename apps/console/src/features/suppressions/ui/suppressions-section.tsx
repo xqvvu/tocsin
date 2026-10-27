@@ -19,6 +19,7 @@ import { suppressionStateAt } from "@tocsin/core";
 
 import { IconTooltip } from "#/components/common/icon-tooltip";
 import { OperationsTable } from "#/components/common/operations-table";
+import { stickyActionsColumnClassName } from "#/components/common/operations-table-layout";
 import { powerActionButtonClassName } from "#/components/common/power-action-button";
 import type { ConsoleTableFeatures } from "#/components/common/table-features";
 import {
@@ -503,7 +504,11 @@ function suppressionsColumnClassName(columnId: string): string | null {
     case "state":
       return "w-[10%]";
     case "actions":
-      return "w-[12%]";
+      // The table keeps a 980px floor, so on a phone the state and action
+      // columns start off-screen. Pinning actions to the right edge keeps
+      // enable/edit/delete reachable without hunting for a horizontal scroll;
+      // the state column stays with the scrolled content.
+      return `${stickyActionsColumnClassName} w-[12%] min-w-24`;
     default:
       return null;
   }
