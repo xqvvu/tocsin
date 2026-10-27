@@ -60,7 +60,7 @@ docker compose logs --since=30m console | grep '"requestId":"<request-id>"'
 ```
 
 ```bash
-docker compose logs --since=30m console \
+docker compose logs --no-log-prefix --since=30m console \
   | jq -R 'fromjson? | select(.properties.requestId == "<request-id>")'
 ```
 
