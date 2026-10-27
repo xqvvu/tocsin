@@ -13,7 +13,7 @@ Tocsin 把告警接收与通知发送分开处理，便于定位「收到什么�
 | Route | 用 source、severity、status、labels、title 或 message 条件匹配事件，并指定一个或多个通知目标。规则可检查，不执行任意代码。 | 路由列表与事件详情中的匹配证据 |
 | Destination | 一个出站通知渠道及其端点、模板和凭证配置。凭证保留在服务端；目标可测试、启停。 | 通知目标配置与测试结果 |
 | Delivery | 一次向指定目标发送的工作记录，包含状态、尝试次数、错误与重试信息。 | 投递详情与 attempt history |
-| Suppression | 有范围和时间窗的静默或维护窗口。事件仍会记录，命中的 Delivery 标为 `suppressed` 且不发送。 | 告警静默页面与投递详情 |
+| Suppression | 有范围和时间窗的临时静默或维护时段。事件仍会记录，命中的 Delivery 标为 `suppressed` 且不发送。 | [告警静默与维护时段](/operations/suppressions)与投递详情 |
 | Integration | 可复用的外部应用资源。目前包括飞书应用，供应用发送模式与可选电话加急使用。 | 飞书应用页面及相关投递详情 |
 
 ## Provider 与 Destination
@@ -34,4 +34,4 @@ Provider 会生成规范化字段，如标题、消息、严重程度、状态�
 默认运行形态是一个 Tocsin 进程与一个本地 SQLite 文件。它不是多副本集群；不要让多个实例共享同一个 SQLite 文件，也不要把数据库放在不适合 SQLite 的网络文件系统上。
 :::
 
-更多：[快速开始](/guide/quick-start) · [通知目标参考](/integrations/destinations) · [Docker 部署与持久化](/operations/deploy-docker)
+更多：[快速开始](/guide/quick-start) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [Docker 部署与持久化](/operations/deploy-docker)

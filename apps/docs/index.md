@@ -29,6 +29,7 @@ features:
 3. [选择并验证通知目标](/integrations/destinations)
 4. [生产 Docker 部署](/operations/deploy-docker)
 5. [备份、恢复与升级](/operations/backup-restore)
+6. [在变更窗口内静默告警](/operations/suppressions)
 
 ::: warning 发布状态
 Tocsin 当前是可试用的自托管 MVP，尚非稳定发布版。生产使用前请评估单实例限制，并先演练备份与恢复。
