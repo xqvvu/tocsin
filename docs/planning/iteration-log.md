@@ -2,6 +2,80 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 130 轮）
+
+- 时间：2026-10-27 08:31 CST 起。
+- 基线：本轮开始时 `origin/main` @ `c2a3819`（第 129 轮日志提交）；CI success；无 open PR。
+- 类型：**既有优先项切片（非 full-audit）+ 发布**。第 128 轮全量审计在 06:40 收尾，距本轮约
+  1h51m < 6h；backlog 有第 129 轮明确列出的「下一轮优先项」Q-279，按第 1.5 步不展开全量审计。
+- 全量审计时间戳：**2026-10-27 06:40 CST（未变）**；距上次约 1h51m。
+- 车道：本轮**未 spawn 常规车道**。`requirements` 在第 128 轮已用窄化 brief 确认「无新候选」
+  （backlog 已有 477 条候选）；`ui-triage` 决策 **`defer`**（`last_ui_review_at` 为 06:45，
+  距本轮 1h46m；期间仅 #522 一处 UI 文案变更，48h / 3 个 UI 合并 / 2 条新 UI 发现三个强信号
+  均不成立）。编排者直接按第 129 轮「下一轮优先项」第 1 条选题，把预算投入 EXPERT_PANEL。
+- `last_ui_review_at`：**2026-10-27 06:45 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `affectionate-meninsky-f2ee1c`。
+- 浏览器验证：本轮无 UI 改动，未起浏览器实例。
+
+### EXPERT_PANEL：Q-279
+
+- 三位专家（安全与可靠性 / 产品与运维 / 独立评估者）独立评审，**一致推翻 backlog 原提案的单列索引**：
+  - 20 万行实测：单列 `(destination_id)` 计划为 `SCAN ... USING INDEX` + 逐行回表，
+    0.08–0.16 s，不优于甚至慢于现状（全表扫描 + 临时 B 树 0.07–0.08 s）；
+  - 四列覆盖索引 `(destination_id, state, finished_at, created_at)` 为
+    `SCAN ... USING COVERING INDEX`，0.02–0.03 s（约 3–4 倍），并消除
+    `USE TEMP B-TREE FOR GROUP BY`；首列同时服务 destination 的外键级联查找。
+- 落地三处：迁移 `0005`、baseline builder（`migrate/schema.ts`）、旧库索引修复
+  （`ensure-complete-schema.ts`）。
+- 决策记录：`docs/planning/decisions/delivery-health-index.md`；
+  PRD：`docs/prd/delivery-health-index.md`。
+- 回滚口径统一：发布后不能直接切回 beta.102；冷备份后删除
+  `schema_migrations` 的 `0005` 行即可原地降级（与 `0004` 先例一致，索引保留），
+  或恢复升级前备份。`backup-restore-upgrade.md` 第 6 节已补 `0005` 实例。
+
+### 本轮交付
+
+- **PR #525 `perf(console): cover the delivery health aggregate with an index`**
+  （rebase 合并 `aa9be3c`；backlog 文档提交 `fae04bf`，合并后 main `76d121a`）：
+  - 迁移 `0005_deliveries_destination_id_health`（`CREATE INDEX IF NOT EXISTS`），
+    同步 baseline 与旧库修复；修正仓储中不成立的「保留期限制表大小」注释。
+  - 迁移测试 +1：索引列顺序、查询计划 `USING COVERING INDEX` 且无 `TEMP B-TREE`、
+    缺索引旧库升级行不丢、二次迁移幂等；同步更新 plan / ledger / `schemaVersion` 断言。
+  - 文档：PRD、决策记录，release checklist / backup-restore / sqlite-store 的 migration 清单。
+  - 验证：`vp check` 0 error / 23 条既有 warning；`vp run -r test` 4/4
+    （console 201 文件 / **1116** 测试）；`vp run -r build` 通过；CI
+    `check · test · build` 1m59s、`playwright · chromium` 1m23s 均 success。
+- **PR #526 `chore(release): v0.1.0-beta.103`**（rebase 合并 `6b781f4`）：
+  版本号、release checklist 当前版本、`0005` 回滚说明。CI 首轮 E2E 卡在
+  `Install Chromium` 14 分钟，按既有处置 `cancel` + `rerun` 后 1m16s 通过。
+
+### 发布评估与发布记录
+
+- 三位发布专家独立评估，**一致放行**：
+  - **发布经理**：`v0.1.0-beta.102..HEAD` 的代码变更只有 #525；无 UI/API 行为变化，
+    但新增迁移属运维可见变更（升级窗口 + 回滚边界），建议 `0.1.0-beta.103`。
+  - **阻断审计**：六项全 PASS（PR CI 双绿、无其他 open PR、迁移纯加法且未改 `0001`–`0004`、
+    无新增 `blocked-autonomous`、依赖/镜像/workflow 零 diff、tag 不冲突）。
+  - **运维/回滚**：风险**低**（纯加法、幂等、失败回滚台账）；要求统一「删台账行可原地降级」
+    与决策记录的口径（已在 #526 完成）。
+- tag `v0.1.0-beta.103` @ `6b781f4`；GitHub Release 为 prerelease，body 1776 字符。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.103`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:dcc7acf02ef9ddf67dde8b468d97489ddcac75f6257cc6ca27461632c63bd7f3`；
+  `--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.102`，
+  **回滚需冷备份后删除 `0005` 台账行或恢复备份**。
+- 补建检查：最近 10 个 tag 与 `gh release list` 一一对应，无需补建。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 下一轮优先项
+
+1. **REQ-271（22）**：`/api/ready` 启动失败原因机器可读 code（M）。
+2. **Q-281（22）**：飞书 FastGPT 卡片 unknown 三态文案（S）。
+3. **UI-81（24）**：中文控制台半翻译术语统一（S）。
+4. UI-78（23）/ UI-79（26）：窄屏会话表与撤销确认框影响数量。
+5. 车道轮转：下一轮非必跑车道为 **`security-exposure`**（自第 124 轮未跑）。
+
 ## 2026-10-27（第 129 轮）
 
 - 时间：2026-10-27 07:34 CST 起。
