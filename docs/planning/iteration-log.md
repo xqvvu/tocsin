@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 132 轮）
+
+- 时间：2026-10-27 10:41 CST 起。
+- 基线：本轮开始时 `origin/main` @ `86f9683`（第 131 轮日志提交）；CI success；无 open PR。
+- 类型：**既有优先项切片 + 发布（非 full-audit）**。最近全量审计为 2026-10-27 06:40 CST，距本轮
+  约 4h < 6h；backlog 有第 131 轮列出的「下一轮优先项」，按第 1.5 步不展开全量审计。
+- 全量审计时间戳：**2026-10-27 06:40 CST（未变）**；距上次约 4h。
+- 车道：本轮**未 spawn requirements / ui-triage**。第 131 轮 09:26–10:35 刚跑完两者，且代码在轮间
+  零变化（main 只多了 planning 文档提交），重跑只会重复同一批结论；按既有纪律直接从第 131 轮
+  「下一轮优先项」第 1 条选题。本轮 spawn 的 3 个 subagent 全部用于发布评审。
+- `ui-triage` 决策：**`defer`**（`last_ui_review_at` = 2026-10-27 06:45 CST，距本轮 3h56m < 48h；
+  自评审以来 UI 路径合并 0 个；未新增 UI 发现；三项强信号均不成立）。
+- `last_ui_review_at`：**2026-10-27 06:45 CST（未变）**。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `gifted-cerf-98d851`。
+- 浏览器验证：本轮只改中文文案，字符串长度与英文原串相近（±2 字符），无布局/交互变化，
+  由 i18n 守卫测试与组件测试覆盖；未起浏览器实例。
+
+### 本轮交付
+
+- **PR #533 `fix(console): unify Chinese operator terms for workers and raw payloads`**
+  （rebase 合并 `0ee2686`）：
+  - `apps/console/src/i18n/messages/zh-Hans.json` 19 个键：`Raw payload` → `原始载荷`、
+    `Worker` / `delivery worker` → `工作进程` / `投递工作进程`、`raw 数据` / `raw debug 数据` /
+    `Raw provider data` → `原始数据` / `原始调试数据` / `原始上游数据`、`Raw headers` → `原始请求头`。
+  - `i18n/messages.test.ts` 新增守卫测试：扫描 zh-Hans 全部非占位文案，出现
+    `raw payload` / `raw header` / `raw debug` / `worker` 即失败（文件名与含换行的配置占位符除外）。
+  - 验证：`vp fmt --write`、`vp check`（0 error / 23 条既有 warning）、`vp run -r test` 4/4
+    （console 203 文件 / **1127** 测试）、`vp run -r build` 通过；CI `check · test · build`
+    9m45s、`playwright · chromium` 1m37s 均 success。
+  - 依赖修复：本会话工作树缺 `@rolldown/plugin-babel`，`vp install --frozen-lockfile --force`
+    重装 808 个包后测试恢复。
+- backlog：UI-81 置 `shipped`，记录实现口径。
+
+### 发布评估与发布记录
+
+- 三位发布专家独立评估：
+  - **发布经理**：`v0.1.0-beta.104..origin/main` 只有 #533 一个用户可见变更（中文运维文案统一），
+    其余为 planning 文档；建议 `0.1.0-beta.105`。
+  - **阻断审计**：open PR 0 个、区间无 migration/依赖/Dockerfile/workflow/env 变更、
+    `blocked-autonomous` 仅 REL-13/16/23（非回归）、tag 不冲突；merge 时 `d8898212` 的 CI 仍
+    in_progress，结论为「暂缓」——待其 CI 与 E2E 双绿后方放行。
+  - **运维/回滚**：风险 **LOW**；升级流程与 beta.104 相同；回滚 `0.1.0-beta.104`，
+    **无需数据库操作**（`infra/sqlite/migrate` 逐字节一致）。
+- 放行前实测：`d8898212` 与 `06a70c7` 的 CI、E2E 均 success。
+- PR #534 `chore(release): v0.1.0-beta.105`（rebase 合并 `06a70c7`）。
+- tag `v0.1.0-beta.105` @ `06a70c7`；GitHub Release 为 prerelease（body 1159 字符）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.105`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:f8e5634913016889dd6cc154b7ebfc3e29a5dc51c4e8ddba8f39704d402a1f63`，
+  `--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.104`，
+  无需数据库操作。
+- 补建检查：最近 10 个 tag 与 `gh release list` 一一对应，无需补建。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
+### 工作树清理
+
+- 回收 1 个：`inspiring-panini-08f8e7`（干净）；跳过 `distracted-bhabha-bd305a`
+  （`.github/workflows/ci.yml` 与 `.node-version` 有真实未提交改动）。
+- `.claude/worktrees` 从 **962M** 降到 **944M**；收尾删除本会话 worktree 的 `node_modules`、
+  `.output` 与专用 `agent-iteration` 后进一步下降。
+- 本地已合并的 `agent/*` 分支按 PR 状态清理。
+
+### 下一轮优先项
+
+1. **UI-79（26）**：撤销其他会话的确认框显示影响数量、零会话禁用时说明原因。
+2. **UI-78（23）**：390px 下会话表改堆叠定义列表（状态/最近活动同屏）或前置关键列。
+3. **SEC-37（25）/ SEC-38（21）**：交 EXPERT_PANEL（编辑草稿 URL 内嵌密码 preserve-on-blank；
+   `subscriptionkey` 后缀脱敏）。
+4. 车道轮转：**`release-infra`**（RC 剩余 gate：provider fixture REL-2、Docker smoke 本地 gate）。
+5. 高价值候选：REQ-52（28）模板 `tocsin.eventUrl` 生产恒为空；REQ-24（28）抑制窗口汇总；
+   REQ-13（28）接入自检 dry-run。
+
 ## 2026-10-27（第 131 轮）
 
 - 时间：2026-10-27 09:26 CST 起。
