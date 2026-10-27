@@ -68,6 +68,45 @@ describe("delivery execution", () => {
     expect(failed).toEqual([]);
   });
 
+  it("passes the deployment event URL to the destination adapter", async () => {
+    let seen: string | undefined;
+    const destinations = {
+      async send(_kind, input) {
+        seen = input.eventUrl;
+
+        return { ok: true, statusCode: 200, responseBody: null, renderedPayload: {} };
+      },
+    } satisfies Pick<DestinationRegistry, "send">;
+    const execution = new DeliveryExecution({
+      store: createExecutionStore({ succeeded: [], failed: [] }),
+      destinations,
+      publicBaseUrl: "https://tocsin.example.test/",
+    });
+
+    await expect(execution.execute(createClaimedDelivery(), now)).resolves.toBe("succeeded");
+
+    expect(seen).toBe("https://tocsin.example.test/events/event-1");
+  });
+
+  it("leaves the event URL unset when the deployment has no public base URL", async () => {
+    let seen: string | undefined = "unset";
+    const destinations = {
+      async send(_kind, input) {
+        seen = input.eventUrl;
+
+        return { ok: true, statusCode: 200, responseBody: null, renderedPayload: {} };
+      },
+    } satisfies Pick<DestinationRegistry, "send">;
+    const execution = new DeliveryExecution({
+      store: createExecutionStore({ succeeded: [], failed: [] }),
+      destinations,
+    });
+
+    await expect(execution.execute(createClaimedDelivery(), now)).resolves.toBe("succeeded");
+
+    expect(seen).toBeUndefined();
+  });
+
   it("sends a redacted normalized event while keeping benign copy intact", async () => {
     const store = createExecutionStore({ succeeded: [], failed: [] });
     const delivery = createClaimedDelivery();

@@ -130,7 +130,7 @@ vp run -r build     # 构建全部包
 | `BETTER_AUTH_SECRET_FILE` | 可选：从单行文件读取 `BETTER_AUTH_SECRET`（Docker secret / Kubernetes Secret 卷）。内联值优先，文件须对 uid 1000 可读。 |
 | `BETTER_AUTH_ALLOWED_HOSTS` | 可选，逗号或换行分隔的 Better Auth 动态 base URL Host 白名单，例如 `localhost:6180,tocsin.example.com`。通过 PVC、反向代理或预览域名访问时需要加入外部 Host。 |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | 可选，逗号或换行分隔的额外可信 Origin，例如 `http://localhost:6180,https://tocsin.example.com`，用于通过 Better Auth 的 CSRF/origin 检查。 |
-| `SERVER_URL` | Tocsin 对外访问 URL，用于生成 webhook URL 等。 |
+| `SERVER_URL` | Tocsin 对外访问 URL：Better Auth base URL 的回落值，也用于生成告警消息模板里的 `tocsin.eventUrl` 事件直链。未设置时该变量渲染为空串。 |
 | `TOCSIN_DATABASE_PATH` | SQLite 数据库路径。 |
 | `TOCSIN_MAX_WEBHOOK_BYTES` | 入站 webhook 最大 payload 大小。 |
 | `TOCSIN_WORKER_BATCH_SIZE` | delivery worker 每批处理数量。 |

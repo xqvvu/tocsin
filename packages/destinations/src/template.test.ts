@@ -49,6 +49,23 @@ describe("destination templates", () => {
     });
   });
 
+  it("renders the event URL carried by the send input", () => {
+    const context = DestinationTemplateEngine.createRenderContext({
+      ...input,
+      eventUrl: "https://tocsin.example.test/events/event-9",
+    });
+
+    expect(DestinationTemplateEngine.renderText(context, "url={{tocsin.eventUrl}}")).toEqual({
+      ok: true,
+      value: "url=https://tocsin.example.test/events/event-9",
+      diagnostics: [],
+    });
+  });
+
+  it("keeps the event URL empty when neither the input nor the options carry one", () => {
+    expect(DestinationTemplateEngine.createRenderContext(input).tocsin.eventUrl).toBe("");
+  });
+
   it("rejects unknown variables with path-level diagnostics", () => {
     expect(
       DestinationTemplateEngine.diagnoseTemplateValue(

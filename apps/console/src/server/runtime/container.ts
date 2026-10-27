@@ -258,6 +258,7 @@ export function createApplicationContainer(
         destinations: container.getDestinationRegistry(),
         resolveDestinationConfig: createDestinationConfigResolver({ store }),
         destinationSendContext: { timeoutMs: destinationTimeoutMs },
+        publicBaseUrl: env.SERVER_URL,
         ...serviceOptions,
       });
     },
@@ -356,6 +357,7 @@ export function createApplicationContainer(
         staleRunningTimeoutMs: workerStaleRunningMs,
         resolveDestinationConfig: createDestinationConfigResolver({ store }),
         sendContext: { timeoutMs: destinationTimeoutMs },
+        publicBaseUrl: env.SERVER_URL,
         triggerPings: (input) => oncall.triggerPingsForDelivery(input),
         ...workerOptions,
       });

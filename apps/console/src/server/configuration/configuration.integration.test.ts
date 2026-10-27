@@ -210,6 +210,9 @@ function createTestContexts(
     store,
     destinations: destinationRegistry,
     destinationSendContext,
+    // Pinned so previews and test sends can assert `tocsin.eventUrl` without
+    // depending on the ambient environment.
+    publicBaseUrl: "https://tocsin.example.test",
   });
   const routes = new RouteService({ store });
   const settings = new AppSettingsService({ store });
@@ -1099,6 +1102,46 @@ describe("configuration capabilities", () => {
     });
     expect(JSON.stringify(result)).not.toContain("raw-token");
     expect(JSON.stringify(result)).not.toContain("source-token");
+
+    await store.close();
+  });
+
+  it("links previews back to the dashboard event", async () => {
+    const { store, services } = await createTestContext();
+    const source = await services.sources.createSource({ name: "Grafana", provider: "grafana" });
+    const event = await store.intake.recordEvent({
+      id: "event-url-sample",
+      sourceId: source.source.id,
+      idempotencyKey: null,
+      normalized: {
+        title: "Disk almost full",
+        message: "/var at 98%",
+        severity: "warning",
+        status: "firing",
+        fingerprint: "grafana:disk:node-1",
+        labels: {},
+        occurredAt: "2026-06-09T07:59:00.000Z",
+      },
+      rawPayload: {},
+      rawHeaders: {},
+    });
+    const destination = await services.destinations.createDestination({
+      name: "Ops webhook",
+      kind: "generic_webhook",
+      config: {
+        url: "https://example.test/webhook",
+        template: { mode: "text", text: "{{event.title}} {{tocsin.eventUrl}}" },
+      },
+    });
+
+    const result = await services.destinations.previewDestination({
+      id: destination.id,
+      sampleEventId: event.id,
+    });
+
+    expect(result.context.tocsin.eventUrl).toBe(
+      "https://tocsin.example.test/events/event-url-sample",
+    );
 
     await store.close();
   });
