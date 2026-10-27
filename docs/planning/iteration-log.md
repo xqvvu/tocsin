@@ -2,6 +2,98 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 138 轮）
+
+- 时间：2026-10-27 16:59 CST 起。
+- 基线：本轮开始时 `origin/main` @ `3331d3a`（第 137 轮日志提交）；main CI success；无 open PR。
+- 类型：**需求切片（非 full-audit）**。距上次全量审计 2026-10-27 13:26 CST 约 3h33m，
+  未达第 1.5 步的 6 小时展开条件；backlog 有 27 分候选（REQ-235/240/241/253/257），
+  按「继续」分支交付，**全量审计时间戳保持 2026-10-27 13:26 CST**。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`quality`（按第 137 轮记录的轮转位置）。
+- `ui-triage` 决策：**`defer`**——`last_ui_review_at` = 2026-10-27 13:55 CST（约 3h05m，未达 48h）；
+  自评审以来 UI 路径合并 3 个（`73371f5`、`870623a`、`24ca21b`），其中 2 个有效未评审（< 3）；
+  42 条 `UI-*` 为存量饱和队列；无已证实的视觉/交互不一致。**升级条件**：`24ca21b`（beta.110
+  的导入差异弹层）至今无浏览器验证记录，下一轮若仍无，仅此一条即判 `review_now`，
+  限缩为 Settings 导入弹层的双视口实测，不做发现扫荡。
+- `last_ui_review_at`：不变，**2026-10-27 13:55 CST**（本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `sleepy-dewdney-257560`（会话写入隔离）。`vp install --frozen-lockfile` 仅会话工作树安装一次。
+
+### 专家发现
+
+- **requirements**（四项候选证据复核 + 1 条新候选，均有 `file:line` 证据）：
+  - **REQ-241 成立**：`create` 返回完整 `Suppression`（`packages/api/src/contract/suppressions.ts:47-51`），
+    丢弃返回值的入口是 **2 个实现、4 个入口**——共享行弹窗体
+    `suppression-from-row-dialog-content.tsx:82-97`（路由行与目标行共用）与事件详情
+    `suppression-from-event-dialog.tsx:123-138`。backlog 原引用的「复用 REQ-39」已过期：
+    REQ-39 仍是 candidate，列表/详情只有绝对起止时间；本轮自带 `formatDurationMs` 剩余时长。
+  - **REQ-253 证据成立，行号需更新**：事件谓词在 `history.repository.ts:755-782`，已含投递 ID 反查
+    （`:776-780`）但**不搜告警源名称**；投递谓词 `:795-830` 已有目标名/路由名却缺 `sources.name`。
+    LIKE 转义 helper `escapeLikeTerm` 已在同文件 `:907-909`，扩展成本低于原评估。
+  - **REQ-240 成立，并发现一处文档承诺偏差**：`/events?destinationId=x` 会让
+    `events-page.tsx:36` 的 `hasActiveFilters` 为真、空态显示「筛选后无匹配」，但该条件从未应用
+    （`operations.service.ts:39-50` 不传 `destinationId`），违反 `docs/prd/operation-filter-scope.md:63-65`
+    验收第 2 条。实现时需同步改该文档的非目标说明。
+  - **REQ-235 成立且确认无迁移**：`settings` 是通用 KV（`settings.repository.ts:204-221`），
+    但需同步 `packages/api/src/schemas/settings.ts:12-19`、`settings.helpers.ts:8-11` 与三个展示面。
+  - 新候选 **REQ-294（27）**：投递列表按事件精确过滤 + Events 投递计数一键下钻；已有
+    `idx_deliveries_event_id`，无迁移。详见 backlog。
+- **quality**（质量与回归）：**HIGH（Q-226 复核成立，未见修复）**：正常失败路径直接 `await markFailed`
+  （`delivery-execution.ts:137,147`）无 try/catch，`delivery-worker.service.ts:100-110` 逐条执行但
+  `:118-126` 整批抛出。除 SQLITE_BUSY/磁盘错误外，投递行在发送期间被级联删除会让
+  `requireDelivery` 抛 `RecordNotFoundError`（`delivery.repository.ts:441`），同批后续行滞留
+  `running` 至 reclaim（默认 5 分钟）。测试只覆盖「成功后 markFailed 也失败」的兜底分支
+  （`delivery-execution.test.ts:628-653`），无正常失败路径注入与多行批次隔离用例。
+  **MEDIUM（Q-284）**：`name UNIQUE`（`migrate/0002_suppressions.ts:15`、
+  `ensure-complete-schema.ts:37,50`）冲突未映射，`errors.ts:27-68` 返回 null → 500；
+  `errors.test.ts:128-142` 已固定「未知错误→500」。**MEDIUM（Q-285）**：配置导入差异预览未按
+  id 去重（`portable-config-diff.ts:126-157` vs 导入后写覆盖 `config-portability.service.ts:143-169`），
+  重复 id 会多计数或报出不会发生的更新。**LOW（Q-286）**：抑制多命中排序用字符串
+  `startsAt` + id（`suppression.ts:290-294`），与 PRD 的「时刻最早 + name」不一致。
+  **LOW（Q-287）**：worker 失败后健康面板仍展示上一次成功的 `lastRun` 计数
+  （`delivery-worker-runner.ts:93-101`）。已核对无问题：LIKE 转义与 total 一致性、重试上限/超时、
+  #545 三处互链。
+- **ui-triage**：见上。
+
+### 本轮交付
+
+- **PR #553 `feat(console): confirm created suppression with expiry and rule link`**（rebase 合入，
+  merge commit `3e77e38`）：
+  - 新增 `features/suppressions/ui/suppression-created-notice.tsx`：规则名、操作者时区到期时间、
+    剩余时长、`/suppressions/$suppressionId` 链接、「完成」按钮。
+  - `SuppressionFromRowDialogContent`（路由行/目标行）与 `SuppressionFromEventDialog` 成功态保留弹窗
+    并展示提示；事件弹窗重新打开时清空成功态；失败路径不变（弹窗不关、条件保留、toast 报错）。
+  - 新增中英文案 `suppressions.created.*`；PRD `docs/prd/suppression-created-notice.md`。
+  - 验证：`vp check` 0 error（23 条既有 warning），`vp run -r test` 206 文件 / 1155 tests，
+    `vp run -r build` 通过；PR CI（check/test/build + playwright）全绿。
+- **docs PR**：REQ-241 → shipped、新增 REQ-294、本轮日志。
+
+### 发布评估与发布记录
+
+三份独立评估返回后，**本轮不发布**。
+
+- **发布经理**：区间 `v0.1.0-beta.110..origin/main` 仅 `3e77e38`（#553）一个用户可见变更，
+  建议 `0.1.0-beta.111`，CI + E2E 在目标 commit 全绿。
+- **阻断审计**：五项 PASS（main CI success；无 migration；blocked-autonomous 仅 REL-13/16/23；
+  无未修复回归；tag 未占用），但门槛 2 **FAIL**——审计期间出现 open PR **#554**
+  `docs(site): bootstrap SRE docs with destination reference`（作者 xqvvu，17:19 创建，
+  非本 routine、非 docs(planning) 豁免），按发布门槛阻断。
+- **运维/回滚**：风险 **LOW**；区间无 Docker/env/依赖/migration/启动变化，升级无需数据库操作，
+  回滚只需换回 `0.1.0-beta.110` 镜像；另提示版本号仍需先 bump 再打 tag。
+
+**结论：本轮不发布**（open PR #554 阻断）。未 bump 版本、未打 tag、未创建 Release、未推镜像。
+下一轮在 #554 合并/关闭后重新评估；若 #554 合并引入依赖（vitepress）与锁文件变化，
+需按「依赖升级需专家小组」重新审视发布区间。
+
+### 下一轮优先项
+
+1. **REQ-240（27）**：Events 按通知目标过滤，同时修掉 `/events?destinationId=` 的假筛选承诺。
+2. **REQ-253（27）**：运维搜索覆盖告警源名称（事件/投递两侧，复用 `escapeLikeTerm`）。
+3. **REQ-294（27）**：投递按事件精确过滤 + Events 计数下钻（若先做 REQ-240，注意同族筛选面板改动）。
+4. **DOC-94（26）**：剩余 10 个 backlog id 冲突去重。
+5. 车道轮转：下一非必跑车道为 **`security-exposure`**（随后 `release-infra`）。
+6. 若 `24ca21b` 仍无浏览器验证记录，下一轮 ui-triage 应判 `review_now`（限缩范围见上）。
+
 ## 2026-10-27（第 137 轮）
 
 - 时间：2026-10-27 15:40 CST 起。
