@@ -74,8 +74,8 @@ docker compose logs --tail=50 console
 | `HOST` / `PORT`                   | `0.0.0.0` / `3000`    | Nitro node-server 监听地址与端口（镜像里已设）                             |
 | `BETTER_AUTH_SECRET`              | 无（compose 回落为空） | 生产**必需**（或改用 `BETTER_AUTH_SECRET_FILE`）：≥32 字符，且不能是占位值或历史公开值；缺失/占位时所有请求（含 `/api/ready`）返回 500，容器被判 unhealthy |
 | `BETTER_AUTH_SECRET_FILE`         | 无                    | 可选：从文件读取同一个 secret。`BETTER_AUTH_SECRET` 非空时忽略；文件须为**单行裸值**、≤4 KiB、对 uid/gid 1000 可读；缺失/不可读/空文件/多行都会让启动失败，错误只含变量名、路径与 errno |
-| `BETTER_AUTH_URL`                 | 无                    | 生产**必需**（或提供 `SERVER_URL`）：Better Auth 的对外 base URL，必须是合法 URL |
-| `SERVER_URL`                      | 无                    | 对外访问 URL；`BETTER_AUTH_URL` 缺省时作为回落值，并用于生成告警模板里的 `tocsin.eventUrl` 事件直链（未设置时回落到 `BETTER_AUTH_URL`） |
+| `BETTER_AUTH_URL`                 | compose 默认 `http://localhost:3000` | 生产**必需**（或提供 `SERVER_URL`）：Better Auth 的对外 base URL，必须是合法 URL。仓库内 `docker-compose.yml` 会把它默认成 `http://localhost:3000`，因此**只设置 `SERVER_URL` 不会改变 Better Auth 的 base URL**；compose 部署必须显式覆盖本变量 |
+| `SERVER_URL`                      | compose 默认 `http://localhost:3000` | 对外访问 URL；仅在 `BETTER_AUTH_URL` 完全未设置时作为回落值，并用于生成告警模板里的 `tocsin.eventUrl` 事件直链（未设置时回落到 `BETTER_AUTH_URL`） |
 | `BETTER_AUTH_ALLOWED_HOSTS`       | 无                    | 可选，逗号/换行分隔的 Host 白名单（走 PVC、反代、临时域名时使用）           |
 | `BETTER_AUTH_TRUSTED_ORIGINS`     | 无                    | 可选，逗号/换行分隔的额外可信 Origin（CSRF/origin 检查）                    |
 | `TOCSIN_DATABASE_PATH`            | `/data/tocsin.sqlite` | SQLite 文件路径；应用自身缺省是 `<cwd>/data.sqlite`，容器里由镜像覆盖       |
