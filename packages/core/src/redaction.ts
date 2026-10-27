@@ -33,6 +33,9 @@ const SENSITIVE_EXACT_KEYS = new Set([
   // A PEM-encoded key names its encoding, so the noun no longer ends the key
   // and the suffix rule misses it.
   "privatekeypem",
+  // `tls.key` is the PEM file name, not a field Tocsin stores, so normalizing
+  // it to one word keeps the dotted form sensitive too.
+  "tlskey",
   "signingkey",
   "signingsecret",
   "signsecret",
@@ -87,6 +90,83 @@ export const REDACTED_VALUE = "[REDACTED]";
 type CredentialTextRedactor = (value: string) => string;
 
 /**
+ * PEM private-key labels Tocsin can meet in an upstream payload. The body is
+ * base64, so no other rule recognises it and a neutral field such as `note` or
+ * `value` would carry the whole key through untouched. Labels are enumerated
+ * instead of pattern-matched so one hostile payload cannot make the scan
+ * quadratic by inventing new headers.
+ */
+const PEM_PRIVATE_KEY_MARKERS = [
+  "PRIVATE KEY",
+  "RSA PRIVATE KEY",
+  "EC PRIVATE KEY",
+  "DSA PRIVATE KEY",
+  "ENCRYPTED PRIVATE KEY",
+  "OPENSSH PRIVATE KEY",
+  "SSH2 ENCRYPTED PRIVATE KEY",
+  "PGP PRIVATE KEY BLOCK",
+].map((label) => ({
+  begin: `-----BEGIN ${label}-----`,
+  end: `-----END ${label}-----`,
+}));
+
+interface TextSpan {
+  start: number;
+  end: number;
+}
+
+function findPrivateKeyBlocks(value: string): TextSpan[] {
+  const spans: TextSpan[] = [];
+
+  for (const { begin, end } of PEM_PRIVATE_KEY_MARKERS) {
+    let searchFrom = 0;
+
+    for (;;) {
+      const start = value.indexOf(begin, searchFrom);
+      if (start === -1) break;
+
+      const endStart = value.indexOf(end, start + begin.length);
+      // A missing END closes every later block of this label too, so stopping
+      // here keeps the whole scan linear.
+      if (endStart === -1) break;
+
+      const blockEnd = endStart + end.length;
+      spans.push({ start, end: blockEnd });
+      searchFrom = blockEnd;
+    }
+  }
+
+  return spans;
+}
+
+/**
+ * Replaces complete PEM private-key blocks, header and footer included, with a
+ * single placeholder. Blocks are found first and merged afterwards so a key
+ * nested inside another block's span still yields one placeholder.
+ */
+function redactPrivateKeyBlocks(value: string): string {
+  const spans = findPrivateKeyBlocks(value);
+  if (spans.length === 0) return value;
+
+  spans.sort((left, right) => left.start - right.start);
+
+  let output = "";
+  let cursor = 0;
+
+  for (const span of spans) {
+    if (span.start < cursor) {
+      cursor = Math.max(cursor, span.end);
+      continue;
+    }
+
+    output += value.slice(cursor, span.start) + REDACTED_VALUE;
+    cursor = span.end;
+  }
+
+  return output + value.slice(cursor);
+}
+
+/**
  * Credential shapes that can appear without a `key=value` prefix, such as a
  * bare `Authorization` header value copied into an error message, URL
  * userinfo, or a chat-provider webhook URL. The matchers stay deliberately
@@ -97,6 +177,9 @@ type CredentialTextRedactor = (value: string) => string;
  * credential pasted into a URL password is handled as userinfo first.
  */
 const CREDENTIAL_VALUE_REDACTORS: ReadonlyArray<CredentialTextRedactor> = [
+  // A PEM block is unambiguous on its own and is already gone before the
+  // per-line assignment scanner runs, so it goes first.
+  redactPrivateKeyBlocks,
   // Chat webhook URLs carry their secret in the path. Capture scheme and host
   // so the same URL inside and outside an assignment converges to one shape.
   (value) =>
@@ -260,7 +343,12 @@ function redactJson(value: JsonValue, redactString: (input: string) => string): 
 }
 
 export function redactText(value: string): string {
-  return redactCredentialText(redactSensitiveAssignments(value));
+  // An unquoted assignment value ends at the first line break, so a
+  // `privateKeyPem=-----BEGIN …` block would lose its header there and leave
+  // the base64 body behind with nothing left to anchor on. Removing whole
+  // blocks first keeps the body covered; value-shape redaction afterwards sees
+  // only the placeholder and stays idempotent.
+  return redactCredentialText(redactSensitiveAssignments(redactPrivateKeyBlocks(value)));
 }
 
 /**
