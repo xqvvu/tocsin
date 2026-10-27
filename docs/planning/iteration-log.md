@@ -2,6 +2,86 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 136 轮）
+
+- 时间：2026-10-27 14:20 CST 起。
+- 基线：本轮开始时 `origin/main` @ `ef73f98`（第 135 轮日志提交）；main CI success；无 open PR。
+- 类型：**continuation（非全量审计）**。距上次全量审计 2026-10-27 13:26 CST 约 54 分钟，
+  未达第 1.5 步的 6 小时展开条件；因 backlog 存在达门槛候选（REQ-10 27、DOC-88..93、
+  REQ-280/281 26）按「继续」分支交付，**全量审计时间戳保持 2026-10-27 13:26 CST**。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`architecture`（按第 135 轮记录的轮转位置）。
+- `ui-triage` 决策：**`defer`**——`last_ui_review_at` = 2026-10-27 13:55 CST（仅 33 分钟）；
+  自评审以来 UI 路径合并 ≤1（即被第 135 轮浏览器实测覆盖的 `73371f5`）；42 条未解决 `UI-*`
+  均为存量候选，第 135 轮已判定数量饱和；最近 UI 改动有双视口浏览器验证记录。
+- `last_ui_review_at`：不变，**2026-10-27 13:55 CST**（本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `objective-ellis-82f992`（会话写入隔离）。`vp install --frozen-lockfile` 两个工作树各装一次
+  （agent-iteration 误装一次，收尾时随工作树一起删除）。
+
+### 专家发现
+
+- **requirements**（3 条新候选，均有 `file:line` 证据，见 backlog REQ-284..286）：
+  - **REQ-284（28）** 配置导入的文案承诺「替换当前配置」，实现只 upsert、从不删除
+    （`config-portability.service.ts:127-217` vs `zh-Hans.json:118,120`）；建议改为「合并/更新」
+    语义并在确认前给出纯前端 diff 预览，列出新增/更新/未列出的配置。
+  - **REQ-285（26）** `/suppressions` 无任何筛选，顶栏徽标落到全量列表
+    （`suppressions-section.tsx:146-162`、`active-suppression-indicator.tsx:49-53`）。
+  - **REQ-286（23）** 投递列表一行一条，告警扇出会淹没其它事件；建议前端按事件折叠
+    （未完全核实 `operations-table.tsx` 的 grouping feature）。
+  - 同族并入：REQ-141、REQ-49、REQ-75/39、REQ-35、REQ-261。
+  - **数据质量**：backlog 中 REQ-260、REQ-261、REQ-278 各出现两次（`:797/809`、`:19/798`、
+    `:30/181`），下一轮 docs 车道去重。
+- **architecture**（无新增漂移，全部为既有项现状复核）：service 纯度、容器装配、entrypoint
+  形状、feature 分层、`components/common` 纯度、import 约定、import protection、仓储分层、
+  i18n 九类均干净。9 条偏差分别并入 ARCH-15（router 内编排 worker，
+  `server/orpc/features/operations/router.ts:72-86`）、ARCH-11（静默表单仍用 `useState`）、
+  ARCH-60（`destination-form.tsx` 1393 行、`route-forms.tsx` 1076 行、`operation-filters.tsx`
+  914 行、`suppression-forms.tsx` 739 行）、ARCH-59（model 测试导入 ui/infra）、ARCH-17
+  （缺 client-only 标记；其中 `components/ui/sheet.tsx` 一项目前规则下无需标记，可从条目删除）、
+  ARCH-49（`packages/api` 31 处跨目录相对导入）、ARCH-63（session 仓储缺 `.helpers.ts`）、
+  ARCH-56（飞书动态字段 300 行）、FIX-9（`server/runtime/store.ts` 三个无 importer 的 accessor）。
+
+### 本轮交付
+
+- **PR #545 `feat(console): link events and deliveries across list and detail views`**：
+  - 投递列表事件标题 → `/events/$eventId`；投递详情 `eventId` → `/events/$eventId`；
+    事件详情投递表目标名 → `/deliveries/$deliveryId`。
+  - 三个组件补链接目标断言；受影响表格测试补 `Link` mock；静默规则链接断言改为按可访问名称定位。
+  - PRD `docs/prd/event-delivery-cross-links.md`；backlog：REQ-10 → shipped。
+  - 验证：`vp check` 0 error（23 条既有 warning）、`vp run -r test` 204 文件 / 1142 tests、
+    `vp run -r build` 4/4。
+- **PR #546 `docs(release): align migration steps, auth URL defaults, and beta.106/107 capabilities`**：
+  DOC-88..93 一次批量更正——五个迁移 step（`sqlite-store.md`）、五种升级场景
+  （`backup-restore-upgrade.md`，含 `0001～0004 → 0005`）、RC checklist `0001–0005`、
+  compose 对 `BETTER_AUTH_URL` 的默认值与「只设 `SERVER_URL` 无效」的说明、
+  Email HTML 已实现的 PRD 状态、beta.106/107 三项能力补记。`vp fmt --check` 通过。
+- **PR #547 `chore(release): v0.1.0-beta.109`**：根 `package.json` 与
+  `docs/release/release-checklist.md` 版本引用。
+
+### 发布评估与发布记录
+
+- 三位发布专家独立评估，结论一致放行：
+  - **发布经理**：`v0.1.0-beta.108..origin/main` 仅 `870623a`（#545）一个用户可见变更，
+    建议 `0.1.0-beta.109`；tag 未被占用。
+  - **阻断审计**：五项 PASS（main CI success；除发布 PR 自身外无 open PR；区间无
+    migration/schema；`blocked-autonomous` 仅 REL-13/16/23 仓库治理项；无未修复回归）。
+  - **运维/回滚**：风险 **LOW**；无 Docker/env/依赖/migration 变化；回滚只需换回
+    `0.1.0-beta.108` 镜像，无需数据库操作。
+- tag `v0.1.0-beta.109` @ `941ad5c`；GitHub Release 为 prerelease，body 非空（硬校验通过）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.109`
+  （linux/amd64 + linux/arm64，`--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；
+  回滚 `0.1.0-beta.108`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用（其 SKILL.md 硬编码 WSL 路径，在 macOS
+  无效），按 AGENTS.md 允许的 fallback 跳过。
+
+### 下一轮优先项
+
+1. **REQ-284（28）**：配置导入差异预览 + 文案改为「合并/更新」语义。
+2. **REQ-280 / REQ-281（26）**：Settings 脱敏诊断包下载、后台标签页失败计数。
+3. **REQ-285（26）**：静默列表筛选 + 徽标下钻 `?state=active`。
+4. backlog 去重（REQ-260/261/278 重复行）；车道轮转下一非必跑车道为 **`docs-drift`**
+   （随后 `quality`、`security-exposure`、`release-infra`）。
+
 ## 2026-10-27（第 135 轮）
 
 - 时间：2026-10-27 13:26 CST 起。
