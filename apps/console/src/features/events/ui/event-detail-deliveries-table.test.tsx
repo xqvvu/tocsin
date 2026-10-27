@@ -1,25 +1,30 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
+import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { EventDetailDeliveriesTable } from "#/features/events/ui/event-detail-deliveries-table";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { AppIntlProvider } from "#/i18n/provider";
 
-// The silence column decides between a rule link and a "rule deleted" note; the
-// link needs no router in this unit test.
+// The target and silence columns both link out; the links need no router in
+// this unit test.
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
     to,
     params,
+    ...rest
   }: {
     children: ReactNode;
     to: string;
-    params: { suppressionId: string };
-  }) => <a href={`${to}/${params.suppressionId}`}>{children}</a>,
+    params?: Record<string, string>;
+  } & AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={to.replace(/\$(\w+)/g, (_, key: string) => params?.[key] ?? "")} {...rest}>
+      {children}
+    </a>
+  ),
   ClientOnly: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
@@ -127,8 +132,8 @@ describe("event detail deliveries table", () => {
 
     expect(screen.getByText(suppressReason)).toBeTruthy();
     expect(screen.getByTitle(suppressReason)).toBeTruthy();
-    expect(screen.getByRole("link").getAttribute("href")).toBe(
-      "/suppressions/$suppressionId/suppression-1",
+    expect(screen.getByRole("link", { name: "suppression-1" }).getAttribute("href")).toBe(
+      "/suppressions/suppression-1",
     );
   });
 
@@ -146,7 +151,21 @@ describe("event detail deliveries table", () => {
 
     expect(screen.getByText(suppressReason)).toBeTruthy();
     expect(screen.getByText("Rule deleted")).toBeTruthy();
-    expect(screen.queryByRole("link")).toBeNull();
+    // Only the target-name link remains; there is no rule to open.
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByRole("link", { name: "suppression-1" })).toBeNull();
+  });
+
+  it("opens the delivery detail from the target name", () => {
+    renderTable([
+      delivery({ id: "delivery-failed", state: "failed", destinationName: "Feishu on-call" }),
+    ]);
+
+    // Retrying in place covers the quick action; inspecting the attempt history
+    // and receipt still needs the delivery page.
+    expect(screen.getByRole("link", { name: "Feishu on-call" }).getAttribute("href")).toBe(
+      "/deliveries/delivery-failed",
+    );
   });
 
   it("falls back to the shared dash for deliveries that were not silenced", () => {
