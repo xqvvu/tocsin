@@ -107,6 +107,7 @@
   "configuration.deliveryPause.toggleLabel": "暂停出站投递",
   "configuration.importNotice.copySourceToken": "复制告警源 Token",
   "configuration.importNotice.copyWebhookUrl": "复制 Webhook URL",
+  "configuration.importNotice.dismissSaved": "我已保存",
   "configuration.importNotice.empty": "没有生成新的告警源 Token",
   "configuration.importNotice.generated": "请立即复制生成的告警源 Token，它们只显示一次，Token hash 永不展示",
   "configuration.importNotice.sourceToken": "告警源 Token",

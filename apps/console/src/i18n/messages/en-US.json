@@ -107,6 +107,7 @@
   "configuration.deliveryPause.toggleLabel": "Pause outbound delivery",
   "configuration.importNotice.copySourceToken": "Copy source token",
   "configuration.importNotice.copyWebhookUrl": "Copy webhook URL",
+  "configuration.importNotice.dismissSaved": "I saved them",
   "configuration.importNotice.empty": "No new source tokens were generated",
   "configuration.importNotice.generated": "Copy generated source tokens now, they are shown once and token hashes are never displayed",
   "configuration.importNotice.sourceToken": "Source token",

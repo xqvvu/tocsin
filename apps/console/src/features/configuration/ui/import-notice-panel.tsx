@@ -3,14 +3,21 @@ import { RiCheckboxCircleLine, RiKey2Line } from "@remixicon/react";
 import type { ImportConfigurationResult } from "@tocsin/core";
 
 import { CopyableCodeLine } from "#/components/common/copyable-code-line";
-import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "#/components/ui/alert";
+import { Button } from "#/components/ui/button";
 import {
   sourceWebhookPath,
   sourceWebhookUrlFromPath,
 } from "#/features/sources/model/source-webhook";
 import { useTranslations } from "#/i18n/use-i18n";
 
-export function ImportNoticePanel({ notice }: { notice: ImportConfigurationResult }) {
+export function ImportNoticePanel({
+  notice,
+  onDismiss,
+}: {
+  notice: ImportConfigurationResult;
+  onDismiss: () => void;
+}) {
   const t = useTranslations();
 
   return (
@@ -22,8 +29,17 @@ export function ImportNoticePanel({ notice }: { notice: ImportConfigurationResul
           ? t("configuration.importNotice.empty")
           : t("configuration.importNotice.generated")}
       </AlertDescription>
+      <AlertAction>
+        <Button variant="ghost" size="sm" onClick={onDismiss}>
+          {t("configuration.importNotice.dismissSaved")}
+        </Button>
+      </AlertAction>
       {notice.generatedSourceTokens.length === 0 ? null : (
-        <div className="col-start-2 mt-2 grid gap-2">
+        // A bulk import can mint dozens of tokens. The list scrolls inside the
+        // notice so the editor and its import controls stay on screen; the
+        // tokens are still one copy away, and dismissing is an explicit
+        // "I saved them" action.
+        <div className="col-start-2 mt-2 grid max-h-64 gap-2 overflow-y-auto pr-2">
           {notice.generatedSourceTokens.map((source) => {
             const webhookPath = sourceWebhookPath(source.sourceId);
 

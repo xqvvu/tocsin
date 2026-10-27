@@ -29,8 +29,11 @@ export function SettingsPage() {
             onRefresh={() => void workspace.refresh()}
           />
           {workspace.importNotice ? (
-            <div className="min-h-0">
-              <ImportNoticePanel notice={workspace.importNotice} />
+            <div className="min-h-0 shrink-0">
+              <ImportNoticePanel
+                notice={workspace.importNotice}
+                onDismiss={workspace.dismissImportNotice}
+              />
             </div>
           ) : null}
           <TabsContent value="ui" className={settingsUiPanelClassName}>

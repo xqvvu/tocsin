@@ -246,6 +246,7 @@ export function useSettingsWorkspace() {
     },
     pending,
     importNotice,
+    dismissImportNotice: () => setImportNotice(null),
     refresh: () => refreshConfiguration({ invalidatePortableConfig: true }),
     portable: {
       toml: {
