@@ -70,7 +70,7 @@
 
 1. **UI-81（24）**：中文控制台半翻译术语统一（`zh-Hans.json` 11 个键 + 守卫测试）。
 2. **UI-79（26）/ UI-78（23）**：撤销会话确认框影响数量、390px 会话表。
-3. `security-exposure` 的 M1/L1 交 EXPERT_PANEL（URL 密码草稿、subscription-key 脱敏）。
+3. **SEC-37 / SEC-38** 交 EXPERT_PANEL（编辑草稿 URL 密码 preserve-on-blank、subscription-key 脱敏）。
 4. 车道轮转：下一轮非必跑车道为 **`release-infra`**（RC 剩余 gate：E2E 接入 CI、provider fixture）。
 
 ## 2026-10-27（第 130 轮）
