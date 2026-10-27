@@ -66,6 +66,27 @@
   - 验证：`vp check` 0 error；`vp run -r test` 4/4（console 203 files / 1126 tests）；
     `vp run -r build` 4/4。
 
+### 发布评估与发布记录
+
+- 三位发布专家独立评估，**一致放行**：
+  - **发布经理**：`v0.1.0-beta.103..HEAD` 有 2 个用户可见变更（#528 FastGPT `unknown` 文案；
+    #529 `/api/ready` 失败码），建议 `0.1.0-beta.104`。
+  - **阻断审计**：五项全 PASS（`ed3bb1a` 上 `check · test · build` 与 `playwright · chromium`
+    均 success；无 open PR；无新增 migration/依赖/Docker/workflow；`blocked-autonomous` 仅
+    REL-13/16/23；tag 不冲突）。
+  - **运维/回滚**：风险 **LOW**；无 schema/配置/env/启动参数变化；beta.104 → beta.103 仅换镜像，
+    无需数据库操作。
+- tag `v0.1.0-beta.104` @ `ed3bb1a`；GitHub Release 为 prerelease。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.104`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:908da918a44f6e45e33bf88079760101d9da66381eab5945471c163d17aff48d`，
+  `--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.103`，
+  无需数据库操作。
+- 已知小坑：beta.104 上自定义引用 `{{presentation.labels.probeUnknown}}` 的 Feishu 卡片，回滚到
+  beta.103 后会因未知静态路径而解析失败；内置卡片与默认模板不受影响。
+- 补建检查：最近 10 个 tag 与 `gh release list` 一一对应，无需补建。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，已跳过（AGENTS.md 允许的 fallback）。
+
 ### 下一轮优先项
 
 1. **UI-81（24）**：中文控制台半翻译术语统一（`zh-Hans.json` 11 个键 + 守卫测试）。
