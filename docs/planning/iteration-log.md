@@ -85,6 +85,27 @@
 - **运维/回滚**：Dockerfile/compose/env/端口/卷/启动参数/依赖/迁移零 diff；纯前端布局，
   不改投递/路由/鉴权/抑制匹配语义；回滚只需换回 `0.1.0-beta.114` 镜像，无需数据库操作。
 
+### 发布
+
+- 版本：**0.1.0-beta.115**，PR #588 `chore(release): v0.1.0-beta.115` rebase 合入 → `7f5e2e7`。
+- tag `v0.1.0-beta.115` → `7f5e2e7`（main CI success）。
+- Release：`Tocsin v0.1.0-beta.115`（prerelease，正文非空，含镜像、变更、升级与回滚说明）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.115`
+  （linux/amd64 + linux/arm64，index digest `sha256:752a6c0c72e7…`，
+  amd64 `sha256:17bf6f1d…`，arm64 `sha256:1a63c65c…`；`--provenance=false --sbom=false`）。
+- 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.114`。
+- Obsidian 同步：本轮只改 `docs/planning`、`docs/prd` 与发布 checklist；`obsidian-vault` skill 未在本会话暴露，
+  按 AGENTS.md 允许的 fallback 跳过同步。
+
+### 工作树回收
+
+- 清理本 session 工作树的构建产物：`musing-bartik-2a667a` 1.0G → 18M（删除 `node_modules`/`.output`）。
+- 回收 1 个已结束 session worktree（`busy-wing-46da4b`，上一轮第 145 轮，`git status` 干净）；
+  `.claude/worktrees` 共 3 个目录 → 2 个（本 session + `agent-iteration`），总量 47M。
+- 按 PR 状态删除已合并分支：`agent/planning-round-144/145`、`agent/release-beta-115`、
+  `agent/suppressions-sticky-actions`；保留无 PR 的历史分支与当前 planning 分支。
+- 停止本轮 UI 评审用的隔离 dev server（端口 6206）；临时 SQLite 保留在 `/tmp/tocsin-r146`。
+
 ### 下一轮优先项
 
 1. **REQ-298（29）** 事件列表精确指纹过滤（无迁移、单轮可交付）。
