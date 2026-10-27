@@ -66,6 +66,7 @@
 - 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.110`。
 - 时序说明：打 tag 后 docs-site routine 新开 #569（仅 `apps/docs` 文档），不影响已冻结的 tag 与镜像；
   发布评审时点无 open PR。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用，按 AGENTS.md 允许的 fallback 跳过。
 
 ### 下一轮优先项
 
