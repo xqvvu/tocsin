@@ -196,6 +196,28 @@ describe("active suppression indicator", () => {
     ).toBeTruthy();
   });
 
+  it("collapses its text below the sm breakpoint while keeping the full name", async () => {
+    renderIndicator([
+      suppression({
+        id: "ending",
+        name: "Database migration",
+        endsAt: at(15),
+        matcher: matcher({ sourceIds: ["source-1"] }),
+      }),
+    ]);
+
+    const link = await screen.findByRole("link", {
+      name: "Active suppressions: 1 · 1 expiring within 30 min",
+    });
+
+    // The pause and failure indicators already hide their text below `sm`; the
+    // silence badge used to keep its full sentence and overflowed the bar.
+    expect(link.getAttribute("aria-label")).toBe(
+      "Active suppressions: 1 · 1 expiring within 30 min",
+    );
+    expect(collapsedSpans(link)).toHaveLength(2);
+  });
+
   it("stays hidden when the suppression query fails", async () => {
     testState.fail = true;
 
@@ -216,3 +238,9 @@ describe("active suppression indicator", () => {
     });
   });
 });
+
+function collapsedSpans(link: HTMLElement): HTMLSpanElement[] {
+  return Array.from(link.querySelectorAll("span")).filter((span) =>
+    span.classList.contains("hidden"),
+  );
+}

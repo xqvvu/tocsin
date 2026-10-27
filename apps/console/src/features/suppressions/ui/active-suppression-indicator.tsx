@@ -38,19 +38,25 @@ export function ActiveSuppressionIndicator() {
   const label = catchAll
     ? t("suppressions.indicator.catchAll")
     : t("suppressions.indicator.active", { count: summary.activeCount });
+  const expiry =
+    summary.expiringSoonCount > 0
+      ? t("suppressions.indicator.expiringSoon", { count: summary.expiringSoonCount })
+      : null;
+  const accessibleLabel = expiry ? `${label} · ${expiry}` : label;
 
   return (
     <Badge
       variant={catchAll ? "destructive" : "outline"}
-      render={<Link to="/suppressions" />}
+      render={<Link to="/suppressions" aria-label={accessibleLabel} />}
       title={summary.names.join(" · ")}
       className="mr-1"
     >
       <RiNotificationOffLine aria-hidden />
-      {label}
-      {summary.expiringSoonCount > 0
-        ? ` · ${t("suppressions.indicator.expiringSoon", { count: summary.expiringSoonCount })}`
-        : null}
+      {/* The other two header indicators collapse to their icon on phones; a
+          long silence label plus the expiry suffix would otherwise overflow the
+          fixed-height bar. */}
+      <span className="hidden sm:inline">{label}</span>
+      {expiry ? <span className="hidden sm:inline"> · {expiry}</span> : null}
     </Badge>
   );
 }
