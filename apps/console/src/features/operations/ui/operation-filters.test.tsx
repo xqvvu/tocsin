@@ -138,6 +138,7 @@ describe("operation filters by page scope", () => {
         destinationId: "destination-1",
         destinationKind: "feishu",
         routeId: "route-1",
+        eventId: "evt-1",
         receipt: "present",
         deliveryState: "failed",
         minAttempts: 2,
@@ -161,6 +162,7 @@ describe("operation filters by page scope", () => {
       destinationKind: "",
       destinationMatch: "",
       routeId: "",
+      eventId: "",
       receipt: "",
       deliveryState: "",
       minAttempts: 0,
@@ -221,6 +223,19 @@ describe("operation filters by page scope", () => {
     renderFilters("deliveries", { routeId: "route-1" }, "toolbar");
 
     expect(screen.getByTitle("Clear Route")).toBeTruthy();
+  });
+
+  it("names the event chip on the deliveries page", () => {
+    // The events table links a count badge here; without the chip the list is
+    // narrowed to one event with no visible way to widen it again.
+    renderFilters("deliveries", { eventId: "evt-1" }, "toolbar");
+
+    expect(screen.getByTitle("Clear Event")).toBeTruthy();
+    expect(screen.getByText("evt-1")).toBeTruthy();
+
+    cleanup();
+    renderFilters("events", { eventId: "evt-1" }, "toolbar");
+    expect(screen.queryByTitle("Clear Event")).toBeNull();
   });
 
   it("names the last-activity basis chip and keeps it off the events page", () => {

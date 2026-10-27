@@ -295,6 +295,12 @@ export const ListOperationsInputSchema = z
     /** Restricts the delivery list to one route; manual deliveries have none. */
     routeId: z.string().min(1).optional(),
     /**
+     * Delivery-only: restricts the list to the deliveries fanned out from one
+     * event. The events table links each count badge here, so an operator can
+     * move from "this alert produced 3 failed deliveries" to the exact rows.
+     */
+    eventId: z.string().min(1).optional(),
+    /**
      * Delivery-only: only jobs whose target returned (or did not return) a
      * message reference.
      */

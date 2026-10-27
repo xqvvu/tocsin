@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+
 import { Badge } from "#/components/ui/badge";
 import type { Operations } from "#/features/operations/model/operation-types";
 import { useTranslations } from "#/i18n/use-i18n";
@@ -25,9 +27,11 @@ const DELIVERY_STATES = (Object.keys(DELIVERY_STATE_ORDER) as EventDeliveryState
 );
 
 export function EventDeliveryCountsCell({
+  eventId,
   counts,
   routeMatchCount,
 }: {
+  eventId: string;
   counts: EventDeliveryCounts;
   routeMatchCount: number;
 }) {
@@ -57,26 +61,48 @@ export function EventDeliveryCountsCell({
   return (
     <div className="flex min-w-0 flex-wrap justify-center gap-1">
       {DELIVERY_STATES.map((state) => (
-        <EventDeliveryStateCount key={state} state={state} value={counts[state]} />
+        <EventDeliveryStateCount
+          key={state}
+          eventId={eventId}
+          state={state}
+          value={counts[state]}
+        />
       ))}
     </div>
   );
 }
 
-function EventDeliveryStateCount({ state, value }: { state: EventDeliveryState; value: number }) {
+function EventDeliveryStateCount({
+  eventId,
+  state,
+  value,
+}: {
+  eventId: string;
+  state: EventDeliveryState;
+  value: number;
+}) {
   const t = useTranslations();
 
   if (value === 0) {
     return null;
   }
 
+  const stateLabel = t(`common.deliveryState.${state}`);
+  // The badge is the entry point to this event's fan-out: clicking it opens the
+  // delivery list already narrowed to this event and this state, so on-call can
+  // go from "3 failed" to the three rows without copying the event id.
+  const linkTitle = `${stateLabel}: ${value} · ${t("events.table.filterDeliveriesByEvent")}`;
+
   return (
     <Badge
       variant={deliveryCountVariant(state)}
-      title={`${t(`common.deliveryState.${state}`)}: ${value}`}
+      render={
+        <Link to="/deliveries" search={{ eventId, deliveryState: state }} aria-label={linkTitle} />
+      }
+      title={linkTitle}
       className="min-w-12 justify-center gap-1 px-1.5"
     >
-      {t(`common.deliveryState.${state}`)}
+      {stateLabel}
       <span className="self-baseline font-mono tabular-nums">{value}</span>
     </Badge>
   );

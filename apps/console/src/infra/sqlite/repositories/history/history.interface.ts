@@ -106,6 +106,12 @@ export interface DeliveryListQuery {
   destinationKind?: DestinationKind;
   /** Only the deliveries created by one route; manual deliveries have none. */
   routeId?: string;
+  /**
+   * Only the deliveries fanned out from one event. The events table links a
+   * delivery-count badge here, so "what did this alert send" is exact instead
+   * of a fuzzy id search.
+   */
+  eventId?: string;
   /** Only the deliveries silenced by one rule ("what did this rule hit?"). */
   suppressionId?: string;
   /**

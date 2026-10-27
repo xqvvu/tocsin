@@ -429,6 +429,7 @@ describe("clearing the operation search", () => {
       "destinationId",
       "destinationKind",
       "destinationMatch",
+      "eventId",
       "minAttempts",
       "q",
       "range",
@@ -443,5 +444,37 @@ describe("clearing the operation search", () => {
     expect(hasOperationFilters(clearedOperationSearch)).toBe(false);
     // Nothing survives pruning, so the cleared state leaves a clean URL.
     expect(pruneSearch(clearedOperationSearch)).toEqual({});
+  });
+});
+
+describe("event filter in the operation search", () => {
+  it("keeps a linked event id and treats it as an active filter", () => {
+    const search = DashboardOperationSearchSchema.parse({
+      eventId: "evt-1",
+      deliveryState: "failed",
+    });
+
+    expect(search.eventId).toBe("evt-1");
+    // The deliveries empty state says "nothing matched" only when it can see an
+    // active filter; an uncounted event id would make it claim nobody filtered.
+    expect(hasOperationFilters(search)).toBe(true);
+    expect(operationFiltersFromSearch(search)).toMatchObject({
+      eventId: "evt-1",
+      deliveryState: "failed",
+    });
+  });
+
+  it("falls back to no event filter for an empty value", () => {
+    expect(DashboardOperationSearchSchema.parse({ eventId: "" }).eventId).toBe("");
+    expect(hasOperationFilters({ eventId: "" })).toBe(false);
+    expect(pruneSearch({ eventId: "" }).eventId).toBeUndefined();
+  });
+
+  it("returns both lists to page 1 when the event filter changes", () => {
+    const merged = mergeOperationSearch({ eventPage: 4, deliveryPage: 3 }, { eventId: "evt-1" });
+
+    expect(merged.eventId).toBe("evt-1");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
   });
 });

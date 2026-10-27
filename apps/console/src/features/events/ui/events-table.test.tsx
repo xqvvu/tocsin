@@ -1,11 +1,41 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { EventsTable } from "#/features/events/ui/events-table";
 import type { Operations } from "#/features/operations/model/operation-types";
 import { AppIntlProvider } from "#/i18n/provider";
+
+// The delivery-count cell links to the filtered delivery list. Rendering the
+// anchor directly keeps the table test free of the app router while still
+// covering the href the cell emits. The rest of the module stays real because
+// the timestamp cell needs `ClientOnly`.
+vi.mock("@tanstack/react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-router")>();
+
+  return {
+    ...actual,
+    Link: ({
+      to,
+      search,
+      children,
+      ...props
+    }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+      to: string;
+      search?: Record<string, string>;
+    }) => {
+      const query = search ? `?${new URLSearchParams(search).toString()}` : "";
+
+      return (
+        <a href={`${to}${query}`} {...props}>
+          {children}
+        </a>
+      );
+    },
+  };
+});
 
 describe("events table", () => {
   afterEach(() => {
