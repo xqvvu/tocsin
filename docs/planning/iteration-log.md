@@ -59,6 +59,36 @@
 - 本轮未做 DOC-88..93 的文档更正：6 条均属 AUTO_FIX，但与 UI 切片不属同一关注点，且剩余
   时间要留给 PR CI 与发布评估；已按优先级写入 backlog，下一轮可直接批量交付。
 
+### 发布评估与发布记录
+
+- 三位发布专家独立评估，结论一致放行（阻断审计初判「CI pending」，复核后 #542 两项检查均 success）：
+  - **发布经理**：`v0.1.0-beta.107..origin/main` 仅 PR #542 一个用户可见变更；建议
+    `0.1.0-beta.108`；tag 未被占用。
+  - **阻断审计**：五项 PASS（#542 的 `check · test · build` 与 `playwright · chromium` 均
+    success；无其他 open PR；区间无 migration/schema；`blocked-autonomous` 仅 REL-13/16/23
+    仓库治理项；版本与 tag 无冲突）。
+  - **运维/回滚**：风险 **LOW**；无 env/迁移/配置格式/启动参数变化；回滚只需换回
+    `0.1.0-beta.107` 镜像，无需数据库操作。
+- PR #543 `chore(release): v0.1.0-beta.108`（rebase 合并 `6a79ee9`）；确认 `6a79ee9` 的
+  main CI 两项均 success 后才打 tag。
+- tag `v0.1.0-beta.108` @ `6a79ee9`；GitHub Release 为 prerelease，body 非空（硬校验通过）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.108`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:42655b2ec2b7fec5fdd09333d9e47b698a1e51515520d96e7b2b742adcbdd6e4`，
+  `--provenance=false --sbom=false`，构建于 tag 对应的干净检出）；回滚 `0.1.0-beta.107`。
+- Obsidian 同步：`obsidian-vault` skill 在本会话不可用（其 SKILL.md 硬编码 WSL 路径，在 macOS
+  无效），按 AGENTS.md 允许的 fallback 跳过。
+
+### 工作树清理
+
+- 第 10.2 步：`list_sessions` 中 2 个候选目录存在于磁盘；回收 `adoring-curran-650897`
+  （PR #539 已合并、`git status` 干净）；跳过 `distracted-bhabha-bd305a`
+  （`.github/workflows/ci.yml` 有真实未提交改动）。`.claude/worktrees` 991M → 974M。
+- 第 10.3 步：专用工作树 `agent-iteration`（本轮未装依赖）与并发锁在收尾时删除；会话工作树的
+  `node_modules`/`.output` 在收尾时删除。
+- `agent/*` 分支按 PR 状态清理：`agent/compact-header-indicators`、`agent/release-0-1-0-beta-108`
+  均已 MERGED；因会话工作树仍签出，按日志惯例由 app 回收工作树后再删本地分支。
+
 ### 下一轮优先项
 
 1. **REQ-10（27）**：Event/Delivery 三处互链（投递列表事件列、投递详情、事件投递表）。
