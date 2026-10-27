@@ -215,7 +215,9 @@ export class DestinationService {
       destination.kind,
       {
         eventId,
-        eventUrl: eventDetailUrl(this.publicBaseUrl, eventId),
+        // A synthetic sample has no stored Event behind it, so linking would
+        // only produce a dead URL in the test message.
+        eventUrl: sample ? eventDetailUrl(this.publicBaseUrl, eventId) : undefined,
         source,
         destination: summary,
         normalizedEvent,
@@ -333,7 +335,12 @@ export class DestinationService {
     const settings = await this.store.settings.get();
     const input = {
       eventId: sample.metadata.eventId,
-      eventUrl: eventDetailUrl(this.publicBaseUrl, sample.metadata.eventId),
+      // The built-in sample is not a stored Event, so only a historical sample
+      // can produce a link that resolves in the dashboard.
+      eventUrl:
+        sample.metadata.kind === "historical_event"
+          ? eventDetailUrl(this.publicBaseUrl, sample.metadata.eventId)
+          : undefined,
       source: sample.metadata.source,
       destination,
       normalizedEvent: sample.normalizedEvent,

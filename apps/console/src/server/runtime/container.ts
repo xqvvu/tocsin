@@ -211,6 +211,9 @@ export function createApplicationContainer(
   const workerBatchSize = options.workerBatchSize ?? env.TOCSIN_WORKER_BATCH_SIZE;
   const workerStaleRunningMs = options.workerStaleRunningMs ?? env.TOCSIN_WORKER_STALE_RUNNING_MS;
   const destinationTimeoutMs = options.destinationTimeoutMs ?? env.TOCSIN_DESTINATION_TIMEOUT_MS;
+  // Alert links need the console's public origin. Production deployments
+  // already set one of these two, and both point at the same app.
+  const publicBaseUrl = env.SERVER_URL ?? env.BETTER_AUTH_URL;
   const onWorkerRunComplete = options.onWorkerRunComplete ?? logWorkerRunComplete;
   const onWorkerError = options.onWorkerError ?? logWorkerError;
   const onOncallWorkerRunComplete = options.onOncallWorkerRunComplete ?? logOncallWorkerRunComplete;
@@ -258,7 +261,7 @@ export function createApplicationContainer(
         destinations: container.getDestinationRegistry(),
         resolveDestinationConfig: createDestinationConfigResolver({ store }),
         destinationSendContext: { timeoutMs: destinationTimeoutMs },
-        publicBaseUrl: env.SERVER_URL,
+        publicBaseUrl,
         ...serviceOptions,
       });
     },
@@ -357,7 +360,7 @@ export function createApplicationContainer(
         staleRunningTimeoutMs: workerStaleRunningMs,
         resolveDestinationConfig: createDestinationConfigResolver({ store }),
         sendContext: { timeoutMs: destinationTimeoutMs },
-        publicBaseUrl: env.SERVER_URL,
+        publicBaseUrl,
         triggerPings: (input) => oncall.triggerPingsForDelivery(input),
         ...workerOptions,
       });

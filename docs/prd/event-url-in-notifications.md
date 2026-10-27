@@ -29,17 +29,20 @@
    `options.eventUrl`，其次使用发送输入里的 `eventUrl`，都没有时保持空字符串。
 2. 新增纯函数 `eventDetailUrl(baseUrl, eventId)`：去掉 base URL 末尾斜杠，拼
    `/events/<encodeURIComponent(eventId)>`；base URL 缺失或为空白时返回 `undefined`。
-3. 用**既有** `SERVER_URL` 作为对外地址来源，不新增环境变量：
+3. 用**既有**公开地址配置，不新增环境变量：优先 `SERVER_URL`，缺失时回落到
+   `BETTER_AUTH_URL`（生产部署本就要求两者之一，且都指向同一个控制台）。
    - 投递执行器（`DeliveryExecution`）在发送输入里带上事件直链；
    - 目标服务在预览（`previewDestination*`）与测试发送（`testDestination`）里带上；
-   - 容器把 `env.SERVER_URL` 注入这两处（`server/runtime/container.ts`）。
-4. 未配置 `SERVER_URL` 时行为与今天完全一致：变量渲染为空串，消息内容不变。
-5. 文档：README 与部署文档补充 `SERVER_URL` 也用于生成事件直链。
+   - 容器解析该地址并注入这两处（`server/runtime/container.ts`）。
+4. 只有**真实入库的事件**才生成直链：内置预览样例与没有样例的测试发送使用合成 id
+   （`preview-event`、`test-<时间戳>`），生成链接只会 404，因此这两种情况保持空串。
+5. 两个地址都未配置时行为与今天完全一致：变量渲染为空串，消息内容不变。
+6. 文档：README 与部署文档补充公开地址也用于生成事件直链。
 
 ## 非目标
 
-- 不新增 `TOCSIN_PUBLIC_URL`。`SERVER_URL` 已经是「对外访问 URL」的既有配置，再引入一个
-  重叠变量会让部署者困惑。
+- 不新增 `TOCSIN_PUBLIC_URL`。`SERVER_URL` / `BETTER_AUTH_URL` 已经是「对外访问 URL」的既有
+  配置，再引入一个重叠变量会让部署者困惑。
 - 不改 webhook 接收地址的复制逻辑（浏览器 origin 的取舍见 backlog NEW-2，另有候选）。
 - 不改内置飞书卡片模板，不给它们默认塞链接；由运营在模板里自行引用变量。
 - 不做短链、签名 URL 或对外鉴权。事件详情仍需登录控制台；链接只负责定位。
@@ -52,9 +55,10 @@
 - `eventDetailUrl`：处理末尾斜杠、子路径、需要编码的事件 id，以及缺失/空白 base URL。
 - `DeliveryExecution` 在配置 `publicBaseUrl` 时把
   `<base>/events/<eventId>` 放进适配器输入；未配置时不设置该字段。
-- 目标预览的模板上下文包含同一规则生成的 `tocsin.eventUrl`（集成测试覆盖）。
+- 目标预览的模板上下文包含同一规则生成的 `tocsin.eventUrl`（集成测试覆盖），而内置样例预览
+  仍为空串。
 - `vp check`、`vp run -r test`、`vp run -r build` 全绿。
-- 无 `SERVER_URL` 的既有部署升级后消息内容不变。
+- 未配置任何公开地址的既有部署升级后消息内容不变。
 
 ## 架构边界
 
