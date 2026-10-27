@@ -921,6 +921,89 @@ describe("delivery worker", () => {
 
     await store.close();
   });
+
+  it("keeps the rest of the batch running when one failure cannot be recorded", async () => {
+    const store = await createStore();
+    const first = await seedDelivery(store);
+    const secondEvent = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: "request-2",
+      normalized: {
+        title: "Checkout unavailable",
+        message: "checkout returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout:unavailable:second",
+        labels: { service: "checkout" },
+        occurredAt: now,
+      },
+      rawPayload: {},
+    });
+    const second = (
+      await store.deliveries.enqueueForEvent({
+        event: secondEvent,
+        matches: [{ routeId: "route-1", destinationIds: ["destination-1"] }],
+        dedupeWindowStartsAt: "2026-06-09T07:55:00.000Z",
+        now,
+      })
+    ).created[0]!;
+    expect(first.id).not.toBe(second.id);
+
+    // One row's bookkeeping write fails (a locked database, or a row a
+    // concurrent deletion cascaded away). The batch must carry on.
+    const deliveries = new Proxy(store.deliveries, {
+      get(target, property, receiver) {
+        if (property === "markFailed") {
+          return async (input: Parameters<typeof target.markFailed>[0]) => {
+            if (input.deliveryId === first.id) {
+              throw new Error("database is locked");
+            }
+
+            return target.markFailed(input);
+          };
+        }
+
+        const value = Reflect.get(target, property, receiver);
+
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const flakyStore = new Proxy(store, {
+      get(target, property, receiver) {
+        if (property === "deliveries") {
+          return deliveries;
+        }
+
+        const value = Reflect.get(target, property, receiver);
+
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const worker = new DeliveryWorker({
+      store: flakyStore,
+      destinations: createDefaultDestinationRegistry(),
+      now: () => now,
+      sendContext: {
+        fetch: async () => ({ ok: false, status: 503, text: async () => "unavailable" }),
+      },
+    });
+
+    const result = await worker.runOnce();
+    const stranded = await store.deliveries.get(first.id);
+    const recorded = await store.deliveries.get(second.id);
+
+    expect(result).toMatchObject({ claimed: 2, succeeded: 0, failed: 1, retrying: 1 });
+    // The unrecorded row is left alone with its claim-time attempt; the stale
+    // attempt reclaim owns it now.
+    expect(stranded?.job.state).toBe("running");
+    expect(stranded?.attempts).toMatchObject([{ attemptNumber: 1, state: "running" }]);
+    // Its sibling still recorded its own failed attempt and retry schedule.
+    expect(recorded?.job.state).toBe("pending");
+    expect(recorded?.job.nextAttemptAt).not.toBeNull();
+    expect(recorded?.attempts).toMatchObject([{ attemptNumber: 1, state: "failed" }]);
+
+    await store.close();
+  });
 });
 
 async function waitForDeliveryState(

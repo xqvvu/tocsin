@@ -1,3 +1,5 @@
+import { getLogger } from "@logtape/logtape";
+
 import { redactText } from "@tocsin/core";
 
 import {
@@ -10,6 +12,9 @@ import type {
   DeliveryWorkerRunOptions,
   DeliveryWorkerRunResult,
 } from "#/server/deliveries/delivery-worker.service.types";
+import { safeErrorProperties } from "#/server/runtime/log-safety";
+
+const deliveryLogger = getLogger(["tocsin", "delivery"]);
 
 export class DeliveryWorker {
   private readonly store: DeliveryWorkerOptions["store"];
@@ -98,15 +103,30 @@ export class DeliveryWorker {
       };
 
       for (const delivery of claimed) {
-        addOutcome(
-          result,
-          await this.execution.execute(
-            delivery,
-            now,
-            presentation,
-            () => options.now ?? this.now(),
-          ),
-        );
+        // One claimed row must never strand the rest of the batch in `running`
+        // until the stale attempt reclaim runs again. Bookkeeping failures are
+        // already absorbed inside the execution; this guard covers anything
+        // else that escapes a single delivery.
+        try {
+          addOutcome(
+            result,
+            await this.execution.execute(
+              delivery,
+              now,
+              presentation,
+              () => options.now ?? this.now(),
+            ),
+          );
+        } catch (error) {
+          result.failed += 1;
+          deliveryLogger.error("Delivery {deliveryId} failed outside its recorded outcome", {
+            deliveryId: delivery.job.id,
+            eventId: delivery.event.id,
+            destinationId: delivery.destination.id,
+            destinationKind: delivery.destination.kind,
+            ...safeErrorProperties(error),
+          });
+        }
       }
 
       result.finishedAt = options.now ?? this.now();
