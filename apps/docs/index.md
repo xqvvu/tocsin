@@ -29,13 +29,14 @@ features:
 3. [创建、轮换或停用告警源](/guide/sources)
 4. [定位 Event 并读取匹配证据](/guide/events)
 5. [选择并验证通知目标](/integrations/destinations)
-6. [配置路由匹配](/guide/routes)
-7. [检查投递状态与重试](/operations/deliveries)
-8. [在变更窗口内静默告警](/operations/suppressions)
-9. [生产 Docker 部署](/operations/deploy-docker)
-10. [完成首个 owner 与账号安全设置](/operations/authentication)
-11. [备份、恢复与升级](/operations/backup-restore)
-12. [查看日志、健康检查与 Worker 状态](/operations/observability)
+6. [登记飞书应用并配置电话加急（可选）](/integrations/feishu-app)
+7. [配置路由匹配](/guide/routes)
+8. [检查投递状态与重试](/operations/deliveries)
+9. [在变更窗口内静默告警](/operations/suppressions)
+10. [生产 Docker 部署](/operations/deploy-docker)
+11. [完成首个 owner 与账号安全设置](/operations/authentication)
+12. [备份、恢复与升级](/operations/backup-restore)
+13. [查看日志、健康检查与 Worker 状态](/operations/observability)
 
 ::: warning 发布状态
 Tocsin 当前是可试用的自托管 MVP，尚非稳定发布版。生产使用前请评估单实例限制，并先演练备份与恢复。
