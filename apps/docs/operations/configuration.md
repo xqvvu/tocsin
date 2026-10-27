@@ -24,13 +24,13 @@ Tocsin 的部署行为由进程环境决定。本页是公开站点的运行时�
 | 变量 | 默认值 | 作用与约束 |
 | --- | --- | --- |
 | `BETTER_AUTH_SECRET` | 无 | Dashboard session 签名密钥。提供时至少 32 个字符；production 必须提供有效值，仓库历史公开值会被拒绝。轮换后所有 dashboard session 失效。 |
-| `BETTER_AUTH_SECRET_FILE` | 无 | 仅当 `BETTER_AUTH_SECRET` 为空时读取。文件必须是单行裸值、不超过 4 KiB，并对容器内 uid/gid `1000` 可读；缺失、空文件、多行或超限都会使启动失败。读到的值不会写回 `process.env`。 |
+| `BETTER_AUTH_SECRET_FILE` | 无 | 仅当 `BETTER_AUTH_SECRET` 为空时读取。文件必须是单行裸值、不超过 4 KiB，并对容器内 uid/gid `1000` 可读；缺失、空文件、多行或超限都会使应用拒绝提供服务。读到的值不会写回 `process.env`。 |
 | `BETTER_AUTH_URL` | 无 | Better Auth 对外 base URL。必须与实际访问协议和域名一致；设置 `BETTER_AUTH_ALLOWED_HOSTS` 时作为动态 Host 校验的回落地址。 |
 | `SERVER_URL` | 无 | 公开实例 URL，用于通知模板中的事件直链。未设置时回落到 `BETTER_AUTH_URL`；`BETTER_AUTH_URL` 也未设置时，作为 Better Auth base URL 的回落值。 |
 | `BETTER_AUTH_ALLOWED_HOSTS` | 无 | 可选 Host 白名单，值可用逗号或换行分隔并自动去重。Host 示例：`tocsin.example.com,ops.internal:3000`。 |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | 无 | 可选额外可信 Origin，值可用逗号或换行分隔并自动去重。Origin 示例：`https://tocsin.example.com,https://ops.internal:3000`。 |
 
-生产部署通常把 `BETTER_AUTH_URL` 与 `SERVER_URL` 设为同一个最终外部 HTTPS URL。只设置其中一个虽然能启动，但会让认证回调或通知直链使用不同的回落地，增加登录循环与链接错误的风险。反向代理、多个域名和临时 Host 的配置步骤见[Docker 生产部署](/operations/deploy-docker#反向代理与限制)。
+生产部署通常把 `BETTER_AUTH_URL` 与 `SERVER_URL` 设为同一个最终外部 HTTPS URL。当前 Compose 已给两者 `http://localhost:3000` 默认值；如果只覆盖 `SERVER_URL` 而保留认证 URL 默认值，事件直链会指向公网地址，认证却仍按 localhost 生成 URL。反向代理、多个域名和临时 Host 的配置步骤见[Docker 生产部署](/operations/deploy-docker#反向代理与限制)。
 
 `BETTER_AUTH_SECRET_FILE` 是当前唯一支持 `_FILE` 间接读取的应用变量。`TOCSIN_SOURCE_*`、`TOCSIN_DEST_*`、`TOCSIN_FEISHU_APP_*` 等可移植配置引用只读取 `process.env`。
 
