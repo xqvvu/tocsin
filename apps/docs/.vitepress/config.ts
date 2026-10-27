@@ -22,6 +22,7 @@ export default defineConfig({
         items: [
           { text: "快速开始", link: "/guide/quick-start" },
           { text: "处理链路与概念", link: "/guide/concepts" },
+          { text: "告警源接入与生命周期", link: "/guide/sources" },
           { text: "路由规则与匹配", link: "/guide/routes" },
         ],
       },

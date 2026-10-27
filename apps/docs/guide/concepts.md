@@ -8,7 +8,7 @@ Tocsin 把告警接收与通知发送分开处理，便于定位「收到什么�
 
 | 概念 | 运维含义 | 排障入口 |
 | --- | --- | --- |
-| 告警源（Source） | 一个上游发送方及其 Provider 解析器；每个告警源独立认证，可单独禁用或轮换 Token。 | 告警源配置与一次性 Token 提示 |
+| 告警源（Source） | 一个上游发送方及其 Provider 解析器；每个告警源独立认证，可单独禁用或轮换 Token。 | [告警源生命周期](/guide/sources)与一次性 Token 提示 |
 | Event | 每次通过认证的入站请求及其规范化结果。不同 Provider 的 payload 被映射为共同告警字段。 | 事件详情中的 normalized fields、原始调试信息与 route matches |
 | Route | 用 source、severity、status、labels、title 或 message 条件匹配事件，并指定一个或多个通知目标。规则可检查，不执行任意代码。 | 路由列表与事件详情中的匹配证据 |
 | Destination | 一个出站通知渠道及其端点、模板和凭证配置。凭证保留在服务端；目标可测试、启停。 | 通知目标配置与测试结果 |
@@ -34,4 +34,4 @@ Provider 会生成规范化字段，如标题、消息、严重程度、状态�
 默认运行形态是一个 Tocsin 进程与一个本地 SQLite 文件。它不是多副本集群；不要让多个实例共享同一个 SQLite 文件，也不要把数据库放在不适合 SQLite 的网络文件系统上。
 :::
 
-更多：[快速开始](/guide/quick-start) · [路由规则与匹配](/guide/routes) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [Docker 部署与持久化](/operations/deploy-docker)
+更多：[告警源接入与生命周期](/guide/sources) · [快速开始](/guide/quick-start) · [路由规则与匹配](/guide/routes) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [Docker 部署与持久化](/operations/deploy-docker)
