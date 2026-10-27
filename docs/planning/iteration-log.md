@@ -2,6 +2,88 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 144 轮）
+
+- 时间：2026-10-28 05:38 CST 起，约 06:30 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `38a2e41`（main CI success；唯一 open PR #577 属 docs-site routine，非本 routine）。
+- 类型：**skip（廉价闸门）+ 定向实现 + 发布**。距上次全量审计 2026-10-28 00:30 CST 约 5h08m
+  （< 6 小时），按第 1.5 步不展开全量审计；backlog 有达到门槛的候选（REQ-295，27 分），
+  因此按上一轮「下一轮优先项」做定向实现。
+- 全量审计时间戳：不变，仍为 **2026-10-28 00:30 CST**（下一轮最早 06:30 CST 后）。
+- 车道轮转位置：不变，下一非必跑车道仍为 **`quality`**（随后 `release-infra`）。
+- `ui-triage`：本轮**未 spawn**。距上一轮结束约 26 分钟、代码在上一轮后只有 docs 提交、
+  `last_ui_review_at` = 2026-10-27 23:50 CST（约 5.8 小时，远低于 48 小时），重跑只会重复相邻轮次
+  结论（第 129 轮规则）。`requirements` 同样未 spawn：第 141 轮的 REQ-295/296/297 仍在 backlog。
+- `last_ui_review_at`：不变，**2026-10-27 23:50 CST**。
+- 范围取舍：按「1 需求切片 + 至多 1 小修复」只交付小修复 SEC-20；REQ-295（forward-only 迁移）
+  需 EXPERT_PANEL 与更大时间预算，留待后续轮次。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `agitated-nobel-ccf903`（写入隔离）。
+
+### 专家发现
+
+本轮未 spawn 审计车道；发布评估由三位专家子代理完成（见下）。附带由运维/回滚专家提出、
+已登记为 backlog 的残余缺口：PEM 规则只覆盖首尾配对的完整块，截断块与小写标签仍会漏（SEC-26，18 分）。
+
+### 本轮交付
+
+- **PR #578 `fix(core): redact PEM private keys and tls.key fields`**（SEC-20，22 分，AUTO_FIX）
+  - `packages/core/src/redaction.ts`：新增 8 类 PEM 私钥标签（PKCS#8、RSA、EC、DSA、Encrypted、
+    OpenSSH、SSH2、PGP）的**值形态**脱敏，完整块连同 header/footer 一并替换为 `[REDACTED]`。
+    标签按枚举而非模式匹配，且同标签下「找不到 END 即结束该标签扫描」，保证扫描线性，
+    不会重现 SEC-19 的平方级回溯。
+  - 脱敏顺序修正：PEM 块替换**先于**赋值扫描（`redactText`），否则未加引号的多行赋值会在第一个
+    换行处丢掉 header，正文 base64 留在原地且失去锚点。
+  - 精确敏感键新增 `tlskey`（`tls.key` / `tlsKey` / `TLS.KEY` 归一后同一形态）；
+    `tlsVersion`、`privateKeyId`、公钥块保持可见。
+  - 测试：敏感键用例补 3 条、可见用例补 `tlsVersion`，新增 4 条（裸块、未加引号多行赋值、
+    JSON 转义块、公钥/TLS 版本可见）。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 4/4 包
+    （core 191 / console 1184 / providers 38 tests）、`vp run -r build` 通过；
+    PR CI `check · test · build` + `playwright · chromium` 通过后 rebase 合并 → `b4e69d3`。
+  - 自查：`code-review` skill（low）无 finding；人工复核覆盖调用顺序、幂等性、重叠 span 合并与
+    1 MiB 线性扫描性能门禁。
+
+### EXPERT_PANEL：发布评估
+
+三位专家一致：**发布**。
+
+- **发布经理**：区间内 1 个用户可见修复（#578；安全脱敏属「修正错误输出」，第 69/138 轮有先例），
+  其余提交为纯 docs；建议 `0.1.0-beta.113`。
+- **阻断审计**：main CI（`b4e69d3` CI + E2E 双绿）、无 open PR、区间 `migrate/` 无 diff、
+  无 ≥27 分的 `blocked-autonomous` 项、`v0.1.0-beta.113` 未占用 → 六项门禁全 PASS。
+- **运维/回滚**：部署面零变化（Dockerfile/compose/端口/卷/env/迁移均无 diff）；不改变投递、路由、
+  鉴权语义（匹配与去重只用未脱敏的 normalized 字段）；回滚只需换回 `0.1.0-beta.112` 镜像，
+  无需数据库操作。
+- 决策记录：常规发布，无新增长期决策文档；本节即三位专家意见摘要。
+
+### 发布
+
+- 版本：**0.1.0-beta.113**，PR #579 `chore(release): v0.1.0-beta.113` rebase 合入 → `2ac2de5`。
+- tag `v0.1.0-beta.113` → `2ac2de5`（main CI + E2E 均 success）。
+- Release：`Tocsin v0.1.0-beta.113`（prerelease，正文非空，含镜像、变更、升级与回滚说明）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.113`
+  （linux/amd64 + linux/arm64，index digest `sha256:f08ee834a4df5af7e171a6abe13079f53888460389f732ea7a277a9f2fa354de`，
+  amd64 `sha256:7fa1e6b2…`，arm64 `sha256:3fe3e0cb…`；`--provenance=false --sbom=false`）。
+- 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.112`。
+- Obsidian 同步：本轮只改 `docs/planning`；`obsidian-vault` skill 未在本会话暴露，
+  按 AGENTS.md 允许的 fallback 跳过同步。
+
+### 工作树回收
+
+- 回收 1 个已结束 session worktree（`brave-shannon-9efcf1`，18M），`.claude/worktrees` 总量
+  1.0G → 988M（其中 968M 是本 session 工作树的 `node_modules`/`.output`，收尾时清除）。
+  其余 3 个目录分属本 session、`agent-iteration` 与同期运行中的 docs-site session，不在回收范围。
+
+### 下一轮优先项
+
+1. **SEC-26（18）** 截断 PEM 块与小写标签补齐（AUTO_FIX）。
+2. **ARCH-40/41（20/18）** `runDeliveryWorker` 与 session/i18n procedure 编排收进 service。
+3. **REQ-295（27）** 事件 raw 载荷保全（forward-only 迁移，走 EXPERT_PANEL）。
+4. **DOC-95/96/58** 一批文档更正。
+5. 车道轮转 **`quality`**；`last_ui_review_at` 将在 2026-10-29 23:50 后超过 48 小时，
+   届时 ui-triage 倾向 `review_now`。
+
 ## 2026-10-28（第 143 轮）
 
 - 时间：2026-10-28 04:42 CST 起，约 05:12 CST 结束。
