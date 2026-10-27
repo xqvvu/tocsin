@@ -27,7 +27,7 @@ curl -fsS http://localhost:3000/api/ready
 在 dashboard 中按以下顺序配置：
 
 1. 在「通知目标」新建一个目标，例如 Feishu、Slack、Email 或通用 Webhook。填入真实可达的接收端，并使用目标页的测试操作验证配置。Email 适配器当前标记为 experimental。字段、模板和安全边界见[通知目标参考](/integrations/destinations)。
-2. 在「告警源」新建一个 `Generic Webhook` 告警源。创建后立即复制一次性显示的 Webhook URL 与接入 Token；Token 之后不会再次显示。
+2. 在「告警源」新建一个 `Generic Webhook` 告警源。创建后立即复制一次性显示的 Webhook URL 与接入 Token；Token 之后不会再次显示。创建、凭据轮换、停用和删除边界见[告警源接入与生命周期](/guide/sources)。
 3. 在「路由」新建规则，选择刚创建的告警源、一个或多个匹配条件及通知目标。仅匹配 `critical` 的规则可用于本例。
 
 接入 Token 是凭证，不要写进仓库、工单或共享日志。下面使用占位符说明请求结构；将它替换为刚才复制的真实值，并将 URL 替换为 dashboard 提供的告警源 URL。

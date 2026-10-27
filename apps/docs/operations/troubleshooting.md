@@ -15,7 +15,7 @@
 
 1. 确认请求目标是告警源自己的 `/api/sources/<source-id>/webhook` URL，而不是 dashboard 页面或通用 `/api` 路径。
 2. 检查 HTTP 状态：`401` 通常是缺少或无效告警源 Token；`403` 可能表示告警源已禁用；`404` 表示告警源不存在；`413` 表示请求体超过实例上限；`400` 表示 JSON 或 Provider 解析失败。
-3. Token 可放在 `Authorization: Bearer ...` 或 `X-Tocsin-Source-Token`；也可用该 Source 已配置的共享密钥，通过 `X-Tocsin-Provider-Secret` 认证。当前实现接受任一有效凭据。
+3. Token 可放在 `Authorization: Bearer ...` 或 `X-Tocsin-Source-Token`；也可用该 Source 已配置的共享密钥，通过 `X-Tocsin-Provider-Secret` 认证。当前实现接受任一有效凭据；凭据丢失或轮换影响见[告警源接入与生命周期](/guide/sources)。
 4. 检查告警源选择的 Provider 是否与上游 payload 格式一致。可在告警源配置中使用 payload 测试能力；解析错误要以当前解析器支持的字段结构为准。
 
 入站请求会在 Event detail 中以规范化字段和脱敏调试信息展示。避免把 Token、共享密钥或未经脱敏的请求体复制进公开工单和日志。

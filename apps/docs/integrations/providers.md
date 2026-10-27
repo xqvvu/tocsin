@@ -7,6 +7,8 @@ description: 为 SRE 与运维人员整理 Tocsin 内置 Provider 的 Webhook �
 
 每个上游系统应创建一个独立告警源（Source），并选择匹配其真实请求体的 Provider。所有内置 Provider 共用同一个告警源 Webhook 入口；差异在认证后的 JSON 解析和规范化，而不是 URL 路径。
 
+创建、Token 轮换、凭据丢失处置和停用删除影响见[告警源接入与生命周期](/guide/sources)。
+
 当前内置解析器：
 
 | 上游 | 控制台 Provider | 适配载荷 |
