@@ -1,0 +1,16 @@
+:root {
+  --vp-c-brand-1: #27675f;
+  --vp-c-brand-2: #21564f;
+  --vp-c-brand-3: #19463f;
+  --vp-c-brand-soft: rgb(39 103 95 / 12%);
+  --vp-font-family-base: "SF Pro Text", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --vp-font-family-mono: "SFMono-Regular", "SF Mono", ui-monospace, monospace;
+}
+
+.VPNavBarTitle .title {
+  letter-spacing: 0.025em;
+}
+
+.VPFeature {
+  border-radius: 2px;
+}
