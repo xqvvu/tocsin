@@ -25,7 +25,7 @@ delivery history retention 已决定不自动清理，理由见
 ## 已完成的 MVP 能力
 
 - Dashboard：首次 setup、登录、dashboard shell、Sources、Routes、Destinations、Events、
-  Deliveries、Suppressions（列表、创建、编辑、启停、删除、命中投递查看）、Integrations
+  Deliveries、Suppressions（列表、创建、编辑、启停、删除、命中投递查看、顶栏生效中/即将到期提示）、Integrations
   （飞书应用登记、测试、被引用保护）、Settings 页面。
 - Auth 边界：Dashboard 使用 Better Auth；Webhook intake 使用告警源接入 Token 与可选额外共享密钥，
   不依赖浏览器 session。
@@ -33,8 +33,8 @@ delivery history retention 已决定不自动清理，理由见
  通过 registry/catalog 暴露 client-safe 能力。
 - Webhook intake：payload size limit、raw payload 保存、敏感字段脱敏、provider parse failure
   记录、idempotency dedupe、快速 accepted response。
-- Event：保存不可变入站事件，展示规范化字段、脱敏 raw debug data、route matches 和关联
-  deliveries。
+- Event：保存不可变入站事件，展示规范化字段、脱敏 raw debug data、route matches、关联
+  deliveries 与同指纹历史页签；模板变量 `tocsin.eventUrl` 提供事件直链（`apps/console/src/lib/event-url.ts`）。
 - Route：支持 source、severity、status、label、title/message contains 规则匹配，并可路由到多个
   destinations。
 - Destination：支持 generic webhook、Feishu、Slack、Email；具备 secret-safe preview/test、
@@ -101,7 +101,7 @@ https://github.com/xqvvu/tocsin/issues/47 已在 `xqvvu/tocsin` 关闭，清单�
   “没有 TLS 终止”仍是已知缺口。`BETTER_AUTH_SECRET` 支持 `_FILE`（Compose file secret / Swarm secret /
   K8s Secret 卷），compose 不再内置默认值，缺失或沿用历史公开值会让生产进程启动失败。
 - `docs/release/backup-restore-upgrade.md`：SQLite 冷备份/恢复、升级、回滚，以及 baseline + forward
-  repair migration（0001–0004）的升级约束；第 8 节记录 2026-10-26 的本地 Docker 演练。
+  repair migration（0001–0005）的升级约束；第 8 节记录 2026-10-26 的本地 Docker 演练。
 
 自动化接入现状：`.github/workflows/ci.yml` 跑 `check · test · build`，`.github/workflows/e2e.yml`
 跑浏览器 E2E（两者都在 `push` 到 main 与 `pull_request` 触发，tag 不触发任何东西）；本地入口分别是
@@ -203,7 +203,9 @@ post-MVP 中继续设计。dedupe cleanup 已改为有界批（见下方 D 节�
   通知型汇总和抑制 retention 清理。）
 - 搜索与排障体验：更强的 Events/Deliveries filter、时间范围、fingerprint 视图、route explain。
   （2026-10-18 校正：Events/Deliveries 筛选、相对时间范围、按事件/投递 ID 搜索、投递按失败原因/
-  目标/路由搜索与 route explain 均已落地；仍未实现的是 fingerprint 聚合视图、绝对时间窗口与筛选结果导出。）
+  目标/路由搜索与 route explain 均已落地。2026-10-27 补记：事件详情已有同指纹历史页签
+  （`features/events/ui/event-fingerprint-context-tab.tsx`）。仍未实现的是跨事件的 fingerprint
+  聚合排行视图、绝对时间窗口与筛选结果导出。）
 - 自托管发布硬化：CI/E2E/Docker smoke、部署文档、备份恢复、升级回滚。
   （2026-10-18 校正：部署、备份恢复、升级回滚文档与 release checklist 已完成；E2E 脚本已落地。
   2026-10-22：E2E 已接入 CI（`.github/workflows/e2e.yml`）；Docker smoke 按既定决定保持本地人工 gate。）

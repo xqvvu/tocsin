@@ -1,7 +1,9 @@
 # PRD: Destination 结构化模板引擎
 
-> 状态（2026-10-23 复核）：已实现。模板引擎当前支持 `text`、`feishu_card`、`slack_blocks` 与
-> `json_payload` 四种模式（`packages/destinations/src/template.ts`）；Email HTML 仍不在范围内。
+> 状态（2026-10-27 复核）：已实现。模板引擎当前支持 `text`、`feishu_card`、`slack_blocks` 与
+> `json_payload` 四种模式（`packages/destinations/src/template.ts`）；Email HTML 也已支持——Email 目标
+> 暴露 `htmlTemplate` 字段（`packages/destinations/src/email/manifest.ts`），按同一引擎渲染并用
+> `escapeHtml` 转义，未设置时回落到文本正文转义的 `<pre>`（`packages/destinations/src/email/payload.ts`）。
 > 正文保留为设计背景，落地情况与后续项见 `destination-template-engine-issues.md`。
 
 Labels: `ready-for-agent`

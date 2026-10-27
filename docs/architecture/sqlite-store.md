@@ -300,11 +300,13 @@ export function transaction<T>(
 bundle 一起打包，不依赖部署环境里的源代码目录。测试或自定义工具可以通过 `options.plan`
 注入一个显式 schema plan。
 
-当前 schema plan 有三个 step（`migrate/plan.ts`）：
+当前 schema plan 有五个 step（`migrate/plan.ts`）：
 
 - `0001_initial_schema.ts`
 - `0002_suppressions.ts`
 - `0003_complete_legacy_schema.ts`
+- `0004_oncall_dispatch_started_at.ts`
+- `0005_deliveries_destination_id_health.ts`
 
 `0001_initial_schema.ts` 只负责编排，不直接堆大量 DDL：
 
@@ -450,7 +452,7 @@ raw driver 的 unknown row 返回；这些 helper 只作为低层兼容工具保
 重点测试：
 
 - `connection.test.ts`：验证文件数据库目录创建、Kysely handle 可执行查询。
-- `migrate.test.ts`：验证 schema plan（0001–0003）、账本、严格文件名、Better Auth 生成快照、
+- `migrate.test.ts`：验证 schema plan（0001–0005）、账本、严格文件名、Better Auth 生成快照、
   执行失败回滚、重复/未知 schema version 防护。
 - `transaction.test.ts`：验证 Kysely transaction rollback，以及嵌套 repository transaction
   复用当前 transaction context。
@@ -477,8 +479,8 @@ vp -C apps/console build
 
 新增表或改 schema：
 
-1. 新增 forward step（例如 `0004_...ts`）并在 `migrate/plan.ts` 注册；不要编辑已提交的
-   `0001`–`0003`。
+1. 新增 forward step（例如 `0006_...ts`）并在 `migrate/plan.ts` 注册；不要编辑已提交的
+   `0001`–`0005`。
 2. 更新 `schema.ts` 的 Kysely table 类型。
 3. 更新对应 repository helper / implementation。
 4. 补充 schema plan 和 repository 测试。
