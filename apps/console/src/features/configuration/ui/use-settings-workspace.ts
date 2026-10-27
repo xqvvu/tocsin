@@ -15,14 +15,16 @@ const maxConfigFileBytes = 1024 * 1024;
 
 interface PortableConfigDraft {
   value: string;
+  /** Last exported current configuration, kept aside for the import diff preview. */
+  baseline: string;
   status: DraftStatus;
 }
 
 type PortableConfigDrafts = Record<PortableConfigFormat, PortableConfigDraft>;
 
 const initialDrafts: PortableConfigDrafts = {
-  toml: { value: "", status: "idle" },
-  json: { value: "", status: "idle" },
+  toml: { value: "", baseline: "", status: "idle" },
+  json: { value: "", baseline: "", status: "idle" },
 };
 
 export function useSettingsWorkspace() {
@@ -88,6 +90,7 @@ export function useSettingsWorkspace() {
         ...current,
         [format]: {
           value,
+          baseline: value,
           status: "loaded",
         },
       }));
@@ -119,10 +122,12 @@ export function useSettingsWorkspace() {
     setDrafts((current) => ({
       toml: {
         value: activeTab === "toml" ? current.toml.value : "",
+        baseline: "",
         status: "idle",
       },
       json: {
         value: activeTab === "json" ? current.json.value : "",
+        baseline: "",
         status: "idle",
       },
     }));
@@ -245,6 +250,7 @@ export function useSettingsWorkspace() {
     portable: {
       toml: {
         value: drafts.toml.value,
+        baseline: drafts.toml.baseline,
         onChange: (value: string) => setDraft("toml", value),
         onLoadFile: (file: File) => void loadConfigFile("toml", file),
         onExport: () => exportConfig("toml"),
@@ -252,6 +258,7 @@ export function useSettingsWorkspace() {
       },
       json: {
         value: drafts.json.value,
+        baseline: drafts.json.baseline,
         onChange: (value: string) => setDraft("json", value),
         onLoadFile: (file: File) => void loadConfigFile("json", file),
         onExport: () => exportConfig("json"),
