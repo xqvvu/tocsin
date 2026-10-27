@@ -48,8 +48,8 @@ describe("operation filters by page scope", () => {
   it("hides delivery-only filters on the events page", () => {
     renderFilters("events");
 
-    // Source, severity, status, and the time window all exist in the events
-    // query; destination, route, and delivery state do not.
+    // Source, severity, status, destination, and the time window all exist in
+    // the events query; route, destination kind, and delivery state do not.
     expect(screen.getByText("Source")).toBeTruthy();
     expect(screen.getByText("Severity")).toBeTruthy();
     expect(screen.getByText("Status")).toBeTruthy();
@@ -57,7 +57,9 @@ describe("operation filters by page scope", () => {
     // list; the delivery list has the exact per-job state instead.
     expect(screen.getByText("Delivery outcome")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
-    expect(screen.queryByText("Destination")).toBeNull();
+    expect(screen.getByText("Destination")).toBeTruthy();
+    // The match control only means something once a destination is selected.
+    expect(screen.queryByText("Destination delivery")).toBeNull();
     expect(screen.queryByText("Destination kind")).toBeNull();
     expect(screen.queryByText("Route")).toBeNull();
     expect(screen.queryByText("Delivery state")).toBeNull();
@@ -65,6 +67,15 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByText("Attempts")).toBeNull();
     // The time basis only changes how the delivery list is windowed.
     expect(screen.queryByText("Time basis")).toBeNull();
+  });
+
+  it("reveals the destination match only after a destination is chosen", () => {
+    renderFilters("events", { destinationId: "destination-1" });
+    expect(screen.getByText("Destination delivery")).toBeTruthy();
+
+    cleanup();
+    renderFilters("events", { destinationId: "" });
+    expect(screen.queryByText("Destination delivery")).toBeNull();
   });
 
   it("shows every filter on the deliveries page", () => {
@@ -76,6 +87,9 @@ describe("operation filters by page scope", () => {
     expect(screen.getByText("Route")).toBeTruthy();
     expect(screen.getByText("Delivery state")).toBeTruthy();
     expect(screen.queryByText("Delivery outcome")).toBeNull();
+    // The destination match is an event question ("did this alert reach that
+    // target"), not a per-job one.
+    expect(screen.queryByText("Destination delivery")).toBeNull();
     expect(screen.getByText("Receipt")).toBeTruthy();
     expect(screen.getByText("Attempts")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
@@ -145,6 +159,7 @@ describe("operation filters by page scope", () => {
       deliveryOutcome: "",
       destinationId: "",
       destinationKind: "",
+      destinationMatch: "",
       routeId: "",
       receipt: "",
       deliveryState: "",
@@ -172,9 +187,10 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByText(/· from/)).toBeNull();
   });
 
-  it("does not surface delivery-only chips on the events page", () => {
-    // A hand-written URL can still carry these keys. The events panel must not
-    // pretend they filter the table it renders.
+  it("keeps the destination chip honest and hides delivery-only chips on events", () => {
+    // A hand-written URL can still carry all three keys. Destination now
+    // filters the event list, so it earns a chip; route and delivery state
+    // still do nothing there and must not pretend otherwise.
     renderFilters(
       "events",
       {
@@ -185,9 +201,20 @@ describe("operation filters by page scope", () => {
       "toolbar",
     );
 
-    expect(screen.queryByTitle("Clear Destination")).toBeNull();
+    expect(screen.getByTitle("Clear Destination")).toBeTruthy();
     expect(screen.queryByTitle("Clear Route")).toBeNull();
     expect(screen.queryByTitle("Clear Delivery state")).toBeNull();
+  });
+
+  it("names the destination match chip on the events page", () => {
+    renderFilters(
+      "events",
+      { destinationId: "destination-1", destinationMatch: "missing" },
+      "toolbar",
+    );
+
+    expect(screen.getByTitle("Clear Destination delivery")).toBeTruthy();
+    expect(screen.getByText("No delivery to destination")).toBeTruthy();
   });
 
   it("names the route chip on the deliveries page", () => {

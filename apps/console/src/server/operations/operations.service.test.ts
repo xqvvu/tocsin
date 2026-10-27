@@ -139,6 +139,30 @@ describe("operations service", () => {
     expect(neverSent.events.total).toBe(0);
     expect(neverSent.deliveries.total).toBe(1);
 
+    // Destination now narrows both lists: the event reached that target and the
+    // delivery was sent to it. Keeping the two aligned is what stops
+    // `/events?destinationId=` from being the silent no-op it used to be.
+    const byDestination = await service.listOperations({
+      limit: 10,
+      destinationId: "destination-1",
+    });
+    expect(byDestination.events.items.map((item) => item.id)).toEqual([event.id]);
+    expect(byDestination.events.total).toBe(1);
+    expect(byDestination.deliveries.items.map((item) => item.id)).toEqual([delivery.id]);
+    expect(byDestination.deliveries.total).toBe(1);
+
+    // The reverse question — which alerts never reached this target — is
+    // events-only. A target that was never used has no delivery row, so the
+    // delivery list is empty while the event list still shows the alert.
+    const neverReached = await service.listOperations({
+      limit: 10,
+      destinationId: "destination-missing",
+      destinationMatch: "missing",
+    });
+    expect(neverReached.events.items.map((item) => item.id)).toEqual([event.id]);
+    expect(neverReached.events.total).toBe(1);
+    expect(neverReached.deliveries.total).toBe(0);
+
     await expect(service.getEventDetail(event.id)).resolves.toMatchObject({
       event: { id: event.id },
     });

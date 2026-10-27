@@ -177,6 +177,11 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.deliveryOutcome ? { deliveryOutcome: filters.deliveryOutcome } : {}),
     ...(filters.destinationId ? { destinationId: filters.destinationId } : {}),
+    // The match only applies next to a destination; the server treats its
+    // absence as the `delivered` default.
+    ...(filters.destinationId && filters.destinationMatch
+      ? { destinationMatch: filters.destinationMatch }
+      : {}),
     ...(filters.destinationKind ? { destinationKind: filters.destinationKind } : {}),
     ...(filters.routeId ? { routeId: filters.routeId } : {}),
     ...(filters.receipt ? { receipt: filters.receipt } : {}),

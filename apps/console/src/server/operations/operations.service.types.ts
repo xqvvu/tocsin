@@ -5,6 +5,7 @@ import type {
   DeliveryTimeField,
   DestinationKind,
   EventDeliveryOutcome,
+  EventDestinationMatch,
   EventListItem,
   NormalizedEvent,
   NumberedPage,
@@ -37,6 +38,8 @@ export interface ListOperationsInput {
   /** Events-only: no delivery, or at least one delivery in that state. */
   deliveryOutcome?: EventDeliveryOutcome;
   destinationId?: string;
+  /** Events-only: did the alert reach that destination, or never get there. */
+  destinationMatch?: EventDestinationMatch;
   /** Delivery-only: one destination adapter kind. */
   destinationKind?: DestinationKind;
   routeId?: string;

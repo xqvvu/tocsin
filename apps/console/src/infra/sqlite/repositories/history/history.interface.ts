@@ -6,6 +6,7 @@ import type {
   DeletionImpact,
   DestinationKind,
   EventDeliveryOutcome,
+  EventDestinationMatch,
   EventDetail,
   EventFingerprintContext,
   EventListItem,
@@ -77,6 +78,13 @@ export interface EventListQuery {
    * per-state counts the list shows.
    */
   deliveryOutcome?: EventDeliveryOutcome;
+  /**
+   * Only events that did (`delivered`, the default) or did not (`missing`)
+   * produce a delivery to this destination. `missing` also covers alerts that
+   * reached nobody at all, which no delivery-level filter can find.
+   */
+  destinationId?: string;
+  destinationMatch?: EventDestinationMatch;
   /** Inclusive lower bound on `events.received_at`, as an ISO timestamp. */
   since?: string;
   /**
