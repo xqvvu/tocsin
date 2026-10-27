@@ -80,11 +80,17 @@
 
 ### 发布评估
 
-**本轮不发布**（未启动三专家面板：门槛已可先验失败，且时间预算已超）：
+**本轮不发布**：
 
-- 门槛「没有 open PR」不满足：**#561 `docs(site): document route matching and suppression boundaries`**
-  （docs-site routine，`mergeable: CONFLICTING`）仍 open，属阻塞项。
-- 本轮交付 #563 为 fix，合并后才有用户可见变化；批次再评估 `0.1.0-beta.111`。
+- 评估开始时（约 02:45 CST）门槛「没有 open PR」不满足：**#561 `docs(site): document route matching
+  and suppression boundaries`**（docs-site routine，`mergeable: CONFLICTING`）仍 open。该 PR 随后由
+  docs-site routine 自行关闭（约 02:55 CST），届时唯一 open PR 只剩本轮 #563。
+- 未启动三专家发布面板的原因：本轮已耗时约 2h27m，远超 75 分钟预算；三专家单次运行在今天的
+  工作量下各需 1.4–2.1h，启动即会把本轮推到 5 小时以上。按第 3 步「超预算后不再启动新的评审工作」
+  收尾。
+- 下一轮可直接评估 `0.1.0-beta.111`：自 `v0.1.0-beta.110` 以来已有用户可见变更
+  （#553 抑制创建确认、#557 Events 按目标筛选、#559/#562 导入与占位符修复、#563 投递批次韧性），
+  且 Q-226 这一 HIGH 阻断项已落地。
 - 未 bump 版本、未打 tag、未建 Release、未推镜像。
 
 ### 下一轮优先项
