@@ -2,6 +2,95 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-27（第 140 轮）
+
+- 时间：2026-10-27 22:14 CST 起。
+- 基线：本轮开始时 `origin/main` @ `b9a0bb6`（main CI success，无 open PR）；PR 创建时 main 已前进到 `9ccfdab`。
+- 类型：**full-audit 触发 + UI 评审（ui-review 作为主交付）**。距上次全量审计
+  2026-10-27 13:26 CST 约 8h48m，达到第 1.5 步的 6 小时闸门；但并发名额被 `ui-review` 占满，
+  实际只跑了 `release-infra` 一个审计车道，**不构成新的全量审计**：全量审计时间戳保持
+  **2026-10-27 13:26 CST**，下一轮应补跑 `docs-drift` / `security-exposure` / `architecture` / `quality`。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`release-infra`；`ui-triage` 判 `review_now` 后
+  追加 `ui-review`（`requirements` 停止后启动，始终 ≤3 并发）。
+- `ui-triage` 决策：**`review_now`（限缩范围）**——第 139 轮评审后新增 2 个 UI 合并
+  （`b06b599` Events 目标筛选、`6f8f583` JSON 占位符）均无浏览器记录，且 UI-83/UI-84 未处理。
+  评审范围限定为 Events 筛选工具条 + Settings JSON 页 + UI-84 复核。
+- `last_ui_review_at`：**2026-10-27 23:50 CST**（本轮完成真实浏览器评审与修复后复测）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `elastic-ardinghelli-b76cb3`。
+
+### 专家发现
+
+**ui-review（代码审计）＋ 编排者真实浏览器验证（隔离临时实例 :6190 + 全新 SQLite）**
+
+- Events 目标筛选链路逐项 PASS：选中目标后才出现「目标投递」二级控件且默认「有该目标的投递」；
+  `missing` 反向筛选命中 4/4；空态诚实（「当前筛选条件没有命中任何事件」）；chip 区分
+  「清除通知目标 / 清除目标投递 / 清除全部筛选」；URL 写 `destinationId` + `destinationMatch`；
+  Deliveries 不渲染该条件。证据：`operation-filters.tsx:443,451,474,761-771`、
+  `operation-search.ts:207,267`。
+- Settings JSON 页：`t.raw` 已生效，控制台无 `IntlError`（`portable-config-form.tsx:58-61`）。
+- **UI-84 复现并升级为高影响**：1440×900 导入 8 个源后，结果面板高 1162px、`应用导入`
+  `top=893` 出视口，且 `main.scrollHeight == clientHeight == 806`、`document.scrollHeight == 806`
+  ——页面本身不可滚动，控件**完全不可达**（不只是被推下去）。
+- 存量已核实：`sources` / `routes` 空态仍写「右侧栏会保留新建表单」（UI-54 证据仍成立，未修）。
+
+**release-infra**
+
+- E2E 已接入 CI（`.github/workflows/e2e.yml`，`testDir ./e2e`，仅 `alert-flow.spec.ts`）→ PASS；
+  覆盖缺口（历史过滤、失败 retry）仍 FAIL。
+- Provider fixtures 仍无目录，payload 全内联于 6 个 `index.test.ts` → FAIL。
+- Docker smoke 已用独立镜像/卷（`docker-compose.smoke.yml:8-14`、`scripts/docker-smoke.sh:70-75`）→ PASS，
+  未进 CI。
+- **Dockerfile 依赖层缺口（本轮修复）**：`Dockerfile:20` 未 COPY `apps/docs/package.json`，
+  而 #554 已把 `apps/docs` 纳入 workspace；`vp install --frozen-lockfile` 会比对该 importer，
+  构建阶段会失败——发布镜像的前置条件。
+- CI 必需检查：`gh api repos/xqvvu/tocsin/rulesets` 返回 `[]`、branch protection 404 → main 无
+  required checks（REL-23 仍 `blocked-autonomous`）。`apps/docs` 无 `build` 脚本、CI 不构建文档站。
+
+**requirements**：会话内 80+ 分钟未返回（已停止），本轮无新增需求候选；下一轮补跑。
+
+### 本轮交付
+
+- **PR #562 `fix(console): keep bulk import tokens inside the viewport`**（rebase 合入）：
+  - `import-notice-panel.tsx`：token 列表 `max-h-64 overflow-y-auto`；新增 `AlertAction`「我已保存」。
+  - `use-settings-workspace.ts` 新增 `dismissImportNotice`；`settings-page.tsx` 接线并 `shrink-0`；
+    中英文案 `configuration.importNotice.dismissSaved`。
+  - `Dockerfile`：构建阶段补 `./apps/docs/package.json`。
+  - 新增 `import-notice-panel.test.tsx`（3 条：高度上限 + 内部滚动、8 个 token 全渲染、仅显式 dismiss）。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 1170 passed、
+    `vp run -r build` 通过；PR CI（check/test/build + playwright）全绿。
+  - 浏览器复测：面板 1162px → 322px，列表内部滚动（256/1096），`应用导入` `top=721` 可见；
+    约 500px 窄视口下面板 341px、按钮可见、无横向溢出；点「我已保存」后面板消失。
+    截图 `/tmp/tocsin-r140/*.png`（未提交）。
+  - 流程说明：diff 仅约 100 行且由本轮编写，采用人工自查 + 本地全量门禁 + PR CI，未另跑 `code-review` skill。
+
+### 发布评估
+
+三份独立评估（发布经理 / 阻断审计 / 运维回滚）后 **本轮不发布**。
+
+- 发布经理：门槛 1 满足——区间含 3 个用户可见变更（#557 Events 按目标筛选、#553 抑制创建确认、
+  #559/#562 的 JSON 占位符与导入提示修复），建议 `0.1.0-beta.111`；并指出必须先合 #562，
+  否则镜像构建因 `apps/docs` manifest 缺失失败。
+- 阻断审计：**门槛 2 FAIL**——open PR **#561 `docs(site): document route matching and suppressions`**
+  （作者 xqvvu，`mergeable: CONFLICTING`，非本 routine）阻断；另有第 138 轮 HIGH `Q-226`
+  （`delivery-worker.service.ts:118-126` 整批抛出）仍未修复。其余 PASS：main CI success、
+  本区间无迁移（`migrate/` diff 为空）、`v0.1.0-beta.111` 未被占用、镜像坐标约定不变。
+- 运维/回滚：风险 **LOW**；区间无迁移/env/compose/入口变化，#562 只改构建阶段 COPY；
+  升级=换镜像 + 等 `/api/ready`，回滚=`0.1.0-beta.110`，均无需数据库操作。
+- 结论：不 bump 版本、不打 tag、不建 Release、不推镜像。
+
+### 下一轮优先项
+
+1. **Q-226（HIGH）**：`delivery-execution.ts:137,147` 正常失败路径无 try/catch，
+   `delivery-worker.service.ts:118-126` 整批抛出 → 同批后续投递滞留 `running` 至 reclaim；
+   补「单行失败不影响同批」与正常失败注入测试。
+2. **REQ-253（27）**：运维搜索覆盖告警源名称（事件与投递两侧；`countEvents` / `countDeliveries`
+   需补 `sources` join，无迁移）。
+3. **REQ-294（27）**：投递按事件精确过滤 + Events 投递计数一键下钻。
+4. **UI-83（24）**：导入差异预览先用与服务端相同的归一化再比较，消除「省略默认值 = updated」误报。
+5. 发布阻断：确认 open PR #561 归属后合并/关闭，再评估 `0.1.0-beta.111`。
+6. 车道轮转：下一非必跑车道为 **`architecture`**（随后 `docs-drift`），并补跑 `requirements`。
+
 ## 2026-10-27（第 139 轮）
 
 - 时间：2026-10-27 17:43 CST 起。
