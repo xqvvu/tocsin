@@ -41,6 +41,7 @@ const copy = {
       probeError: "Probe error",
       probeRecovered: "The model is responding again.",
       probeFailed: "Model probe failed",
+      probeUnknown: "Model status unknown",
     },
   },
   "zh-Hans": {
@@ -80,6 +81,7 @@ const copy = {
       probeError: "错误详情",
       probeRecovered: "模型已恢复响应",
       probeFailed: "模型探测失败",
+      probeUnknown: "模型状态未知",
     },
   },
 } as const;

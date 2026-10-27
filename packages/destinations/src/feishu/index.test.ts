@@ -374,6 +374,57 @@ describe("feishu sender", () => {
     expect(serialized).not.toContain("lastDownTime");
   });
 
+  it.each([
+    ["firing", "Model probe failed", "模型探测失败"],
+    ["resolved", "The model is responding again.", "模型已恢复响应"],
+    ["unknown", "Model status unknown", "模型状态未知"],
+  ] as const)(
+    "renders the FastGPT probe card for a %s status without claiming recovery",
+    async (status, en, zh) => {
+      const config = FeishuConfigSchema.parse({
+        webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/example",
+        template: {
+          mode: "feishu_card",
+          card: uptimeKumaTemplate,
+          bindings: defaultFeishuCardBindings,
+        },
+      });
+      const render = (locale: "en-US" | "zh-Hans") =>
+        feishuSender.preview({
+          ...input,
+          source: {
+            ...input.source,
+            name: "FastGPT model probe",
+            provider: "fastgpt",
+          },
+          normalizedEvent: {
+            ...input.normalizedEvent,
+            title: "speech-01-turbo model probe",
+            message: "MiniMax tts model probe",
+            severity: "info",
+            status,
+            fingerprint: "fastgpt:6a995e6514161dc586c6cded",
+            labels: {
+              provider: "fastgpt",
+              model_name: "speech-01-turbo",
+              probe_attempts: "1",
+              probe_latency_ms: "295",
+            },
+          },
+          payload: {},
+          config,
+          presentation: { locale, timeZone: "UTC" },
+        });
+
+      expect(JSON.stringify(await render("en-US"))).toContain(en);
+      expect(JSON.stringify(await render("zh-Hans"))).toContain(zh);
+
+      if (status !== "resolved") {
+        expect(JSON.stringify(await render("zh-Hans"))).not.toContain("模型已恢复响应");
+      }
+    },
+  );
+
   it("keeps a modified Uptime Kuma custom card for FastGPT events", async () => {
     const customCard = structuredClone(uptimeKumaTemplate);
     customCard.header.title.content = "Custom monitor: {{payload.monitor.name}}";

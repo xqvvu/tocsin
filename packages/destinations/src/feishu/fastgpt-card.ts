@@ -38,7 +38,7 @@ export function createFastgptModelProbeCardTemplate(input: { event: NormalizedEv
   const bodyElements: FeishuCardV2["body"]["elements"] = [
     {
       tag: "markdown",
-      content: `**{{event.labels.${modelLabel}}}**\n${input.event.status === "firing" ? "{{presentation.labels.probeFailed}}" : "{{presentation.labels.probeRecovered}}"}`,
+      content: `**{{event.labels.${modelLabel}}}**\n${probeStatusLabel(input.event.status)}`,
       text_size: "normal",
     },
   ];
@@ -118,6 +118,17 @@ export function createFastgptModelProbeCardTemplate(input: { event: NormalizedEv
   } satisfies FeishuCardV2;
 
   return JsonObjectSchema.parse(definition);
+}
+
+function probeStatusLabel(status: NormalizedEvent["status"]): string {
+  switch (status) {
+    case "firing":
+      return "{{presentation.labels.probeFailed}}";
+    case "resolved":
+      return "{{presentation.labels.probeRecovered}}";
+    case "unknown":
+      return "{{presentation.labels.probeUnknown}}";
+  }
 }
 
 function field(labelPath: string, value: string): FeishuCardV2["body"]["elements"][number] {
