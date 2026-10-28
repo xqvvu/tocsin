@@ -53,7 +53,12 @@ export function buildDeliveryRouteEvidence(detail: DeliveryDetail): DeliveryRout
   };
 }
 
-function containsRedactedValue(event: NormalizedEvent): boolean {
+/**
+ * Whether the DTO's event was projected for display. Replaying any rule against
+ * it — route or suppression — would compare `[REDACTED]` with the rule's
+ * configured value and report a miss that never happened.
+ */
+export function containsRedactedValue(event: NormalizedEvent): boolean {
   return (
     event.title.includes(REDACTED_VALUE) ||
     event.message.includes(REDACTED_VALUE) ||
