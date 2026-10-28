@@ -13,12 +13,14 @@ description: 为 SRE 与运维人员整理 Tocsin 内置 Provider 的 Webhook �
 
 | 上游 | 控制台 Provider | 适配载荷 |
 | --- | --- | --- |
-| 自定义系统 | Generic Webhook | 任意 JSON 对象，按约定字段提取告警 |
+| 自定义系统 | Generic Webhook | 推荐 JSON 对象，按约定字段提取告警 |
 | Alertmanager | Alertmanager | 原生 Webhook 通知载荷 |
 | SigNoz | SigNoz | Alertmanager 兼容的 Webhook 载荷 |
 | Grafana | Grafana | Grafana Alerting Webhook 载荷 |
 | Uptime Kuma | Uptime Kuma | 通知 Webhook 中的 `monitor` 与 `heartbeat` |
 | FastGPT | FastGPT 模型探测 | FastGPT 模型状态探测事件 |
+
+需要逐项发送可复制的测试载荷并判读 `202` / `400` 时，使用[Provider 接入验收配方](/integrations/provider-verification)。
 
 ## 通用接入契约
 
@@ -85,7 +87,7 @@ Token 与共享密钥不必同时提供。未配置额外共享密钥时，`X-To
 
 ## Generic Webhook
 
-适合内部脚本、发布系统或尚未有专用适配器的监控系统。Provider 只要求 JSON 对象，不会因为出现额外字段而拒绝请求。
+适合内部脚本、发布系统或尚未有专用适配器的监控系统。推荐发送 JSON 对象；Provider 会忽略额外字段，但非对象 JSON 只能生成默认标题、消息与 fingerprint，无法按字段参与路由。
 
 ```json
 {
@@ -281,4 +283,4 @@ FastGPT 使用独立探测契约，不是通用告警格式。创建 `FastGPT �
 4. 在 Deliveries 核对目标、状态与尝试记录；没有 Delivery 时先检查 Route 和目标是否启用。
 5. 若收到 `400`，使用响应中的 `eventId` 打开解析失败 Event，再修正上游载荷或告警源 Provider。
 
-相关页面：[快速开始](/guide/quick-start) · [处理链路与概念](/guide/concepts) · [通知目标参考](/integrations/destinations) · [故障排查](/operations/troubleshooting)
+相关页面：[Provider 接入验收配方](/integrations/provider-verification) · [快速开始](/guide/quick-start) · [处理链路与概念](/guide/concepts) · [通知目标参考](/integrations/destinations) · [故障排查](/operations/troubleshooting)
