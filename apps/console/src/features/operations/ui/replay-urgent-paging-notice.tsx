@@ -25,11 +25,14 @@ export function ReplayUrgentPagingNotice({ impact }: { impact: ReplayUrgentPagin
     .map((destination) => `${destination.destinationName} ×${destination.receiverCount}`)
     .join(" · ");
 
+  // No faint destructive tint behind the text. `bg-destructive/5` darkened the
+  // surface just enough to drop the 12px title to a 4.36:1 contrast ratio and
+  // the 11px note to 4.34:1, both under the 4.5:1 AA threshold — on the one
+  // notice where misreading "may call N receivers" precedes an irreversible
+  // phone page. The red border, red title and warning icon carry the urgency;
+  // on the plain background both lines measure 4.74:1 or better.
   return (
-    <div
-      role="note"
-      className="border-destructive/40 bg-destructive/5 flex flex-col gap-1 border p-2"
-    >
+    <div role="note" className="border-destructive/40 flex flex-col gap-1 border p-2">
       <p className="text-destructive flex items-center gap-1 text-xs font-medium">
         <RiAlarmWarningLine data-icon="inline-start" aria-hidden />
         {t("operations.replayUrgentPaging.title", {
