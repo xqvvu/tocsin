@@ -92,8 +92,8 @@
   `adoring-euler-cc1bae`（分支 `agent/ui-rehearsal-disabled-verdict`）。
 - 本会话工作树 `node_modules` 曾处于半删状态（`@vitejs/plugin-react` 缺失），按既有经验删除全部
   workspace `node_modules` 后 `vp install` 恢复。
-- 本轮日志 PR `#686` 在轮次结束时 GitHub 尚未注册 checks（创建后 7 分钟仍为 “no checks reported”），
-  按边界等待规则保留 open，下一轮确认 CI 绿后 rebase 合入；`#685`（docs-site）同样仍 open。
+- 本轮日志 PR：首个 `#686` 因 rebase 合并后分支历史与 main 冲突（GitHub 未注册任何 check）被关闭，
+  改由基于 `origin/main` 重建的 `#687` 承载并已合入；`#685`（docs-site）在轮次结束时仍 open。
 
 ### 下一轮优先项
 
