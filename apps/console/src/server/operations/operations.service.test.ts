@@ -444,7 +444,7 @@ describe("operations service time range", () => {
 });
 
 describe("operations service event fingerprint filter", () => {
-  it("narrows events by exact fingerprint and leaves the delivery list alone", async () => {
+  it("narrows events and deliveries by exact fingerprint", async () => {
     let nextId = 0;
     const store = await openSqliteStore({
       databasePath: ":memory:",
@@ -497,9 +497,9 @@ describe("operations service event fingerprint filter", () => {
 
     const first = await record("checkout down", "checkout:unavailable");
     const second = await record("checkout still down", "checkout:unavailable");
-    await record("checkout down (eu)", "checkout:unavailable:eu");
+    const longerPrefix = await record("checkout down (eu)", "checkout:unavailable:eu");
 
-    for (const event of [first, second]) {
+    for (const event of [first, second, longerPrefix]) {
       await store.deliveries.enqueueForEvent({
         event,
         matches: [{ routeId: "route-1", destinationIds: ["destination-1"] }],
@@ -515,8 +515,11 @@ describe("operations service event fingerprint filter", () => {
       [first.id, second.id].sort(),
     );
     expect(exact.events.total).toBe(2);
-    // Events-only dimension: the delivery list keeps both enqueued jobs, so a
-    // URL that carries the fingerprint cannot silently hide delivery rows.
+    // The delivery list shares the predicate, so the third event's job is
+    // excluded too — a URL carrying the fingerprint narrows both lists.
+    expect(exact.deliveries.items.map((delivery) => delivery.eventId).sort()).toEqual(
+      [first.id, second.id].sort(),
+    );
     expect(exact.deliveries.total).toBe(2);
 
     await store.close();
