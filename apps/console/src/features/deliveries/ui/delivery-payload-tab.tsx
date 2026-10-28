@@ -1,6 +1,7 @@
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
 import { DeliveryJsonBlock } from "#/features/deliveries/ui/delivery-json-block";
 import { DeliveryPayloadPrunedNotice } from "#/features/deliveries/ui/delivery-payload-pruned-notice";
+import { RawPayloadRetentionNotice } from "#/features/operations/ui/raw-payload-retention-notice";
 import { useTranslations } from "#/i18n/use-i18n";
 
 /**
@@ -16,9 +17,20 @@ export function DeliveryPayloadTab({ detail }: { detail: DeliveryDetailData }) {
 
   return (
     <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] gap-3">
-      <p className="border-border bg-background text-muted-foreground border px-3 py-2 text-xs">
-        {t("deliveries.detail.payloadNotice")}
-      </p>
+      <div className="grid gap-2">
+        <p className="border-border bg-background text-muted-foreground border px-3 py-2 text-xs">
+          {t("deliveries.detail.payloadNotice")}
+        </p>
+        {/*
+          The window belongs to the event's raw payload (the left column), not
+          to the rendered payload, which is persisted on the delivery and
+          survives the prune. The hint is only useful before the prune, so the
+          pruned branch keeps its own explanation.
+        */}
+        {detail.rawPayloadPruned ? null : (
+          <RawPayloadRetentionNotice receivedAt={detail.event.receivedAt} />
+        )}
+      </div>
       <div className="grid min-h-0 gap-3 lg:grid-cols-2">
         {detail.rawPayloadPruned ? (
           <DeliveryPayloadPrunedNotice />
