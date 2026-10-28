@@ -30,6 +30,8 @@ async function createHarness(
     destinationConfig?: JsonObject;
     /** Skips creating `destination-1`, keeping only the route reference to it. */
     skipDestination?: boolean;
+    /** Title needles, so a case can prove matching ran before display redaction. */
+    routeTitleContains?: string[];
   } = {},
 ) {
   const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
@@ -63,6 +65,7 @@ async function createHarness(
     rule: {
       severities: ["critical"],
       labels: [{ key: "service", operator: "equals", value: "checkout" }],
+      titleContains: options.routeTitleContains ?? [],
     },
     destinationIds: options.routeDestinationIds ?? ["destination-1"],
   });
@@ -121,6 +124,73 @@ describe("source rehearsal service", () => {
 
     // The rehearsal is read-only: no Event, no Delivery, no job, and no real
     // outbound request even though the target rendered successfully.
+    expect(recordEvent).not.toHaveBeenCalled();
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("projects the parsed event, metadata, and match evidence for display", async () => {
+    const parse = vi.fn<ProviderRegistry["parse"]>(() => ({
+      ok: true,
+      idempotencyKey: "evt-123",
+      normalized: {
+        title: "Checkout token=super-secret-value failed",
+        message: "upstream returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout-fingerprint",
+        labels: { service: "checkout", authorization: "Bearer abcdefgh1234" },
+        occurredAt: "2026-10-28T11:59:00.000Z",
+      },
+      providerMetadata: { provider: "generic", accessToken: "abc123" },
+    }));
+    const { destinations, store, service } = await createHarness({
+      providers: { parse } as unknown as ProviderRegistry,
+      routeTitleContains: ["Checkout"],
+    });
+    const recordEvent = vi.spyOn(store.intake, "recordEvent");
+    const enqueue = vi.spyOn(store.deliveries, "enqueueForEvent");
+    const preview = vi.spyOn(destinations, "preview");
+    const send = vi.spyOn(destinations, "send");
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    expect(result.parse.ok).toBe(true);
+    if (!result.parse.ok) {
+      throw new Error("expected a successful parse");
+    }
+
+    // Credential-shaped values are replaced; benign values and the fingerprint
+    // that route matching and dedupe rely on stay intact.
+    expect(result.parse.normalizedEvent.title).toContain("[REDACTED]");
+    expect(result.parse.normalizedEvent.title).not.toContain("super-secret-value");
+    expect(result.parse.normalizedEvent.labels.authorization).toBe("[REDACTED]");
+    expect(result.parse.normalizedEvent.labels.service).toBe("checkout");
+    expect(result.parse.normalizedEvent.fingerprint).toBe("checkout-fingerprint");
+    expect(result.parse.providerMetadata).toEqual({
+      provider: "generic",
+      accessToken: "[REDACTED]",
+    });
+
+    // Matching ran on the raw event — the title needle still matched — while
+    // the evidence that leaves the server carries the same projection.
+    expect(result.routes[0]?.matched).toBe(true);
+    const titleCheck = result.routes[0]?.checks.find((check) => check.field === "title");
+    expect(titleCheck?.actual).toContain("[REDACTED]");
+    expect(titleCheck?.actual).not.toContain("super-secret-value");
+    expect(titleCheck?.expected).toEqual(["Checkout"]);
+    expect(result.routes[0]?.checks.find((check) => check.field === "label")?.actual).toBe(
+      "checkout",
+    );
+
+    // The preview renders what production would send, not the raw secret.
+    const previewInput = preview.mock.calls[0]?.[1] as
+      | { normalizedEvent: { title: string } }
+      | undefined;
+    expect(previewInput?.normalizedEvent.title).not.toContain("super-secret-value");
+    expect(result.renders[0]?.renderedPayload).not.toContain("super-secret-value");
+
+    // Still read-only: no Event, no Delivery, no outbound request.
     expect(recordEvent).not.toHaveBeenCalled();
     expect(enqueue).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();

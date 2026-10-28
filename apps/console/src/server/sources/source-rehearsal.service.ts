@@ -2,8 +2,10 @@ import {
   RehearseSourceCommandSchema,
   evaluateRouteMatch,
   redactJsonText,
-  redactJsonValue,
+  redactNormalizedEvent,
+  redactRouteMatchResults,
   redactText,
+  type JsonObject,
   type NormalizedEvent,
   type RehearseSourceCommand,
   type RouteMatchResult,
@@ -73,6 +75,13 @@ export class SourceRehearsalService {
       };
     }
 
+    // Matching keeps the raw event: the route engine compares real values, and
+    // redacting first would change which rules match. Everything that leaves
+    // this method is projected the same way a stored event is at its read
+    // boundary, and the destination preview renders from the projection so the
+    // rehearsal shows exactly what the alert would carry in production
+    // (`delivery-execution.ts` redacts before rendering too).
+    const displayEvent = redactNormalizedEvent(parsed.normalized);
     const routes = await this.store.routes.list();
     const matches = routes.map((route) =>
       evaluateRouteMatch(route, { sourceId: source.id, event: parsed.normalized }),
@@ -80,7 +89,7 @@ export class SourceRehearsalService {
     const renders = await this.renderMatchedDestinations({
       matches,
       source: summary,
-      normalizedEvent: parsed.normalized,
+      normalizedEvent: displayEvent,
       payload: input.payload,
     });
 
@@ -89,10 +98,10 @@ export class SourceRehearsalService {
       receivedAt,
       parse: {
         ok: true,
-        normalizedEvent: parsed.normalized,
-        providerMetadata: parsed.providerMetadata,
+        normalizedEvent: displayEvent,
+        providerMetadata: redactJsonText(parsed.providerMetadata) as JsonObject,
       },
-      routes: matches,
+      routes: redactRouteMatchResults(matches),
       renders,
     };
   }
@@ -146,7 +155,10 @@ export class SourceRehearsalService {
 
     const settings = await this.store.settings.get();
     const presentation = { locale: settings.locale, timeZone: settings.timeZone };
-    const payload = redactJsonValue(input.payload);
+    // Same projection the outbound path applies to the raw payload before it
+    // reaches a template: value-shape-only redaction misses `{"text":"token=…"}`
+    // under a neutral key, and the rehearsal must not diverge from production.
+    const payload = redactJsonText(input.payload);
     const renders: SourceRehearsalRender[] = [];
 
     for (const destinationId of destinationIds) {

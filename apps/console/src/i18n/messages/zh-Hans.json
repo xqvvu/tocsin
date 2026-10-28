@@ -1252,6 +1252,7 @@
   "sources.rehearsal.reasons.invalid_payload": "请求体无效",
   "sources.rehearsal.reasons.unknown_error": "未知错误",
   "sources.rehearsal.reasons.unsupported_payload": "请求体暂不支持",
+  "sources.rehearsal.redactedNotice": "预演结果已脱敏，疑似凭据显示为 [REDACTED]，原始请求体未改动，仍在上方输入框",
   "sources.rehearsal.rendersEmpty": "没有命中的目标可渲染",
   "sources.rehearsal.rendersTitle": "目标渲染预览",
   "sources.rehearsal.requestFailed": "预演失败",
