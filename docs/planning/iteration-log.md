@@ -43,6 +43,24 @@
 
 - 本轮无 EXPERT_PANEL 事项。
 
+### 发布
+
+- 三位发布专家独立评估：发布经理 **GO（合并后）**（#651 是自 beta.126 起唯一用户可见变更）、
+  阻断审计 **GO**（main CI success、除 #651 外无 open PR、无迁移/依赖/schema 变化）、
+  运维/回滚 **GO**（无镜像配置、SQLite 与环境变量变化，回滚只需换镜像）。
+- 版本 `0.1.0-beta.127`，PR #653 合入 `ee5a4c57`（tag 目标）；合并后 main `CI` 与 `E2E` 均 success。
+- tag `v0.1.0-beta.127`（annotated）指向 `ee5a4c57`；GitHub Release（prerelease）已创建且 body 非空。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.127`（linux/amd64 + linux/arm64）：
+  index digest `sha256:c0cc93cacdf7a827ef1d85da96ebd4fe3ac63c33858f83e38726f31714e4086f`，
+  amd64 `sha256:7e4f654d903e6c3a4f4744015294647e5731df6c2dd2a1dde832c116f3458690`，
+  arm64 `sha256:37807e2ec5e6942c1529abef236bde4b3acba427ed56a6ffcaeea5a1fbf69f88`。
+- 回滚镜像 `0.1.0-beta.126`；`schema_migrations` 台账不变（`0001`–`0005`），回滚无需降级数据库。
+- 构建在 tag 的干净检出 `/tmp/tocsin-build-beta127` 中进行，未使用主 checkout；未推 `latest`。
+- 发布执行期间 docs-site 定时任务新开了 #652/#654 两个 docs-only PR（不在本轮门禁检查时点内），
+  不影响本次产物；留给 docs-site 车道处理。
+
+### 收尾与同步
+
 ### 下一轮优先项
 
 1. **architecture 车道**（轮转位）+ ARCH-67/68 纯重构小 PR。
