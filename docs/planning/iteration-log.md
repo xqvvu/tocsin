@@ -67,6 +67,25 @@
   「Cannot find type definition file for 'node'」类错误。按
   [[node-modules-partial-delete]] 删掉全部 workspace `node_modules` 后重装（2.8s）即恢复。
 
+### 发布
+
+- 三位专家（发布经理 / 阻断审计 / 运维回滚）一致**发布**：自 `v0.1.0-beta.119`（`5ad9a5b`）以来
+  唯一用户可见变化是 PR #611；`5ff45a0` 与 `4a5a37e` 的 main CI 与 E2E 均 success；
+  检查时无 open PR（docs-site routine 的 PR 不算阻断）；`blocked-autonomous` 项均低于实现门槛；
+  `v0.1.0-beta.119..origin/main` 在 `migrate/` 下无改动；最近 10 个 tag 与 GitHub Release 一一对应。
+- 版本 `0.1.0-beta.120`，PR #612 `chore(release): v0.1.0-beta.120`（rebase 合入 `4a5a37e`），
+  tag 指向 `4a5a37e`，GitHub Release（prerelease）已创建且 body 非空。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.120`，
+  linux/amd64 + linux/arm64，index digest `sha256:bed25465682e…`，
+  amd64 `sha256:86a9c95d79d1…`，arm64 `sha256:0c7331466dba…`。
+- 回滚镜像 `0.1.0-beta.119`；无迁移、无配置/环境变量/依赖变化。
+
+### 工作树清理
+
+- 回收 1 个空闲且 PR 已合入的会话工作树（`elated-golick-3ee524`，19M）；`.claude/worktrees` 现有 4 个目录，
+  其中 `docs-site-20261028-135300` 属正在运行的 docs-site routine，`agent-iteration` 为本 routine 专用，
+  `fervent-heisenberg-67565b` 为本 session cwd。
+
 ### 下一轮优先项
 
 1. **REQ-311（27）**：投递列表精确指纹过滤 + 事件详情「同指纹」下钻。
