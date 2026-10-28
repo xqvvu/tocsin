@@ -427,6 +427,40 @@ export interface EventReplayPreview {
   matchedRouteCount: number;
   newDeliveryCount: number;
   existingDeliveryCount: number;
+  urgentPaging: ReplayUrgentPagingImpact;
+}
+
+/**
+ * One destination whose new replay deliveries would place automatic urgent
+ * phone calls.
+ *
+ * Replay is a bulk action that operators reach for during an incident, and a
+ * page to someone's phone is the loudest side effect it has. Naming the
+ * destinations turns "N new deliveries" into "these people are about to be
+ * called" before the operator confirms.
+ */
+export interface ReplayUrgentPagingDestination {
+  destinationId: string;
+  destinationName: string;
+  /** Receivers the destination would ring per new delivery. */
+  receiverCount: number;
+}
+
+/**
+ * Read-only projection of the urgent calls a replay can trigger.
+ *
+ * It answers "who could be phoned if these deliveries succeed". A delivery
+ * still has to succeed and return a message reference before paging fires, and
+ * the paging dedupe window can drop receivers, so `receiverCount` is an upper
+ * bound rather than a promise. Disabled destinations and targets that already
+ * have a delivery are excluded because neither can page.
+ */
+export interface ReplayUrgentPagingImpact {
+  destinations: ReplayUrgentPagingDestination[];
+  /** New deliveries that pass every automatic paging gate. */
+  deliveryCount: number;
+  /** Upper bound on calls: receivers per paging delivery, across destinations. */
+  receiverCount: number;
 }
 
 export interface EventReplayResult extends EventReplayPreview {
@@ -462,6 +496,8 @@ export interface RouteReplayPreview {
   candidates: RouteReplayCandidate[];
   newDeliveryCount: number;
   existingDeliveryCount: number;
+  /** Aggregate over every candidate; see `ReplayUrgentPagingImpact`. */
+  urgentPaging: ReplayUrgentPagingImpact;
 }
 
 export interface RouteReplayResult {

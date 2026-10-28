@@ -96,6 +96,13 @@ describe("route replay prompt", () => {
       })),
       newDeliveryCount: 12,
       existingDeliveryCount: 0,
+      urgentPaging: {
+        destinations: [
+          { destinationId: "destination-ops", destinationName: "Ops group", receiverCount: 24 },
+        ],
+        deliveryCount: 12,
+        receiverCount: 24,
+      },
     };
   });
 
@@ -123,6 +130,10 @@ describe("route replay prompt", () => {
     expect(
       screen.getByText("All 12 candidates above will be replayed after confirmation"),
     ).toBeTruthy();
+    // One line rolls up every candidate, so a bulk replay cannot hide a
+    // 24-call side effect behind per-event rows.
+    expect(await screen.findByText(/Urgent paging may call 24 receivers/)).toBeTruthy();
+    expect(screen.getByText("Destinations: Ops group ×24")).toBeTruthy();
   });
 });
 

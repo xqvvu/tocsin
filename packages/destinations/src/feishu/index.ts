@@ -7,3 +7,4 @@ export * from "#destinations/feishu/payload";
 export * from "#destinations/feishu/schema";
 export * from "#destinations/feishu/sign";
 export * from "#destinations/feishu/fastgpt-card";
+export * from "#destinations/feishu/urgent";

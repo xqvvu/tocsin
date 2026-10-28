@@ -2,7 +2,7 @@ import { getLogger } from "@logtape/logtape";
 
 import type { OncallPing } from "@tocsin/core";
 import type { UrgencyChannelKind } from "@tocsin/destinations";
-import { FeishuConfigSchema } from "@tocsin/destinations/feishu";
+import { FeishuConfigSchema, feishuUrgentPagingReceivers } from "@tocsin/destinations/feishu";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
 import type {
@@ -140,42 +140,29 @@ export class OncallService {
 
   async triggerPingsForDelivery(input: OncallPingTriggerInput): Promise<void> {
     const { destination, event } = input.delivery;
+    // One shared gate with the replay preview so the two can never disagree
+    // about whether a delivery pages.
+    const receivers =
+      destination.kind === "feishu"
+        ? feishuUrgentPagingReceivers({
+            config: destination.config,
+            status: event.normalized.status,
+            severity: event.normalized.severity,
+          })
+        : [];
 
-    if (destination.kind !== "feishu") {
+    if (receivers.length === 0) {
       return;
     }
 
-    const parsed = FeishuConfigSchema.safeParse(destination.config);
-
-    if (!parsed.success) {
-      return;
-    }
-
-    const { sendMode, urgent } = parsed.data;
     const now = input.now ?? this.now();
-
-    if (sendMode !== "app" || !urgent?.autoEnabled) {
-      return;
-    }
-
-    if (event.normalized.status !== "firing") {
-      return;
-    }
-
-    // The schema normalises an empty list to the critical gate, so membership
-    // is the whole rule. Keep it unconditional: an `length > 0` escape hatch
-    // here is what let an empty imported list page every severity at once.
-    if (!urgent.severities.some((severity) => severity === event.normalized.severity)) {
-      return;
-    }
-
     const dedupeWindowStartsAt = new Date(
       new Date(now).valueOf() - this.dedupeWindowMs,
     ).toISOString();
     let queued = 0;
     let suppressed = 0;
 
-    for (const receiver of urgent.receivers) {
+    for (const receiver of receivers) {
       const ping = await this.store.oncall.enqueueForDelivery({
         deliveryId: input.delivery.job.id,
         destinationId: destination.id,
