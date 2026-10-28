@@ -25,7 +25,7 @@ import {
   eventReplayPreviewQueryOptions,
   operationsQueryKeys,
 } from "#/features/operations/api/operations.queries";
-import { ReplayUrgentPagingNotice } from "#/features/operations/ui/replay-urgent-paging-notice";
+import { UrgentPagingNotice } from "#/features/operations/ui/urgent-paging-notice";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function EventReplayAction({
@@ -188,7 +188,7 @@ function ReplayPreviewBody({
             ? t("events.replay.previewNoNew")
             : t("events.replay.previewReady")}
       </p>
-      <ReplayUrgentPagingNotice impact={preview.urgentPaging} />
+      <UrgentPagingNotice impact={preview.urgentPaging} action="replay" />
 
       {preview.targets.length > 0 ? (
         <div className="flex flex-col gap-1">

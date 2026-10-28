@@ -442,27 +442,25 @@ export interface EventReplayPreview {
   matchedRouteCount: number;
   newDeliveryCount: number;
   existingDeliveryCount: number;
-  urgentPaging: ReplayUrgentPagingImpact;
+  urgentPaging: UrgentPagingImpact;
 }
 
 /**
- * One destination whose new replay deliveries would place automatic urgent
- * phone calls.
+ * One destination whose deliveries would place automatic urgent phone calls.
  *
- * Replay is a bulk action that operators reach for during an incident, and a
- * page to someone's phone is the loudest side effect it has. Naming the
- * destinations turns "N new deliveries" into "these people are about to be
- * called" before the operator confirms.
+ * Replay and retry are both operator actions that can ring someone's phone, and
+ * naming the destinations turns "N deliveries" into "these people are about to
+ * be called" before the operator confirms.
  */
-export interface ReplayUrgentPagingDestination {
+export interface UrgentPagingDestination {
   destinationId: string;
   destinationName: string;
-  /** Receivers the destination would ring per new delivery. */
+  /** Receivers the destination would ring per delivery. */
   receiverCount: number;
 }
 
 /**
- * Read-only projection of the urgent calls a replay can trigger.
+ * Read-only projection of the urgent calls an action can trigger.
  *
  * It answers "who could be phoned if these deliveries succeed". A delivery
  * still has to succeed and return a message reference before paging fires, and
@@ -470,12 +468,26 @@ export interface ReplayUrgentPagingDestination {
  * bound rather than a promise. Disabled destinations and targets that already
  * have a delivery are excluded because neither can page.
  */
-export interface ReplayUrgentPagingImpact {
-  destinations: ReplayUrgentPagingDestination[];
-  /** New deliveries that pass every automatic paging gate. */
+export interface UrgentPagingImpact {
+  destinations: UrgentPagingDestination[];
+  /** Deliveries that pass every automatic paging gate. */
   deliveryCount: number;
   /** Upper bound on calls: receivers per paging delivery, across destinations. */
   receiverCount: number;
+}
+
+/**
+ * Who a successful retry of one failed delivery could phone.
+ *
+ * A retry re-queues the job and the worker's paging trigger fires on success,
+ * so a deliberate resend carries the same irreversible side effect a replay
+ * does. The preview keeps the replay's upper-bound semantics: the destination
+ * and route must still be enabled, and the send still has to succeed before
+ * anyone is called.
+ */
+export interface DeliveryRetryPreview {
+  deliveryId: string;
+  urgentPaging: UrgentPagingImpact;
 }
 
 export interface EventReplayResult extends EventReplayPreview {
@@ -511,8 +523,8 @@ export interface RouteReplayPreview {
   candidates: RouteReplayCandidate[];
   newDeliveryCount: number;
   existingDeliveryCount: number;
-  /** Aggregate over every candidate; see `ReplayUrgentPagingImpact`. */
-  urgentPaging: ReplayUrgentPagingImpact;
+  /** Aggregate over every candidate; see `UrgentPagingImpact`. */
+  urgentPaging: UrgentPagingImpact;
 }
 
 export interface RouteReplayResult {

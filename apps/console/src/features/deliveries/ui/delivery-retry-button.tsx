@@ -4,7 +4,9 @@ import { toast } from "sonner";
 
 import { isDeliveryAcceptedUnrecorded, type DeliveryState } from "@tocsin/core";
 
+import { AlertDialog, AlertDialogContent } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
+import { DeliveryRetryConfirmContent } from "#/features/deliveries/ui/delivery-retry-confirm";
 import { useOperationMutations } from "#/features/operations/api/operation.mutations";
 import { useTranslations } from "#/i18n/use-i18n";
 
@@ -18,19 +20,31 @@ import { useTranslations } from "#/i18n/use-i18n";
  * accepted the alert is terminal-failed only because its success could not be
  * recorded; retrying it would notify on-call twice, so it shows the reason
  * instead of the action.
+ *
+ * The click opens the same confirmation the list row uses. Retrying from a
+ * detail page is no less consequential: a successful send can place the
+ * automatic urgent calls, and that warning belongs before the click, not only
+ * in the list.
  */
 export function DeliveryRetryButton({
   id,
   state,
   lastError,
+  destinationName,
+  attemptCount,
+  maxAttempts,
 }: {
   id: string;
   state: DeliveryState;
   lastError: string | null;
+  destinationName: string;
+  attemptCount: number;
+  maxAttempts: number;
 }) {
   const t = useTranslations();
   const { retryDelivery, invalidateOperations } = useOperationMutations();
   const [pending, setPending] = React.useState(false);
+  const [confirming, setConfirming] = React.useState(false);
 
   if (state !== "failed") {
     return null;
@@ -62,16 +76,33 @@ export function DeliveryRetryButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={pending}
-      className="w-fit"
-      onClick={() => void retry()}
-    >
-      <RiRestartLine data-icon="inline-start" aria-hidden />
-      {t("deliveries.detail.retry.action")}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={pending}
+        className="w-fit"
+        onClick={() => setConfirming(true)}
+      >
+        <RiRestartLine data-icon="inline-start" aria-hidden />
+        {t("deliveries.detail.retry.action")}
+      </Button>
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent size="sm">
+          <DeliveryRetryConfirmContent
+            deliveryId={id}
+            destinationName={destinationName}
+            attempt={attemptCount}
+            maxAttempts={maxAttempts}
+            pending={pending}
+            onConfirm={() => {
+              setConfirming(false);
+              void retry();
+            }}
+          />
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

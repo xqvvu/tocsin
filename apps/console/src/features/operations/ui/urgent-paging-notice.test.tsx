@@ -3,12 +3,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import type { ReplayUrgentPagingImpact } from "@tocsin/core";
+import type { UrgentPagingImpact } from "@tocsin/core";
 
-import { ReplayUrgentPagingNotice } from "#/features/operations/ui/replay-urgent-paging-notice";
+import { UrgentPagingNotice } from "#/features/operations/ui/urgent-paging-notice";
 import { AppIntlProvider } from "#/i18n/provider";
 
-const impact: ReplayUrgentPagingImpact = {
+const impact: UrgentPagingImpact = {
   deliveryCount: 2,
   receiverCount: 3,
   destinations: [
@@ -16,20 +16,20 @@ const impact: ReplayUrgentPagingImpact = {
   ],
 };
 
-function renderNotice(value: ReplayUrgentPagingImpact) {
+function renderNotice(value: UrgentPagingImpact, action: "replay" | "retry" = "replay") {
   return render(
     <AppIntlProvider locale="en-US">
-      <ReplayUrgentPagingNotice impact={value} />
+      <UrgentPagingNotice impact={value} action={action} />
     </AppIntlProvider>,
   );
 }
 
-describe("replay urgent paging notice", () => {
+describe("urgent paging notice", () => {
   afterEach(() => {
     cleanup();
   });
 
-  it("renders nothing when the replay pages nobody", () => {
+  it("renders nothing when the action pages nobody", () => {
     const { container } = renderNotice({ ...impact, deliveryCount: 0, receiverCount: 0 });
 
     expect(container.firstElementChild).toBeNull();
@@ -42,6 +42,16 @@ describe("replay urgent paging notice", () => {
 
     expect(note.textContent).toContain("3 receivers");
     expect(note.textContent).toContain("2 new deliveries");
+    expect(note.textContent).toContain("Primary on-call ×3");
+  });
+
+  it("describes a single retry without a delivery count", () => {
+    renderNotice({ ...impact, deliveryCount: 1, receiverCount: 2 }, "retry");
+
+    const note = screen.getByRole("note");
+
+    expect(note.textContent).toContain("A successful retry may call 2 receivers");
+    expect(note.textContent).not.toContain("new deliver");
     expect(note.textContent).toContain("Primary on-call ×3");
   });
 

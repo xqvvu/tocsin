@@ -69,6 +69,9 @@ function DeliveryDetailPageToolbar({
               id={detail.job.id}
               state={detail.job.state}
               lastError={detail.job.lastError}
+              destinationName={detail.destination.name}
+              attemptCount={detail.job.attemptCount}
+              maxAttempts={detail.job.maxAttempts}
             />
           ) : null}
           {detail ? <DeliveryEvidenceDownload detail={detail} /> : null}

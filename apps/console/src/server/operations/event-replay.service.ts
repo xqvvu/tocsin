@@ -18,8 +18,8 @@ import {
   type RouteReplayCandidate,
   type RouteReplayPreview,
   type RouteReplayResult,
-  type ReplayUrgentPagingDestination,
-  type ReplayUrgentPagingImpact,
+  type UrgentPagingDestination,
+  type UrgentPagingImpact,
 } from "@tocsin/core";
 import { feishuUrgentPagingReceivers } from "@tocsin/destinations/feishu";
 
@@ -222,7 +222,7 @@ export class EventReplayService {
     const events = route.enabled ? await store.intake.listRecent({ limit }) : [];
     const destinations = await this.destinationIndex(store);
     const candidates: RouteReplayCandidate[] = [];
-    const urgentImpacts: ReplayUrgentPagingImpact[] = [];
+    const urgentImpacts: UrgentPagingImpact[] = [];
     let matchedEventCount = 0;
 
     for (const event of events) {
@@ -359,8 +359,8 @@ function urgentPagingImpact(
   event: EventRecord,
   targets: EventReplayTarget[],
   destinations: Map<string, DestinationRuntimeConfig>,
-): ReplayUrgentPagingImpact {
-  const byDestination = new Map<string, ReplayUrgentPagingDestination>();
+): UrgentPagingImpact {
+  const byDestination = new Map<string, UrgentPagingDestination>();
   let deliveryCount = 0;
   let receiverCount = 0;
 
@@ -409,8 +409,8 @@ function urgentPagingImpact(
 }
 
 /** Roll per-event impacts up for the route replay preview. */
-function mergedUrgentPaging(impacts: ReplayUrgentPagingImpact[]): ReplayUrgentPagingImpact {
-  const byDestination = new Map<string, ReplayUrgentPagingDestination>();
+function mergedUrgentPaging(impacts: UrgentPagingImpact[]): UrgentPagingImpact {
+  const byDestination = new Map<string, UrgentPagingDestination>();
   let deliveryCount = 0;
   let receiverCount = 0;
 
@@ -437,8 +437,8 @@ function mergedUrgentPaging(impacts: ReplayUrgentPagingImpact[]): ReplayUrgentPa
 }
 
 function sortedUrgentDestinations(
-  byDestination: Map<string, ReplayUrgentPagingDestination>,
-): ReplayUrgentPagingDestination[] {
+  byDestination: Map<string, UrgentPagingDestination>,
+): UrgentPagingDestination[] {
   return [...byDestination.values()].sort(
     (left, right) =>
       right.receiverCount - left.receiverCount ||

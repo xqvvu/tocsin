@@ -31,6 +31,12 @@ export const operationsQueryKeys = {
     deliveryId,
   ],
   deliveryBacklog: () => [...operationsQueryKeys.all, "deliveries", "backlog"] as const,
+  deliveryRetryPreview: (deliveryId: string) => [
+    ...operationsQueryKeys.all,
+    "deliveries",
+    "retry-preview",
+    deliveryId,
+  ],
 };
 
 /** The configuration row a queued-delivery count is scoped to. */
@@ -39,6 +45,24 @@ export type PendingDeliveryScope = {
   routeId?: string;
   destinationId?: string;
 };
+
+/**
+ * Who a retry of one failed delivery could phone.
+ *
+ * A live question rather than cached state: the answer depends on the
+ * destination's current configuration and the event's severity, and it
+ * precedes a phone call that cannot be undone. `gcTime: 0` drops the entry as
+ * soon as the confirmation closes, so the next open re-reads instead of
+ * trusting an answer that may have aged out.
+ */
+export function deliveryRetryPreviewQueryOptions(deliveryId: string) {
+  return orpc.operations.previewDeliveryRetry.queryOptions({
+    input: { id: deliveryId },
+    queryKey: operationsQueryKeys.deliveryRetryPreview(deliveryId),
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
 
 /**
  * Counts queued deliveries before a configuration row is disabled.

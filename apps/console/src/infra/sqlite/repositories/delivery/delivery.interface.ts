@@ -71,6 +71,12 @@ export interface DeliveryRepository {
   markFailed(input: MarkDeliveryFailedInput): Promise<DeliveryJob>;
   retryNow(input: RetryDeliveryInput): Promise<DeliveryJob>;
   get(id: string): Promise<DeliveryDetail | null>;
+  /**
+   * The job row alone, for reads that only need the delivery's identity and
+   * state. `get` assembles the whole detail projection (attempts, pings,
+   * payload); a pre-flight check does not need to pay for that.
+   */
+  getJob(id: string): Promise<DeliveryJob | null>;
 }
 
 export interface EnqueueDeliveriesInput {
