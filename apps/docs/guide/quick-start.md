@@ -58,7 +58,7 @@ curl -i -X POST 'http://localhost:3000/api/sources/<source-id>/webhook' \
 
 ## 核对 Event 与 Delivery
 
-打开「事件」，按时间找到新 Event，检查规范化字段及路由匹配证据；各标签与证据含义见[事件检索与证据](/guide/events)。再打开关联的 Delivery：Worker 在后台处理投递，状态可能先是 `pending` 或 `running`，之后变为 `succeeded` 或 `failed`。失败时查看尝试记录与脱敏后的错误信息，修复通知目标配置后可从投递详情手动重试。
+打开「事件」，按时间找到新 Event，检查规范化字段及路由匹配证据；各标签与证据含义见[事件检索与证据](/guide/events)。再打开关联的 Delivery：Worker 在后台处理投递，状态可能先是 `pending` 或 `running`，之后变为 `succeeded` 或 `failed`。失败时查看尝试记录与脱敏后的错误信息，修复通知目标配置后可从投递详情手动重试；重试前会要求确认，目标开启自动加急时还会列出可能拨打的电话上界。
 
 若没有 Delivery，先确认 Route 已启用、条件确实匹配且通知目标已启用；条件组合与多路由语义见[路由规则与匹配](/guide/routes)。Delivery 状态为 `suppressed` 表示命中了有效的告警静默或维护时段；这不是发送失败。创建、核对和结束这类规则见[告警静默与维护时段](/operations/suppressions)。
 
