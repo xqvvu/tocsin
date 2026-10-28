@@ -2,6 +2,54 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 158 轮）
+
+- 时间：2026-10-28 21:01 CST 起。
+- 基线：`origin/main` @ `94c69ed`（第 157 轮 planning 提交，main CI success；启动时无 open PR）。
+- 类型：**增量交付轮（未跑全量审计）**。距上次全量审计 17:05 约 3h56m（< 6 小时），且 backlog 有多个 ≥27 候选，按第 1.5 步继续交付。
+- 全量审计时间戳：沿用 **2026-10-28 17:05 CST**（第 154 轮）。
+- 车道轮转位置：本轮跑 `requirements` + `ui-triage` + `release-infra`；`ui-triage` 判定 `defer`。下一非必跑车道为 **`architecture`**。
+- `last_ui_review_at` = **2026-10-28 20:02 CST**（未更新，本轮无 UI 评审）。
+
+### ui-triage 决策与理由
+
+- 决策：**`defer`**。距上次真实浏览器评审仅 1h14m；自 20:02 起唯一触及 UI 路径的合并是 `b98adc3`（仅可访问名称/tooltip 文案，可见文本零变化）；剩余 UI-95/96/97/98/99 均属实现项。重开浏览器只会复现同一批发现。
+- 只读发现：backlog 存在重复 ID `UI-90`（第 48 行 shipped #619 与第 910 行旧 candidate），建议下一轮清理。
+
+### requirements
+
+- **REQ-316 与既有 REQ-13 重复**（`iteration-backlog.md:227`），本轮合并为同一交付并把 REQ-316 标记为重复项。
+- 核实：`ProviderRegistry.parse` 可独立调用（`packages/providers/src/registry.ts:50-63`），但 config schema 校验在 try 之外（`:52`）会抛 ZodError；`testPayload` 是能力位（`packages/providers/src/types.ts:60-65`）；路由匹配为纯函数（`packages/core/src/route/route.ts:182-219`）；真正写库在 `intake.service.ts:108-143`，解析失败路径也会落库（`:192-240`）。
+- 新候选 **REQ-318**（28，S）：告警源覆盖列忽略路由条件，severity-only 路由仍显示“可投递”（`source-route-coverage.ts:19-26,41-55`）。
+
+### release-infra
+
+- **REL-21 已具备**：`.github/workflows/e2e.yml:3-7,18,42-62` 已接入 push/PR，`gh run list` 最近五次 success；无需新 workflow。
+- **REL-24 仍缺失**：provider payload 仍内联（`packages/providers/src/{alertmanager,grafana,signoz,generic,uptime-kuma,fastgpt}/index.test.ts`），无 fixtures 目录；建议抽取第一批 10 个 payload，成本 M。
+- **REL-3 已修复**：`scripts/docker-smoke.sh:20-25,56,67-75` 使用独立 project/卷并断言不含 `tocsin-data`。
+- 旧仓库名 `xqvvu/vane` 已无失效引用；REL-16/23（required checks）仍 blocked-autonomous。
+- 本轮未交付 release-infra 小修（预算用于主切片），REL-24 列为下一轮优先。
+
+### 本轮交付
+
+- **PR #651 `feat(console): rehearse source intake without writing events`**（REQ-13 + REQ-316）
+  - 只读 `sources.rehearse`：`ProviderRegistry.parse` → `evaluateRouteMatch` → 命中目标的纯渲染预览；不写 events/deliveries、不产生 job、不调用 transport。
+  - `SourceRehearsalService`（`server/sources/source-rehearsal.service.ts`）+ container 工厂 + router 一行委托；解析失败消息 `redactText`、渲染载荷 `redactJsonText`、配置非法 → `configuration_error`、请求体 ≤256 KiB。
+  - Sources 工具栏「接入预演」对话框：源选择、JSON 请求体、规范化结果、全部路由逐条件 evidence、目标渲染预览；停用源提示真实 Webhook 会被拒绝。
+  - PRD `docs/prd/source-intake-rehearsal.md`；中英文案 31 键 ×2。
+  - 验证：`vp check` 0 error；`vp run -r test` 4/4（225 文件 / 1285 tests）；`vp run -r build` 2/2。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项。
+
+### 下一轮优先项
+
+1. **architecture 车道**（轮转位）+ ARCH-67/68 纯重构小 PR。
+2. REL-24 provider fixture 第一批（5 文件 / 10 payload）。
+3. REQ-318（28，S）告警源条件覆盖提示。
+4. UI-95/96/97/98 的 S 成本修复批，并顺手清理重复 ID UI-90。
+
 ## 2026-10-28（第 157 轮）
 
 - 时间：2026-10-28 19:27 CST 起。
