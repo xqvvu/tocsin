@@ -2,6 +2,100 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 164 轮）
+
+- 时间：2026-10-29 05:52 CST 起。
+- 基线：`origin/main` @ `e82062ea`；启动时无 open PR，main CI 与 E2E 双绿。
+- 类型：**需求切片 + 发布**（非 full-audit）。最近全量审计为第 160 轮 **2026-10-29 02:05 CST**
+  （距今 < 6 小时）；backlog 有 ≥27 分候选（REQ-328 29、REQ-329 28、REQ-330 27、REQ-327 27），
+  按第 1.5 步继续交付，不重跑全量审计。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`docs-drift`（轮转位）。
+  下一非必跑车道建议 **`architecture`**（自第 38–39 轮后未跑）。
+- `last_ui_review_at` = **2026-10-29 03:50 CST**（未更新，本轮 `ui-triage` 判 `defer`）。
+
+### ui-triage 决策与理由
+
+- 决策：**`defer`**。三条强信号均不成立：距上次评审 2h02m（< 48h）；自 03:50 起触及 UI 路径的合并
+  仅 1 个（`fd3ebdb2` 预演判定）；未解决 UI 发现 61 条属饱和队列，且本轮非 UI 车道新增 0 条；
+  唯一新 UI 面（预演判定）已有第 163 轮隔离实例的真实浏览器记录。
+- 下次触发条件：UI 路径合并累计 ≥ 3，或新增 UI 面无浏览器验证，或非 UI 车道新增 ≥ 2 条 UI 发现，
+  或满 2026-10-31 03:50 CST。
+- 轻量抽查提示（未入库）：目标停用时预演结果并排出现两枚同义徽标
+  （`source-rehearsal-verdict-badge.tsx:31-34` 的「目标已停用」与 `source-rehearsal-result.tsx:177-181`
+  的「已停用」），可与 UI-108 同批修；UI-107 / UI-108 仍未修。
+
+### 专家发现
+
+**requirements（5 条新候选，已写入 backlog）**
+
+- REQ-333（27）投递列表披露「目标/路由已停用」的领取阻断。
+- REQ-334（27）可移植配置 `secret_refs` 支持 `<NAME>_FILE`（EXPERT_PANEL：反转已文档化的非目标）。
+- REQ-335（27）Email 目标测试发送支持覆盖收件人。
+- REQ-336（26）事件显示上游发生时间与接入时间的偏差。
+- REQ-332（25）通用 Webhook 出站 HMAC 签名（EXPERT_PANEL：触碰 secret 处理）。
+
+**docs-drift（8 条新漂移，已写入 backlog）**
+
+- DOC-106（高）`apps/docs/guide/sources.md:91` 仍称预演「不评估静默、全局投递暂停」，
+  REQ-325 已交付 `verdict`（`apps/console/src/server/sources/source-rehearsal.service.ts:184-233`）。
+- DOC-107（高）`apps/docs/integrations/destinations.md:37` 称 Webhook / 邮件网关 URL「只保存在服务端」，
+  实际 `DestinationOperationalConfig.endpoint` 会在目标表渲染（`packages/core/src/destination/destination.ts:90-92`、
+  `features/destinations/ui/destination-operational-config-cell.tsx:36-37`）。
+- DOC-108（中）`apps/docs/guide/concepts.md:96` 与 `operations/deliveries.md:100` 称 suppressed「没有 attempt」，
+  领取时转静默会保留既有失败尝试（`infra/sqlite/repositories/delivery/delivery.repository.ts:270-305`）。
+- DOC-109（中）`docs/prd/account-session-security.md:5` 状态头宣称「最近登录记录」，代码与非目标均无。
+- DOC-110（中低）`docs/architecture/orpc-api-layer.md:238-242` 漏 `DeliveryAlreadyAcceptedError` → 409
+  （`apps/console/src/server/orpc/errors.ts:59-64`）。
+- DOC-111（中低）两处文档称坏 `BETTER_AUTH_SECRET` 会让进程「启动失败」，实测是进程不退出、所有请求 500、
+  容器 unhealthy 且不会自动重启（`docs/release/docker-production-deployment.md:75`）。
+- DOC-112（低）`docs/architecture/application-container.md:35,85` 与 `frontend-architecture.md:111`
+  漏 `createSourceRehearsalService`（`server/runtime/container.ts:98,261`）。
+- DOC-113（低）四个已交付 PRD 无状态头且用现在时描述不存在的能力（destination-delivery-health、
+  configuration-import-diff-preview、event-delivery-priority-sort、delivery-outcome-unknown）。
+
+### 本轮交付
+
+- PR `#681` `feat(console): confirm every delivery retry and disclose urgent calls`（REQ-328）
+  - 新增只读 `operations.previewDeliveryRetry`（`server/operations/operations.service.ts:119-177`）：
+    复用 `feishuUrgentPagingReceivers` 与 `claimNext` 的启停谓词（目标停用 / 路由停用 → 空投影），
+    投递不存在返回 `null`；`DeliveryRepository` 暴露既有 `getJob`。
+  - `ReplayUrgentPagingImpact` / `ReplayUrgentPagingDestination` → `UrgentPagingImpact` /
+    `UrgentPagingDestination`；`ReplayUrgentPagingNotice` → `UrgentPagingNotice`（`action: "replay" | "retry"`）。
+  - 抽出 `DeliveryRetryConfirmContent`，投递列表 / 投递详情 / 事件投递表三个入口统一确认；
+    打开时读取预览，命中时显示加急提示，读取失败不阻塞重试。
+  - 文案：`deliveries.retry.confirm.*`、`operations.urgentPaging.*`（新增 `retryTitle`）。
+  - 验证：`vp check` 0 error（32 条既有 warning）；`vp run -r test` 227 文件 / 1318 测试；
+    `vp run -r build` 2/2；PR CI `test · build` 与 `playwright` 双绿。
+  - PRD：`docs/prd/delivery-retry-urgent-disclosure.md`。
+- PR `#680`（docs 站会话遗留 `docs(site): document rehearsal delivery verdict`）按其自身 CI 绿后
+  rebase 合入，解除发布门槛里的 open PR 阻断。
+- PR `#682` `chore(release): v0.1.0-beta.132`。
+
+### 发布
+
+- 三位专家一致 **GO**：发布经理认定 1 个用户可见变更（重试确认 + 加急披露 + 新只读 API）；
+  阻断审计 6 项门槛在合入 #680 后全部 PASS（目标 commit CI + E2E 双绿）；运维/回滚专家确认
+  无迁移、无配置格式、无 env、无依赖变化，回滚只需换镜像。无分歧项，故未产生
+  `docs/planning/decisions/` 记录。
+- tag `v0.1.0-beta.132`（annotated）指向 `19e123b5`，该 commit 的 CI 与 E2E 双绿后才打。
+- GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.132`（linux/amd64 + linux/arm64）；
+  回滚 `0.1.0-beta.131`，**无需数据库操作**。
+
+### 工作树清理
+
+- 回收：本轮会话工作树 `clever-ardinghelli-163eea` 的 `node_modules`/`.output` 等在收尾时清理；
+  `agent-iteration` 的锁与本轮分支在结束时删除。
+
+### 下一轮优先项
+
+1. REQ-329（28）重新启用通知目标前披露排队中的加急呼叫。
+2. DOC-106 / DOC-107（高）文档更正，DOC-108..113 同批走 `docs:` PR。
+3. SEC-A3（24，AUTO_FIX）读取边界脱敏补 PEM / `tls.key` / `dbPass` 断言。
+4. REQ-333（27）投递列表披露领取阻断；REQ-327（27）飞书应用投递健康列。
+5. SEC-A1 / SEC-A2 交 EXPERT_PANEL；REQ-332 / REQ-334 首次进 EXPERT_PANEL。
+6. 下一非必跑车道：**`architecture`**。
+
 ## 2026-10-29（第 163 轮）
 
 - 时间：2026-10-29 04:33 CST 起。
