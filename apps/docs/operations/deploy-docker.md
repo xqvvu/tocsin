@@ -65,7 +65,7 @@ SERVER_URL=https://tocsin.example.com
 在目标 release tag 的源码上构建并启动：
 
 ```bash
-export TOCSIN_IMAGE_TAG=v0.1.0-beta.126   # 换成实际 release tag
+export TOCSIN_IMAGE_TAG=v0.1.0-beta.127   # 换成实际 release tag
 docker compose -f compose.prod.yml build
 docker compose -f compose.prod.yml up -d
 docker compose -f compose.prod.yml ps
