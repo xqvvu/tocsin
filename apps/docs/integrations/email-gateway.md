@@ -204,7 +204,7 @@ HTML 模板的规则是“标记可信、变量转义”：
 - 首选独立、最小权限的网关 Token，并按环境或实例区分，不要复用 dashboard 登录密码。
 - 网关日志不要记录完整 `Authorization`、原始请求体或收件人之外的敏感上下文。
 - 可移植配置导出会把邮件网关 URL 和 Header 值替换为环境变量引用；备份文件仍可能包含可解密或明文 secret，必须按敏感数据保护。
-- 轮换凭证时，先让网关同时接受新旧值或准备短暂切换窗口，再更新 Tocsin Header、执行 Test，并观察一次真实 Delivery。
+- 轮换凭证时，先让网关同时接受新旧值或准备短暂切换窗口，再更新 Tocsin Header、执行 Test，并观察一次真实 Delivery；完整切换与旧队列处理见[通知目标凭证轮换与故障演练](/integrations/destination-rotation)。
 
 邮件网关 URL 和 Header 值不会被注入模板变量。<code v-pre>{{headers.authorization}}</code>、<code v-pre>{{config.endpointUrl}}</code> 一类写法会被拒绝，不会把 secret 带进预览、正文或投递证据。
 
@@ -237,4 +237,4 @@ HTML 模板的规则是“标记可信、变量转义”：
 8. 验证 `resolved`、不同 severity 和多目标 Route 的邮件主题与收件人。
 9. 把网关负责人、退信处理入口、队列积压告警和凭证轮换步骤写入值班手册。
 
-相关页面：[通知目标参考](/integrations/destinations) · [投递检索、生命周期与重试](/operations/deliveries) · [环境变量与运行时配置](/operations/configuration) · [可移植配置参考](/operations/portable-config) · [日志与可观测性](/operations/observability) · [故障排查](/operations/troubleshooting)
+相关页面：[通知目标参考](/integrations/destinations) · [通知目标凭证轮换与故障演练](/integrations/destination-rotation) · [投递检索、生命周期与重试](/operations/deliveries) · [环境变量与运行时配置](/operations/configuration) · [可移植配置参考](/operations/portable-config) · [日志与可观测性](/operations/observability) · [故障排查](/operations/troubleshooting)

@@ -39,7 +39,7 @@ description: Tocsin 飞书、Slack、邮件网关与通用 Webhook 通知目标�
 | 预览载荷、测试结果、Delivery 错误与响应体 | 返回前再次脱敏 |
 | 模板上下文 | 不包含目标配置、认证 Header、Token、签名密钥或飞书应用密钥 |
 
-不要把生产 Webhook URL、签名密钥、Bearer Token 或邮件网关密码写入公开工单、仓库文档或聊天记录。轮换凭证后，重新测试目标并观察一次真实 Delivery。
+不要把生产 Webhook URL、签名密钥、Bearer Token 或邮件网关密码写入公开工单、仓库文档或聊天记录。轮换凭证后，重新测试目标并观察一次真实 Delivery；并行切换、旧队列和紧急撤销顺序见[通知目标凭证轮换与故障演练](/integrations/destination-rotation)。
 
 ## 飞书
 
@@ -295,4 +295,4 @@ JSON 模板（飞书卡片、Slack blocks、通用 Webhook JSON）只插值字�
 | 邮件网关拒绝请求 | 核对 JSON 信封、发件域、认证 Header 与网关幂等策略；按[邮件网关接入与验收](/integrations/email-gateway#故障排查)逐项排查 |
 | Delivery 停在 `pending` 或 `running` | 检查 readiness 中的 Worker、队列暂停状态和运行日志；查看下次重试时间与 attempt history |
 
-相关页面：[通知目标验收与失败判读](/integrations/destination-verification) · [告警源接入参考](/integrations/providers) · [处理链路与概念](/guide/concepts) · [故障排查](/operations/troubleshooting)
+相关页面：[通知目标验收与失败判读](/integrations/destination-verification) · [通知目标凭证轮换与故障演练](/integrations/destination-rotation) · [告警源接入参考](/integrations/providers) · [处理链路与概念](/guide/concepts) · [故障排查](/operations/troubleshooting)

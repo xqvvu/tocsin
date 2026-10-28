@@ -155,7 +155,7 @@ Delivery 详情的「电话加急」表按呼叫对象逐行显示：
 | `99991400` / HTTP `429` | 应用级限流 | 保留自动退避，避免告警风暴和批量调试同时拨号 |
 | 有成功 Delivery，但没有 ping | 自动关闭、非 `firing`、级别不命中、没有呼叫对象、Webhook 模式、无消息引用或去重 | 先读「为什么没有自动加急」，再核对当前目标配置与投递时间 |
 
-应用凭证、`App secret`、tenant access token 与完整请求头都不得写入工单、文档或浏览器存储。呼叫对象 ID 是值班排障所需的运维标识，可以出现在已认证 dashboard 与投递证据中。
+应用凭证、`App secret`、tenant access token 与完整请求头都不得写入工单、文档或浏览器存储。呼叫对象 ID 是值班排障所需的运维标识，可以出现在已认证 dashboard 与投递证据中。计划轮换与泄露处置顺序见[通知目标凭证轮换与故障演练](/integrations/destination-rotation#飞书应用)。
 
 可移植配置导出会把飞书应用密钥替换成环境变量引用，不输出明文 secret；数据库备份仍包含应用凭证，必须按 secret 材料保护。格式见[可移植配置参考](/operations/portable-config#飞书应用)，备份要求见[备份与恢复](/operations/backup-restore)。
 
@@ -171,4 +171,4 @@ Delivery 详情的「电话加急」表按呼叫对象逐行显示：
 
 日志类别与安全取日志方式见[日志与可观测性](/operations/observability)；认证或 Webhook 问题见[故障排查](/operations/troubleshooting)。
 
-相关页面：[通知目标参考](/integrations/destinations) · [处理链路与概念](/guide/concepts) · [投递检索、生命周期与重试](/operations/deliveries) · [告警静默与维护时段](/operations/suppressions) · [可移植配置参考](/operations/portable-config)
+相关页面：[通知目标参考](/integrations/destinations) · [通知目标凭证轮换与故障演练](/integrations/destination-rotation#飞书应用) · [处理链路与概念](/guide/concepts) · [投递检索、生命周期与重试](/operations/deliveries) · [告警静默与维护时段](/operations/suppressions) · [可移植配置参考](/operations/portable-config)
