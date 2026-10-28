@@ -113,6 +113,7 @@ dashboard 适合人工复核，但不能代替外部探针。每个班次至少�
 | 入站 `invalid_token` 或 `source_disabled` | 最近一次 Token/来源变更、上游配置 | 按[告警源接入与生命周期](/guide/sources)核对，不在工单记录 Token 明文 |
 | 电话最终失败 | 接收人、飞书应用状态、加急记录与平台错误码 | 按[飞书应用与电话加急](/integrations/feishu-app)核实后再决定人工补呼 |
 | 磁盘持续下降 | 数据卷总量、WAL、日志、备份和表行数 | 按[数据保留与 SQLite 容量](/operations/data-retention)处理容量 |
+| 告警风暴或大面积误报 | Event / Delivery 增速、涉及的目标与是否已有电话加急 | 按[告警风暴与大面积误报的处置顺序](/operations/incident-playbook)选择最窄的急停手段，不要先删除配置 |
 
 ## 上线验收
 
