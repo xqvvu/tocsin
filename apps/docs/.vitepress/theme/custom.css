@@ -21,3 +21,16 @@
   max-width: 100%;
   overflow-x: auto;
 }
+
+/*
+ * On a phone-width viewport CJK wraps between any two characters, so a
+ * squeezed column can end up one glyph per line. Keeping runs whole pushes the
+ * table into its own horizontal scroll instead. Desktop has room to wrap
+ * normally, so the rule stops at the mobile breakpoint.
+ */
+@media (max-width: 767px) {
+  .vp-doc table th,
+  .vp-doc table td {
+    word-break: keep-all;
+  }
+}
