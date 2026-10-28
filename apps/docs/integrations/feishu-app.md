@@ -119,7 +119,7 @@ Route → 飞书应用模式的目标 → 应用向群发送卡片并取得 mess
 
 权限、群配置、接收人范围、额度耗尽和未知业务码通常不可重试。修复问题后，可回到该 Delivery 再发起手动加急；若仍在 5 分钟窗口内，去重会拒绝同一呼叫对象。
 
-全局「暂停出站投递」只暂停卡片 Delivery，不暂停独立的加急队列。被静默规则抑制的 Delivery 不会发送卡片，也不会产生新的电话 ping；已经发出的电话无法撤回。相关语义见[投递生命周期与重试](/operations/deliveries)与[告警静默与维护时段](/operations/suppressions)。
+全局「暂停出站投递」只暂停卡片 Delivery，不暂停独立的加急队列。被静默规则抑制的 Delivery 不会发送卡片，也不会产生新的电话 ping；已经发出的电话无法撤回。相关语义见[投递检索、生命周期与重试](/operations/deliveries)与[告警静默与维护时段](/operations/suppressions)。
 
 ## 读取加急记录
 
@@ -171,4 +171,4 @@ Delivery 详情的「电话加急」表按呼叫对象逐行显示：
 
 日志类别与安全取日志方式见[日志与可观测性](/operations/observability)；认证或 Webhook 问题见[故障排查](/operations/troubleshooting)。
 
-相关页面：[通知目标参考](/integrations/destinations) · [处理链路与概念](/guide/concepts) · [投递生命周期与重试](/operations/deliveries) · [告警静默与维护时段](/operations/suppressions) · [可移植配置参考](/operations/portable-config)
+相关页面：[通知目标参考](/integrations/destinations) · [处理链路与概念](/guide/concepts) · [投递检索、生命周期与重试](/operations/deliveries) · [告警静默与维护时段](/operations/suppressions) · [可移植配置参考](/operations/portable-config)

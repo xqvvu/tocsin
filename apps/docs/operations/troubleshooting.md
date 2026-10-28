@@ -33,7 +33,7 @@
 
 ## Delivery 失败或停滞
 
-状态含义、退避计算、手动重试、全局暂停和积压判读的完整说明见[投递生命周期与重试](/operations/deliveries)。
+列表检索、状态含义、退避计算、手动重试、全局暂停和积压判读的完整说明见[投递检索、生命周期与重试](/operations/deliveries)。
 
 1. 打开 Delivery detail，检查状态、attempt history、下次重试时间与最后错误；错误和 payload 会做脱敏，但仍应谨慎处理调试数据。
 2. 先使用 Destination 的测试操作验证端点、凭证和模板，再检查目标服务是否可从 Tocsin 容器网络访问。字段与模板约束见[通知目标参考](/integrations/destinations)；邮件网关契约、退信边界与幂等排查见[邮件网关接入与验收](/integrations/email-gateway)。
