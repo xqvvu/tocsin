@@ -18,9 +18,13 @@ import {
   type RouteReplayCandidate,
   type RouteReplayPreview,
   type RouteReplayResult,
+  type ReplayUrgentPagingDestination,
+  type ReplayUrgentPagingImpact,
 } from "@tocsin/core";
+import { feishuUrgentPagingReceivers } from "@tocsin/destinations/feishu";
 
 import type { EnqueueDeliveriesResult } from "#/infra/sqlite/repositories/delivery/delivery.interface";
+import type { DestinationRuntimeConfig } from "#/infra/sqlite/repositories/destination/destination.interface";
 import type { SqliteStoreUnitOfWork } from "#/infra/sqlite/store";
 import type { EventReplayServiceOptions } from "#/server/operations/event-replay.service.types";
 
@@ -44,8 +48,9 @@ export class EventReplayService {
     }
 
     const routeMatches = await this.currentRouteMatches(this.store, event);
+    const destinations = await this.destinationIndex(this.store);
 
-    return this.buildPreview(this.store, event, routeMatches, null);
+    return this.buildPreview(this.store, event, routeMatches, null, destinations);
   }
 
   async replayEvent(command: ReplayEventCommand): Promise<EventReplayResult | null> {
@@ -72,7 +77,13 @@ export class EventReplayService {
         dedupeByIdempotency: false,
         skipExistingForEvent: true,
       });
-      const preview = await this.buildPreview(tx, event, routeMatches, enqueue);
+      const preview = await this.buildPreview(
+        tx,
+        event,
+        routeMatches,
+        enqueue,
+        await this.destinationIndex(tx),
+      );
 
       return {
         ...preview,
@@ -177,6 +188,7 @@ export class EventReplayService {
     event: EventRecord,
     routeMatches: RouteMatchResult[],
     enqueue: EnqueueDeliveriesResult | null,
+    destinations: Map<string, DestinationRuntimeConfig>,
   ): Promise<EventReplayPreview> {
     const targets = await this.eventReplayTargets(store, event, routeMatches, enqueue);
     const existingDeliveryCount = targets.filter((target) => target.alreadyExists).length;
@@ -190,16 +202,27 @@ export class EventReplayService {
       matchedRouteCount: routeMatches.length,
       newDeliveryCount: targets.length - existingDeliveryCount,
       existingDeliveryCount,
+      urgentPaging: urgentPagingImpact(event, targets, destinations),
     };
   }
 
+  private async destinationIndex(
+    store: Pick<SqliteStoreUnitOfWork, "destinations">,
+  ): Promise<Map<string, DestinationRuntimeConfig>> {
+    return new Map(
+      (await store.destinations.list()).map((destination) => [destination.id, destination]),
+    );
+  }
+
   private async buildRoutePreview(
-    store: Pick<SqliteStoreUnitOfWork, "history" | "intake" | "sources">,
+    store: Pick<SqliteStoreUnitOfWork, "destinations" | "history" | "intake" | "sources">,
     route: RouteDefinition,
     limit: number,
   ): Promise<RouteReplayPreview> {
     const events = route.enabled ? await store.intake.listRecent({ limit }) : [];
+    const destinations = await this.destinationIndex(store);
     const candidates: RouteReplayCandidate[] = [];
+    const urgentImpacts: ReplayUrgentPagingImpact[] = [];
     let matchedEventCount = 0;
 
     for (const event of events) {
@@ -214,12 +237,13 @@ export class EventReplayService {
 
       matchedEventCount += 1;
 
-      const preview = await this.buildPreview(store, event, [match], null);
+      const preview = await this.buildPreview(store, event, [match], null, destinations);
 
       if (preview.newDeliveryCount === 0) {
         continue;
       }
 
+      urgentImpacts.push(preview.urgentPaging);
       candidates.push({
         event: await routeReplayEventSummary(store, event),
         targets: preview.targets,
@@ -244,6 +268,7 @@ export class EventReplayService {
         (total, candidate) => total + candidate.existingDeliveryCount,
         0,
       ),
+      urgentPaging: mergedUrgentPaging(urgentImpacts),
     };
   }
 
@@ -322,4 +347,101 @@ async function routeReplayEventSummary(
     fingerprint: event.normalized.fingerprint,
     receivedAt: event.receivedAt,
   };
+}
+
+/**
+ * Who a replay could page, derived from the same automatic paging gate the
+ * delivery trigger uses. Only new deliveries to enabled destinations count:
+ * an existing target is skipped by replay, and a disabled destination never
+ * reaches the worker.
+ */
+function urgentPagingImpact(
+  event: EventRecord,
+  targets: EventReplayTarget[],
+  destinations: Map<string, DestinationRuntimeConfig>,
+): ReplayUrgentPagingImpact {
+  const byDestination = new Map<string, ReplayUrgentPagingDestination>();
+  let deliveryCount = 0;
+  let receiverCount = 0;
+
+  for (const target of targets) {
+    if (target.alreadyExists) {
+      continue;
+    }
+
+    const destination = destinations.get(target.destinationId);
+
+    if (!destination || !destination.enabled) {
+      continue;
+    }
+
+    const receivers = feishuUrgentPagingReceivers({
+      config: destination.config,
+      status: event.normalized.status,
+      severity: event.normalized.severity,
+    });
+
+    if (receivers.length === 0) {
+      continue;
+    }
+
+    deliveryCount += 1;
+    receiverCount += receivers.length;
+
+    const existing = byDestination.get(destination.id);
+
+    if (existing) {
+      existing.receiverCount += receivers.length;
+    } else {
+      byDestination.set(destination.id, {
+        destinationId: destination.id,
+        destinationName: destination.name,
+        receiverCount: receivers.length,
+      });
+    }
+  }
+
+  return {
+    destinations: sortedUrgentDestinations(byDestination),
+    deliveryCount,
+    receiverCount,
+  };
+}
+
+/** Roll per-event impacts up for the route replay preview. */
+function mergedUrgentPaging(impacts: ReplayUrgentPagingImpact[]): ReplayUrgentPagingImpact {
+  const byDestination = new Map<string, ReplayUrgentPagingDestination>();
+  let deliveryCount = 0;
+  let receiverCount = 0;
+
+  for (const impact of impacts) {
+    deliveryCount += impact.deliveryCount;
+    receiverCount += impact.receiverCount;
+
+    for (const destination of impact.destinations) {
+      const existing = byDestination.get(destination.destinationId);
+
+      if (existing) {
+        existing.receiverCount += destination.receiverCount;
+      } else {
+        byDestination.set(destination.destinationId, { ...destination });
+      }
+    }
+  }
+
+  return {
+    destinations: sortedUrgentDestinations(byDestination),
+    deliveryCount,
+    receiverCount,
+  };
+}
+
+function sortedUrgentDestinations(
+  byDestination: Map<string, ReplayUrgentPagingDestination>,
+): ReplayUrgentPagingDestination[] {
+  return [...byDestination.values()].sort(
+    (left, right) =>
+      right.receiverCount - left.receiverCount ||
+      left.destinationName.localeCompare(right.destinationName),
+  );
 }

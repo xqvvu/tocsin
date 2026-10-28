@@ -201,6 +201,18 @@ export const EventReplayTargetSchema = z.object({
   alreadyExists: z.boolean(),
 });
 
+export const ReplayUrgentPagingDestinationSchema = z.object({
+  destinationId: z.string().min(1),
+  destinationName: z.string().min(1),
+  receiverCount: z.number().int().min(1),
+});
+
+export const ReplayUrgentPagingImpactSchema = z.object({
+  destinations: z.array(ReplayUrgentPagingDestinationSchema),
+  deliveryCount: z.number().int().min(0),
+  receiverCount: z.number().int().min(0),
+});
+
 export const EventReplayPreviewSchema = z.object({
   eventId: z.string().min(1),
   routeMatches: z.array(RouteMatchResultSchema),
@@ -208,6 +220,7 @@ export const EventReplayPreviewSchema = z.object({
   matchedRouteCount: z.number().int().min(0),
   newDeliveryCount: z.number().int().min(0),
   existingDeliveryCount: z.number().int().min(0),
+  urgentPaging: ReplayUrgentPagingImpactSchema,
 });
 
 export const EventReplayResultSchema = EventReplayPreviewSchema.extend({
@@ -243,6 +256,7 @@ export const RouteReplayPreviewSchema = z.object({
   candidates: z.array(RouteReplayCandidateSchema),
   newDeliveryCount: z.number().int().min(0),
   existingDeliveryCount: z.number().int().min(0),
+  urgentPaging: ReplayUrgentPagingImpactSchema,
 });
 
 export const RouteReplayResultSchema = z.object({

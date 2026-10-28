@@ -22,6 +22,7 @@ import {
   operationsQueryKeys,
   routeReplayPreviewQueryOptions,
 } from "#/features/operations/api/operations.queries";
+import { ReplayUrgentPagingNotice } from "#/features/operations/ui/replay-urgent-paging-notice";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function RouteReplayPrompt({
@@ -168,6 +169,8 @@ function RouteReplayPreviewBody({
           {t("routing.replay.summary.newDeliveries", { count: preview.newDeliveryCount })}
         </Badge>
       </div>
+
+      <ReplayUrgentPagingNotice impact={preview.urgentPaging} />
 
       {preview.candidates.length === 0 ? (
         <p className="text-muted-foreground text-xs leading-5">{t("routing.replay.empty")}</p>

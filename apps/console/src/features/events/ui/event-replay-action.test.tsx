@@ -95,6 +95,13 @@ describe("event replay action", () => {
       matchedRouteCount: 2,
       newDeliveryCount: 2,
       existingDeliveryCount: 1,
+      urgentPaging: {
+        destinations: [
+          { destinationId: "destination-ops", destinationName: "Ops group", receiverCount: 2 },
+        ],
+        deliveryCount: 1,
+        receiverCount: 2,
+      },
     };
   });
 
@@ -124,6 +131,10 @@ describe("event replay action", () => {
     expect(screen.getAllByText("Exists")).toHaveLength(1);
     expect(screen.getAllByText("Critical checkout")).toHaveLength(2);
     expect(screen.getByText("Delivery targets")).toBeTruthy();
+    // The page is the one side effect an operator cannot take back, so the
+    // preview names the receivers before confirmation.
+    expect(screen.getByText(/Urgent paging may call 2 receivers/)).toBeTruthy();
+    expect(screen.getByText("Destinations: Ops group ×2")).toBeTruthy();
   });
 
   it("hides the target list when no route target matches", async () => {
@@ -134,6 +145,7 @@ describe("event replay action", () => {
       matchedRouteCount: 0,
       newDeliveryCount: 0,
       existingDeliveryCount: 0,
+      urgentPaging: { destinations: [], deliveryCount: 0, receiverCount: 0 },
     };
 
     render(
