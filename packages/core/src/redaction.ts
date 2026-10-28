@@ -41,8 +41,10 @@ const SENSITIVE_EXACT_KEYS = new Set([
   "signsecret",
   "webhookurl",
   // Credential names that end in a noun the suffix rule does not cover, or
-  // whose suffix is ambiguous. Kept exact so `dbPass`, `bypass`,
-  // `signatureAlgorithm`, and `privateKeyId` stay readable.
+  // whose suffix is ambiguous. Kept exact so `bypass`, `signatureAlgorithm`,
+  // and `privateKeyId` stay readable. Prefixed `pass`/`pwd` forms such as
+  // `dbPass`, `userPass`, and `dbPwd` are caught by the word-boundary rule
+  // below, which normalization would otherwise erase into `dbpass`.
   "secretaccesskey",
   "awssecretaccesskey",
   "storageaccountkey",
@@ -290,7 +292,11 @@ function redactUrlUserinfo(value: string): string {
 export function isSensitiveKey(key: string): boolean {
   const normalized = normalizeKey(key);
 
-  return SENSITIVE_EXACT_KEYS.has(normalized) || SENSITIVE_KEY_SUFFIX_PATTERN.test(normalized);
+  return (
+    SENSITIVE_EXACT_KEYS.has(normalized) ||
+    SENSITIVE_KEY_SUFFIX_PATTERN.test(normalized) ||
+    endsWithPasswordNoun(key, 0)
+  );
 }
 
 /**
@@ -490,11 +496,51 @@ function isWhitespace(char: string | undefined): boolean {
 }
 
 /**
+ * `pass` and `pwd` name a credential only when they occupy a whole word.
+ * Normalization erases the boundary that tells `dbPass` from `bypass`
+ * (`dbpass` vs `bypass`), so the normalized suffix rule cannot separate them.
+ * This reads the raw key instead and splits it at separators and camelCase
+ * turns; the bare `pass`/`pwd` keys are already in the exact set, and ordinary
+ * words such as `bypass`, `compass`, and `bypassReason` keep their final
+ * segment intact. A glued all-lowercase key such as `dbpass` has no boundary
+ * to read and stays visible.
+ */
+function endsWithPasswordNoun(value: string, start: number): boolean {
+  let segmentStart = start;
+
+  for (let index = start + 1; index < value.length; index += 1) {
+    if (isKeySeparator(value[index - 1])) {
+      segmentStart = index;
+      continue;
+    }
+
+    const previous = value[index - 1];
+    const current = value[index];
+
+    if (previous !== undefined && current !== undefined) {
+      if (previous >= "a" && previous <= "z" && current >= "A" && current <= "Z") {
+        segmentStart = index;
+      }
+    }
+  }
+
+  if (segmentStart === start) {
+    return false;
+  }
+
+  const noun = value.slice(segmentStart).toLowerCase();
+
+  return noun === "pass" || noun === "pwd";
+}
+
+/**
  * `[A-Za-z0-9._-]*(?:secret|token|...)` anchored at the end of the value. The
  * prefix is unbounded on purpose: a credential behind a long identifier is
  * still a credential, and bounding it would silently narrow redaction.
  */
 function endsWithSensitiveKeySuffix(value: string, start: number): boolean {
+  if (endsWithPasswordNoun(value, start)) return true;
+
   const remainderLength = value.length - start;
 
   return SENSITIVE_KEY_SUFFIXES.some((suffix) => {

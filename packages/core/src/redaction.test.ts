@@ -138,6 +138,15 @@ describe("redaction", () => {
     "X-Signature",
     "X-Amz-Signature",
     "x-amz-signature",
+    // Prefixed password nouns: the noun has to form its own word, so the
+    // camelCase and separator boundaries below are what make these sensitive.
+    "dbPass",
+    "userPass",
+    "dbPwd",
+    "DB_PASS",
+    "db.pass",
+    "db-pwd",
+    "x-pass",
   ])("treats %s as a sensitive key", (key) => {
     expect(isSensitiveKey(key)).toBe(true);
   });
@@ -158,8 +167,12 @@ describe("redaction", () => {
     "Content-Type",
     "payloadHash",
     "hash",
-    "dbPass",
     "bypass",
+    "compass",
+    "bypassReason",
+    // A glued all-lowercase key has no word boundary to read; the rule stays
+    // conservative rather than guessing at English compounds.
+    "dbpass",
     "dsnName",
     "signatureAlgorithm",
   ])("keeps %s visible", (key) => {
@@ -202,6 +215,32 @@ describe("redaction", () => {
       aws_access_key_id: "AKIAEXAMPLE",
       account_key_id: "key-1",
     });
+  });
+
+  it("redacts password-abbreviation keys while keeping ordinary words visible", () => {
+    expect(
+      redactJsonValue({
+        dbPass: "db-secret",
+        userPass: "user-secret",
+        dbPwd: "db-password",
+        bypass: true,
+        compass: "north",
+      }),
+    ).toEqual({
+      dbPass: REDACTED_VALUE,
+      userPass: REDACTED_VALUE,
+      dbPwd: REDACTED_VALUE,
+      bypass: true,
+      compass: "north",
+    });
+  });
+
+  it("redacts password-abbreviation assignments in free text", () => {
+    // An unquoted value runs to the next comma or line break, so the fixture
+    // separates the trailing fields the way a real DSN would.
+    expect(redactText("dsn user=ops dbPass=hunter2, host=db1, bypass=true")).toBe(
+      `dsn user=ops dbPass=${REDACTED_VALUE}, host=db1, bypass=true`,
+    );
   });
 
   it("redacts cloud-prefixed credential assignments inside JSON text", () => {
