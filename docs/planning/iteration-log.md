@@ -2,6 +2,78 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 155 轮）
+
+- 时间：2026-10-28 17:37 CST 起。
+- 基线：`origin/main` @ `a7ebbbc`（第 154 轮 planning 提交，CI success）；启动时 1 个 open PR
+  （#631，docs-site routine 留下的绿 PR）。
+- 类型：**增量交付轮（未跑全量审计）**。距第 154 轮结束仅 5 分钟（`a7ebbbc` 于 17:32 提交），
+  按记忆「相邻两轮间隔很近时不要重跑车道」未 spawn `requirements` / `ui-triage` / 新车道：
+  仓库代码零变化，重跑只会复述上一轮结论。直接按上一轮日志的「下一轮优先项」从 backlog 选题。
+- 全量审计时间戳：沿用 **2026-10-28 17:05 CST**（第 154 轮）。
+- 车道轮转位置：不变；下一非必跑车道仍为 **`architecture`**，之后 `release-infra`。
+- `ui-triage`：未运行（相邻轮次，无新 UI 合并）。
+- `last_ui_review_at` 保持 **2026-10-28 15:05 CST**。
+- 工作树：`agent-iteration` 已是注册工作树（先 `git worktree list` 确认），只用于并发锁与基线；
+  实现、验证、PR 在会话工作树 `jovial-goodall-1ad000`。
+
+### 本轮交付
+
+- **PR #633 `feat(console): filter events by the delivery state to one destination`**
+  （REQ-304，AUTO_SHIP，rebase 合入 `f9c40b9`）
+  - 事件列表新增 `destinationOutcome`（Events 专用，需配合 `destinationId`）。此前「目标 + 投递结果」
+    是两个独立 `EXISTS`，于是「Pager 失败、邮件成功」的告警也会命中「Pager + 失败」——正是渠道故障
+    时要排除的假阳性（`history.repository.ts` 的 `eventDeliveryOutcomePredicate` 与
+    `eventDestinationPredicate` 互不相关）。
+  - 状态折进同一个相关 `EXISTS`（`destination_id = ? AND state = ?`），列表与 `total` 共用谓词；
+    同一目标的重试记录只计一次事件。`missing` 覆盖仍由 `destinationMatch` 表达，故本维度没有 `none`；
+    手工拼出 `missing` + 状态时读作「没有到该目标的该状态投递」（同一子查询内取反）。
+  - URL：未知值回退为空；无目标、或与 `missing` 同时出现时被清洗；变化会把两个列表重置到第一页。
+  - UI：仅在 Events 作用域、已选目标且未选 `missing` 时渲染「目标投递结果」；chip 可移除，重置会清空。
+    中英文案齐备，中文用 SRE 术语（「该目标投递失败」等）。
+  - 文档：`docs/prd/operations-destination-outcome.md`。
+  - 验证：`vp check` 0 error（仅既有 warning）、`vp run -r test` 222 文件 / 1272 tests、
+    `vp run -r build`；PR 的 CI 与 E2E 双绿。
+  - **浏览器实测**（隔离实例：`TOCSIN_DATABASE_PATH=/tmp/tocsin-destination-outcome.db
+    vp -C apps/console dev --port 6190 --host localhost`；未复用 6180，因其凭据与库不属于本轮）：
+    setup 建号 → 建通用 Webhook 目标 → Events 选目标后同时出现「目标投递」与「目标投递结果」；
+    选「该目标投递失败」后 URL 变为 `?destinationId=…&destinationOutcome=failed`，chip 显示
+    「目标投递结果 该目标投递失败」，筛选面板 2 列网格无截断。截图存
+    `/tmp/tocsin-destination-outcome-zh.png`（未入库），验证后已停掉实例并删除临时库。
+- **推进遗留 PR #631**（docs-site routine 的绿 PR，`CLEAN`/`MERGEABLE`、双 check 通过、session 已结束）：
+  按 rebase 合入 `2aaa1c3`。它属文档站车道，本轮只是避免长期 open PR 阻塞发布门槛，不重复其内容。
+
+### 各车道发现
+
+本轮未跑只读车道。相邻轮次且 `a7ebbbc..origin/main` 的代码部分只有本轮的提交，重复运行只会复述
+第 154 轮的结论（当时的发现与 `file:line` 已完整记录在下一节）。
+
+### 发布
+
+- 三位发布专家（发布经理 / 阻断审计 / 运维回滚）独立核对后一致 **GO**：
+  自 `v0.1.0-beta.123`（`b760aac`）以来唯一用户可见变更为 #633（`f9c40b9`），另有 3 个文档/规划提交；
+  `origin/main` @ `f9c40b9` 的 CI 与 E2E 均 success；检查时无 open PR；
+  `v0.1.0-beta.123..origin/main` 在 `apps/console/src/infra/sqlite/migrate` 零 diff；
+  无 env / 启动参数 / 配置格式 / 依赖变化；`blocked-autonomous` 三项（REL-13 LICENSE、REL-16/23
+  required checks）均非代码阻塞。
+- 版本 `0.1.0-beta.124`，PR #634 合入 `b58836f`（该提交 main CI 与 E2E 均 success，作为 tag 目标）。
+- tag `v0.1.0-beta.124` 指向 `b58836f`，GitHub Release（prerelease）已创建且 body 非空（1388 字符）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.124`（linux/amd64 + linux/arm64）：
+  index digest `sha256:29bba00c5cc4192211d36ca435c098b9150aa3c658e1a4f881affe63a26e4267`，
+  amd64 `sha256:7e0186f283b97f1356bb5ebb73e83c5c858e651cc6ce0ab037116f2fbbe93320`，
+  arm64 `sha256:52d3ebfecad926f5d86f3cbc70e957594b042e8bb11a2f835b91dd30723fa033`。
+- 回滚镜像 `0.1.0-beta.123`；`schema_migrations` 台账不变（`0001`–`0005`），回滚无需降级数据库。
+- 构建在 tag 的干净检出（临时 worktree `/tmp/tocsin-build-beta124`）里进行，未使用主 checkout；
+  未推 `latest`。
+
+### 下一轮优先项
+
+1. **`architecture` 车道**（轮转位）+ 复跑 `release-infra`。
+2. Q-292 / Q-293 / Q-294（MEDIUM）：批量重放聚合与早退分支、`publicBaseUrl` 装配的回归测试。
+3. UI-93 / UI-94 / UI-91（LOW）：chip 可访问名称、390px 投递行截断、补投空态主按钮。
+4. REQ-305（27）：事件搜索覆盖外部消息引用（`provider_ref_value`）。
+5. REQ-312（27，优雅停机）触及部署语义，交 EXPERT_PANEL。
+
 ## 2026-10-28（第 154 轮）
 
 - 时间：2026-10-28 16:33 CST 起，约 17:45 CST 结束。
