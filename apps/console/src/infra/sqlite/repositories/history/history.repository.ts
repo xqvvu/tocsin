@@ -140,6 +140,14 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("events.received_at", ">=", query.since);
     }
 
+    if (query.fingerprint) {
+      // Equality, not LIKE: the recurrence view asks for one alert identity,
+      // and a substring match here would mix in every unrelated alert whose
+      // text happens to contain the same characters. `idx_events_fingerprint_received_at`
+      // covers the lookup and the list's `received_at` ordering.
+      builder = builder.where("events.fingerprint", "=", query.fingerprint);
+    }
+
     if (query.q) {
       builder = builder.where(eventSearchPredicate(query.q));
     }
@@ -617,6 +625,14 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.since) {
       builder = builder.where("events.received_at", ">=", query.since);
+    }
+
+    if (query.fingerprint) {
+      // Equality, not LIKE: the recurrence view asks for one alert identity,
+      // and a substring match here would mix in every unrelated alert whose
+      // text happens to contain the same characters. `idx_events_fingerprint_received_at`
+      // covers the lookup and the list's `received_at` ordering.
+      builder = builder.where("events.fingerprint", "=", query.fingerprint);
     }
 
     if (query.q) {

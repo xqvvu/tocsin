@@ -23,6 +23,7 @@ import {
   EventDestinationMatchSchema,
   OperationTimeRangeSchema,
   OPERATION_SEARCH_MAX_LENGTH,
+  EVENT_FINGERPRINT_FILTER_MAX_LENGTH,
 } from "@tocsin/core";
 
 export const DashboardOperationSearchSchema = z.object({
@@ -90,6 +91,11 @@ export const DashboardOperationSearchSchema = z.object({
     .catch("")
     .optional(),
   q: z.string().catch("").optional(),
+  // Events-only: one exact fingerprint. The search box matches fingerprints as
+  // substrings among many fields, so a pasted fingerprint there also returns
+  // unrelated rows; this dimension keeps "every occurrence of this alert"
+  // exact. Empty means "any fingerprint".
+  fingerprint: z.string().catch("").optional(),
   eventPage: z.coerce.number().int().min(1).catch(1).optional(),
   deliveryPage: z.coerce.number().int().min(1).catch(1).optional(),
 });
@@ -111,6 +117,7 @@ export interface DashboardOperationSearch {
   timeField?: DeliveryTimeField | "";
   rangeAnchor?: string;
   q?: string;
+  fingerprint?: string;
   eventPage?: number;
   deliveryPage?: number;
 }
@@ -132,6 +139,7 @@ export type OperationFilterData = {
   timeField?: DeliveryTimeField;
   rangeAnchor?: string;
   q?: string;
+  fingerprint?: string;
   eventPage?: number;
   deliveryPage?: number;
 };
@@ -161,6 +169,7 @@ export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
   timeField: "",
   rangeAnchor: "",
   q: "",
+  fingerprint: "",
 };
 
 /**
@@ -186,6 +195,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     // Counting the default made a hand-edited `timeField=created` claim the
     // list was filtered when every row was still eligible.
     search.timeField === "updated" ||
+    search.fingerprint ||
     search.q?.trim(),
   );
 }
@@ -208,6 +218,10 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
       // Spacing is preserved: the search input is backed by this value, and
       // trimming on every keystroke used to eat the space in "Disk usage".
       q: search.q?.slice(0, OPERATION_SEARCH_MAX_LENGTH),
+      // Fingerprints are pasted exact identifiers, not typed incrementally, so
+      // trimming and clipping them in the URL is safe. The contract rejects
+      // longer input, and a padded value would never equal a stored fingerprint.
+      fingerprint: search.fingerprint?.trim().slice(0, EVENT_FINGERPRINT_FILTER_MAX_LENGTH),
       // A match only means something next to the destination it describes, and
       // `delivered` is the server default. Keeping either would make the URL
       // claim a filter that changes nothing.
@@ -259,6 +273,7 @@ export function mergeOperationSearch(
     "timeField",
     "rangeAnchor",
     "q",
+    "fingerprint",
   ];
   const filterChanged = filterKeys.some((key) => Object.hasOwn(next, key));
   // A new window without a new anchor would inherit the old instant. Anchors

@@ -50,6 +50,9 @@ export class OperationsService {
         destinationId: input.destinationId,
         destinationMatch: input.destinationMatch,
         q: input.q,
+        // Exact identity rather than a search: the recurrence view links here
+        // so "see every occurrence" cannot drift into substring matches.
+        fingerprint: input.fingerprint,
         since,
         page: input.eventPage ?? 1,
       }),

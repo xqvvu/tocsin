@@ -56,6 +56,8 @@ export interface ListOperationsInput {
   /** Delivery-only: compare the window against enqueue or last-activity time. */
   timeField?: DeliveryTimeField;
   q?: string;
+  /** Events-only: one exact fingerprint, so "every occurrence" stays exact. */
+  fingerprint?: string;
   eventPage?: number;
   deliveryPage?: number;
 }

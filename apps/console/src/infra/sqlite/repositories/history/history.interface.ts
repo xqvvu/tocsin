@@ -93,6 +93,12 @@ export interface EventListQuery {
    * somewhere in the row.
    */
   q?: string;
+  /**
+   * One exact `events.fingerprint`. Unlike `q`, no other field is considered,
+   * so "every occurrence of this alert" cannot pick up rows whose text merely
+   * contains the same characters.
+   */
+  fingerprint?: string;
   page?: number;
   limit?: number;
 }

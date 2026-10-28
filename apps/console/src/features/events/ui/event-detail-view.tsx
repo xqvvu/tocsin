@@ -89,7 +89,7 @@ export function EventDetailView({ detail }: { detail: EventDetailData }) {
             content, so opening an event does not fetch its recurrence context
             unless the operator asks for it.
           */}
-          <EventFingerprintContextTab eventId={detail.event.id} />
+          <EventFingerprintContextTab eventId={detail.event.id} sourceId={detail.event.sourceId} />
         </TabsContent>
 
         <TabsContent value="raw" className="min-h-0 overflow-hidden p-3">

@@ -749,6 +749,18 @@ function activeFilterChips(
     });
   }
 
+  if (scope === "events" && search.fingerprint) {
+    // The exact fingerprint is the only identity the events list can filter on
+    // without also matching other fields, so it gets its own chip instead of
+    // being folded into the search term.
+    chips.push({
+      key: "fingerprint",
+      label: t("operations.filters.fingerprint"),
+      valueLabel: search.fingerprint,
+      clear: { fingerprint: "" },
+    });
+  }
+
   if (scope === "events" && search.deliveryOutcome) {
     chips.push({
       key: "deliveryOutcome",
