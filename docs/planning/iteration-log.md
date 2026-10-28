@@ -2,6 +2,82 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 156 轮）
+
+- 时间：2026-10-28 18:26 CST 起。
+- 基线：`origin/main` @ `2a5ffa8`（第 155 轮 planning 提交，CI success）；启动时无 open PR
+  （docs-site 的 #638 已合入 `19d3d74`）。
+- 类型：**增量交付轮（未跑全量审计）**。距第 155 轮结束仅 9 分钟，`2a5ffa8` 之后代码零变化，
+  按记忆「相邻两轮间隔很近时不要重跑车道」未 spawn `ui-triage` 与新审计车道：
+  `last_ui_review_at` 为 15:05（< 48 小时），且自那以后没有新的 UI 合并，`ui-triage` 决策记为
+  `defer`（相邻轮次，无新 UI 证据，重跑只会复述上一轮结论）。
+- `requirements`：以**窄 brief**（只读 `post-mvp-planning.md` 与 `mvp-rc-checklist.md`，10 分钟硬
+  边界、最多 2 条候选）运行一次，返回 2 条新候选，均未在本轮实现（见下）。
+- 全量审计时间戳：沿用 **2026-10-28 17:05 CST**（第 154 轮）。
+- 车道轮转位置：不变；下一非必跑车道仍为 **`architecture`**，之后 `release-infra`。
+- `last_ui_review_at` 保持 **2026-10-28 15:05 CST**。
+- 工作树：`agent-iteration` 已是注册工作树（先 `git worktree list` 确认），只用于并发锁与基线；
+  实现、验证、PR 在会话工作树 `exciting-kapitsa-9c2670`。
+
+### 本轮交付
+
+- **PR #639 `feat(console): find events by the delivery's external message reference`**
+  （REQ-305，AUTO_SHIP，rebase 合入 `c6acd76`）
+  - Events 列表搜索新增「外部消息引用」维度：`eventTermPredicate` 的关联投递 `EXISTS` 内增加
+    `provider_ref_value LIKE ? ESCAPE '\'`，与既有 Delivery ID 分支并列
+    （`history.repository.ts:859-868`）。列表与 `total` 共用谓词，`EXISTS` 形状不变，同一事件的
+    多条匹配投递不会重复计数。
+  - 修复的真实摩擦：投递详情/列表已能按飞书 `om_...` 等引用检索，事件列表却不能；值班拿到
+    引用后必须先去 Deliveries 反查再跳回事件。此前 `docs/prd/delivery-provider-reference-search.md`
+    明确把「事件列表不搜外部引用」列为非目标，本轮有意推翻并在新 PRD 中记录理由。
+  - `provider_ref_type` 机器值仍不参与搜索；`%`、`_`、`\` 转义沿用原实现。
+  - 文案：Events 占位符补「外部消息引用」/「external reference」；文档站事件页同步字段表与示例。
+  - 新增 mini-PRD `docs/prd/event-provider-reference-search.md`。
+  - 验证：`vp check` 0 error（27 条既有 warning）、`vp run -r test` 4/4（console 222 文件 /
+    1273 tests，净增 1）、`vp run -r build` 2/2；PR 的 CI 与 E2E 双绿。
+  - **未做浏览器实测**：改动是服务端搜索谓词，仓储测试直接覆盖命中与排除；placeholder 由
+    组件测试覆盖。已在 PR 正文与发布说明中如实注明。
+- **code-review（low）**：1 条文档一致性发现（旧 PRD 的非目标与新行为矛盾），已在本轮 PR 内修复
+  （新 PRD 补「有意推翻」说明）。
+
+### requirements（窄 brief 新候选）
+
+1. **REQ-314 投递历史身份快照**（25 分，候选）：投递详情从 live 表 join 名称
+   （`history.repository.ts:221-228`），而 `deliveries` 只存 id 且 FK 为 cascade
+   （`migrate/schema.ts:116-119`），硬删除目标/路由会连带删掉投递、改名则历史显示新名
+   （`docs/release/mvp-rc-checklist.md:180` 已记录）。范围：入队时写目标名/kind 与路由名快照列，
+   历史 DTO 优先快照、旧行回落 live join。触及 schema（向前加法迁移），未实现。
+2. **REQ-315 持久化投递失败分类 errorKind**（24 分，候选）：adapter 已产生
+   `DestinationErrorKind`（`packages/destinations/src/types.ts:55-65,83`），执行层只写日志
+   （`delivery-execution.ts:352`），`delivery_attempts` 无对应列
+   （`migrate/schema.ts:140-151`）。范围：向前迁移新增 nullable `error_kind`、落库、DTO 与筛选。
+   触及 schema 与查询 API，未实现。
+
+### 发布
+
+- 三位发布专家（发布经理 / 阻断审计 / 运维回滚）独立核对后一致 **GO**：
+  自 `v0.1.0-beta.124`（`b58836f`）以来唯一用户可见变更为 #639（`c6acd76`），其余 5 个提交均为
+  文档/规划；`origin/main` @ `6cef82a` 的 CI 与 E2E 均 success；检查时无 open PR；
+  `v0.1.0-beta.124..origin/main` 在 `apps/console/src/infra/sqlite/migrate`、`pnpm-lock.yaml`、
+  Dockerfile / compose / entrypoint 均零 diff；`blocked-autonomous` 三项（REL-13 LICENSE、
+  REL-16/23 required checks）均非代码阻塞。
+- 版本 `0.1.0-beta.125`，PR #640 合入 `b4fba3a`（该提交 main CI 与 E2E 均 success，作为 tag 目标）。
+- tag `v0.1.0-beta.125`（annotated）指向 `b4fba3a`；GitHub Release（prerelease）已创建且 body 非空。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.125`（linux/amd64 + linux/arm64）：
+  index digest `sha256:850fa88b1c6873c80658de66fe24bff7aea7dba103b5a63544c8388c725fa78a`，
+  amd64 `sha256:146252b08461cfb89de423bdee1c0084f82e5b369acc1c92958a956b057e3d7e`，
+  arm64 `sha256:a9ae47ee6c068f4673f0d5ecf39ccd303701502e90816c45eebc24b0f7019c5a`。
+- 回滚镜像 `0.1.0-beta.124`；`schema_migrations` 台账不变（`0001`–`0005`），回滚无需降级数据库。
+- 构建在 tag 的干净检出 `/tmp/tocsin-build-beta125` 中进行，未使用主 checkout；未推 `latest`。
+
+### 下一轮优先项
+
+1. **`architecture` 车道**（轮转位）+ 复跑 `release-infra`。
+2. Q-293 / Q-292 / Q-294（MEDIUM，26/25/25）：重放早退分支、批量聚合、`publicBaseUrl` 装配。
+3. REQ-314（25）/ REQ-315（24）：均触及 schema，需 EXPERT_PANEL 三人裁决后选择其一。
+4. DOC-105（24）：文档站补目标 × 投递状态筛选说明。
+5. UI-91 / UI-93 / UI-94（LOW）。
+
 ## 2026-10-28（第 155 轮）
 
 - 时间：2026-10-28 17:37 CST 起。
