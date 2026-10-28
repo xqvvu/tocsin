@@ -1295,6 +1295,8 @@
   "sources.table.pagination.range": "共 {total} 个告警源",
   "sources.table.routes.blocked": "目标全停用",
   "sources.table.routes.blockedTitle": "{count} 条已启用的路由规则会匹配这个告警源，但关联的通知目标全部停用，投递会排队但不会发送：{names}",
+  "sources.table.routes.conditionalSuffix": " · {count} 条带条件",
+  "sources.table.routes.conditionalTitle": "其中 {count} 条还需事件满足级别、状态、标签或文本条件才会投递：{names}",
   "sources.table.routes.deliverable": "{count} 条可投递",
   "sources.table.routes.deliverableTitle": "{count} 条已启用的路由规则会匹配这个告警源（{direct} 条指定告警源，{catchAll} 条兜底），且至少有一个启用的通知目标：{names}",
   "sources.table.routes.none": "未匹配路由",

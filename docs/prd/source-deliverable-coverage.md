@@ -1,7 +1,8 @@
 # 告警源可投递覆盖率
 
 - 状态：已实现（第 31 轮自主迭代）
-- 关联：REQ-129、REQ-7、NEW-A
+- 关联：REQ-129、REQ-7、NEW-A；REQ-318 在此口径上追加「带条件」后缀，
+  见 `docs/prd/source-coverage-condition-awareness.md`
 - 范围：`apps/console` 前端派生与列表展示，无迁移、无契约变更
 
 ## 问题

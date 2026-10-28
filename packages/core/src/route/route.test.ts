@@ -8,6 +8,7 @@ import {
   evaluateRouteMatch,
   findMatchingRoutes,
   routeMatchesEvent,
+  routeRuleHasEventConditions,
 } from "#core/route/route";
 
 const event: NormalizedEvent = {
@@ -285,5 +286,26 @@ describe("route match evidence", () => {
     ]);
 
     expect(legacy[0]?.checks[0]?.condition).toBeUndefined();
+  });
+});
+
+describe("routeRuleHasEventConditions", () => {
+  it("treats a source-only rule as unconditional coverage", () => {
+    // Covering the source is what the Sources coverage column already counts,
+    // so `sourceIds` must not make the rule read as conditional.
+    expect(routeRuleHasEventConditions({ sourceIds: ["source-grafana"] })).toBe(false);
+    expect(routeRuleHasEventConditions({})).toBe(false);
+  });
+
+  it("counts every event-level condition dimension", () => {
+    expect(routeRuleHasEventConditions({ severities: ["critical"] })).toBe(true);
+    expect(routeRuleHasEventConditions({ statuses: ["firing"] })).toBe(true);
+    expect(
+      routeRuleHasEventConditions({
+        labels: [{ key: "environment", operator: "equals", value: "prod" }],
+      }),
+    ).toBe(true);
+    expect(routeRuleHasEventConditions({ titleContains: ["checkout"] })).toBe(true);
+    expect(routeRuleHasEventConditions({ messageContains: ["timeout"] })).toBe(true);
   });
 });
