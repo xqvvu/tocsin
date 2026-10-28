@@ -2,6 +2,100 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 148 轮）
+
+- 时间：2026-10-28 09:53 CST 起，约 11:20 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `5e19adc`（main CI 与 E2E 双绿；无 open PR）。
+- 类型：**需求切片 + 小修复 + 三车道审计**（非 full-audit）。距上次全量审计 **2026-10-28 08:20 CST** 约 1.5 小时，
+  按第 1.5 步不展开全量审计；backlog 有 ≥27 分候选，按第 147 轮「下一轮优先项」直接续做 REQ-177。
+- 全量审计时间戳：不变，仍为 **2026-10-28 08:20 CST**（下一次全量审计最早 2026-10-28 14:20 CST）。
+- 车道轮转位置：本轮跑 `requirements`（未返回，超时）+ `ui-triage` + `release-infra`；
+  下一非必跑车道为 **`docs-drift`**（随后 `security-exposure`）。
+- `ui-triage` 决策：**`defer`**（不做深度 UI 评审）。理由：距 `last_ui_review_at` 1h41m（<48h）、
+  自那次评审以来 UI 路径合并 1 个（<3）、未解决 `UI-*` 47 条属第 135 轮已判定的饱和存量且自评审后
+  新增 0 条、最近 UI 合并均有浏览器验证记录；代码抽查 6 个代表文件未见新的不一致。
+- `last_ui_review_at`：不变，**2026-10-28 08:20 CST**（48 小时到期点 2026-10-30 08:20）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `cranky-neumann-cdac65`（写入隔离）。
+
+### 本轮交付
+
+- **PR #595 `feat(console): show raw payload retention window end`**（REQ-177，AUTO_SHIP，rebase 合入 `505cbfc`）
+  - 新增环境中立纯函数 `apps/console/src/lib/raw-payload-retention.ts`：`receivedAt + rawPayloadRetentionDays`
+    得到窗口结束时间与 `expired`；与仓储 `received_at < cutoff` 口径一致（截止时刻即视为到期）。
+  - 新增 `features/operations/ui/raw-payload-retention-notice.tsx`：未到期显示「原始载荷保留至 <时间> ·
+    保留策略 N 天，到期后由后台清理任务惰性删除」；已过期但未清理显示「已超过窗口、等待后台清理」并提示先导出证据；
+    复用 `appSettingsQueryOptions()`（`useQuery` + `retry: false`），读取中/失败不渲染、不阻塞页签；
+    时间戳复用 `OperationTimestamp`（客户端 + 配置时区）。
+  - 接入事件「原始调试」（`event-raw-tab.tsx`）与投递「载荷」（`delivery-payload-tab.tsx`）页签；
+    投递页签在已清理时保留原说明、不再承诺窗口。
+  - 中文迷你 PRD `docs/prd/raw-payload-retention-window.md`；中英文案 `common.rawPayloadRetention.*`。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 217 文件 / 1228 tests、
+    `vp run -r build` 通过；PR 的 `check · test · build` 与 `playwright · chromium` 双绿。
+- **PR #596 `docs(release): align pnpm version references with packageManager`**（AUTO_FIX，rebase 合入 `ace761a`）
+  - release-infra 车道发现：`package.json` 已是 `pnpm@12.15.0`，而 `README.md:90`、`AGENTS.md:544`、
+    `docs/release/mvp-rc-checklist.md:158` 仍写 `12.14.0`，且 checklist 已把「版本对齐」勾为完成。
+    仅文档改动，`vp fmt --check` 通过。
+
+### 各车道发现
+
+**requirements（未返回）**：本轮 subagent 运行超过 70 分钟未返回，按单轮时间预算中止，未产出新候选。
+下一轮重新运行该车道（backlog 仍有 6 条 28 分候选，不阻塞）。
+
+**release-infra（返回，含一项前提校正）**
+- **前提校正**：E2E workflow 已存在且绿——`.github/workflows/e2e.yml:3-7,17-22`（push main + PR）、
+  `:47-54`（Chromium + Playwright）、`:56-62`（失败上传 `test-results`）；本车道既往「没有 E2E workflow」
+  的说法已过期。E2E 单次约 85s、不需要任何 secrets（`apps/console/playwright.config.ts:29-45` 自起临时 SQLite）。
+- 真实缺口（多为既有候选，本轮只复核不新建）：E2E spec 未覆盖历史过滤与失败 retry（= REL-4 / REL-22，
+  `apps/console/e2e/alert-flow.spec.ts:105-175`，`docs/release/mvp-rc-checklist.md:131-135` 未勾）；
+  provider fixture 目录缺失（= REL-2 / REL-24）；provider 贡献指南缺失（= REL-46 / REQ-118）；
+  E2E 跑 `vp dev` 而非生产产物（= REL-8）；多版本 payload 覆盖需真实上游样本（新，需 EXPERT_PANEL，未落 id）。
+- **新增候选 REL-72**：`Dockerfile:4` 的构建镜像 `vite-plus:1.1.0`（未按 digest 固定）执行
+  `vp env install` / `vp install` / `vp -C apps/console build`（`Dockerfile:23-32`），而 workspace catalog
+  是 `vite-plus 1.3.0`（`pnpm-workspace.yaml:9`），发布镜像可能与本地/CI 不同源。
+- 其余核对：`mvp-rc-checklist` 关于「无 release workflow / 无 changelog / 无镜像自动化」的断言属实；
+  `BETTER_AUTH_SECRET_FILE`、docker-smoke 断言、dedupe 行号均对得上；main 无 branch protection（= REL-16/23）。
+
+**ui-triage**：`defer`（见上）。
+
+### EXPERT_PANEL：发布评估
+
+三位专家一致：**发布**。
+
+- **发布经理**：`v0.1.0-beta.116..origin/main` 只有 1 条用户可见变化（PR #595 载荷保留窗口提示）；
+  #591 只改 `apps/docs`，#594/#596 为计划/发布文档；建议预发布递增 `0.1.0-beta.117`，不建议攒批。
+- **阻断审计**：目标 commit `ace761a` 的 main CI 与 E2E 双绿；open PR 为 0；区间 `migrate/`、
+  `package.json`、`pnpm-lock.yaml` 零 diff；`blocked-autonomous` 仅 REL-13/16/23（仓库治理类）；
+  `v0.1.0-beta.116` 的 Release 存在且 body 非空。
+- **运维/回滚**：Dockerfile/compose/env/端口/卷/启动命令零 diff；`apps/console/src/infra/sqlite/**` 零 diff；
+  回滚只需换回 `0.1.0-beta.116` 镜像，无需数据库操作；健康检查 `curl -fsS http://127.0.0.1:3000/api/ready`。
+
+### 发布
+
+- 版本：**0.1.0-beta.117**，PR #597 `chore(release): v0.1.0-beta.117` rebase 合入 → `2cd06dd`
+  （main CI 与 E2E 双绿后打 tag）。
+- tag `v0.1.0-beta.117` → `2cd06dd`；Release `Tocsin v0.1.0-beta.117`（prerelease，body 非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.117`
+  （linux/amd64 + linux/arm64，`--provenance=false --sbom=false`，index digest `sha256:c6081374c352…`，
+  amd64 `sha256:a7ba7c1d915a…`，arm64 `sha256:5d104a2249d2…`）。
+- 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.116`；无需数据库操作。
+- Obsidian 同步：`obsidian-vault` skill 未在本会话暴露，按 AGENTS.md 允许的 fallback 跳过同步。
+
+### 下一轮优先项
+
+1. **requirements 车道重跑**（本轮超时未返回），重点仍是 post-MVP 方向 4「搜索、过滤与历史排障」。
+2. **Q-290（24，AUTO_FIX）** 抑制表单把已删除的源/目标渲染为可取消条目（第 147 轮顺延）。
+3. EXPERT_PANEL：**Q-288 / Q-289**（配置删除语义、投递状态机栅栏）、**REQ-299**（迁移前快照）、
+   **REL-72**（Docker 构建期 Vite+ 与 workspace 不同源）。
+4. 车道轮转：`requirements` + `ui-triage` 必跑；第三名额 **`docs-drift`**。
+
+### 工作树回收
+
+- 回收 1 个已结束 session worktree：`magical-chebyshev-7b372a`（第 147 轮，`git status` 干净，18M）。
+  同目录 `docs-site-20261028-095420`（675M）属仍在运行的 docs-site session，跳过。
+- 删除本 session 工作树的 `node_modules`、`apps/console/.output` 构建产物。
+- 按 PR 状态删除已合并本地分支。
+
 ## 2026-10-28（第 147 轮）
 
 - 时间：2026-10-28 08:26 CST 起，约 09:05 CST 结束。
