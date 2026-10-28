@@ -1,3 +1,8 @@
+---
+title: 快速开始
+description: 从 Docker Compose 启动本地 Tocsin 实例，走通告警源、路由、通知目标到投递的首次验收。
+---
+
 # 快速开始
 
 本指南从 Docker Compose 启动一个本地实例，并走完「告警源 → Event → Route → Destination → Delivery」。部署和备份细节见[生产部署](/operations/deploy-docker)与[备份恢复](/operations/backup-restore)。
