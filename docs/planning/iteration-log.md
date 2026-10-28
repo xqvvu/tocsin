@@ -2,6 +2,98 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 165 轮）
+
+- 时间：2026-10-29 06:42 CST 起。
+- 基线：`origin/main` @ `e5ab23b0`；启动时无 open PR，main CI 绿。
+- 类型：**UI 评审切片**（非 full-audit）。最近全量审计为第 160 轮 **2026-10-29 02:05 CST**
+  （距今 4h37m < 6 小时）；backlog 有 ≥27 分候选（REQ-329 28、REQ-333 27、REQ-335 27...），
+  按第 1.5 步继续交付，不重跑全量审计。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`architecture`（轮转位；第 161 轮后首次）。
+  `ui-triage` 判 `review_now`，追加 `ui-review`（取代 requirements 成为主交付；全部 3+1 串行分批）。
+- 下一非必跑车道建议 **`docs-drift`**。
+
+### ui-triage 决策与理由
+
+- 决策：**`review_now`**。三条硬信号未达阈值（距上次 2h52m < 48h；UI 路径合并 2 个 < 3；
+  61 条存量属饱和队列），但第 164 轮自列的 defer 触发条件「新增 UI 面无浏览器验证」已成立：
+  `79e0170a`（三入口统一重试确认 + 加急提示）只有 CI/测试记录，无人工浏览器验证；
+  `fd3ebdb2` 唯一未实测的第四种判定 `destination_disabled` 经代码快检确认存在重复徽标。
+  继续 defer 会让「不定时」退化为「永不触发」，故判 review_now。
+- `last_ui_review_at` = **2026-10-29 07:00 CST**（本轮真实浏览器评审完成）。
+- 下次触发条件：UI 路径合并累计 ≥ 3，或新增 UI 面无浏览器验证，或满 2026-10-31 07:00 CST。
+
+### 专家发现
+
+**ui-review（真实浏览器，隔离实例 `localhost:6197` + `/tmp/tocsin-ui-review.sqlite`，1440/390）**
+
+- UI-110（已交付）`destination_disabled` 判定与启用态徽标并排重复：
+  「目标已停用」+「已停用」，390 下两枚占 132px 挤压目标名
+  （`source-rehearsal-result.tsx:175-181`、`zh-Hans.json:1290,1294`）。
+- UI-111（24）重试确认层加急预览读取失败时静默消失：只有 `preview.data` 分支，
+  无 `isError`（`delivery-retry-confirm.tsx:43,56-58`），失败与「不会打电话」视觉一致。
+- UI-112（22）加急提示异步到达导致弹层 164→301px（+137px），确认按钮下移约 68px。
+- UI-113（24）预演渲染失败时仍显示「会送达」：verdict 先于渲染计算
+  （`source-rehearsal.service.ts:218-222,255-265`），与红色错误并存。
+- UI-114（20）390px 下路由判定表格横向裁切，`overflow-x-auto` 无可见滚动提示（`source-rehearsal-result.tsx:132`）。
+- UI-99 补证据：IconTooltip 包 AlertDialogTrigger，取消关闭后 tooltip 残留在粘性表头上方
+  （`delivery-retry-action.tsx:34-48`、`icon-tooltip.tsx:14`）。
+- 已核实无问题：暂停提示条位于结果最上方、静默块居中、判定徽标在卡片头部，桌面与移动层级一致。
+
+**requirements（5 条新候选，已写入 backlog）**
+
+- REQ-337（28）重试确认补充「当前静默规则会再次压住这次投递」预检
+  （`operations.service.ts:119-141`、`delivery-retry-confirm.tsx:43-58`、`delivery.repository.ts:270-305`）。
+- REQ-338（28）停用/删除通知目标前披露受影响告警源
+  （`destination-actions.tsx:142-168`、`route-reference-impact.ts:5-10`、`source-route-coverage.ts:38-67`）。
+- REQ-339（27）预演解析失败时提示其他解析器可接受该载荷
+  （`source-rehearsal.service.ts:79-91,138-153`、`providers/registry.ts:50-63,73-86`）。
+- REQ-340（27）事件路由匹配表按最接近命中排序（`event-detail-route-matches-table.tsx:63-90`）。
+- REQ-341（26）投递列表回执列补 HTTP 状态与时间（`operations.ts:296-339`、`history.repository.ts:772-800`）。
+
+**architecture（6 条新发现，已写入 backlog）**
+
+- ARCH-76（MEDIUM）加急能力写死飞书，绕过 `UrgencyRegistry`：4 个 console 文件直接 import
+  adapter（`oncall.service.ts:5,86,147`、`oncall-execution.ts:10,75`、`operations.service.ts:11,156`、
+  `event-replay.service.ts:24,378`），通用层被飞书常量污染。EXPERT_PANEL。
+- ARCH-77（MEDIUM）feature 双向依赖环：82 文件 122 条跨 feature 边（sources↔routes、
+  destinations↔suppressions、events↔suppressions、configuration↔operations）。EXPERT_PANEL。
+- ARCH-78（LOW）`i18n.getRequestLocale` 在 entrypoint 内读设置与协商 locale（`i18n/router.ts:13-26`）。AUTO_FIX。
+- ARCH-79（LOW）投递仓储抛 `InvalidDeliveryStateError`/`DeliveryAlreadyAcceptedError`
+  （`delivery.repository.ts:484,491`），与 AGENTS「仓储只抛 RecordNotFound」有文字缺口。EXPERT_PANEL。
+- ARCH-80（LOW）`server/runtime/store.ts` 无人使用（仅自身测试引用）。AUTO_FIX。
+- ARCH-81（LOW）marker 规则缺「同构受保护访问」例外（`use-mobile.ts:7,13`、`locale-cookie.ts:29-47`）。AUTO_FIX（文档）。
+- ARCH-69..75 复核全部仍成立，状态未变化；模块放置、import 边界、service 纯度、容器、entrypoint
+  薄度、`components/common` 均 clean。
+
+### 本轮交付
+
+- PR `#684` `fix(console): state a disabled rehearsal target once`（UI-110）
+  - `verdict === "destination_disabled"` 时不再渲染第二枚状态徽标；其余判定保留（如 suppressed + 目标停用）。
+  - 回归：停用判定只出现一次、静默判定仍显示目标状态（`source-rehearsal-dialog.test.tsx`，+2 例）。
+  - 验证：`vp check` 0 error（34 warning）；`vp -C apps/console test run` 227 文件 / 1320 测试；
+    `vp run -r test`、`vp run -r build` 通过；浏览器 1440 `Target disabled` ×1 / `Disabled` ×0，
+    390 弹层无横向溢出，无 pageerror；截图 `/tmp/tocsin-verify-165-rehearsal-1440.png`、`...-390.png`。
+- 注意：首次 `vp run -r test` 报 5 个 unhandled errors（222 文件全过但 console task exit 1），
+  单独重跑 `vp -C apps/console test run` 全绿（227/1320）且错误不复现，判定为并发跑 4 个包时的偶发资源问题，
+  未改任何无关测试。
+
+### 工作树与隔离
+
+- 写入隔离生效：`agent-iteration` 仅用于锁与只读审计，实现在本会话工作树
+  `adoring-euler-cc1bae`（分支 `agent/ui-rehearsal-disabled-verdict`）。
+- 本会话工作树 `node_modules` 曾处于半删状态（`@vitejs/plugin-react` 缺失），按既有经验删除全部
+  workspace `node_modules` 后 `vp install` 恢复。
+
+### 下一轮优先项
+
+1. UI-111 + UI-112：重试确认层的失败态与高度跳变（同一组件、同批修，REQ-337 的前置）。
+2. REQ-329（28）重新启用通知目标前披露排队中的加急呼叫（未做）。
+3. REQ-337（28）重试确认静默预检；REQ-338（28）目标停用披露受影响告警源。
+4. UI-113 预演渲染失败判定；UI-114 390 表格裁切。
+5. ARCH-78/80/81 三条 AUTO_FIX 可小 PR 批量交付。
+6. 下一非必跑车道：**`docs-drift`**。
+
 ## 2026-10-29（第 164 轮）
 
 - 时间：2026-10-29 05:52 CST 起。
