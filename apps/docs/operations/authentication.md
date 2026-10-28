@@ -103,7 +103,7 @@ export SERVER_URL="https://tocsin.example.com"
 
 ### 轮换认证密钥
 
-轮换 `BETTER_AUTH_SECRET` 会让所有 dashboard session 失效，效果接近“让所有人重新登录”，但仍保留账号密码和业务数据。更新 secret store 后必须重启容器；运行中的进程不会重新读取密钥文件。
+轮换 `BETTER_AUTH_SECRET` 会让所有 dashboard session 失效，效果接近“让所有人重新登录”，但仍保留账号密码和业务数据。更新 secret store 后必须重启容器；运行中的进程不会重新读取密钥文件。Compose、Swarm、Kubernetes 与 bind mount 的挂载权限和轮换顺序见[认证密钥文件注入与轮换](/operations/deploy-docker#认证密钥文件注入与轮换)。
 
 ## Webhook 不要复用 dashboard 登录
 
