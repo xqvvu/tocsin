@@ -14,6 +14,7 @@ import { EventJsonBlock } from "#/features/events/ui/event-json-block";
 import { SeverityBadge } from "#/features/events/ui/severity-badge";
 import { RouteMatchCheckBadges } from "#/features/routes/ui/route-match-check-badges";
 import { RouteMatchResultBadge } from "#/features/routes/ui/route-match-result-badge";
+import { SourceRehearsalVerdictBadge } from "#/features/sources/ui/source-rehearsal-verdict-badge";
 import { useTranslations } from "#/i18n/use-i18n";
 
 /**
@@ -30,6 +31,22 @@ export function SourceRehearsalResultView({ result }: { result: SourceRehearsalR
           at its read boundary; say so, because the payload in the editor still
           carries the operator's original values. */}
       <p className="text-muted-foreground text-[11px]">{t("sources.rehearsal.redactedNotice")}</p>
+
+      {/* The render below always shows what the target *would* carry. The pause
+          banner explains why nothing would actually leave while it is on. */}
+      {result.delivery.paused ? (
+        <Alert>
+          <AlertTitle>{t("sources.rehearsal.pausedTitle")}</AlertTitle>
+          <AlertDescription>
+            <span className="block">{t("sources.rehearsal.pausedDescription")}</span>
+            {result.delivery.pausedAt ? (
+              <span className="block font-mono text-[11px]">
+                {t("sources.rehearsal.pausedSince", { time: result.delivery.pausedAt })}
+              </span>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {result.source.enabled ? null : (
         <Alert>
@@ -155,12 +172,32 @@ export function SourceRehearsalResultView({ result }: { result: SourceRehearsalR
                   <span className="truncate text-xs font-medium" title={render.destinationName}>
                     {render.destinationName}
                   </span>
-                  <Badge variant={render.enabled ? "secondary" : "outline"}>
-                    {render.enabled
-                      ? t("sources.rehearsal.targetEnabled")
-                      : t("sources.rehearsal.targetDisabled")}
-                  </Badge>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <SourceRehearsalVerdictBadge verdict={render.verdict} />
+                    <Badge variant={render.enabled ? "secondary" : "outline"}>
+                      {render.enabled
+                        ? t("sources.rehearsal.targetEnabled")
+                        : t("sources.rehearsal.targetDisabled")}
+                    </Badge>
+                  </div>
                 </div>
+                {render.suppression ? (
+                  <div className="border-border flex flex-col gap-1.5 border-b px-3 py-2">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                      <span className="text-muted-foreground">
+                        {t("sources.rehearsal.suppressionRule")}
+                      </span>
+                      <span className="font-medium">{render.suppression.name}</span>
+                      <Badge variant="outline">
+                        {t(`suppressions.kind.${render.suppression.kind}`)}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground text-[11px] break-words">
+                      {render.suppression.reason}
+                    </p>
+                    <RouteMatchCheckBadges checks={render.suppression.checks} />
+                  </div>
+                ) : null}
                 {render.ok ? (
                   <div className="max-h-64 overflow-auto">
                     <EventJsonBlock

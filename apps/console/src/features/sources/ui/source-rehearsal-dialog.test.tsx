@@ -48,6 +48,7 @@ const result: SourceRehearsalResult = {
       ],
     },
   ],
+  delivery: { paused: false, pausedAt: null },
   renders: [
     {
       destinationId: "destination-1",
@@ -56,6 +57,35 @@ const result: SourceRehearsalResult = {
       ok: true,
       renderedPayload: '{"text":"Checkout unavailable"}',
       errorMessage: null,
+      verdict: "deliver",
+      suppression: null,
+    },
+  ],
+};
+
+const silencedResult: SourceRehearsalResult = {
+  ...result,
+  delivery: { paused: true, pausedAt: "2026-10-28T11:00:00.000Z" },
+  renders: [
+    {
+      ...result.renders[0]!,
+      verdict: "suppressed",
+      suppression: {
+        id: "suppression-1",
+        name: "Checkout maintenance",
+        kind: "maintenance_window",
+        reason: "Maintenance window 「Checkout maintenance」 matched severity in [critical]",
+        checks: [
+          {
+            field: "severity",
+            matched: true,
+            detail: "Expected one of critical, received critical",
+            condition: "compare",
+            expected: ["critical"],
+            actual: "critical",
+          },
+        ],
+      },
     },
   ],
 };
@@ -134,6 +164,27 @@ describe("source rehearsal dialog", () => {
     expect(screen.getByText("Route evaluation (1/1 matched)")).toBeTruthy();
     expect(screen.getByText("Ops webhook")).toBeTruthy();
     expect(screen.getByText('{"text":"Checkout unavailable"}')).toBeTruthy();
+  });
+
+  it("discloses the real delivery verdict next to the render", async () => {
+    const onRehearse = vi.fn(async () => silencedResult);
+    renderDialog(onRehearse);
+    openDialog();
+
+    fireEvent.change(screen.getByLabelText("Webhook body"), {
+      target: { value: '{"title":"Checkout unavailable"}' },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Run rehearsal" }));
+
+    // A target can render perfectly and still never be sent; the verdict badge
+    // and the silence rule are what stop the operator reading "preview" as
+    // "delivered".
+    expect(await screen.findByText("Would be silenced")).toBeTruthy();
+    expect(screen.getByText("Silence rule")).toBeTruthy();
+    expect(screen.getAllByText(/Checkout maintenance/).length).toBeGreaterThan(0);
+    expect(screen.getByText("Maintenance window")).toBeTruthy();
+    expect(screen.getByText("Delivery is paused globally")).toBeTruthy();
+    expect(screen.getByText(/Paused since 2026-10-28T11:00:00.000Z/)).toBeTruthy();
   });
 
   it("surfaces a request failure without dropping the dialog", async () => {
