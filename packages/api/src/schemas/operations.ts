@@ -351,10 +351,11 @@ export const ListOperationsInputSchema = z
     timeField: DeliveryTimeFieldSchema.optional(),
     q: z.string().trim().min(1).max(OPERATION_SEARCH_MAX_LENGTH).optional(),
     /**
-     * Events-only: one exact `events.fingerprint`. The search box matches the
+     * Both lists: one exact `events.fingerprint`. The search box matches the
      * fingerprint as one substring among many fields, so it also returns rows
      * whose text merely contains the same characters; this dimension answers
-     * "every occurrence of exactly this alert" and nothing else.
+     * "every occurrence of exactly this alert" on the events list and "every
+     * notification it ever sent" on the delivery list.
      */
     fingerprint: z.string().trim().min(1).max(EVENT_FINGERPRINT_FILTER_MAX_LENGTH).optional(),
     eventPage: z.number().int().min(1).default(1),

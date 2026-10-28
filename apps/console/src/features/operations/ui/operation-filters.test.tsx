@@ -220,9 +220,11 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByTitle("Clear Delivery state")).toBeNull();
   });
 
-  it("names the fingerprint chip on the events page", () => {
-    // The recurrence tab links here so an operator can leave its five-row cap
-    // without retyping the fingerprint into the substring search box.
+  it("names the fingerprint chip on both pages", () => {
+    // The recurrence tab links to both lists so an operator can leave its
+    // five-row cap without retyping the fingerprint into the substring search
+    // box. Both destinations carry the same exact-fingerprint rule, so both
+    // must show the chip the reader needs in order to clear it.
     renderFilters("events", { fingerprint: "checkout:unavailable" }, "toolbar");
 
     expect(screen.getByTitle("Clear Fingerprint")).toBeTruthy();
@@ -230,7 +232,9 @@ describe("operation filters by page scope", () => {
 
     cleanup();
     renderFilters("deliveries", { fingerprint: "checkout:unavailable" }, "toolbar");
-    expect(screen.queryByTitle("Clear Fingerprint")).toBeNull();
+
+    expect(screen.getByTitle("Clear Fingerprint")).toBeTruthy();
+    expect(screen.getByText("checkout:unavailable")).toBeTruthy();
   });
 
   it("names the destination match chip on the events page", () => {

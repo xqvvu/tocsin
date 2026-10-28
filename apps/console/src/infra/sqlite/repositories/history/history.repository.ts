@@ -416,6 +416,13 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("deliveries.event_id", "=", query.eventId);
     }
 
+    if (query.fingerprint) {
+      // Equality against the joined event, not a substring over the row: the
+      // recurrence view asks for every notification one alert ever sent, and a
+      // search term would also match other alerts that quote the same text.
+      builder = builder.where("events.fingerprint", "=", query.fingerprint);
+    }
+
     if (query.suppressionId) {
       builder = builder.where("deliveries.suppression_id", "=", query.suppressionId);
     }
@@ -703,6 +710,12 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.eventId) {
       builder = builder.where("deliveries.event_id", "=", query.eventId);
+    }
+
+    if (query.fingerprint) {
+      // Mirrors `listDeliveries`: the count has to answer the same predicate
+      // the page does, or the footer claims rows the filter never returns.
+      builder = builder.where("events.fingerprint", "=", query.fingerprint);
     }
 
     if (query.suppressionId) {

@@ -90,13 +90,28 @@ export function EventFingerprintContextTab({
           pulls in unrelated alerts. The list link carries the same-source and
           exact-fingerprint rule the recurrence query already uses.
         */}
-        <Link
-          to="/events"
-          search={{ sourceId, fingerprint: data.fingerprint }}
-          className="ml-auto text-xs underline-offset-2 hover:underline"
-        >
-          {t("events.detail.fingerprint.viewAll", { count: data.earlierCount + 1 })}
-        </Link>
+        <div className="ml-auto flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <Link
+            to="/events"
+            search={{ sourceId, fingerprint: data.fingerprint }}
+            className="text-xs underline-offset-2 hover:underline"
+          >
+            {t("events.detail.fingerprint.viewAll", { count: data.earlierCount + 1 })}
+          </Link>
+          {/*
+            The recurrence list answers "how often did this fire"; the delivery
+            list answers "which notifications did it send". Both carry the same
+            source and exact fingerprint, so the two views describe one alert
+            instead of two fuzzy matches.
+          */}
+          <Link
+            to="/deliveries"
+            search={{ sourceId, fingerprint: data.fingerprint }}
+            className="text-xs underline-offset-2 hover:underline"
+          >
+            {t("events.detail.fingerprint.viewDeliveries")}
+          </Link>
+        </div>
       </section>
 
       <EventFingerprintChanges fieldChanges={data.fieldChanges} labelChanges={data.labelChanges} />
