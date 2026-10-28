@@ -37,6 +37,7 @@ import { useOperationDateFormatter } from "#/features/operations/model/operation
 import {
   clearedOperationSearch,
   type DashboardOperationSearch,
+  wholeSecondInstant,
 } from "#/features/operations/model/operation-search";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
@@ -603,7 +604,7 @@ function OperationFiltersPanel({
               // Opening a window fixes its lower bound; otherwise every page
               // request resolves "last hour" against a later instant and rows
               // slide out from under the reader.
-              rangeAnchor: value ? currentRangeAnchor() : "",
+              rangeAnchor: value ? wholeSecondInstant() : "",
             })
           }
         >
@@ -873,17 +874,22 @@ function activeFilterChips(
     });
   }
 
-  return chips;
-}
+  if (search.rangeUntil) {
+    // Not a filter the operator picked: the list froze its upper edge when they
+    // started paging. It stays a chip anyway, because a stalled list during an
+    // incident looks broken and the chip is the only thing that explains why —
+    // and its clear button is how the reader goes back to a live list.
+    chips.push({
+      key: "rangeUntil",
+      label: t("operations.filters.pagingSnapshot"),
+      valueLabel: t("operations.filters.pagingSnapshotValue", {
+        time: formatDateTimeCompact(search.rangeUntil),
+      }),
+      clear: { rangeUntil: "" },
+    });
+  }
 
-/**
- * The instant a newly opened window is pinned to.
- *
- * Whole seconds keep the URL readable; sub-second precision cannot change which
- * rows fall inside any of the offered windows.
- */
-function currentRangeAnchor(): string {
-  return new Date(Math.floor(Date.now() / 1000) * 1000).toISOString();
+  return chips;
 }
 
 function OperationSearchInput({

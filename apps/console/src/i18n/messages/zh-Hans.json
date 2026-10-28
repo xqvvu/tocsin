@@ -944,6 +944,8 @@
   "operations.filters.timeRangeOptions.24h": "最近 24 小时",
   "operations.filters.timeRangeOptions.7d": "最近 7 天",
   "operations.filters.timeRangeAnchored": "{range} · 自 {time}",
+  "operations.filters.pagingSnapshot": "结果集已锚定",
+  "operations.filters.pagingSnapshotValue": "翻页起点 {time}",
   "operations.filters.search": "搜索",
   "operations.filters.searchPlaceholder": "标题、消息、指纹、幂等键、标签、上游元数据或 ID（空格分隔多词需全部命中）",
   "operations.filters.searchPlaceholderDeliveries": "标题、消息、指纹、幂等键、标签、上游元数据、ID、任一次尝试的错误、通知目标、路由或外部消息引用（空格分隔多词需全部命中）",

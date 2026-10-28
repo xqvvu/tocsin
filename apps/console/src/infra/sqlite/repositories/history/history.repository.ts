@@ -140,6 +140,12 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("events.received_at", ">=", query.since);
     }
 
+    if (query.until) {
+      // Exclusive: rows received at exactly the captured instant were not part
+      // of the first page, so they belong outside the frozen walk.
+      builder = builder.where("events.received_at", "<", query.until);
+    }
+
     if (query.fingerprint) {
       // Equality, not LIKE: the recurrence view asks for one alert identity,
       // and a substring match here would mix in every unrelated alert whose
@@ -430,6 +436,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where(timeColumn, ">=", query.since);
     }
 
+    if (query.until) {
+      builder = builder.where(timeColumn, "<", query.until);
+    }
+
     if (query.q) {
       builder = builder.where(deliverySearchPredicate(query.q));
     }
@@ -627,6 +637,12 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("events.received_at", ">=", query.since);
     }
 
+    if (query.until) {
+      // Exclusive: rows received at exactly the captured instant were not part
+      // of the first page, so they belong outside the frozen walk.
+      builder = builder.where("events.received_at", "<", query.until);
+    }
+
     if (query.fingerprint) {
       // Equality, not LIKE: the recurrence view asks for one alert identity,
       // and a substring match here would mix in every unrelated alert whose
@@ -707,6 +723,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.since) {
       builder = builder.where(timeColumn, ">=", query.since);
+    }
+
+    if (query.until) {
+      builder = builder.where(timeColumn, "<", query.until);
     }
 
     if (query.q) {

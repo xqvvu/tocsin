@@ -54,6 +54,7 @@ export class OperationsService {
         // so "see every occurrence" cannot drift into substring matches.
         fingerprint: input.fingerprint,
         since,
+        until: input.rangeUntil,
         page: input.eventPage ?? 1,
       }),
       this.store.history.listDeliveries({
@@ -71,6 +72,7 @@ export class OperationsService {
         timeField: input.timeField,
         q: input.q,
         since,
+        until: input.rangeUntil,
         page: input.deliveryPage ?? 1,
       }),
     ]);

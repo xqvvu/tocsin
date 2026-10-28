@@ -90,6 +90,14 @@ export const DashboardOperationSearchSchema = z.object({
     .refine((value) => value === "" || !Number.isNaN(Date.parse(value)))
     .catch("")
     .optional(),
+  // The instant the reader started paging. Offset pagination has no cursor, so
+  // without an upper bound an alert that arrives between page requests pushes
+  // every later row down and the next page repeats a row already read.
+  rangeUntil: z
+    .string()
+    .refine((value) => value === "" || !Number.isNaN(Date.parse(value)))
+    .catch("")
+    .optional(),
   q: z.string().catch("").optional(),
   // Events-only: one exact fingerprint. The search box matches fingerprints as
   // substrings among many fields, so a pasted fingerprint there also returns
@@ -116,6 +124,7 @@ export interface DashboardOperationSearch {
   range?: OperationTimeRange | "";
   timeField?: DeliveryTimeField | "";
   rangeAnchor?: string;
+  rangeUntil?: string;
   q?: string;
   fingerprint?: string;
   eventPage?: number;
@@ -138,6 +147,7 @@ export type OperationFilterData = {
   range?: OperationTimeRange;
   timeField?: DeliveryTimeField;
   rangeAnchor?: string;
+  rangeUntil?: string;
   q?: string;
   fingerprint?: string;
   eventPage?: number;
@@ -168,6 +178,7 @@ export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
   range: "",
   timeField: "",
   rangeAnchor: "",
+  rangeUntil: "",
   q: "",
   fingerprint: "",
 };
@@ -233,6 +244,11 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
       // for; keeping it after the window is cleared would attach a stale instant
       // to the next window the operator picks.
       rangeAnchor: search.range ? search.rangeAnchor : undefined,
+      // A captured paging bound outlives the window it was taken in only as
+      // long as the reader keeps walking pages; `mergeOperationSearch` drops it
+      // on the next filter change. It is kept independently of `range` because
+      // walking unfiltered history needs the same protection.
+      rangeUntil: search.rangeUntil,
       // 0 is the schema's "any" sentinel, so it stays out of the URL the same
       // way an empty string filter does.
       minAttempts: search.minAttempts && search.minAttempts > 0 ? search.minAttempts : undefined,
@@ -255,6 +271,7 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
 export function mergeOperationSearch(
   search: DashboardOperationSearch,
   next: Partial<DashboardOperationSearch>,
+  now: Date = new Date(),
 ): DashboardOperationSearch {
   const filterKeys: Array<keyof DashboardOperationSearch> = [
     "sourceId",
@@ -280,6 +297,13 @@ export function mergeOperationSearch(
   // are only valid for the window they were captured with, so an explicit
   // window change drops the stale one.
   const anchorStale = Object.hasOwn(next, "range") && !Object.hasOwn(next, "rangeAnchor");
+  // Turning to page 2 is the moment the reader starts walking a result set, so
+  // that is when the upper bound is captured. Page 1 stays live: an operator
+  // watching an incident still sees alerts arrive until they page away, and the
+  // "frozen at" chip is what tells them the walk stopped moving.
+  const PAGES = ["eventPage", "deliveryPage"] as const;
+  const pagesTo = PAGES.some((key) => (next[key] ?? 0) > 1);
+  const snapshotStarted = !filterChanged && !search.rangeUntil && pagesTo;
 
   return pruneSearch({
     ...search,
@@ -287,6 +311,19 @@ export function mergeOperationSearch(
     ...(anchorStale ? { rangeAnchor: "" } : {}),
     // A filter change starts a fresh result set, so both lists go back to their
     // first page — otherwise the reader lands mid-way through a different set.
-    ...(filterChanged ? { eventPage: 1, deliveryPage: 1 } : {}),
+    // The paging bound belongs to the old set and would hide rows that match
+    // the new one, so it is released together with the pages.
+    ...(filterChanged ? { eventPage: 1, deliveryPage: 1, rangeUntil: "" } : {}),
+    ...(snapshotStarted ? { rangeUntil: wholeSecondInstant(now) } : {}),
   });
+}
+
+/**
+ * The instant a window or a paging walk is pinned to.
+ *
+ * Whole seconds keep the URL readable; sub-second precision cannot change which
+ * rows fall inside any of the offered windows, nor which rows a page holds.
+ */
+export function wholeSecondInstant(now: Date = new Date()): string {
+  return new Date(Math.floor(now.getTime() / 1000) * 1000).toISOString();
 }
