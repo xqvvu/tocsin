@@ -15,8 +15,11 @@ describe("log safety", () => {
       properties: {
         token: "source-secret",
         sourceId: "source-1",
+        dbPwd: "db-secret",
+        bypass: true,
         nested: {
           password: "password-secret",
+          userPass: "user-secret",
           status: "accepted",
         },
       },
@@ -28,8 +31,11 @@ describe("log safety", () => {
     expect(redacted.properties).toEqual({
       token: "[REDACTED]",
       sourceId: "source-1",
+      dbPwd: "[REDACTED]",
+      bypass: true,
       nested: {
         password: "[REDACTED]",
+        userPass: "[REDACTED]",
         status: "accepted",
       },
     });
