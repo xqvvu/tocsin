@@ -105,6 +105,16 @@
 - 回滚镜像 `0.1.0-beta.125`；`schema_migrations` 台账不变（`0001`–`0005`），回滚无需降级数据库。
 - 构建在 tag 的干净检出 `/tmp/tocsin-build-beta126` 中进行，未使用主 checkout；未推 `latest`。
 
+### 收尾与同步
+
+- 工作树：已回收第 156 轮会话工作树 `exciting-kapitsa-9c2670`（`.claude/worktrees` 817M → 784M）；
+  删除已合并分支 `agent/ui-chip-accessible-names`、`agent/release-beta-126`、`agent/round-156-planning`；
+  `agent-iteration`、并发锁与镜像构建用的 `/tmp/tocsin-build-beta126` 已移除；本会话工作树的
+  `node_modules` / `.output` / `.vite` / `coverage` 在轮末删除。
+- Obsidian 同步：已按规范同步到真实 vault
+  （`~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Vane/`）：重写 `Vane Iteration Log`、
+  `Vane Iteration Backlog` 与 `Vane Release Checklist`。
+
 ### 下一轮优先项
 
 1. **`release-infra` 车道**（轮转位）+ ARCH-67/68 纯重构小 PR。
