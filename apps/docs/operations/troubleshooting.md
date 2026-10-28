@@ -1,3 +1,8 @@
+---
+title: 故障排查
+description: 按接收、解析、路由与投递顺序诊断 Tocsin 的 Webhook、Worker、认证与通知问题。
+---
+
 # 故障排查
 
 按「接收 → 解析 → 匹配 → 投递」顺序排查。先核对应用 readiness，再定位具体 Event 或 Delivery；事件页各标签的读取顺序见[事件检索与证据](/guide/events)，日志格式、级别、类别、request id 关联与安全取日志方式见[日志与可观测性](/operations/observability)。外部探针与值班告警的配置见[生产监控与告警基线](/operations/monitoring)。不要把入站接受误认为出站送达。
@@ -20,7 +25,9 @@
 1. 确认请求目标是告警源自己的 `/api/sources/<source-id>/webhook` URL，而不是 dashboard 页面或通用 `/api` 路径。
 2. 检查 HTTP 状态：`401` 通常是缺少或无效告警源 Token；`403` 可能表示告警源已禁用；`404` 表示告警源不存在；`413` 表示请求体超过实例上限；`400` 表示 JSON 或 Provider 解析失败。
 3. Token 可放在 `Authorization: Bearer ...` 或 `X-Tocsin-Source-Token`；也可用该 Source 已配置的共享密钥，通过 `X-Tocsin-Provider-Secret` 认证。当前实现接受任一有效凭据；凭据丢失或轮换影响见[告警源接入与生命周期](/guide/sources)。
-4. 检查告警源选择的 Provider 是否与上游 payload 格式一致。可在告警源配置中使用 payload 测试能力；解析错误要以当前解析器支持的字段结构为准。
+4. 检查告警源选择的 Provider 是否与上游 payload 格式一致。告警源配置页当前没有 payload dry-run 或解析器测试按钮；目标页的“测试”只验证出站通知，不会创建 Event。
+
+要验证入站解析，请从上游使用测试发送能力，或向一个专用的非生产告警源发送唯一标题的代表性 Webhook。确认响应为 `202` 并记录 `eventId`，再打开对应 Event 核对 Provider 规范化字段。测试告警源可以不配置已启用的路由，这样只会留下 Event 与匹配证据，不会触发生产通知；需要验证完整链路时，再使用独立测试目标与路由。响应为 `400` 时，同样用响应中的 `eventId` 打开解析失败 Event，而不是仅凭状态码猜测字段问题。
 
 入站请求会在 Event detail 中以规范化字段和脱敏调试信息展示。避免把 Token、共享密钥或未经脱敏的请求体复制进公开工单和日志。
 
