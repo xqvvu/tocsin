@@ -142,7 +142,7 @@ source/severity/status/destination/route/state 组合过滤、按路由过滤、
 route explain，以及同指纹历史上下文与变更对比（REQ-249，`docs/prd/event-fingerprint-context.md`）
 已落地；fingerprint 聚合视图（REQ-6）、绝对时间窗口（REQ-33）与筛选结果导出（REQ-34）仍待做。
 raw/debug JSON 不纳入搜索以避免凭据回显
-（`apps/console/src/infra/sqlite/repositories/history/search.test.ts:421`），delivery history 已决定
+（`apps/console/src/infra/sqlite/repositories/history/search.test.ts:472`），delivery history 已决定
 不自动清理（`docs/release/history-retention-and-snapshots.md:14`），二者不再作为待实现项。
 
 问题：Events 和 Deliveries 已经可查看，但生产排障需要更强的过滤、时间范围、fingerprint 聚合和历史保留策略。

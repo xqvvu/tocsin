@@ -2,6 +2,115 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 154 轮）
+
+- 时间：2026-10-28 16:33 CST 起，约 17:45 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `53da562`（第 153 轮 planning 提交，CI success），无 open PR。
+- 类型：**全量审计 + 两个交付切片 + 发布**。距上一轮结束仅 7 分钟（第 153 轮 planning 提交 16:26），
+  按记忆「相邻两轮间隔很近时不要重跑车道」未 spawn `requirements` / `ui-triage`；上一轮日志的
+  下一轮优先项第一条是「展开全量审计」（上次 08:20，已 8 小时），因此本轮跑 `docs-drift` +
+  `security-exposure` + `quality` 三条只读车道，并按 backlog 现成候选实现切片。
+- 全量审计时间戳：**2026-10-28 17:05 CST**。
+- 车道轮转位置：本轮已跑 `docs-drift`、`security-exposure`、`quality`；下一非必跑车道为
+  **`architecture`**，之后 `release-infra`。
+- `ui-triage`：未运行（相邻轮次；自 `last_ui_review_at` 以来没有新的 UI 合并；未解决 UI-91/93/94
+  已在 backlog）。`last_ui_review_at` 保持 **2026-10-28 15:05 CST**。
+- 工作树：`agent-iteration` 已在第 153 轮收尾时被删除，本轮只重建了锁目录；实现、验证、PR 在会话
+  工作树 `objective-lehmann-3f16be`。
+
+### 运维注意（下轮必读）
+
+- 当 `agent-iteration` **不是**注册工作树时，`git -C "$WT" ...` 会向上解析到主 checkout
+  `/Users/chuanhu9/devs/tocsin`，`reset --hard` / `checkout` 会作用到用户的主工作树。本轮启动时
+  因此把主 checkout 的 `refs/heads/main` 从 `3331d3a` 移到了 `origin/main` 并短暂切到 tag；
+  已按 `refs/heads/main` reflog 恢复到 `3331d3a`（`git checkout main && git reset --hard 3331d3a`）。
+  恢复后 `git status` 仅剩 `apps/docs/.vitepress/cache` 的未跟踪缓存文件。下次必须先
+  `git worktree list` 确认路径是注册工作树，或直接 `git worktree add "$WT" --detach origin/main`。
+
+### 本轮交付
+
+- **PR #627 `feat(console): confirm delivery retries before re-queuing`**（UI-92，AUTO_SHIP，rebase 合入 `70287d5`）
+  - 行内重试图标改为打开 `AlertDialog`：标题「重新发送这次投递？」，说明写明目标名与 `{attempt} / {max}`，
+    只有确认才调用 `onRetry`；`pending` 时触发器禁用。新增 `features/deliveries/ui/delivery-retry-action.tsx`，
+    `delivery-actions.tsx` 改为复用它，新增中英文案。
+  - 测试：`delivery-retry-action.test.tsx` 4 条（先确认后重试、取消不重试、确认仅调用一次且带投递 id、
+    pending 禁用），并断言说明文案携带目标名与尝试次数。
+  - 验证：`vp check` 0 error、`vp run -r test` 222 文件 / 1263 tests、`vp run -r build`；PR 双绿。
+- **PR #628 `fix(core): redact password-abbreviation keys like dbPass`**（SEC-39，EXPERT_PANEL 3/3，rebase 合入 `a7c0547`）
+  - 新增 `endsWithPasswordNoun`：按 `.` `_` `-` 与 camelCase 转折切分原始键，末段为 `pass`/`pwd` 判敏感；
+    `isSensitiveKey` 与文本级 `endsWithSensitiveKeySuffix` 共用同一判定，覆盖结构化键、`dbPass=...`
+    自由文本、日志属性与配置导出；`bypass`/`compass`/`bypassReason` 与无边界粘连的 `dbpass` 保持可见。
+  - 测试：core 正例 7 条 / 反例 3 条 + 结构化 JSON + 自由文本赋值；`log-safety.test.ts` 增加
+    `dbPwd`/`userPass` 脱敏与 `bypass` 可见断言。
+  - 决策记录：`docs/planning/decisions/secret-redaction-password-keys.md`。
+  - 验证：`vp check` 0 error、`vp run -r test` 全绿、`vp run -r build`；PR 双绿。
+- **PR #629 `chore(release): v0.1.0-beta.123`**（rebase 合入 `22f0d73`）→ tag / GitHub Release / 双平台镜像（见下）。
+
+### 各车道发现
+
+**docs-drift**
+
+- 1 处失效引用：`docs/prd/post-mvp-planning.md:145` 指向 `search.test.ts:421`（反斜杠转义用例），
+  真正断言「raw payload 中凭据形状值不参与搜索」的是 `search.test.ts:472`。已在本轮 docs PR 修正。
+- RC checklist 未勾 gate、post-MVP 方向状态、`xqvvu/vane` 引用均核实无漂移（后者仅为 ACR 镜像坐标）。
+
+**security-exposure**
+
+- HIGH：SEC-39 确认——精确集合只有逐字 `pass`/`pwd`（`packages/core/src/redaction.ts:54-55`），
+  后缀正则不含二者（`:85`），影响 `intake.service.ts:81` 写入（永久）、`log-safety.ts:19,54,84`、
+  `config-portability.ts:319,459,483`；`redaction.test.ts:161-162` 把 `dbPass` 与 `bypass` 一起钉为可见。
+  本轮已修（见上）。
+- LOW **SEC-43**：`destinations.getTemplateDraft` 原样返回 `webhookUrl`/`endpointUrl`
+  （`destination.helpers.ts:136,123`），Slack/Feishu webhook URL 路径本身即发送凭据；回填编辑表单需要它，
+  属有意设计，已入 backlog。
+- 其余清洁：列表/详情 DTO 无 token hash、签名密钥、密码；导入保护标记无缺失；近期两次合并未新增暴露。
+
+**quality**
+
+- MEDIUM **Q-292**：批量重放的电话影响聚合只测「单候选 + 单目标」（`event-replay.service.test.ts:344-405`），
+  `mergedUrgentPaging` 的累加分支退化为直通（`event-replay.service.ts:228-271,412-437`）。
+- MEDIUM **Q-293**：重放服务 `eventId`/`routeId` 未知与 `route.enabled=false` 分支无断言
+  （`event-replay.service.ts:46-48,62-64,100-102,113-126`）。
+- MEDIUM **Q-294**：`publicBaseUrl` 的容器回落装配（`SERVER_URL ?? BETTER_AUTH_URL`）无测试
+  （`container.ts:216,330-332`；`runtime-information.service.test.ts:99-105` 只测投影）。
+- LOW **Q-295**：fingerprint + state 组合用例退化，删除指纹谓词仍可通过
+  （`delivery-list-fingerprint.test.ts:268-275`）。
+- LOW **Q-296**：AA 对比度回归测试只钉根节点 `className`（`replay-urgent-paging-notice.test.tsx:48-59`），
+  内层加底色或降对比度不会失败。
+
+### EXPERT_PANEL：SEC-39
+
+- 三位专家（安全与可靠性 / 产品与运维 / 独立评估者）独立评审，意见一致：采用「原始键分段」规则，
+  不动归一化后的后缀正则；必须同时覆盖文本级路径并更新既有 pin。
+- 决策记录：`docs/planning/decisions/secret-redaction-password-keys.md`。
+- 取舍：`dbpass`/`DBPASS` 这类无边界粘连键保持可见（词形无法与英文复合词区分），已写入注释与测试。
+
+### 发布
+
+- 三位发布专家（发布经理 / 阻断审计 / 运维回滚）逐条核对门槛后一致 **GO**：
+  自 `v0.1.0-beta.122`（`ef0f82f`）以来用户可见变更为 #627（重试确认）与 #628（密码缩写脱敏）；
+  `origin/main` @ `a7c0547` 的 main CI 与 E2E 均 success；检查时无 open PR；`ef0f82f..a7c0547`
+  在 `apps/console/src/infra/sqlite/migrate` 零 diff；`blocked-autonomous` 三项（REL-13 LICENSE、
+  REL-16/23 required checks）均非代码阻塞。
+- 版本 `0.1.0-beta.123`，PR #629 合入 `22f0d73`。该提交的 main CI 运行被随后推送的 docs-site 提交
+  `b760aac` 取消（并发组）；`b760aac`（包含发布提交，CI success）作为 tag 目标。
+- tag `v0.1.0-beta.123` 指向 `b760aac`，GitHub Release（prerelease）已创建且 body 非空。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.123`（linux/amd64 + linux/arm64）：
+  index digest `sha256:b8a7a91c55b4a6870cb05294e779a0834df969ee04bd96153d9d5b2a8884ff27`，
+  amd64 `sha256:1bd67f353a00bc4d9e1866e5ebba1af4766f446dc63be19c7e9b32340ba3d187`，
+  arm64 `sha256:d58882ffbb9e148ab6468a91a1b3706ca6051b756260161f9814f3ccc0e3d5d7`。
+- 回滚镜像 `0.1.0-beta.122`；无迁移、无配置/环境变量/依赖变化。注意 #628 写入侧脱敏不可逆：
+  beta.123 期间入库的 `dbPass`/`userPass`/`dbPwd` 值已为 `[REDACTED]`，回滚无法还原。
+
+### 下一轮优先项
+
+1. **`architecture` 车道**（轮转位）+ 复跑 `release-infra`。
+2. Q-292 / Q-293 / Q-294（MEDIUM）：批量重放聚合与早退分支、`publicBaseUrl` 装配的回归测试。
+3. UI-93 / UI-94 / UI-91（LOW）：chip 可访问名称、390px 投递行截断、补投空态主按钮。
+4. REQ-312（27，优雅停机）触及部署语义，交 EXPERT_PANEL。
+5. SEC-43（LOW）与 REQ-304 / REQ-24（28）按评分择一。
+6. 若 `agent-iteration` 仍非注册工作树，先 `git worktree add` 再建锁（见「运维注意」）。
+
 ## 2026-10-28（第 153 轮）
 
 - 时间：2026-10-28 15:41 CST 起，约 16:45 CST 结束。
