@@ -2,6 +2,63 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 153 轮）
+
+- 时间：2026-10-28 15:41 CST 起，约 16:45 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `76f3145`（第 152 轮的 planning 提交，CI success），无 open PR。
+- 类型：**需求切片 + 小修复 + 发布**（非 full-audit）。距上一轮结束仅 1 分钟、仓库代码自 #616/#619 合入后无新增变化，
+  按记忆「相邻两轮间隔很近时不要重跑车道」未 spawn `requirements` / `ui-triage` / 审计车道，
+  直接按第 152 轮日志的「下一轮优先项」选题。
+- 全量审计时间戳：不变，仍为 **2026-10-28 08:20 CST**。距今已 7.3 小时，但 backlog 有 ≥27 的现成候选，
+  按「有达标候选则继续」执行交付；**下一轮应展开全量审计**。
+- 车道轮转位置：不变；下一非必跑车道仍为 **`docs-drift`**。
+- `ui-triage`：未运行（相邻轮次、无新增 UI 代码变化）。`last_ui_review_at` 保持 **2026-10-28 15:05 CST**。
+- 工作树：`agent-iteration` 仅用于并发锁；实现、验证、PR 在会话工作树 `charming-joliot-64c2b9`。
+
+### 本轮交付
+
+- **PR #621 `feat(console): surface the notification link base URL in settings`**（REQ-313，AUTO_SHIP，rebase 合入 `10a695c`）
+  - `RuntimeInformationOutputSchema` 增加 `publicBaseUrl: z.url().nullable()`；服务通过新增 `links.publicBaseUrl`
+    逐字段投影；容器注入 `env.SERVER_URL ?? env.BETTER_AUTH_URL ?? null`（`container.ts:216` 已有解析值）。
+  - Settings「运行时与生效参数」新增「通知直链基址」事实行；缺失或本机地址（`localhost`、`*.localhost`、
+    `127.0.0.0/8`、`::1`、`::`、`0.0.0.0`）时内联提示后果与修法；新增纯函数
+    `features/configuration/model/public-base-url.ts` 与提示组件 `settings-public-base-url-notice.tsx`。
+  - 新增 `docs/prd/notification-base-url.md`；更正 `apps/docs/operations/configuration.md` 中
+    「运行时面板不显示认证 URL」的旧说法。
+  - 测试：分类器 4 条、面板 3 条、服务投影 1 条；`vp check` 0 error、`vp run -r test` 221 文件 / 1259 tests、build 通过；
+    PR 的 `check · test · build` 与 `playwright · chromium` 双绿。
+- **PR #622 `test(console): pin fingerprint narrowing on both operation lists`**（Q-52，AUTO_FIX，rebase 合入 `3d6e11a`）
+  - 用例改名 `narrows events and deliveries by exact fingerprint`；为前缀更长的指纹事件也建一条投递，
+    断言投递分页同样只返回 2 条、`eventId` 恰为两个精确匹配事件，使测试重新证明它声称的行为。
+  - 验证：`vp check` 0 error、219 文件 / 1251 tests、build 通过；PR 双绿。
+- **PR #623 `chore(release): v0.1.0-beta.122`**（rebase 合入 `ef0f82f`）→ tag / GitHub Release / 双平台镜像（见下）。
+
+### 发布
+
+- 三位发布专家（发布经理、阻断审计、运维回滚）按门槛逐条核对后一致 **GO**：
+  自 `v0.1.0-beta.121`（`865d6ce`）以来唯一用户可见变化为 #621；`origin/main` @ `ef0f82f` 的 CI 与 E2E 均 success；
+  检查时无 open PR；`migrate/` 零 diff；`blocked-autonomous` 三项均非代码阻塞（REL-13 LICENSE、REL-16/23 required checks）。
+- 版本 `0.1.0-beta.122`，tag `v0.1.0-beta.122` 指向 `ef0f82f`，
+  GitHub Release（prerelease）已创建且 body 非空。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.122`，
+  linux/amd64 + linux/arm64，index digest `sha256:f27e0255d67617b385a5f0f9b5d464ede69f44b4359cddb182b6e158025c0fc7`，
+  amd64 `sha256:0109d0cc52bf3dd320fe67c1742a90cf51ba2cacbce5a7c408b6f1b55c53f20d`，
+  arm64 `sha256:1ad8d3c22af69f70b90343bf245e27754c9db9a3af373b70416f6659ec204999`。
+- 回滚镜像 `0.1.0-beta.121`；无迁移、无配置/环境变量/依赖变化。
+
+### 未做/缺口
+
+- 本轮未做浏览器验证：本地无可用 Tocsin console dev 端口（仅 5173 被他用），改动为加法事实行，已由 jsdom 面板测试覆盖。
+- 未 spawn 审计车道；下一轮应展开全量审计（距上次 08:20 已超 6 小时）。
+- 发布后主分支又合入 docs-site 提交 `a1cf25f`（属独立 routine），不影响已打 tag 的 `ef0f82f`。
+
+### 下一轮优先项
+
+1. **全量审计**：至少 `docs-drift` + `security-exposure` + `quality`，并复跑 `release-infra`。
+2. **REQ-312**（优雅停机，27，触及部署语义）交 EXPERT_PANEL 三人小组裁决。
+3. **SEC-39**（`dbPass`/`dbPwd` 被判为非敏感）仍未裁决，交 3 人专家小组。
+4. 其余 ≥27 候选（REQ-304/REQ-24 28 分等）按评分与可逆性择一实现。
+
 ## 2026-10-28（第 152 轮）
 
 - 时间：2026-10-28 14:26 CST 起，约 15:40 CST 结束。
