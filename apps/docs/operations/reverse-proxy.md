@@ -140,6 +140,8 @@ server {
 
 nginx 默认会继续转发 `Authorization` 和自定义请求头。若前面还有 WAF、API Gateway 或 CDN，确认它没有删除 `X-Tocsin-Source-Token`、`X-Tocsin-Provider-Secret`、`X-Request-Id` 等 Webhook 与排障请求头。
 
+`X-Forwarded-Proto` 不只用于生成外部链接。生产构建的 h3 会用它把请求 URL 还原为 `https://<host>`；dashboard 的写操作经过 TanStack Start 的 CSRF 中间件，当浏览器没有发送 `Sec-Fetch-Site` 时会退化为比较 `Origin` 与请求 URL 的 origin。缺少该头时，这类请求会得到 `403 Forbidden`，而页面浏览可能仍然正常。
+
 ## 4. 配置 Caddy
 
 Caddy 可以自动申请证书并默认保留原始 Host。下列配置再显式固定 Host 与请求体边界：
@@ -200,7 +202,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
 1. `docker compose port console 3000` 只显示 loopback；直接从外部网络访问 `http://<host>:3000` 失败。
 2. `https://<域名>/api/ready` 返回 `200`，并且没有证书错误或 HTTP/HTTPS 混用。
 3. `/setup` 或 `/login` 的页面、认证 API 和 POST 请求都走同一 HTTPS Origin；浏览器可保存 session cookie，登录后不会立即跳回登录页。
-4. 在浏览器 DevTools 确认 session cookie 带 `Secure`，且没有跨域预检失败或 `Invalid origin`。
+4. 在浏览器 DevTools 确认 session cookie 名为 `__Secure-better-auth.session_token`，带 `Secure`、`HttpOnly` 与 `SameSite=Lax`，且没有跨域预检失败或 `Invalid origin`。用 `http://` 访问时浏览器不会回传该 cookie，表现为登录后又回到登录页。
 5. 用一次超过代理上限的测试请求确认返回 `413`；再检查 Tocsin 日志里是否出现同一请求，以区分代理拦截与应用拦截。
 6. 创建真实告警源后发送测试 Webhook，得到 `202`，并在 Event 详情看到本次请求、匹配结果和预期 Delivery。
 7. 检查响应头 `x-request-id`，再用该 id 在日志中定位请求；不要把 Token、Cookie 或完整载荷贴进工单。
@@ -213,6 +215,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
 | `502 Bad Gateway` | 容器未启动、应用端口不匹配、代理无法访问 loopback 或私有网络 | 先查 `/api/ready` 和 `docker compose ps`，再核对 `proxy_pass` / upstream 地址。 |
 | `/api/ready` 返回应用 `503` | 应用已到达，但 SQLite、迁移或 Worker 未就绪 | 按响应中的固定 `code` 查看[版本升级与回滚](/operations/upgrade-rollback#readiness-判读)。 |
 | 登录后立即回登录页 | 外部 URL、Host、HTTPS 或 Cookie 不一致；浏览器拒绝非安全 cookie | 统一 `BETTER_AUTH_URL` 与实际 Origin，保留 Host，并清除旧域名 cookie 后重试。 |
+| dashboard 写操作返回 `403 Forbidden`，但页面浏览正常 | 代理缺少 `X-Forwarded-Proto: https`，或把 Host 改写为内部地址；CSRF 在缺少 `Sec-Fetch-Site` 时发现 `Origin` 与请求 URL 不一致 | 补齐 `X-Forwarded-Proto $scheme` 并保留原始 Host；用 DevTools 确认实际发送的请求头。 |
 | 多域名中一个域名报 Host/Origin 错误 | 只配置了 `BETTER_AUTH_URL`，没有加入实际 Host 与完整 Origin | 在 Compose override 中补齐 allowed hosts、trusted origins 并重建容器。 |
 | Webhook 返回代理自己的 `413` | `client_max_body_size` 或网关上限低于 `TOCSIN_MAX_WEBHOOK_BYTES` | 对齐代理上限；应用日志中没有请求通常说明请求未到进程。 |
 | Webhook 返回 `404` | 网关删除了路径前缀、只代理了 dashboard 页面，或把 Webhook 当静态内容处理 | 对 `/api/sources/*/webhook` 保留原始路径、POST 方法和 JSON 请求体。 |
