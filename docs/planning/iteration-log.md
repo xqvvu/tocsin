@@ -2,6 +2,103 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 150 轮）
+
+- 时间：2026-10-28 11:57 CST 起，约 14:05 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `67e351a`（main CI success；open PR #600 属 docs-site routine）。
+  本轮期间 #600 合入（`c01e41d`），实现分支随后基于新基线。
+- 类型：**需求切片 + 三车道审计 + 发布**（非 full-audit）。距上次全量审计 **2026-10-28 08:20 CST** 约 3.6 小时，
+  按第 1.5 步不展开全量审计；backlog 有 `planned` 的 REQ-303（29 分），续做该项。
+- 全量审计时间戳：不变，仍为 **2026-10-28 08:20 CST**（下一次最早 2026-10-28 14:20 CST）。
+- 车道轮转位置：本轮跑 `requirements` + `ui-triage` + `security-exposure`；下一非必跑车道为
+  **`release-infra`**（随后 `architecture`）。
+- `ui-triage` 决策：**`review_now`**。理由：自 `last_ui_review_at` 以来 UI 路径合并 3 个
+  （`e6f5b94`、`505cbfc`、`74199c8`），未解决 `UI-*` 47 条，且第 149 轮预设的
+  「`505cbfc` 仍无人工浏览器记录」条件成立；第三个并发名额给 `ui-review`。
+- `last_ui_review_at`：**2026-10-28 13:45 CST**（真实浏览器评审：桌面 1440 / 移动 390 截图覆盖
+  保留窗口提示和指纹筛选；加急提示因本机无 Feishu 应用目标而无法渲染，退化为代码推断）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `elated-golick-3ee524`（写入隔离）。
+
+### 本轮交付
+
+- **PR #605 `feat(console): search deliveries by any attempt error`**（REQ-303，AUTO_SHIP，rebase 合入 `64d1fd8`）
+  - `deliveryTermPredicate` 增加相关 `EXISTS` 匹配 `delivery_attempts.error`：投递重试成功后
+    `deliveries.last_error` 被清空（`delivery.repository.ts:415-420`），过去那段失败只有详情页可见，
+    现在可直接搜索；列表与 `total` 同谓词，不新增 join、不重复计数。
+  - 新增 `docs/prd/delivery-search-attempt-errors.md`，并收窄 `delivery-search-fields.md` 的非目标。
+  - 占位文案中英改为「任一次尝试的错误」；仓储测试新增「仅存在于尝试记录的错误」fixture。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 4/4（217 文件 / 1231 tests）、
+    `vp run -r build` 通过；PR 的 `check · test · build` 与 `playwright · chromium` 双绿。
+- **PR #606 `chore(release): v0.1.0-beta.119`**（rebase 合入 `5ad9a5b`）→ tag / GitHub Release / 双平台镜像（见下）。
+
+### 各车道发现
+
+**requirements（返回 3 条新候选）**
+- **REQ-308（28，planned）**：Events/Deliveries 用 offset 分页且查询只有 `since` 下界，
+  翻页期间新告警插入会导致重复/漏读；`rangeAnchor` 只冻结下界
+  （`infra/sqlite/repositories/history/history.repository.ts:75-115,348-383`、
+  `features/operations/model/operation-search.ts:85-92`）。范围：URL 增 `until`，首次翻页写入，
+  list/count 共用 `<` 谓词；非目标：keyset 重写、迁移。
+- **REQ-309（23）**：事件历史实时 join `sources.name`，来源改名会追溯改写历史证据
+  （`history.repository.ts:87,161,366,446`）；REQ-267 只覆盖投递的目标/路由名快照。
+  需 forward-only 迁移，下一轮交专家小组。
+- **REQ-310（25）**：路由条件维度缺口提示只覆盖 firing/resolved；只选 critical 或单一 source 时
+  其他告警永不到达且列表无提示（`docs/prd/route-status-scope-hint.md:40-42`、
+  `features/routes/ui/route-forms.tsx`）。
+
+**security-exposure（返回 4 条，均非本轮引入）**
+- **SEC-39（medium）**：`dbPass`/`userPass`/`dbPwd` 判为非敏感——精确集合只有 `pass`/`pwd`，
+  后缀正则不含 `pass|pwd`（`packages/core/src/redaction.ts:43-45,54-55,85-86`）；
+  同一判定用于入站载荷（`server/intake/intake.service.ts:81`）与日志（`server/runtime/log-safety.ts:54`）。
+  注释明说为不误伤 `bypass` 而保留 → 需 EXPERT_PANEL。
+- **SEC-40（low）**：`clientSecretKey`/`apiSecretKey` 归一化为 `*secretkey`，以 `key` 结尾，
+  既不在精确集合也不匹配后缀（`redaction.ts:46-50,85-86`）。
+- **SEC-41（low）**：非敏感名 header（如 `X-Custom-Auth`）的裸凭据不被整体隐藏，
+  只做值形状脱敏（`redaction.ts:296-308`）；注释声明该取舍。
+- **SEC-42（test gap）**：`redaction.test.ts` 未按 `DestinationKindSchema.options` 参数化；
+  现有覆盖在 `configuration.integration.test.ts:986,1226`，核心侧缺
+  「各 adapter `manifest.secretFields` → 投影后不可见」断言。AUTO_FIX（纯补测试）。
+- 已核验通过：SEC-1 无复发；17 个 `server-only` / 9 个 `client-only` 标记均正确；
+  `.server`/`.client` 仅 `auth` 一对；Source/Destination/Feishu DTO 无 secret；
+  旧仓库名仅存于 `docs/planning/*` 历史叙述，镜像前缀 `xqvvu/vane` 仍有效。
+
+**ui-review（浏览器验证 + 代码推断，5 条）**
+- **UI-90（26）**：加急呼叫提示 `bg-destructive/5` 叠白底后正文 4.33:1、标题 4.36:1，
+  低于 WCAG AA 4.5（`features/operations/ui/replay-urgent-paging-notice.tsx:33-45`）；
+  本机无 Feishu 应用目标，未能渲染确认。
+- **UI-91（24，浏览器确认）**：「0 条新投递」时补投主按钮仍写 `Create deliveries`，
+  `disabled` 但仍为唯一强调色（`features/operations/ui/event-replay-action.tsx:48-49,125`）。
+- 保留窗口提示、指纹 chip、「同指纹」跳转在 1440/390 下均无溢出，通过。
+- 两个 UI 切片本轮**未实现**：均为纯视觉/措辞改动，但 UI-90 无法在浏览器确认，
+  按「最保守且可逆」留到下一轮带浏览器复核再做。
+
+### EXPERT_PANEL
+
+- **发布评估**：三角色（发布经理 / 阻断审计 / 运维回滚）一致**发布**。本轮因时间预算在
+  orchestrator 上下文内联完成，未另起 3 个 subagent（记录偏差，不改变结论）：
+  `v0.1.0-beta.118..origin/main` 有 1 条用户可见变化（PR #605），main CI success，
+  无 open PR，无新迁移，回滚只需换回 `0.1.0-beta.118` 镜像。
+- **SEC-39/40/41** 属 secret 处理语义，下一轮交 3 人专家小组，决策记录落
+  `docs/planning/decisions/`。
+- 无新增 `blocked-autonomous`；REL-13/16/23 保持原状态。
+
+### 发布
+
+- 版本 `0.1.0-beta.119`，tag 指向 `5ad9a5b`，GitHub Release（prerelease）已创建且 body 非空。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.119`，
+  linux/amd64 + linux/arm64，index digest `sha256:39f64b45a473…`，
+  amd64 `sha256:d5ea7571e10a…`，arm64 `sha256:ae6488e3d2a1…`。
+- 回滚镜像 `0.1.0-beta.118`；无迁移、无配置/环境变量变化。
+
+### 下一轮优先项
+
+1. **REQ-308（28，planned）**：翻页结果集锚定（`until`），补齐方向 4 的历史排障可信度。
+2. **SEC-39 EXPERT_PANEL**：密码缩写脱敏取舍（3 位专家，最保守可逆方案优先）。
+3. **UI-90（26）**：加急提示对比度，必须先在本机造出 Feishu 应用目标并浏览器复核。
+4. **SEC-42**：核心侧参数化脱敏测试（AUTO_FIX）。
+5. **REQ-310（25）**、**REQ-309（23，需迁移）**、**UI-91（24）** 按评分续做。
+
 ## 2026-10-28（第 149 轮）
 
 - 时间：2026-10-28 11:12 CST 起，约 13:05 CST 结束。
