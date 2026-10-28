@@ -2,6 +2,117 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 152 轮）
+
+- 时间：2026-10-28 14:26 CST 起，约 15:40 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `f5f6de8`（main CI success）。open PR #614 属 docs-site routine。
+- 类型：**需求切片 + 三车道 + UI 评审 + 发布**（非 full-audit）。距上次全量审计 **2026-10-28 08:20 CST**
+  已 6.1 小时，但 backlog 有 4 条 ≥27 的 candidate（REQ-304 28、REQ-311/REQ-305/REQ-295 27），
+  按第 1 步「有达标候选则继续」优先续做评分最高且已排期的一项，未展开全量审计。
+- 全量审计时间戳：不变，仍为 **2026-10-28 08:20 CST**。**下一轮应展开全量审计**（6 小时闸门已过）。
+- 车道轮转位置：本轮跑 `requirements` + `ui-triage` + **`architecture`**（轮转位），并按 `ui-triage`
+  的 `review_now` 追加 `ui-review`；`requirements` 与 `architecture` 两条车道超时未返回（见下）。
+  下一非必跑车道为 **`docs-drift`**。
+- `ui-triage` 决策：**`review_now`**。理由：`last_ui_review_at` 13:45 早于 `61d5ca0`（翻页锚定 chip）
+  16 分钟，新 chip 只有 jsdom 断言、无浏览器记录；未解决 `UI-*` 49 条，其中 UI-90/UI-91 正是上次评审
+  新发现且未闭环。信号 (c) 成立，与第 150 轮判 `review_now` 的触发条件同型。
+- `last_ui_review_at`：**2026-10-28 15:05 CST**（真实浏览器评审，1440×900 + 390×844，
+  一次性 SQLite `/tmp/tocsin-ui-review-6199.sqlite`，截图存 `/tmp/tocsin-ui-review/`）。
+- 工作树：`agent-iteration` 用于并发锁、车道只读审计与 UI 评审浏览器实例；实现、验证、PR 在会话工作树
+  `focused-mclaren-0c29eb`（写入隔离）。
+
+### 本轮交付
+
+- **PR #616 `feat(console): filter deliveries by exact fingerprint`**（REQ-311，AUTO_SHIP，rebase 合入 `3030994`）
+  - `DeliveryListQuery.fingerprint`；`listDeliveries` / `countDeliveries` 对已 join 的 `events.fingerprint`
+    加等值谓词，列表与 `total` 同谓词；复用 `idx_events_fingerprint_received_at`，**无迁移**。
+  - `operations.service` 把它一并透传给投递列表；契约注释由 Events-only 改为两列表共用。
+  - 精确指纹 chip 改为两页共用；「同指纹」页签新增「在投递列表查看该指纹的全部投递」链接
+    （同源 + 精确指纹）。
+  - 新增 `docs/prd/delivery-fingerprint-filter.md`；更正 `docs/prd/event-fingerprint-filter.md`
+    中已被取代的非目标与两条验收标准。
+  - 新增 `delivery-list-fingerprint.test.ts`（6 条）：重复出现全部命中（含同一次多目标扇出）、前缀更长
+    与正文引用被排除、`{sourceId, fingerprint}` 收窄、`total` 与分页同谓词、可与 `state` 叠加、
+    不传值不变；对照组证明 `q` 返回更多行。
+  - 验证：`vp check` 0 error、`vp run -r test` 218 文件 / 1248 tests、`vp run -r build`；
+    PR 的 `check · test · build` 与 `playwright · chromium` 双绿。
+- **PR #619 `fix(console): keep the urgent-paging warning above AA contrast`**（UI-90，UI 评审主交付）
+  - 补投确认框的「可能触发 N 通自动电话上报」提示去掉 `bg-destructive/5`：浏览器计算样式实测
+    12px 标题 4.36:1 → 4.74:1、11px 说明 4.34:1 → 4.74:1，均达到 WCAG AA。
+  - 新增 `replay-urgent-paging-notice.test.tsx`（3 条）锁定无底色、零投递不渲染、目标与电话数文案。
+- **PR #617 `docs: document the exact-fingerprint delivery filter`**（rebase 合入 `3d3974a`）
+  - `apps/docs/operations/deliveries.md` 结构化筛选表新增「精确指纹」行；
+    `apps/docs/guide/events.md`「同指纹」小节记录两个下钻入口；backlog 标记 REQ-311 shipped。
+- **PR #618 `chore(release): v0.1.0-beta.121`**（rebase 合入 `865d6ce`）→ tag / GitHub Release / 双平台镜像（见下）。
+
+### 各车道发现
+
+**ui-triage**（`review_now`，理由见上）
+
+**ui-review（真实浏览器，1440×900 + 390×844）**
+- **结论：合入的「结果集已锚定」翻页 chip 在浏览器里站得住**。逐项实测：第 1 页无 chip；第 2 页出现且
+  URL 为 `eventPage=2&rangeUntil=…` / `deliveryPage=2&rangeUntil=…`；显示本地紧凑时间
+  （`10/28 06:42`）而非 ISO；清除后 chip 消失、`rangeUntil` 从 URL 移除、列表恢复实时；
+  390px 下 `scrollWidth == 390`，严重程度 chip 与指纹 chip 同行不重叠、时间范围 chip `y=326` 与锚定
+  chip `y=356` 不相交；分页脚顶 `745` 远低于筛选区底 `359`。
+- **UI-90（MEDIUM，已修）**：紧急上报警告对比度 4.36:1 / 4.34:1，低于 AA 4.5:1。
+  证据 `features/operations/ui/replay-urgent-paging-notice.tsx:31-33`，截图
+  `/tmp/tocsin-ui-review/replay-dialog-existing-1440.png`。根因是 `bg-destructive/5` 这层淡红底
+  （白底上同一组文字为 4.76:1 / 4.74:1）。
+- **UI-92（MEDIUM，S，candidate）**：投递列表的重试是 24px 图标单击即发，无确认
+  （`features/deliveries/ui/delivery-actions.tsx:30-42`、`deliveries-page.tsx:130-137`）。失败行的
+  「重试」与「检查」是紧邻的两枚 ghost `icon-xs` 按钮，误点会把失败投递立刻重新入队并发往生产渠道
+  （含可能的电话上报）。建议包一层 `AlertDialog` 或收进 `DropdownMenu`。违反 AGENTS.md
+  「delivery/test/retry actions 必须显式」。
+- **UI-91（LOW，S，仍未修）**：补投对话框 `previewNew = 0` 时只强调一个禁用主按钮，唯一可用是「取消」
+  （`features/events/ui/event-replay-action.tsx:123-128`）。建议 `!canReplay` 时不渲染
+  `AlertDialogAction`，改为次级链接到 `/deliveries?eventId=…` 或 `/routes`。
+- **UI-93（LOW，S，candidate）**：筛选 chip 的可访问名称丢了值——`aria-label` 为「清除严重程度」，
+  可见文本是「严重程度 严重」（`features/operations/ui/operation-filters.tsx:196-197`）。屏幕阅读器
+  无法区分同类 chip。建议在插值里带上 `valueLabel`。
+- **UI-94（LOW，S，candidate）**：390px 下投递行把目标名与事件标题截到约 6 个字
+  （`features/deliveries/ui/delivery-target-cell.tsx:43-48`）；事件列表同宽会隐藏列，投递表没有同等适配。
+- 无问题的区域：`/suppressions` 空态与新增入口、`/destinations` 密度与健康摘要、两个列表的空态
+  （都有原因说明与「清除全部筛选」）、错误边界（一次 schema 解码失败触发带脱敏摘要的应用错误页）。
+
+**requirements（超时未返回）**：本轮 spawn 后约 40 分钟未返回，按第 3 步时间预算终止，未产出新候选。
+下一轮补跑。
+
+**architecture（超时未返回）**：同上。下一轮轮转仍从 `architecture` 开始。
+
+### EXPERT_PANEL
+
+- 本轮无新增 EXPERT_PANEL 事项：REQ-311 纯加法只读维度、无 schema/迁移、不改投递路由语义；
+  UI-90 为纯样式修正。
+- 既有 **SEC-39**（`dbPass`/`dbPwd` 判为非敏感）仍未裁决，下一轮起 3 人专家小组处理。
+
+### 发布
+
+- 三位发布专家结论按门槛逐条核对后一致**发布**：自 `v0.1.0-beta.120`（`4a5a37e`）以来用户可见变化为
+  #616 与 #619；`origin/main` @ `865d6ce` 的 `check · test · build` 与 `playwright · chromium` 均 success；
+  检查时无 open PR（#614 属 docs-site routine）；`v0.1.0-beta.120..865d6ce` 在 `migrate/` 下无改动；
+  `blocked-autonomous` 项（REL-13 LICENSE、REL-16/23 CI 强制门禁）均属仓库设置/法律决策，不阻断发布。
+- 版本 `0.1.0-beta.121`，PR #618（rebase 合入 `865d6ce`），tag 指向 `865d6ce`，
+  GitHub Release（prerelease）已创建且 body 非空。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.121`，
+  linux/amd64 + linux/arm64，index digest `sha256:850b830b6b09…`，
+  amd64 `sha256:58396fda9df9…`，arm64 `sha256:0f13bb2472db…`。
+- 回滚镜像 `0.1.0-beta.120`；无迁移、无配置/环境变量/依赖变化。
+
+### 工作树清理
+
+- 见文末「工作树」小节；本轮回收情况在收尾时记录。
+
+### 下一轮优先项
+
+1. **全量审计**（6 小时闸门已过，08:20 之后未跑）：至少覆盖 `requirements` + `docs-drift` +
+   `security-exposure`；补跑本轮超时的 `requirements` 与 `architecture`。
+2. **UI-92（MEDIUM，S）**：投递列表的重试加确认，防误点即发往生产渠道。
+3. **UI-93 / UI-94 / UI-91（LOW，S）**：chip 可访问名称、390px 投递行截断、补投空态主按钮。
+4. **SEC-39 EXPERT_PANEL**：密码缩写脱敏取舍。
+5. **REQ-304（28）**：事件筛选「目标 × 投递结果」按同一条投递求交；**REQ-305（27）** 事件搜索覆盖
+   provider reference；**REQ-295（27）** raw 载荷保全（需迁移，交专家小组）。
+
 ## 2026-10-28（第 151 轮）
 
 - 时间：2026-10-28 13:29 CST 起，约 14:10 CST 结束。
