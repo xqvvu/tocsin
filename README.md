@@ -87,7 +87,7 @@ docs
 要求：
 
 - Node.js `26.x`（以仓库根目录的 `.node-version` 为准）
-- pnpm `12.14.0`（由 `package.json` 的 `packageManager` 声明）
+- pnpm `12.15.0`（由 `package.json` 的 `packageManager` 声明）
 
 工程化统一由 [Vite+](https://vite.plus) 的 `vp` CLI 提供：Vite、Vitest、Oxlint、Oxfmt 和任务编排都在一个入口下。`vite-plus` 是仓库根目录的 devDependency，用 `vp` 前先在根目录安装一次依赖。
 

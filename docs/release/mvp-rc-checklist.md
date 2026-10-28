@@ -155,7 +155,8 @@ post-MVP 中继续设计。dedupe cleanup 已改为有界批（见下方 D 节�
       仍未开始，保留在 E 节。
 - [x] 清理 `apps/console/README.md` starter 内容。
 - [x] 对齐 README、package metadata、workspace 中的 Node/vp 版本说明。
-      （2026-10-18 校正）README 与 AGENTS.md 的 pnpm 版本已对齐 `packageManager` 的 `pnpm@12.14.0`。
+      （2026-10-18 校正，2026-10-28 复核）README 与 AGENTS.md 的 pnpm 版本已对齐 `packageManager`
+      的 `pnpm@12.15.0`。
 
 ### C. 产品与 UI 收尾
 

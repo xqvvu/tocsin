@@ -541,7 +541,7 @@ runner. `vite-plus` is a root devDependency; run `vp install` once from the
 workspace root before using it.
 
 - Runtime: Node `26.x`, pinned by the committed `.node-version`.
-- Package manager: `pnpm@12.14.0`, declared in root `package.json`.
+- Package manager: `pnpm@12.15.0`, declared in root `package.json`.
 - Install: `vp install` (or `vp install --frozen-lockfile` in CI).
 - Format: `vp fmt --write` to fix, `vp fmt --check` to verify.
 - Lint: `vp lint` (add `--fix` to write fixes).
