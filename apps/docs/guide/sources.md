@@ -68,6 +68,7 @@ dashboard 登录 session 不能用于 Webhook。未配置额外共享密钥时�
 - 已入队的 Delivery 会继续由 Worker 发送；停用告警源不是出站投递的总开关。
 - 重新启用后，原有 Token 和额外共享密钥继续生效，无需重新生成。
 - 如果仍需要记录 Event、但暂时不希望发送通知，应使用[告警静默与维护时段](/operations/suppressions)，而不是停用告警源。
+- 告警风暴中停用告警源与其他急停手段的取舍，见[告警风暴与大面积误报的处置顺序](/operations/incident-playbook)。
 
 停用确认框会显示当前排队中的 Delivery 数，便于在拒绝新告警前判断是否仍有在途通知。
 

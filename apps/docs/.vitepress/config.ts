@@ -61,6 +61,7 @@ export default defineConfig({
           { text: "日志与可观测性", link: "/operations/observability" },
           { text: "生产监控与告警基线", link: "/operations/monitoring" },
           { text: "告警静默与维护时段", link: "/operations/suppressions" },
+          { text: "告警风暴与急停处置", link: "/operations/incident-playbook" },
           { text: "故障排查", link: "/operations/troubleshooting" },
         ],
       },
