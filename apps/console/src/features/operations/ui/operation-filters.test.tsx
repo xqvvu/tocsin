@@ -170,6 +170,7 @@ describe("operation filters by page scope", () => {
       range: "",
       timeField: "",
       rangeAnchor: "",
+      rangeUntil: "",
       q: "",
     });
   });
@@ -181,6 +182,16 @@ describe("operation filters by page scope", () => {
 
     expect(screen.getByTitle("Clear Time range")).toBeTruthy();
     expect(screen.getByText("Last hour · from 10/23, 04:00")).toBeTruthy();
+  });
+
+  it("names the frozen paging bound on its own chip", () => {
+    // A list that stopped moving reads as broken during an incident; the chip is
+    // the only thing that explains why, and its clear button is the way back to
+    // a live list.
+    renderFilters("events", { rangeUntil: "2026-10-23T04:00:00.000Z" }, "toolbar");
+
+    expect(screen.getByTitle("Clear Result set frozen")).toBeTruthy();
+    expect(screen.getByText("paging from 10/23, 04:00")).toBeTruthy();
   });
 
   it("keeps the plain window label when the link has no anchor", () => {

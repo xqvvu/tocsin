@@ -199,6 +199,9 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     // The anchor only applies to the window it was captured with, so it stays
     // out of the request (and the query key) when there is no window.
     ...(filters.range && filters.rangeAnchor ? { rangeAnchor: filters.rangeAnchor } : {}),
+    // The paging bound is not tied to a window — walking unfiltered history
+    // needs it just as much — so it is sent whenever it was captured.
+    ...(filters.rangeUntil ? { rangeUntil: filters.rangeUntil } : {}),
     ...(filters.q?.trim() ? { q: filters.q.trim() } : {}),
     ...(filters.eventPage && filters.eventPage > 1 ? { eventPage: filters.eventPage } : {}),
     ...(filters.deliveryPage && filters.deliveryPage > 1

@@ -308,6 +308,59 @@ describe("time range anchor in the operation search", () => {
   });
 });
 
+describe("paging snapshot in the operation search", () => {
+  const now = new Date("2026-10-23T04:00:00.500Z");
+  const bound = "2026-10-23T04:00:00.000Z";
+
+  it("freezes the upper bound when the reader turns to page 2", () => {
+    const merged = mergeOperationSearch({ range: "1h" }, { eventPage: 2 }, now);
+
+    // Whole seconds only: sub-second precision cannot move a row across pages.
+    expect(merged.rangeUntil).toBe(bound);
+  });
+
+  it("also freezes when the delivery list turns a page", () => {
+    expect(mergeOperationSearch({}, { deliveryPage: 2 }, now).rangeUntil).toBe(bound);
+  });
+
+  it("keeps the captured bound for the rest of the walk", () => {
+    const merged = mergeOperationSearch({ rangeUntil: bound, eventPage: 2 }, { eventPage: 3 }, now);
+
+    // Re-capturing on every page turn would let rows that arrived mid-walk back
+    // into the set, which is the drift the bound exists to stop.
+    expect(merged.rangeUntil).toBe(bound);
+  });
+
+  it("leaves the first page live", () => {
+    // Nothing is frozen until the reader pages: an operator watching an incident
+    // must still see alerts arrive on page 1.
+    expect(mergeOperationSearch({}, { severity: "critical" }, now).rangeUntil).toBeUndefined();
+  });
+
+  it("releases the bound when a filter starts a new result set", () => {
+    const merged = mergeOperationSearch(
+      { rangeUntil: bound, eventPage: 3 },
+      { severity: "critical" },
+      now,
+    );
+
+    // The old bound describes the old set; keeping it would hide rows that
+    // match the new one.
+    expect(merged.rangeUntil).toBeUndefined();
+    expect(merged.eventPage).toBeUndefined();
+  });
+
+  it("ignores a bound the URL cannot prove is a timestamp", () => {
+    expect(DashboardOperationSearchSchema.parse({ rangeUntil: "yesterday" })).toMatchObject({
+      rangeUntil: "",
+    });
+  });
+
+  it("is cleared by the shared reset object", () => {
+    expect(clearedOperationSearch.rangeUntil).toBe("");
+  });
+});
+
 describe("delivery outcome filter in the operation search", () => {
   it("accepts every delivery state plus the no-delivery outcome", () => {
     // `none` is the only value that is not a DeliveryState: it is how a
@@ -435,6 +488,7 @@ describe("clearing the operation search", () => {
       "q",
       "range",
       "rangeAnchor",
+      "rangeUntil",
       "receipt",
       "routeId",
       "severity",

@@ -88,6 +88,11 @@ export interface EventListQuery {
   /** Inclusive lower bound on `events.received_at`, as an ISO timestamp. */
   since?: string;
   /**
+   * Exclusive upper bound on `events.received_at`. Freezing it while paging
+   * keeps newly received alerts from shifting the offset-paginated rows.
+   */
+  until?: string;
+  /**
    * Literal substring over title, message, fingerprint, and event/delivery ids.
    * Whitespace-separated terms are ANDed (at most 8): each must match
    * somewhere in the row.
@@ -136,6 +141,11 @@ export interface DeliveryListQuery {
   timeField?: DeliveryTimeField;
   /** Inclusive lower bound on the selected `timeField` column, as an ISO timestamp. */
   since?: string;
+  /**
+   * Exclusive upper bound on the same `timeField` column. Freezing it while
+   * paging keeps jobs enqueued mid-walk from shifting the offsets.
+   */
+  until?: string;
   /**
    * Literal substring over the event fields, event/delivery ids, the latest
    * delivery error, and the destination or route name. Whitespace-separated

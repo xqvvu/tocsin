@@ -7,9 +7,34 @@ import { createSqliteRepositories } from "#/infra/sqlite/store";
 
 const NOW = "2026-10-12T10:00:00.000Z";
 
-async function repositoryWithTwoWindows(): Promise<
-  ReturnType<typeof createSqliteRepositories>["history"]
-> {
+const event = (id: string, fingerprint: string, receivedAt: string) => ({
+  id,
+  source_id: "src-1",
+  fingerprint,
+  severity: "critical" as const,
+  status: "firing" as const,
+  title: `Alert ${id}`,
+  message: "message",
+  labels_json: "{}",
+  normalized_json: "{}",
+  provider_metadata_json: "{}",
+  raw_payload_json: "{}",
+  raw_headers_json: "{}",
+  received_at: receivedAt,
+  occurred_at: receivedAt,
+  created_at: receivedAt,
+});
+
+const delivery = (id: string, eventId: string, createdAt: string) => ({
+  id,
+  event_id: eventId,
+  destination_id: "dest-1",
+  state: "pending" as const,
+  created_at: createdAt,
+  updated_at: createdAt,
+});
+
+async function repositoryWithDb() {
   const db = createSqliteDatabase({ databasePath: ":memory:" });
   await migrateSqliteDatabase(db);
 
@@ -36,26 +61,9 @@ async function repositoryWithTwoWindows(): Promise<
     })
     .execute();
 
-  const event = (id: string, fingerprint: string, receivedAt: string) => ({
-    id,
-    source_id: "src-1",
-    fingerprint,
-    severity: "critical" as const,
-    status: "firing" as const,
-    title: `Alert ${id}`,
-    message: "message",
-    labels_json: "{}",
-    normalized_json: "{}",
-    provider_metadata_json: "{}",
-    raw_payload_json: "{}",
-    raw_headers_json: "{}",
-    received_at: receivedAt,
-    occurred_at: receivedAt,
-    created_at: receivedAt,
-  });
-
   // One event before the boundary and one exactly on it: the window is an
-  // inclusive lower bound, so both ends of the comparison are pinned.
+  // inclusive lower bound and an exclusive upper one, so both ends of each
+  // comparison are pinned.
   await db
     .insertInto("events")
     .values([
@@ -63,15 +71,6 @@ async function repositoryWithTwoWindows(): Promise<
       event("event-new", "fp-new", "2026-10-12T09:30:00.000Z"),
     ])
     .execute();
-
-  const delivery = (id: string, eventId: string, createdAt: string) => ({
-    id,
-    event_id: eventId,
-    destination_id: "dest-1",
-    state: "pending" as const,
-    created_at: createdAt,
-    updated_at: createdAt,
-  });
 
   await db
     .insertInto("deliveries")
@@ -81,7 +80,11 @@ async function repositoryWithTwoWindows(): Promise<
     ])
     .execute();
 
-  return createSqliteRepositories(new SqliteRepositoryContext({ db })).history;
+  return { db, history: createSqliteRepositories(new SqliteRepositoryContext({ db })).history };
+}
+
+async function repositoryWithTwoWindows() {
+  return (await repositoryWithDb()).history;
 }
 
 describe("history time range", () => {
@@ -102,6 +105,55 @@ describe("history time range", () => {
 
     expect(page.items.map((item) => item.id)).toEqual(["delivery-new"]);
     expect(page.total).toBe(1);
+  });
+
+  it("narrows events by an exclusive received_at upper bound", async () => {
+    const repository = await repositoryWithTwoWindows();
+
+    const page = await repository.listEvents({ until: "2026-10-12T09:30:00.000Z" });
+
+    // Exclusive, unlike `since`: a row received at exactly the captured instant
+    // was not part of the page the reader started from.
+    expect(page.items.map((item) => item.id)).toEqual(["event-old"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("narrows deliveries by an exclusive created_at upper bound", async () => {
+    const repository = await repositoryWithTwoWindows();
+
+    const page = await repository.listDeliveries({ until: "2026-10-12T09:30:00.000Z" });
+
+    expect(page.items.map((item) => item.id)).toEqual(["delivery-old"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("holds the page boundary still while newer events keep arriving", async () => {
+    const { db, history } = await repositoryWithDb();
+
+    // Newest first, one row per page: page 1 is `event-new`.
+    const first = await history.listEvents({ limit: 1 });
+    expect(first.items.map((item) => item.id)).toEqual(["event-new"]);
+
+    // An alert lands after the reader loaded page 1 and before they ask for
+    // page 2. Unbounded, the offset shifts by one and `event-new` is served
+    // twice — the exact defect the frozen bound exists to prevent.
+    await db
+      .insertInto("events")
+      .values(event("event-newest", "fp-newest", "2026-10-12T09:45:00.000Z"))
+      .execute();
+
+    const unbounded = await history.listEvents({ limit: 1, page: 2 });
+    expect(unbounded.items.map((item) => item.id)).toEqual(["event-new"]);
+
+    // Captured on the first page turn, the bound keeps the walk on the set the
+    // reader started from.
+    const bounded = await history.listEvents({
+      limit: 1,
+      page: 2,
+      until: "2026-10-12T09:40:00.000Z",
+    });
+    expect(bounded.items.map((item) => item.id)).toEqual(["event-old"]);
+    expect(bounded.total).toBe(2);
   });
 
   it("keeps the list and count in step when the window matches nothing", async () => {

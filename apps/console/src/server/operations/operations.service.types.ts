@@ -53,6 +53,11 @@ export interface ListOperationsInput {
   range?: OperationTimeRange;
   /** Instant the window was opened; without it the window follows the clock. */
   rangeAnchor?: string;
+  /**
+   * Exclusive upper bound on the list's time column, captured on the first
+   * page turn so rows arriving mid-walk cannot shift the offsets.
+   */
+  rangeUntil?: string;
   /** Delivery-only: compare the window against enqueue or last-activity time. */
   timeField?: DeliveryTimeField;
   q?: string;

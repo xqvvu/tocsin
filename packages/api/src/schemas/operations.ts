@@ -335,6 +335,14 @@ export const ListOperationsInputSchema = z
      */
     rangeAnchor: IsoDateTimeSchema.optional(),
     /**
+     * Exclusive upper bound on the list's time column, captured when the
+     * operator starts paging. Both lists are offset-paginated, so an alert
+     * that arrives between page requests shifts every later row down and
+     * makes the next page repeat a row the reader already saw. Freezing the
+     * upper edge once keeps the result set still for the rest of the walk.
+     */
+    rangeUntil: IsoDateTimeSchema.optional(),
+    /**
      * Delivery-only: which timestamp `range` compares against and which one
      * the list is ordered by. `created` (the default) is enqueue time;
      * `updated` is the last activity, so a retried job stays inside the window
