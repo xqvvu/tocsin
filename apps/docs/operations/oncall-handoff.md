@@ -67,7 +67,7 @@ Worker：投递 …；加急 …；/api/ready 结果 …
 - 测试会立即通过当前配置发送一条真实消息，默认使用内置样例，也可以选择历史 Event 验证真实模板字段。
 - 测试绕过投递队列、全局暂停、路由和静默，不创建 Event 或 Delivery。因此它只能证明目标凭证、网络和模板可用，不能证明“Webhook → 路由 → 投递”链路通。
 - 停用的目标仍然可以测试发送；测试成功不代表路由会继续使用它。
-- 确认接收端真的看到了消息，而不只是页面显示“已接受”。同时核对平台返回的业务结果：飞书看业务码，Slack 看响应体是否为 `ok`，并确认消息引用已记录。
+- 确认接收端真的看到了消息，而不只是页面显示“已接受”。同时核对平台返回的业务结果：飞书看业务码，Slack 看响应体是否为 `ok`，并确认消息引用已记录。各类型的成功判定与失败边界见[通知目标验收与失败判读](/integrations/destination-verification)。
 
 ### 第二层：全链路 canary
 
@@ -125,4 +125,4 @@ Worker：投递 …；加急 …；/api/ready 结果 …
 | 电话加急没有全局列表就代表没有失败 | 记录在各自 Delivery 详情；按飞书目标和失败投递逐条核对 |
 | 刚升级完只看 `/api/health` 就交班 | `/api/health` 只证明进程能响应；用 `/api/ready` 和真实 canary 验证完整链路 |
 
-相关页面：[生产监控与告警基线](/operations/monitoring) · [投递检索、生命周期与重试](/operations/deliveries) · [告警静默与维护时段](/operations/suppressions) · [告警风暴与大面积误报的处置顺序](/operations/incident-playbook) · [飞书应用与电话加急](/integrations/feishu-app) · [设置与运行态操作](/operations/settings) · [故障排查](/operations/troubleshooting)
+相关页面：[生产监控与告警基线](/operations/monitoring) · [投递检索、生命周期与重试](/operations/deliveries) · [通知目标验收与失败判读](/integrations/destination-verification) · [告警静默与维护时段](/operations/suppressions) · [告警风暴与大面积误报的处置顺序](/operations/incident-playbook) · [飞书应用与电话加急](/integrations/feishu-app) · [设置与运行态操作](/operations/settings) · [故障排查](/operations/troubleshooting)

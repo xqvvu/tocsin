@@ -23,6 +23,7 @@ export default defineConfig({
         text: "通知目标",
         items: [
           { text: "通知目标参考", link: "/integrations/destinations" },
+          { text: "目标验收与失败判读", link: "/integrations/destination-verification" },
           { text: "邮件网关接入与验收", link: "/integrations/email-gateway" },
           { text: "飞书应用与电话加急", link: "/integrations/feishu-app" },
         ],
@@ -56,6 +57,7 @@ export default defineConfig({
           { text: "告警源接入参考", link: "/integrations/providers" },
           { text: "Provider 接入验收配方", link: "/integrations/provider-verification" },
           { text: "通知目标参考", link: "/integrations/destinations" },
+          { text: "通知目标验收与失败判读", link: "/integrations/destination-verification" },
           { text: "邮件网关接入与验收", link: "/integrations/email-gateway" },
           { text: "飞书应用与电话加急", link: "/integrations/feishu-app" },
         ],
