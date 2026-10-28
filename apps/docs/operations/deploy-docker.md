@@ -75,17 +75,22 @@ docker compose -f compose.prod.yml ps
 - 后续命令都显式带 `-f compose.prod.yml`，避免与本地试用实例混用同一个 Compose 项目。
 - 不要用 `docker-compose.override.yml` 追加 `ports:`：Compose 会把列表与基础文件合并，两条映射会争抢宿主 3000 端口。生产清单直接写成独立文件更可控。
 
-::: tip 用文件注入认证密钥
-不希望密钥出现在环境变量或 `env_file` 时，改用 `BETTER_AUTH_SECRET_FILE`：从 `tocsin.env` 移除 `BETTER_AUTH_SECRET`，并在清单中加入：
+## 认证密钥文件注入与轮换
+
+`BETTER_AUTH_SECRET_FILE` 用于避免认证密钥出现在 `process.env`、`docker inspect` 和 `compose config` 的解析结果中。它不是通用 secret manager：当前只有 `BETTER_AUTH_SECRET` 支持 `_FILE`，数据库内的 Source Token、目标凭证和飞书应用 secret 仍按各自导入与备份流程管理。
+
+文件内容仍是明文，运行中的进程也会在内存中持有它。挂载文件、宿主机目录和备份都必须按密钥材料保护，不能打进镜像或提交到仓库。
+
+### Compose 文件 secret
+
+在 `compose.prod.yml` 中把内联值显式留空，并声明 Compose 文件 secret：
 
 ```yaml
 services:
   console:
+    env_file:
+      - ./tocsin.env
     environment:
-      NODE_ENV: "production"
-      HOST: "0.0.0.0"
-      PORT: "3000"
-      TOCSIN_DATABASE_PATH: "/data/tocsin.sqlite"
       BETTER_AUTH_SECRET: ""
       BETTER_AUTH_SECRET_FILE: /run/secrets/tocsin_auth_secret
     secrets:
@@ -93,11 +98,67 @@ services:
 
 secrets:
   tocsin_auth_secret:
-    file: ./secrets/tocsin_auth_secret
+    file: "${TOCSIN_AUTH_SECRET_SOURCE:?set TOCSIN_AUTH_SECRET_SOURCE to the host secret file}"
 ```
 
-文件必须是单行裸值、不超过 4 KiB、对容器内 uid/gid `1000` 可读；内联的 `BETTER_AUTH_SECRET` 非空时优先。轮换密钥后需重启容器才会重新读取，并会让现有 dashboard session 失效。
-:::
+`tocsin.env` 仍保存 `BETTER_AUTH_URL`、`SERVER_URL` 等非 secret 配置，但不要再包含非空的 `BETTER_AUTH_SECRET`。内联值优先于文件；如果环境里残留旧值，应用不会读取 `_FILE`。
+
+`TOCSIN_AUTH_SECRET_SOURCE` 是 Compose 在宿主机读取 secret 文件的路径，不是容器内路径。把文件放在仓库外的受控目录，例如部署账号可写的 `/srv/tocsin/secrets/auth`；不要放进会被提交或打进镜像的目录。
+
+密钥文件必须是单行裸值，不能写成 `BETTER_AUTH_SECRET=...`、带引号、带注释或多行 PEM。文件上限为 4 KiB；末尾换行会被去掉，内部换行、空文件和不可读文件都会让应用拒绝提供服务。生成时可以这样做：
+
+```bash
+export TOCSIN_AUTH_SECRET_SOURCE=/srv/tocsin/secrets/auth
+install -d -m 0700 "$(dirname "$TOCSIN_AUTH_SECRET_SOURCE")"
+(
+  umask 077
+  openssl rand -hex 32 > "$TOCSIN_AUTH_SECRET_SOURCE"
+)
+docker compose -f compose.prod.yml config --quiet
+docker compose -f compose.prod.yml up -d
+```
+
+不要把 `docker compose config` 的完整输出贴到工单或聊天；它可能展开其它环境变量。验证挂载时只检查可读性和大小，不要 `cat` 密钥：
+
+```bash
+docker compose -f compose.prod.yml exec console \
+  sh -c 'test -r "$BETTER_AUTH_SECRET_FILE" && wc -c < "$BETTER_AUTH_SECRET_FILE"'
+curl -fsS http://127.0.0.1:3000/api/ready
+```
+
+### 不同编排方式的权限与轮换
+
+| 注入方式 | 文件与权限 | 轮换方式 |
+| --- | --- | --- |
+| Compose 文件 secret | 作为 `/run/secrets/<name>` 文件挂载；本机 Compose 默认 root 所有、`0444`，容器内 `node` 用户可读 | 同一路径替换源文件后执行 `docker compose -f compose.prod.yml restart console`；挂载名或路径变化时执行 `up -d` |
+| Docker Swarm secret | 仅在 `docker stack deploy` 使用 secret store；`docker compose up` 不会读取 Swarm secret，挂载为 tmpfs | secret 内容不可原地修改；创建新 secret，更新 stack 引用并使用新名称，验证后再移除旧 secret |
+| Kubernetes Secret 卷 | 仓库不提供官方 Deployment 或 Helm chart；使用平台现有方式把密钥投影为文件，并确保容器 uid/gid `1000` 可读 | 更新 Secret 后重启 Pod，确保进程在启动时重新读取；不要同时注入非空的内联值 |
+| 宿主机 bind mount | 文件必须对容器 uid/gid `1000` 可读；entrypoint 只修复 `/data` 数据目录，不会修改 secret 文件权限 | 替换同一路径的文件后重启容器；如果只改挂载声明，则重建容器 |
+
+Kubernetes 若把 Secret 文件模式设为 `0400`，必须确保卷和文件对 uid/gid `1000` 可读，通常需要配置 `fsGroup: 1000`；运行进程使用不同 group 时再显式设置 `runAsGroup: 1000`。Kubernetes 更新投影文件可能有延迟；需要确定何时生效时，以重启 Pod 为边界，而不是假设运行中的进程会重新读取。
+
+### 轮换步骤
+
+轮换认证密钥会让所有 dashboard session 失效，但不会修改账号密码、告警源 Token、通知目标凭证或业务数据。
+
+1. 记录当前镜像、Compose/编排配置和回滚方式。按[备份与恢复](/operations/backup-restore)完成可用备份。
+2. 生成新的高熵值，写入新的 secret 文件或新的编排 secret 对象。不要在终端参数、镜像层或仓库文件中写入明文。
+3. 保持 `BETTER_AUTH_SECRET` 为空，把 `BETTER_AUTH_SECRET_FILE` 指向新文件；需要换挂载名时同步修改编排引用。
+4. 重启或重建容器，等待 `/api/ready` 返回 `200`，再登录并走一次测试投递。
+5. 确认旧 session 已失效、日志没有输出密钥内容后，再按变更流程销毁旧 secret。若怀疑旧值已经泄露，不要为了回滚继续保留它。
+
+### 文件注入失败怎么判
+
+| 现象 | 常见原因 | 处理 |
+| --- | --- | --- |
+| 所有请求含 `/api/ready` 返回 `500`，日志报 `Unable to read BETTER_AUTH_SECRET_FILE` | 路径写错、文件未挂载、uid/gid `1000` 不可读 | 核对容器内路径、挂载和文件权限；不要先删数据库 |
+| 日志报 `must contain a single line` | 文件是 `.env` 格式、包含注释或 PEM | 改为单行裸值，只保留末尾换行 |
+| 日志报文件过大或为空 | secret 文件误写成证书、批量环境文件或空文件 | 重新生成 4 KiB 以内的单行值 |
+| 文件明明已更新，页面仍接受旧 session | 进程没有重启，或内联 `BETTER_AUTH_SECRET` 仍非空 | 重启或重建容器，并确认内联值已清空 |
+| Kubernetes Pod 权限拒绝 | Secret 文件模式过严，uid/gid `1000` 不可读 | 配置 `fsGroup` / `runAsGroup`，或调整文件模式 |
+| `docker compose config` 或日志中出现 secret | 使用了内联变量、打印了文件内容，或没有加 `--quiet` | 停止传播输出，按泄露流程轮换密钥 |
+
+只有认证密钥支持 `_FILE`；配置导入时 `TOCSIN_SOURCE_*`、`TOCSIN_DEST_*` 与 `TOCSIN_FEISHU_APP_*` 引用仍只读取进程环境，见[可移植配置参考](/operations/portable-config)。
 
 ## 数据卷与文件权限
 
