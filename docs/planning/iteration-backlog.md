@@ -14,6 +14,7 @@
 
 | id | 标题 | 来源 | 评分 | 状态 | PR | 备注 |
 |---|---|---|---|---|---|---|
+| REL-77 | 发布 `0.1.0-beta.126` | release panel（第 157 轮） | — | shipped | #646 | tag `v0.1.0-beta.126` @ `8c125c9`；GitHub Release（prerelease，body 非空）；镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.126`（linux/amd64 + linux/arm64，index digest `sha256:54315b06679b3dcf226fdc138b61f118e9507934704d4038653552041de3a7de`，amd64 `sha256:c2a79f7aaa27e0a71d4b27d130ff133b2d6e379ae5b84ba121ad653509cfbbee`，arm64 `sha256:5f66d471b3225e29796fad65c155a62d5fcc763f1f86c7550a51ea7e55ac4261`）；回滚 `0.1.0-beta.125`；用户可见变更 #644（UI-93 筛选 chip 可访问名称带取值）；无迁移、无依赖、无 env 变化 |
 | REQ-316 | 告警接入链路预演（上游载荷 → 解析 → 路由 → 模板渲染，只读） | requirements lane（第 157 轮） | 27 | candidate | — | 现有验证分段：目标测试只覆盖配置→渲染→发送（`destination.service.ts:325-370`），路由匹配只在写库接入（`intake.service.ts:93`）或已有事件重放时使用；manifest 的 `testPayload`（`packages/providers/src/types.ts:60-65`）全仓无消费者（仅 `registry.test.ts:32` 假 manifest）；Sources 页无入口（`sources-page-toolbar.tsx:6-15`、`packages/api/src/contract/sources.ts:31-59`）。范围：加法只读 `sources.rehearse` procedure + service 复用 parse/evaluate/redact + 「接入预演」Sheet；验收含 events/deliveries 行数不变且不产生 job。非目标：真实发送、样例载荷字段、落库、历史。无 schema/迁移。评分 27（5/5/4/5/5/3） |
 | REQ-317 | 投递列表按静默规则筛选并接到完整筛选上下文 | requirements lane（第 157 轮） | 26 | candidate | — | `DeliveryListQuery.suppressionId` 已存在（`history.interface.ts:141-142`，列表/计数共用 `history.repository.ts:431-432,730-731`），唯一调用方是抑制详情命中表（`suppression.service.ts:115-121`）；契约/URL/筛选面板无该维度（`packages/api/src/schemas/operations.ts:289`、`operation-search.ts:31`）。范围：加法输入 + 透传 + 投递页筛选/chip + 命中表「在投递列表中查看」；非目标：REQ-198、NEW-BM（需明确先后）。无 schema/迁移。评分 26（4/3/5/5/5/4） |
 | UI-95 | 设置页运行时网格末行露出大块灰色空腔 | ui-review（第 157 轮，浏览器实测） | 22 | candidate | — | 13 个事实在 `xl` 4 列网格占 3 排 + 1 格，剩余 3 格显示 `dl` 的 `bg-border`，约 50,626 px² 灰块像未加载占位（`features/configuration/ui/settings-runtime-panel.tsx:23,67-75`）。建议改为每个 fact `border-t border-l`、`dl` `border-r border-b`，剩余区域保持 `bg-card`。成本 S。截图 `/tmp/tocsin-ui-review-settings-desktop-1440.png` |
@@ -922,6 +923,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.126` | `8c125c9` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.126`（linux/amd64 + linux/arm64，index digest `sha256:54315b06679b3dcf226fdc138b61f118e9507934704d4038653552041de3a7de`，amd64 `sha256:c2a79f7aaa27e0a71d4b27d130ff133b2d6e379ae5b84ba121ad653509cfbbee`，arm64 `sha256:5f66d471b3225e29796fad65c155a62d5fcc763f1f86c7550a51ea7e55ac4261`） | 筛选 chip 可访问名称带取值（#644，UI-93）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.125` |
 | `0.1.0-beta.120` | `4a5a37e` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.120`（linux/amd64 + linux/arm64，index digest `sha256:bed25465682e…`，amd64 `sha256:86a9c95d79d1…`，arm64 `sha256:0c7331466dba…`） | 运维列表翻页结果集锚定（#611，REQ-308）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.119` |
 | `0.1.0-beta.119` | `5ad9a5b` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.119`（linux/amd64 + linux/arm64，index digest `sha256:39f64b45a473…`，amd64 `sha256:d5ea7571e10a…`，arm64 `sha256:ae6488e3d2a1…`） | 投递搜索覆盖任一次尝试的错误（#605，REQ-303）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.118` |
 | `0.1.0-beta.118` | `51d49ff` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.118`（linux/amd64 + linux/arm64，index digest `sha256:1bc3ebe98fd2…`，amd64 `sha256:62f110254e64…`，arm64 `sha256:563ef3995696…`） | 补投预览披露加急电话影响（#602，REQ-171）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.117` |
@@ -1002,8 +1004,9 @@
 - **第 157 轮更新（2026-10-28）**：UI 评审（`review_now`）交付 UI-93（#644，筛选 chip 可访问名称带取值），
   新增 REQ-316（27，M）接入链路预演、REQ-317（26，S）投递按静默规则筛选、UI-95..UI-99。
   下一优先：**`release-infra` 车道** + **ARCH-67/68** 纯重构小 PR、**REQ-316**、Q-293/292/294、
-  REQ-314/315（schema，需 EXPERT_PANEL）。车道轮转：下一非必跑车道 **`release-infra`**。
-  `last_ui_review_at` = 2026-10-28 20:02 CST。
+  REQ-314/315（schema，需 EXPERT_PANEL）。本轮已发布 **`0.1.0-beta.126`**（tag `v0.1.0-beta.126`
+  @ `8c125c9`，GitHub Release + 双平台镜像，回滚 `0.1.0-beta.125`；见 REL-77）。
+  车道轮转：下一非必跑车道 **`release-infra`**。`last_ui_review_at` = 2026-10-28 20:02 CST。
 - **第 144 轮更新（2026-10-28）**：交付 SEC-20（#578，PEM 私钥块值形态 + `tlskey` 精确键）。
   下一优先：**SEC-26（18）** 截断 PEM 块与小写标签残余、**ARCH-40/41（20/18）** 编排收进 service、
   **REQ-295（27）** 事件 raw 载荷保全（forward-only 迁移，走 EXPERT_PANEL）、**DOC-95/96/58** 文档更正。

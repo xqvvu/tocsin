@@ -92,8 +92,18 @@
 
 ### 发布
 
-- 发布评估在 PR 合并后由三位发布专家独立裁决；结果与 tag/镜像（若 GO）记录在后续
-  `docs(planning)` 提交与 backlog「已发布版本」表。
+- 三位发布专家独立核对：发布经理 **GO**（#644 属用户可见修复，读屏名称与 tooltip 变化）、
+  运维/回滚 **GO**（无迁移/依赖/镜像配置变化，回滚只需换镜像）、阻断审计初始 **NO-GO**
+  （唯一阻断是 docs-site 的 open PR #645）；#645 于发布前按 rebase 合入 `399d49c` 后阻断解除，
+  `8c125c9` 的 `check · test · build` 与 `playwright · chromium` 均 success。
+- 版本 `0.1.0-beta.126`，PR #646 合入 `8c125c9`（tag 目标）。
+- tag `v0.1.0-beta.126`（annotated）指向 `8c125c9`；GitHub Release（prerelease）已创建且 body 非空。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.126`（linux/amd64 + linux/arm64）：
+  index digest `sha256:54315b06679b3dcf226fdc138b61f118e9507934704d4038653552041de3a7de`，
+  amd64 `sha256:c2a79f7aaa27e0a71d4b27d130ff133b2d6e379ae5b84ba121ad653509cfbbee`，
+  arm64 `sha256:5f66d471b3225e29796fad65c155a62d5fcc763f1f86c7550a51ea7e55ac4261`。
+- 回滚镜像 `0.1.0-beta.125`；`schema_migrations` 台账不变（`0001`–`0005`），回滚无需降级数据库。
+- 构建在 tag 的干净检出 `/tmp/tocsin-build-beta126` 中进行，未使用主 checkout；未推 `latest`。
 
 ### 下一轮优先项
 
