@@ -112,7 +112,13 @@ export function SourceRehearsalDialog({
         <RiPlayLine data-icon="inline-start" aria-hidden />
         {t("sources.rehearsal.open")}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-3xl">
+      {/*
+        A pasted payload plus a full result easily exceeds the viewport. The
+        popup is a fixed-height grid row set: header and footer stay put and only
+        the middle row scrolls, so the run/cancel buttons can never be clipped
+        off screen.
+      */}
+      <DialogContent className="max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-3xl">
         <DialogHeader className="pr-8">
           <DialogTitle>{t("sources.rehearsal.title")}</DialogTitle>
           <DialogDescription>{t("sources.rehearsal.description")}</DialogDescription>
@@ -156,9 +162,11 @@ export function SourceRehearsalDialog({
               id="source-rehearsal-payload"
               rows={8}
               spellCheck={false}
-              className={cn("font-mono text-xs", payloadInvalid && "border-destructive")}
+              className={cn("max-h-48 font-mono text-xs", payloadInvalid && "border-destructive")}
               aria-invalid={payloadInvalid}
-              placeholder={t("sources.rehearsal.payloadPlaceholder")}
+              // The example is literal JSON: formatting it as ICU would read the
+              // braces as arguments and fail on every render.
+              placeholder={t.raw("sources.rehearsal.payloadPlaceholder") as string}
               value={payloadText}
               disabled={running}
               onChange={(event) => {
