@@ -2,6 +2,98 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 161 轮）
+
+- 时间：2026-10-29 02:50 CST 起。
+- 基线：`origin/main` @ `fd1b64a3`；启动时无 open PR，main 最新 CI 于本轮结束时仍在运行。
+- 类型：**需求切片 + 安全修复**（非 full-audit）。最近全量审计为第 160 轮
+  **2026-10-29 02:05 CST**，距今 < 6 小时；backlog 有 ≥27 分候选（REQ-321/322/323/324），
+  按第 1.5 步规则继续交付，不重跑全量审计。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`architecture`（轮转位）。
+  下一非必跑车道建议 **`security-exposure`**（轮转 requirements → architecture → security）。
+- `last_ui_review_at` = **2026-10-29 00:24 CST**（未更新，本轮 `ui-triage` 判 `defer`）。
+- 工作树：`agent-iteration` 承担并发锁与最终 `docs(planning)` 提交。本轮会话工作树
+  `vibrant-hodgkin-94a5e2` 在 PR rebase 合并时被一并移除（无未提交改动，无内容丢失）。
+
+### ui-triage 决策与理由
+
+- 决策：**`defer`**。三条强信号均不成立：`last_ui_review_at` 距今 2h26m（< 48h）；
+  自 00:24 起触及 UI 路径的合并仅 2 个（`4fd216dd`、`76571d84`，< 3）；
+  candidate 状态 UI 条目 58 条属饱和存量队列，沿用第 159/160 轮口径不计为触发信号。
+- 附加建议：下次 UI 评审补看窄屏下覆盖徽标后缀是否换行/溢出。
+
+### 专家发现
+
+**requirements（3 条新候选，已写入 backlog）**
+
+- **REQ-325（28）** 接入预演披露「真实送达判定」（静默 / 全局暂停）。
+  预演只做 parse→route→render（`source-rehearsal.service.ts:45-98`），真实链路会在入队/
+  认领时命中抑制（`delivery.repository.ts:104-106,270-298`）或全局暂停时不领取
+  （`delivery-worker.service.ts:64-82`），维护窗口里预演仍显示「可送达」。
+- **REQ-326（28）** 通知目标覆盖列区分全量/条件覆盖。Sources 侧已有
+  `routeRuleHasEventConditions`（`source-route-coverage.ts:49-56`），Destinations 侧
+  （`destination-route-coverage.ts:5-24`）仍只数总数。
+- **REQ-327（27）** Integrations 列表显示飞书应用引用目标的投递健康。
+  `feishu-apps-section.tsx:31-84` 只有名称/AppID/引用目标名；目标 DTO 已有
+  `deliveryHealth` 与 `operationalConfig.appRef`（`destination.ts:48,90-96`）。
+
+**architecture（7 条发现，已写入 backlog ARCH-69..75）**
+
+- MEDIUM `ARCH-69`：`operations/router.ts:72-86` 在 handler 内编排 worker（应下沉 service）。
+- MEDIUM `ARCH-70`：基线迁移 0001 调用共享 builder，后加内容折进 0001 再由 0003 补救
+  （`0001_initial_schema.ts:5,14,16`、`schema.ts:5+`、`0003_complete_legacy_schema.ts:6-8`）。
+- MEDIUM `ARCH-71`：`route-forms.tsx` 1076 行、`suppression-forms.tsx` 739 行、
+  `operation-filters.tsx` 981 行、`destination-form.tsx` 1393 行偏离「一文件一导出组件」。
+- LOW `ARCH-72`（标记过多，8 处）、`ARCH-73`（`lib/browser.ts` 边界）、
+  `ARCH-74`（model 测试反向依赖 infra）、`ARCH-75`（auth 表单仍在 routes）。
+- 已核实 clean：18 个 service 无 `ORPCError`、无 DI/单例、10/11 router 用
+  `withDashboardService`、`components/common` 纯度、包间 import 边界、repository 三件套、
+  迁移 0004/0005 forward-only 且幂等。
+
+### 本轮交付
+
+- **PR #667 `feat(console): replay why a delivery was not suppressed`**（REQ-321）
+  - 新增 `DeliverySuppressionOutlook`：按当前规则定义回放到投递创建时刻，列出当时生效的规则、
+    命中/未命中与失败条件，按「错得最少」排序；uncertain 场景（规则启用状态取当前值、
+    事件已脱敏）在界面明说。
+  - 复用 `containsRedactedValue`（由 `delivery-route-evidence` 导出）保持与路由依据同口径。
+  - 新增 PRD `docs/prd/delivery-suppression-outlook.md`；7 例组件测试 + 2 例门控测试。
+  - 验证：`vp check` 0 error；`vp -C apps/console test run` 全绿；PR CI 与 E2E success。
+- **PR #668 `fix(console): project rehearsal output at the read boundary`**（Q-297）
+  - 预演成功响应改为：原始事件匹配 → `redactNormalizedEvent` → 用投影渲染 → 返回
+    `redactRouteMatchResults` + `redactJsonText(providerMetadata)`；payload 投影由
+    `redactJsonValue` 收紧为 `redactJsonText`，与生产 `delivery-execution.ts:116-121` 对齐。
+  - 结果视图顶部新增中英提示；服务测试新增投影用例并断言零写入/零发送。
+  - 验证：`vp check` 0 error；相关 41 例测试通过；PR CI 与 E2E success。
+
+### EXPERT_PANEL
+
+- **Q-297**（预演读取边界脱敏）：三位专家一致 → 采纳「先投影再渲染」，
+  决策记录 `docs/planning/decisions/q-297-rehearsal-redaction.md`（随 #668 合入）。
+  安全专家关注浏览器侧二次暴露；产品专家指出预演失真比暴露更伤运维判断；
+  评估者独立核实生产顺序并给出断言稳定性建议（勿断言 `detail`，勿整串 `toBe`）。
+
+### 发布
+
+- **本轮不发布**。两道门槛未满足：存在其他 agent 的 open PR #669（docs site），
+  且 `origin/main` 最新 commit 的 CI 在本轮结束时仍在运行。
+  用户可见变更 #667 / #668 记为下一轮发布候选（建议 `0.1.0-beta.130`）。
+
+### 收尾与同步
+
+- 本轮会话工作树 `vibrant-hodgkin-94a5e2` 随 rebase 合并被移除；实现分支
+  `agent/delivery-suppression-outlook`、`agent/rehearsal-redaction` 已随合并删除。
+- `agent-iteration` 用于并发锁与 planning 提交，本轮结束时移除。
+
+### 下一轮优先项
+
+1. **发布评估**：main CI 转绿且 #669 合入后，评估 `0.1.0-beta.130`（#667 + #668）。
+2. REQ-325（28）接入预演披露真实送达判定（静默 / 全局暂停）。
+3. REQ-326（28）通知目标覆盖列条件标记；REQ-327（27）飞书应用投递健康。
+4. ARCH-69 / ARCH-70 交 EXPERT_PANEL（entrypoint 编排、基线迁移冻结）。
+5. Q-299（UI-100 断言口径）、Q-302（查询白名单表驱动守卫）。
+6. 下一非必跑车道：`security-exposure`。
+
 ## 2026-10-29（第 160 轮）
 
 - 时间：2026-10-29 02:05 CST 起。
