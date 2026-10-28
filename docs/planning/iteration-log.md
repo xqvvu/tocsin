@@ -4,7 +4,7 @@
 
 ## 2026-10-28（第 147 轮）
 
-- 时间：2026-10-28 08:26 CST 起。
+- 时间：2026-10-28 08:26 CST 起，约 09:05 CST 结束。
 - 基线：本轮开始时 `origin/main` @ `720837b`（main CI success；open PR #591 属 docs-site routine，非本 routine）。
 - 类型：**定向需求切片 + 发布评估**（非 full-audit）。距上次全量审计 **2026-10-28 08:20 CST** 约 6 分钟，
   按第 1.5 步不展开全量审计；backlog 有 29 分候选 REQ-298，按第 146 轮「下一轮优先项」直接续做。
@@ -32,12 +32,43 @@
   - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 214 文件 / 1217 tests、
     `vp run -r build` 通过。
 
+### EXPERT_PANEL：发布评估
+
+三位专家一致：**发布**（均指出需等 PR #592 合并且 CI 转绿后再打 tag）。
+
+- **发布经理**：`v0.1.0-beta.115..origin/main` 只有 3 个 docs 提交，唯一用户可见变更是 PR #592
+  （事件列表精确指纹过滤）；建议预发布递增 `0.1.0-beta.116`。
+- **阻断审计**：main @ `720837b` 的 CI 与 E2E 双绿；open PR 仅 #591（docs-site routine，改动只在
+  `apps/docs`，不进运行镜像）；区间 `migrate/` 零 diff；`blocked-autonomous` 仅 REL-13/REL-16/REL-23
+  （仓库治理类，非 ≥27 分代码项）；Q-288/Q-289 为既有缺陷，按计划待面板，不算回归。
+- **运维/回滚**：Dockerfile/compose/env/端口/卷/依赖/迁移零 diff；回滚只需换回 `0.1.0-beta.115` 镜像，
+  无需数据库操作。
+
+### 发布
+
+- 版本：**0.1.0-beta.116**，PR #593 `chore(release): v0.1.0-beta.116` rebase 合入 → `00b3fe8`
+  （main CI 与 E2E 双绿后打 tag）。
+- tag `v0.1.0-beta.116` → `00b3fe8`；Release `Tocsin v0.1.0-beta.116`（prerelease，正文非空，1221 字节）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.116`
+  （linux/amd64 + linux/arm64，index digest `sha256:56b0d42f7a8c…`，
+  amd64 `sha256:8b7450f94209…`，arm64 `sha256:d76772fac525…`；`--provenance=false --sbom=false`）。
+- 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.115`；无需数据库操作。
+- Obsidian 同步：`obsidian-vault` skill 未在本会话暴露，按 AGENTS.md 允许的 fallback 跳过同步。
+
 ### 下一轮优先项
 
 1. **Q-290（24）** 抑制表单把已删除的源/目标渲染为可取消条目（AUTO_FIX，纯 UI）。
 2. **REQ-177（28）** 原始载荷保留窗口结束时间（纯前端，仍为 candidate）。
 3. EXPERT_PANEL：**Q-288 / Q-289**（配置删除语义、投递状态机栅栏）与 **REQ-299**（迁移前快照）。
 4. 车道轮转：`requirements` + `ui-triage` 必跑；第三名额 **`release-infra`**。
+
+### 工作树回收
+
+- 回收 1 个已结束 session worktree：`musing-bartik-2a667a`（第 146 轮，`git status` 干净，18M）。
+  同目录下 `docs-site-20261028-075602`（674M）属仍在运行的 docs-site routine（PR #591），跳过。
+- 删除本 session 工作树的 `node_modules`（900M）与 `apps/console/.output`（50M）构建产物。
+- 按 PR 状态删除已合并本地分支：`agent/event-fingerprint-filter`、`agent/planning-round-146`、
+  `agent/release-beta-116`。
 
 ## 2026-10-28（第 146 轮）
 
