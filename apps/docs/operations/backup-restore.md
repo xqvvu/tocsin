@@ -49,6 +49,6 @@ curl -fsS http://localhost:3000/api/ready
 已应用的 migration 会按版本跳过。已部署实例的 schema 变更应通过新的 forward migration 发布，而不是改写旧 migration 文件。
 :::
 
-Delivery history 当前不会自动清理；原始 payload 则按 dashboard 设置中的保留天数清理。请把持续增长的数据库容量和敏感备份保留纳入例行检查。
+Delivery history 当前不会自动清理；原始 payload 则按 dashboard 设置中的保留天数清理。请把持续增长的数据库容量和敏感备份保留纳入例行检查，清理边界与空间指标见[数据保留与 SQLite 容量](/operations/data-retention)。
 
 更多：[版本升级、回滚与数据库兼容性](/operations/upgrade-rollback) · [Docker 生产部署](/operations/deploy-docker) · [项目 Release notes](https://github.com/xqvvu/tocsin/releases)

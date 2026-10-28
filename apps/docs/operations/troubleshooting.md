@@ -10,6 +10,7 @@
 | 容器 unhealthy，认证密钥报错 | 确认 production 环境设置了有效 `BETTER_AUTH_SECRET`，或正确挂载并设置 `BETTER_AUTH_SECRET_FILE`。内联值非空时文件回退不会生效；修改 secret 后重启容器。 |
 | dashboard 登录或回调异常 | 确认 `BETTER_AUTH_URL` 与实际外部 URL 一致；代理后使用 HTTPS，并按多 Host/Origin 场景设置允许列表。应用不自行推断代理后的外部地址；配置与验收顺序见[TLS 反向代理](/operations/reverse-proxy)。 |
 | 数据库无法写入 | 核对 `/data` 对容器进程可写、卷挂载到预期位置、磁盘空间充足。不要通过删除 SQLite 文件尝试“重置”生产实例。 |
+| 数据库体积持续增长或磁盘接近耗尽 | 原始载荷保留期不会删除 Event、Delivery、attempt 或加急记录；dashboard 的「可回收空间」也不是宿主机磁盘余量。按[数据保留与 SQLite 容量](/operations/data-retention#容量处置顺序)记录基线、检查 WAL/备份并评估受控的级联删除。 |
 
 首个 owner 抢注、登录循环、session 撤销与认证密钥轮换见[认证与账号安全](/operations/authentication)。
 环境变量默认值、Compose 透传差异与修改后的生效步骤见[环境变量与运行时配置](/operations/configuration)。

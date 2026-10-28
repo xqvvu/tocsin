@@ -165,7 +165,7 @@ sink 会把敏感键（如 `authorization`、`token`、`password`、`secret`、`
 
 - 日志只写 stdout/stderr。Docker 部署由日志驱动保存，`docker compose logs` 直接读取；不要在容器内另建日志文件。
 - 轮转与保留周期由部署平台决定（Docker 日志驱动、journald 或 Kubernetes 采集器），Tocsin 不管理日志文件生命周期。
-- 业务数据不依赖日志：Event、Delivery 和尝试记录保存在 SQLite 中；日志用于解释过程，不用于恢复数据。
+- 业务数据不依赖日志：Event、Delivery 和尝试记录保存在 SQLite 中；日志用于解释过程，不用于恢复数据。业务数据的保留、容量与清理边界见[数据保留与 SQLite 容量](/operations/data-retention)。
 - 备份与升级前先保全相关时间段的日志，尤其是在数据库迁移失败或需要回滚时，见[备份与恢复](/operations/backup-restore)与[版本升级与回滚](/operations/upgrade-rollback)。
 
 ## 值班检查清单
