@@ -12,7 +12,13 @@ export default defineConfig({
       { text: "架构", link: "/operations/architecture" },
       { text: "事件", link: "/guide/events" },
       { text: "路由", link: "/guide/routes" },
-      { text: "告警接入", link: "/integrations/providers" },
+      {
+        text: "告警接入",
+        items: [
+          { text: "Provider 接入参考", link: "/integrations/providers" },
+          { text: "Provider 接入验收配方", link: "/integrations/provider-verification" },
+        ],
+      },
       {
         text: "通知目标",
         items: [
@@ -48,6 +54,7 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: "告警源接入参考", link: "/integrations/providers" },
+          { text: "Provider 接入验收配方", link: "/integrations/provider-verification" },
           { text: "通知目标参考", link: "/integrations/destinations" },
           { text: "邮件网关接入与验收", link: "/integrations/email-gateway" },
           { text: "飞书应用与电话加急", link: "/integrations/feishu-app" },
