@@ -70,6 +70,16 @@
 - 回滚镜像 `0.1.0-beta.124`；`schema_migrations` 台账不变（`0001`–`0005`），回滚无需降级数据库。
 - 构建在 tag 的干净检出 `/tmp/tocsin-build-beta125` 中进行，未使用主 checkout；未推 `latest`。
 
+### 收尾与同步
+
+- 工作树：已回收第 155 轮会话工作树 `jovial-goodall-1ad000`（`.claude/worktrees` 787M → 765M）；
+  `agent-iteration`、并发锁与本会话工作树的 `node_modules` / `.output` / `.vite` / `coverage`
+  在轮末删除；镜像构建用的 `/tmp/tocsin-build-beta125` 已移除。
+- Obsidian 同步：已按规范同步到真实 vault
+  （`~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Vane/`）：重写 `Vane Iteration Log`
+  与 `Vane Iteration Backlog`，新增 `Vane Event Provider Reference Search`（PRD 原文 + Related
+  wikilinks）并加入 `Vane Index`。
+
 ### 下一轮优先项
 
 1. **`architecture` 车道**（轮转位）+ 复跑 `release-infra`。
