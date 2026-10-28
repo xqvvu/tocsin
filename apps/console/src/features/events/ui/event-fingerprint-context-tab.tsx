@@ -1,5 +1,6 @@
 import { RiErrorWarningLine } from "@remixicon/react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "#/components/ui/empty";
@@ -20,7 +21,14 @@ import { useTranslations } from "#/i18n/use-i18n";
  * server has already redacted titles, messages and labels, so this component
  * renders strings as they arrive.
  */
-export function EventFingerprintContextTab({ eventId }: { eventId: string }) {
+export function EventFingerprintContextTab({
+  eventId,
+  sourceId,
+}: {
+  eventId: string;
+  /** The source this event arrived on; the list link stays same-source. */
+  sourceId: string;
+}) {
   const t = useTranslations();
   const context = useQuery(eventFingerprintContextQueryOptions(eventId));
 
@@ -75,6 +83,20 @@ export function EventFingerprintContextTab({ eventId }: { eventId: string }) {
           <span>{t("events.detail.fingerprint.latestOccurrence")}</span>
           <OperationTimestamp format="dateTime" value={data.previous.receivedAt} />
         </p>
+        {/*
+          The table below stops at five rows, so the count in this header was a
+          dead end: an operator who needed the sixth occurrence had to retype
+          the fingerprint into the search box, where a substring match also
+          pulls in unrelated alerts. The list link carries the same-source and
+          exact-fingerprint rule the recurrence query already uses.
+        */}
+        <Link
+          to="/events"
+          search={{ sourceId, fingerprint: data.fingerprint }}
+          className="ml-auto text-xs underline-offset-2 hover:underline"
+        >
+          {t("events.detail.fingerprint.viewAll", { count: data.earlierCount + 1 })}
+        </Link>
       </section>
 
       <EventFingerprintChanges fieldChanges={data.fieldChanges} labelChanges={data.labelChanges} />

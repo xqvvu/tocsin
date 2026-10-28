@@ -163,6 +163,7 @@ describe("operation filters by page scope", () => {
       destinationMatch: "",
       routeId: "",
       eventId: "",
+      fingerprint: "",
       receipt: "",
       deliveryState: "",
       minAttempts: 0,
@@ -206,6 +207,19 @@ describe("operation filters by page scope", () => {
     expect(screen.getByTitle("Clear Destination")).toBeTruthy();
     expect(screen.queryByTitle("Clear Route")).toBeNull();
     expect(screen.queryByTitle("Clear Delivery state")).toBeNull();
+  });
+
+  it("names the fingerprint chip on the events page", () => {
+    // The recurrence tab links here so an operator can leave its five-row cap
+    // without retyping the fingerprint into the substring search box.
+    renderFilters("events", { fingerprint: "checkout:unavailable" }, "toolbar");
+
+    expect(screen.getByTitle("Clear Fingerprint")).toBeTruthy();
+    expect(screen.getByText("checkout:unavailable")).toBeTruthy();
+
+    cleanup();
+    renderFilters("deliveries", { fingerprint: "checkout:unavailable" }, "toolbar");
+    expect(screen.queryByTitle("Clear Fingerprint")).toBeNull();
   });
 
   it("names the destination match chip on the events page", () => {

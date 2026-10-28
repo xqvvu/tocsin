@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { OPERATION_SEARCH_MAX_LENGTH } from "@tocsin/core";
+import { EVENT_FINGERPRINT_FILTER_MAX_LENGTH, OPERATION_SEARCH_MAX_LENGTH } from "@tocsin/core";
 
 import {
   clearedOperationSearch,
@@ -430,6 +430,7 @@ describe("clearing the operation search", () => {
       "destinationKind",
       "destinationMatch",
       "eventId",
+      "fingerprint",
       "minAttempts",
       "q",
       "range",
@@ -476,5 +477,50 @@ describe("event filter in the operation search", () => {
     expect(merged.eventId).toBe("evt-1");
     expect(merged.eventPage).toBeUndefined();
     expect(merged.deliveryPage).toBeUndefined();
+  });
+});
+
+describe("exact fingerprint filter in the operation search", () => {
+  it("trims a pasted fingerprint for the server and drops an empty one", () => {
+    // Fingerprints are pasted exact identifiers, so unlike the search box the
+    // URL never needs to keep in-progress spacing.
+    expect(pruneSearch({ fingerprint: "  checkout:unavailable  " }).fingerprint).toBe(
+      "checkout:unavailable",
+    );
+    expect(pruneSearch({ fingerprint: "   " }).fingerprint).toBeUndefined();
+    expect(operationFiltersFromSearch({ fingerprint: " checkout:unavailable " })).toMatchObject({
+      fingerprint: "checkout:unavailable",
+    });
+  });
+
+  it("clips a hand-edited fingerprint to the contract limit", () => {
+    const long = "f".repeat(EVENT_FINGERPRINT_FILTER_MAX_LENGTH + 20);
+
+    const fingerprint = pruneSearch({ fingerprint: long }).fingerprint;
+
+    // Persisting the overflow would make the next server call fail validation,
+    // which is the same reason the search term is clipped.
+    expect(fingerprint).toHaveLength(EVENT_FINGERPRINT_FILTER_MAX_LENGTH);
+  });
+
+  it("counts as an active filter and resets both lists to the first page", () => {
+    expect(hasOperationFilters({ fingerprint: "checkout:unavailable" })).toBe(true);
+    expect(hasOperationFilters({ fingerprint: "" })).toBe(false);
+
+    const merged = mergeOperationSearch(
+      { eventPage: 4, deliveryPage: 3 },
+      { fingerprint: "checkout:unavailable" },
+    );
+
+    expect(merged.fingerprint).toBe("checkout:unavailable");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+
+  it("clears with the shared reset object", () => {
+    // The events page reset and the inline chip share one reset table; a key
+    // missing here would survive "Reset filters" exactly like `minAttempts`
+    // once did on the deliveries page.
+    expect(clearedOperationSearch.fingerprint).toBe("");
   });
 });

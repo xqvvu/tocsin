@@ -443,6 +443,86 @@ describe("operations service time range", () => {
   });
 });
 
+describe("operations service event fingerprint filter", () => {
+  it("narrows events by exact fingerprint and leaves the delivery list alone", async () => {
+    let nextId = 0;
+    const store = await openSqliteStore({
+      databasePath: ":memory:",
+      now: () => now,
+      ids: {
+        source: () => "source-1",
+        destination: () => "destination-1",
+        route: () => "route-1",
+        event: () => `event-${++nextId}`,
+        delivery: () => `delivery-${++nextId}`,
+        attempt: () => `attempt-${++nextId}`,
+      },
+    });
+    const service = new OperationsService({ store, oncall: new OncallService({ store }) });
+
+    await store.sources.create({
+      id: "source-1",
+      name: "Generic source",
+      provider: "generic",
+      tokenHash: "token-hash",
+    });
+    await store.destinations.create({
+      id: "destination-1",
+      name: "Ops webhook",
+      kind: "generic_webhook",
+    });
+    await store.routes.create({
+      id: "route-1",
+      name: "Critical",
+      rule: { severities: ["critical"] },
+      destinationIds: ["destination-1"],
+    });
+
+    const record = (title: string, fingerprint: string) =>
+      store.intake.recordEvent({
+        sourceId: "source-1",
+        idempotencyKey: title,
+        receivedAt: now,
+        normalized: {
+          title,
+          message: title,
+          severity: "critical",
+          status: "firing",
+          fingerprint,
+          labels: {},
+          occurredAt: now,
+        },
+        rawPayload: {},
+      });
+
+    const first = await record("checkout down", "checkout:unavailable");
+    const second = await record("checkout still down", "checkout:unavailable");
+    await record("checkout down (eu)", "checkout:unavailable:eu");
+
+    for (const event of [first, second]) {
+      await store.deliveries.enqueueForEvent({
+        event,
+        matches: [{ routeId: "route-1", destinationIds: ["destination-1"] }],
+        dedupeWindowStartsAt: now,
+        now,
+      });
+    }
+
+    const exact = await service.listOperations({ limit: 10, fingerprint: "checkout:unavailable" });
+
+    // Both repeats match; the longer fingerprint with the same prefix does not.
+    expect(exact.events.items.map((event) => event.id).sort()).toEqual(
+      [first.id, second.id].sort(),
+    );
+    expect(exact.events.total).toBe(2);
+    // Events-only dimension: the delivery list keeps both enqueued jobs, so a
+    // URL that carries the fingerprint cannot silently hide delivery rows.
+    expect(exact.deliveries.total).toBe(2);
+
+    await store.close();
+  });
+});
+
 function oncallPing(): OncallPing {
   return {
     id: "ping-1",

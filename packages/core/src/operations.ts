@@ -29,6 +29,17 @@ export const OperationTimeRangeSchema = z.enum(["15m", "1h", "6h", "24h", "7d"])
 export type OperationTimeRange = z.infer<typeof OperationTimeRangeSchema>;
 
 /**
+ * Upper bound for the exact `fingerprint` list filter.
+ *
+ * Fingerprints are provider-authored identifiers, so the real length belongs
+ * to the upstream system. The bound only keeps a hand-edited URL or a pasted
+ * value from becoming an unbounded SQL parameter; every observed provider
+ * (Alertmanager's 16-char hex, Grafana's generator URL hash, and the generic
+ * webhook contract) stays far below it.
+ */
+export const EVENT_FINGERPRINT_FILTER_MAX_LENGTH = 512;
+
+/**
  * Narrows the events list by what the alert's fan-out produced.
  *
  * `none` is not a delivery state: it selects events that produced no delivery
