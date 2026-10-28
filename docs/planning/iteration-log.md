@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 151 轮）
+
+- 时间：2026-10-28 13:29 CST 起，约 14:10 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `7a6ca8b`（main CI success）。open PR #609 属 docs-site routine。
+- 类型：**需求切片 + 三车道**（非 full-audit）。距上次全量审计 **2026-10-28 08:20 CST** 约 5.1 小时，
+  但 backlog 有 `planned` 的 REQ-308（28 分），按第 1 步优先续做，未展开全量审计。
+- 全量审计时间戳：不变，仍为 **2026-10-28 08:20 CST**（下一次最早 2026-10-28 14:20 CST）。
+- 车道轮转位置：本轮跑 `requirements` + `ui-triage` + `release-infra`；下一非必跑车道为
+  **`architecture`**（随后 `docs-drift`）。
+- `ui-triage` 决策：**`defer`**。理由：`last_ui_review_at` 是 1 小时前的真实浏览器评审，
+  13:45 之后 main 上 0 个提交；三个 UI 路径提交中两个正是上一轮评审的触发项，生产 UI 组件零变更。
+  它同时判定 UI-90 可以用计算（oklch→sRGB→相对亮度）而非截图确认，无需完整评审。
+- `last_ui_review_at`：不变，**2026-10-28 13:45 CST**。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `fervent-heisenberg-67565b`（写入隔离）。
+
+### 本轮交付
+
+- **PR #611 `feat(console): freeze the operations list while paging`**（REQ-308，AUTO_SHIP）
+  - URL/契约新增 `rangeUntil`，首次翻页捕获一次（整秒）；`listEvents`/`countEvents`/
+    `listDeliveries`/`countDeliveries` 对所选时间列加排他 `< timeColumn` 上界；筛选变化即释放；
+    顶部可清除 chip「结果集已锚定 · 翻页起点 …」。第 1 页保持实时。
+  - 新增 `docs/prd/operation-pagination-snapshot.md`。
+  - 回归测试直接复现缺陷：第 1 页读到最新行后插入更新的告警，无 `until` 的第 2 页确实重复该行，
+    有 `until` 的第 2 页返回下一行；列表与 `total` 同谓词。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 217 文件 / 1242 tests、
+    `vp run -r build` 通过。
+
+### 各车道发现
+
+**requirements（窄 brief，返回 1 条新候选）**
+- **REQ-311（27，candidate）**：投递列表缺「精确指纹」维度。`DeliveryListQuery` 有
+  `eventId`/`suppressionId` 但无 `fingerprint`（`history.interface.ts:120-122`），契约与前端模型
+  都把指纹标为 Events-only（`packages/api/src/schemas/operations.ts:346-351`、
+  `operation-search.ts:94-98`），服务只在 `listEvents` 传它（`operations.service.ts:55`）。
+  查询已 `innerJoin("events")`、`idx_events_fingerprint_received_at` 已存在，**无需迁移**。
+- 其余方向（按上游发生时间、搜源名称、每页条数、Events 按渠道类型）均已对应既有 REQ-214/253/116/Q-15。
+
+**release-infra（历史结论已过期，已更正）**
+- **E2E workflow 已存在**：`.github/workflows/e2e.yml:1,3-7,17-18,53-54`；main push 与 PR 均触发，
+  实证 run 40637797706 / 40638496603 均 success。`just e2e` 在 `Justfile:80-82`。
+  backlog 里「没有 E2E workflow」的旧断言应视为已解决。
+- **providers fixture 仍缺**：`packages/providers` 无 fixture 目录，25 处 payload 内联
+  （`packages/providers/src/grafana/index.test.ts:11-45`、`signoz/index.test.ts:11-38` 等）。
+- **RC checklist 4 条未勾 gate 均真实**：`docs/release/mvp-rc-checklist.md:131`（E2E 覆盖全部步骤，
+  spec 只有 1 个 serial 用例）、`:185`（provider 贡献指南缺失）、`:187`（fixture 化）、
+  `:188`（多版本样本，需真实上游数据，不可编造）。
+- 本轮未实施：fixture 搬迁约需 15 分钟且会与 REQ-308 抢带宽，列为下一轮 AUTO_FIX 候选。
+
+**ui-triage**
+- UI-90（对比度）与 UI-91（空态按钮文案）都可在无浏览器条件下安全修，UI-90 的改法与依据已给出
+  （`replay-urgent-paging-notice.tsx:33,40,43`，标题改 `text-foreground`、图标保留 `text-destructive`）。
+
+### EXPERT_PANEL
+
+- 本轮无新增 EXPERT_PANEL 事项：REQ-308 无 schema/迁移、不改投递路由语义、纯加法参数。
+- 既有 **SEC-39**（`dbPass`/`dbPwd` 判为非敏感）仍未裁决，下一轮起 3 人专家小组处理。
+
+### 环境备注
+
+- 新一轮会话工作树的 `node_modules` 只有 3 个条目（`@tanstack`、`vite`、`vite-plus`），
+  `vp install --frozen-lockfile` 报 "Already up to date" 却不修，`vp check` 因此报 4504 个
+  「Cannot find type definition file for 'node'」类错误。按
+  [[node-modules-partial-delete]] 删掉全部 workspace `node_modules` 后重装（2.8s）即恢复。
+
+### 下一轮优先项
+
+1. **REQ-311（27）**：投递列表精确指纹过滤 + 事件详情「同指纹」下钻。
+2. **SEC-39 EXPERT_PANEL**：密码缩写脱敏取舍。
+3. **SEC-42（AUTO_FIX）**：核心侧按 `DestinationKindSchema.options` 参数化的脱敏测试。
+4. **providers fixture 化（AUTO_FIX）**：grafana / signoz / alertmanager / generic 的 7 个内联 payload。
+5. **UI-90（26）**、**UI-91（24）**、**REQ-310（25）**、**REQ-309（23，需迁移）** 按评分续做。
+
 ## 2026-10-28（第 150 轮）
 
 - 时间：2026-10-28 11:57 CST 起，约 14:05 CST 结束。
