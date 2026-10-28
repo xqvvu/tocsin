@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
+import type { JsonObject } from "@tocsin/core";
 import { createDefaultDestinationRegistry } from "@tocsin/destinations";
 import { createDefaultProviderRegistry, type ProviderRegistry } from "@tocsin/providers";
 
@@ -20,7 +21,16 @@ const alertPayload = {
 };
 
 async function createHarness(
-  options: { routeEnabled?: boolean; providers?: ProviderRegistry } = {},
+  options: {
+    routeEnabled?: boolean;
+    providers?: ProviderRegistry;
+    /** Route targets, so a case can point at a destination that was never created. */
+    routeDestinationIds?: string[];
+    /** Stored destination config, so a case can exercise an unparseable config. */
+    destinationConfig?: JsonObject;
+    /** Skips creating `destination-1`, keeping only the route reference to it. */
+    skipDestination?: boolean;
+  } = {},
 ) {
   const store = await openSqliteStore({ databasePath: ":memory:", now: () => now });
   const destinations = createDefaultDestinationRegistry();
@@ -38,12 +48,14 @@ async function createHarness(
     config: {},
     tokenHash: "unused-in-rehearsal",
   });
-  await store.destinations.create({
-    id: "destination-1",
-    name: "Ops webhook",
-    kind: "generic_webhook",
-    config: { url: "https://example.test/hook" },
-  });
+  if (!options.skipDestination) {
+    await store.destinations.create({
+      id: "destination-1",
+      name: "Ops webhook",
+      kind: "generic_webhook",
+      config: options.destinationConfig ?? { url: "https://example.test/hook" },
+    });
+  }
   await store.routes.create({
     id: "route-1",
     name: "Critical checkout",
@@ -52,7 +64,7 @@ async function createHarness(
       severities: ["critical"],
       labels: [{ key: "service", operator: "equals", value: "checkout" }],
     },
-    destinationIds: ["destination-1"],
+    destinationIds: options.routeDestinationIds ?? ["destination-1"],
   });
 
   return { store, destinations, service };
@@ -60,9 +72,10 @@ async function createHarness(
 
 describe("source rehearsal service", () => {
   it("parses the payload, explains every route, and renders matched destinations", async () => {
-    const { store, service } = await createHarness();
+    const { store, destinations, service } = await createHarness();
     const recordEvent = vi.spyOn(store.intake, "recordEvent");
     const enqueue = vi.spyOn(store.deliveries, "enqueueForEvent");
+    const send = vi.spyOn(destinations, "send");
 
     const result = await service.rehearseSource({
       sourceId: "source-1",
@@ -71,6 +84,8 @@ describe("source rehearsal service", () => {
 
     expect(result.parse).toMatchObject({
       ok: true,
+      // PRD acceptance 1: the provider metadata travels back with the event.
+      providerMetadata: { provider: "generic" },
       normalizedEvent: {
         title: "Checkout unavailable",
         severity: "critical",
@@ -104,9 +119,11 @@ describe("source rehearsal service", () => {
     });
     expect(result.renders[0]?.renderedPayload).toContain("Checkout unavailable");
 
-    // The rehearsal is read-only: no Event, no Delivery, no job.
+    // The rehearsal is read-only: no Event, no Delivery, no job, and no real
+    // outbound request even though the target rendered successfully.
     expect(recordEvent).not.toHaveBeenCalled();
     expect(enqueue).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("returns a redacted parse failure without evaluating routes or rendering", async () => {
@@ -170,6 +187,40 @@ describe("source rehearsal service", () => {
     expect(result.routes[0]?.checks[0]).toMatchObject({ field: "enabled", matched: false });
     expect(result.renders).toEqual([]);
     expect(preview).not.toHaveBeenCalled();
+  });
+
+  it("reports a route target that no longer exists", async () => {
+    const { service } = await createHarness({
+      routeDestinationIds: ["destination-missing"],
+      skipDestination: true,
+    });
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    expect(result.renders).toEqual([
+      {
+        destinationId: "destination-missing",
+        destinationName: "destination-missing",
+        enabled: false,
+        ok: false,
+        renderedPayload: "",
+        errorMessage: "Destination not found: destination-missing",
+      },
+    ]);
+  });
+
+  it("reports a destination whose stored config cannot be parsed", async () => {
+    const { service } = await createHarness({ destinationConfig: {} });
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    expect(result.renders).toHaveLength(1);
+    expect(result.renders[0]).toMatchObject({
+      destinationId: "destination-1",
+      ok: false,
+      renderedPayload: "",
+    });
+    expect(result.renders[0]?.errorMessage).toBeTruthy();
   });
 
   it("rejects an oversized payload at the boundary", async () => {
