@@ -28,7 +28,7 @@ Tocsin 当前不提供 Prometheus/OpenTelemetry metrics endpoint、内置告警�
 | 电话加急最终失败：`tocsin.oncall` | 最终 `failed` 或“已拨出但记录失败”即通知 | 电话可能未接通或状态未知；先核实接收人 |
 | 入站认证与解析异常：`tocsin.intake` | 同一 `sourceId` 10 分钟内 5 条异常即建工单 | Token 轮换错误、来源停用或格式变化可能导致静默漏告警 |
 | 数据卷剩余空间：宿主机或 Kubernetes volume | 剩余低于 20% 警告，低于 10% 通知；同时设绝对下限 | SQLite、WAL、日志和备份共享磁盘，写满后接入与投递都会失败 |
-| 备份新鲜度：备份任务与校验结果 | 24 小时内无成功备份、文件为空或校验失败即建工单 | “任务存在”不等于可恢复，还需定期恢复演练 |
+| 备份新鲜度：备份任务与校验结果 | 24 小时内无成功备份、文件为空或校验失败即建工单 | “任务存在”不等于可恢复，还需按[恢复后验收清单](/operations/backup-restore#恢复后验收清单)定期演练 |
 | TLS 证书有效期：HTTPS 或证书监控 | 剩余 14 天警告，剩余 3 天通知值班 | 证书过期会让 dashboard 和 Webhook 同时不可用 |
 
 `/api/ready` 的 `code` 用于排障，不应被普通 HTTP 黑盒探针忽略。探针先按状态码触发，再在工单或告警正文中带上 `checks` 与 `code`；各错误码的含义见[日志与可观测性](/operations/observability#健康检查、worker-状态与投递健康)。

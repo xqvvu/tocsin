@@ -51,7 +51,7 @@ description: Tocsin 镜像升级、SQLite forward-only migration、readiness 失
 
 1. 从部署清单记录当前镜像、Compose/override 文件、目标版本和计划回滚版本。
 2. 阅读目标版本的 release notes，逐项确认 migration、环境变量、配置格式、接口和回滚限制。
-3. 完成一次冷备份。容器停止后复制同一个快照中的主库、`-wal` 与 `-shm` 文件，并校验备份。
+3. 完成一次冷备份。容器停止后复制同一个快照中的主库、`-wal` 与 `-shm` 文件，并按[校验备份](/operations/backup-restore#校验备份)确认可读。
 4. 用 SQLite 工具读取备份中的 migration 台账，确认当前数据库版本。下面假设 `$BACKUP_DIR` 是上一页生成的快照目录：
 
 ```bash
