@@ -327,6 +327,9 @@ export function createApplicationContainer(
           format: env.TOCSIN_LOG_FORMAT,
           level: env.TOCSIN_LOG_LEVEL,
         },
+        links: {
+          publicBaseUrl: publicBaseUrl ?? null,
+        },
         ...serviceOptions,
       });
     },
