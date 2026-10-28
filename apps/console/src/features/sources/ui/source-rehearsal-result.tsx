@@ -174,11 +174,19 @@ export function SourceRehearsalResultView({ result }: { result: SourceRehearsalR
                   </span>
                   <div className="flex shrink-0 items-center gap-1.5">
                     <SourceRehearsalVerdictBadge verdict={render.verdict} />
-                    <Badge variant={render.enabled ? "secondary" : "outline"}>
-                      {render.enabled
-                        ? t("sources.rehearsal.targetEnabled")
-                        : t("sources.rehearsal.targetDisabled")}
-                    </Badge>
+                    {/* The disabled verdict already says the target is disabled.
+                        Rendering the state badge beside it showed "Target
+                        disabled" next to "Disabled": two badges reading as two
+                        different facts instead of one. Every other verdict
+                        keeps the state badge, which still adds information
+                        (for example a silenced alert on a disabled target). */}
+                    {render.verdict === "destination_disabled" ? null : (
+                      <Badge variant={render.enabled ? "secondary" : "outline"}>
+                        {render.enabled
+                          ? t("sources.rehearsal.targetEnabled")
+                          : t("sources.rehearsal.targetDisabled")}
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 {render.suppression ? (

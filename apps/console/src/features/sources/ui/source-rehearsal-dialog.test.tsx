@@ -90,6 +90,17 @@ const silencedResult: SourceRehearsalResult = {
   ],
 };
 
+const disabledResult: SourceRehearsalResult = {
+  ...result,
+  renders: [
+    {
+      ...result.renders[0]!,
+      enabled: false,
+      verdict: "destination_disabled",
+    },
+  ],
+};
+
 function renderDialog(onRehearse: () => Promise<SourceRehearsalResult>) {
   render(
     <AppIntlProvider locale="en-US">
@@ -185,6 +196,46 @@ describe("source rehearsal dialog", () => {
     expect(screen.getByText("Maintenance window")).toBeTruthy();
     expect(screen.getByText("Delivery is paused globally")).toBeTruthy();
     expect(screen.getByText(/Paused since 2026-10-28T11:00:00.000Z/)).toBeTruthy();
+  });
+
+  it("states a disabled target once instead of stacking two badges", async () => {
+    const onRehearse = vi.fn(async () => disabledResult);
+    renderDialog(onRehearse);
+    openDialog();
+
+    fireEvent.change(screen.getByLabelText("Webhook body"), {
+      target: { value: '{"title":"Checkout unavailable"}' },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Run rehearsal" }));
+
+    // "Target disabled" and "Disabled" side by side read as two different
+    // facts. The verdict already carries the state for this verdict only.
+    expect(await screen.findByText("Target disabled")).toBeTruthy();
+    expect(screen.queryByText("Disabled")).toBeNull();
+  });
+
+  it("still shows the target state when another verdict decides the outcome", async () => {
+    const onRehearse = vi.fn(async () => ({
+      ...silencedResult,
+      renders: [
+        {
+          ...silencedResult.renders[0]!,
+          enabled: false,
+        },
+      ],
+    }));
+    renderDialog(onRehearse);
+    openDialog();
+
+    fireEvent.change(screen.getByLabelText("Webhook body"), {
+      target: { value: '{"title":"Checkout unavailable"}' },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Run rehearsal" }));
+
+    // Silence wins the verdict, so the target's own state is still useful and
+    // must not be hidden along with the duplicate.
+    expect(await screen.findByText("Would be silenced")).toBeTruthy();
+    expect(screen.getByText("Disabled")).toBeTruthy();
   });
 
   it("surfaces a request failure without dropping the dialog", async () => {
