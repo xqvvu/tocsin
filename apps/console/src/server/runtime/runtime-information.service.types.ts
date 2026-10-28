@@ -17,9 +17,16 @@ export interface RuntimeInformationLogging {
   level: RuntimeInformation["logLevel"];
 }
 
+/** Public origins rendered into operator-facing notification links. */
+export interface RuntimeInformationLinks {
+  /** Origin used for `tocsin.eventUrl`, or null when no base URL is configured. */
+  publicBaseUrl: string | null;
+}
+
 export interface RuntimeInformationServiceOptions {
   store: Pick<SqliteStore, "sqliteVersion">;
   limits: RuntimeInformationLimits;
   logging: RuntimeInformationLogging;
+  links: RuntimeInformationLinks;
   readSystemInformation?: (sqliteVersion: string) => SystemInformation;
 }

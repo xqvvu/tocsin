@@ -2,6 +2,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { runtimeInformationQueryOptions } from "#/features/configuration/api/configuration.queries";
 import { formatBytes } from "#/features/configuration/model/format-bytes";
+import { SettingsPublicBaseUrlNotice } from "#/features/configuration/ui/settings-public-base-url-notice";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function SettingsRuntimePanel() {
@@ -22,6 +23,10 @@ export function SettingsRuntimePanel() {
       <dl className="bg-border grid grid-cols-1 gap-px sm:grid-cols-2 xl:grid-cols-4">
         <RuntimeFact label={t("configuration.runtime.version")} value={runtime.version} />
         <RuntimeFact label={t("configuration.runtime.environment")} value={runtime.environment} />
+        <RuntimeFact
+          label={t("configuration.runtime.publicBaseUrl")}
+          value={runtime.publicBaseUrl ?? t("configuration.runtime.publicBaseUrlUnset")}
+        />
         <RuntimeFact label={t("configuration.runtime.nodeVersion")} value={runtime.nodeVersion} />
         <RuntimeFact
           label={t("configuration.runtime.platform")}
@@ -54,6 +59,7 @@ export function SettingsRuntimePanel() {
         <RuntimeFact label={t("configuration.runtime.logFormat")} value={runtime.logFormat} />
         <RuntimeFact label={t("configuration.runtime.logLevel")} value={runtime.logLevel} />
       </dl>
+      <SettingsPublicBaseUrlNotice publicBaseUrl={runtime.publicBaseUrl} />
     </section>
   );
 }

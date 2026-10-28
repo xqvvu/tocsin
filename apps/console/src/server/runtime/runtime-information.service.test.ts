@@ -27,6 +27,7 @@ function createService(
       workerStaleRunningMs: 5 * 60_000,
     },
     logging: { format: "auto", level: "info" },
+    links: { publicBaseUrl: null },
     readSystemInformation: () => SYSTEM_INFORMATION,
     ...overrides,
   });
@@ -42,6 +43,7 @@ describe("runtime information service", () => {
       platform: "linux",
       architecture: "arm64",
       environment: "production",
+      publicBaseUrl: null,
       sqliteDriver: "better-sqlite3",
       sqliteVersion: "3.53.0",
       destinationTimeoutMs: 10_000,
@@ -84,6 +86,7 @@ describe("runtime information service", () => {
       "maxWebhookBytes",
       "nodeVersion",
       "platform",
+      "publicBaseUrl",
       "sqliteDriver",
       "sqliteVersion",
       "version",
@@ -91,5 +94,13 @@ describe("runtime information service", () => {
       "workerIntervalMs",
       "workerStaleRunningMs",
     ]);
+  });
+
+  it("projects the configured notification base URL verbatim", async () => {
+    const service = createService({ links: { publicBaseUrl: "https://tocsin.example.test" } });
+
+    const information = await service.getRuntimeInformation();
+
+    expect(information.publicBaseUrl).toBe("https://tocsin.example.test");
   });
 });

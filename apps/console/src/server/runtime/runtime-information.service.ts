@@ -14,6 +14,7 @@ export class RuntimeInformationService {
   private readonly store: RuntimeInformationServiceOptions["store"];
   private readonly limits: RuntimeInformationServiceOptions["limits"];
   private readonly logging: RuntimeInformationServiceOptions["logging"];
+  private readonly links: RuntimeInformationServiceOptions["links"];
   private readonly readSystemInformation: NonNullable<
     RuntimeInformationServiceOptions["readSystemInformation"]
   >;
@@ -22,6 +23,7 @@ export class RuntimeInformationService {
     this.store = options.store;
     this.limits = options.limits;
     this.logging = options.logging;
+    this.links = options.links;
     this.readSystemInformation = options.readSystemInformation ?? loadSystemInformation;
   }
 
@@ -35,6 +37,7 @@ export class RuntimeInformationService {
       platform: system.platform,
       architecture: system.architecture,
       environment: system.environment,
+      publicBaseUrl: this.links.publicBaseUrl,
       sqliteDriver: system.sqliteDriver,
       sqliteVersion: system.sqliteVersion,
       destinationTimeoutMs: this.limits.destinationTimeoutMs,

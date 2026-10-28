@@ -16,7 +16,7 @@ Tocsin 的部署行为由进程环境决定。本页是公开站点的运行时�
 - `apps/console/src/env.ts` 定义应用环境变量的 schema。应用同时读取进程环境与 Vite 环境；空字符串按“未设置”处理，因此删除变量或设为空会触发对应默认值。
 - 环境变量在进程启动时形成运行时配置。应用没有热重载端点；修改后必须重启或重建容器。
 - 修改 Compose/override 的 `environment` 后，用 `docker compose up -d` 重建容器才能应用新值。只替换同路径 secret 文件内容时，`docker compose restart console` 会重新启动并读取文件。
-- 设置页的「运行时与生效参数」显示已生效的超时、Webhook 上限、Worker 参数与日志配置。它不显示认证 URL、密钥或环境变量来源，也不能替代部署清单。
+- 设置页的「运行时与生效参数」显示已生效的超时、Webhook 上限、Worker 参数与日志配置，并显示通知直链基址（`SERVER_URL`，缺失时回落到 `BETTER_AUTH_URL`）；基址为空或指向本机时面板会给出提示。它不显示密钥或环境变量来源，也不能替代部署清单。
 - 语言、时区、[原始载荷保留天数](/operations/data-retention)和全局投递暂停属于数据库中的运行设置，不是环境变量。可移植配置里的 `secret_refs` 只用于导入时解析密钥值，也不等同于部署变量。
 
 ## 认证与外部 URL

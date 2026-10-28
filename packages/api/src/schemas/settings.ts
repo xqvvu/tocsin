@@ -31,6 +31,14 @@ export const RuntimeInformationOutputSchema = z.object({
   platform: z.string(),
   architecture: z.string(),
   environment: z.string(),
+  /**
+   * Absolute origin rendered into the `tocsin.eventUrl` template variable, or
+   * `null` when the process has neither `SERVER_URL` nor `BETTER_AUTH_URL`.
+   * Notification links are unusable in that case, so the settings screen
+   * surfaces the absence instead of leaving operators to discover it after a
+   * page has already been sent.
+   */
+  publicBaseUrl: z.url().nullable(),
   sqliteDriver: z.literal("better-sqlite3"),
   sqliteVersion: z.string(),
   destinationTimeoutMs: z.number().int().positive(),
