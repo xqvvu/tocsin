@@ -56,14 +56,28 @@ description: 面向 SRE 与运维人员说明 Tocsin 设置页、投递急停、
 
 ### 运行时与生效参数
 
-「运行时与生效参数」从当前进程和实际运行配置读取，可用于核对当前部署是否与预期版本一致：
+「运行时与生效参数」是当前进程的只读投影，面板副标题为「只读 · 来自当前进程与环境变量」。它反映容器里真正生效的值，而不是部署文件里写了什么。
 
-- Tocsin 版本、运行环境、Node 版本、平台与架构；
-- 通知直链基址，即 `SERVER_URL` 或回落后的 `BETTER_AUTH_URL`；
-- SQLite 驱动和活动连接报告的实际版本；
-- 出站 HTTP 超时、Webhook 请求体上限；
-- 投递与加急 Worker 共用的间隔、批量和超时回收窗口；
-- 日志格式与级别。
+面板各字段对应的环境变量或来源：
+
+- **版本** — 仓库根 `package.json` 的 `version`，原样显示，与发布版本一致。
+- **运行环境** — 构建模式 `import.meta.env.MODE`，不是 `NODE_ENV`；生产构建通常为 `production`，开发服务器为 `development`。
+- **通知直链基址** — `SERVER_URL`，为空时回落 `BETTER_AUTH_URL`；两者都为空时显示「未配置」。
+- **Node 版本 / 平台** — `process.version`，以及 `process.platform` 与 `process.arch`，合起来显示为 `linux/arm64` 这样的形式。
+- **SQLite** — 驱动名与活动连接报告的版本，驱动固定为 `better-sqlite3`；版本每次读取，不是启动时缓存。
+- **出站超时** — `TOCSIN_DESTINATION_TIMEOUT_MS`，按下面的时长格式显示。
+- **Webhook 上限** — `TOCSIN_MAX_WEBHOOK_BYTES`，按下面的字节格式显示。
+- **工作进程间隔 / 超时回收** — `TOCSIN_WORKER_INTERVAL_MS`、`TOCSIN_WORKER_STALE_RUNNING_MS`，按下面的时长格式显示。
+- **工作进程批量** — `TOCSIN_WORKER_BATCH_SIZE`，整数原样显示。
+- **日志格式 / 日志级别** — `TOCSIN_LOG_FORMAT`、`TOCSIN_LOG_LEVEL`，原样显示配置 token。
+
+默认值、取值范围与校验规则只在[环境变量与运行时配置](/operations/configuration)维护，本页不重复，避免两处漂移。三个「工作进程」字段同时作用于投递与加急队列。
+
+显示格式有几处容易误读：
+
+- **时长**按整分钟、整秒、毫秒三级降级：能被 `60000` 整除显示 `N min`，能被 `1000` 整除显示 `N s`，否则显示 `N ms`。所以默认的 `10000` 显示 `10 s`、`300000` 显示 `5 min`，而 `1500` 会显示 `1500 ms`。
+- **字节**按 1024 进制换算到 `B`、`KiB`、`MiB`、`GiB`：整值不带小数（默认 `1048576` 显示 `1 MiB`），非整值保留一位小数（`1.5 KiB`）。
+- **日志格式**显示的是配置 token，不是解析后的格式；`auto` 的实际输出按构建模式解析，细节见[日志与可观测性](/operations/observability#格式与级别)。
 
 通知直链基址为空或仍指向 `localhost` 时，面板会提示 `tocsin.eventUrl` 可能无法被收件人打开。修正 `SERVER_URL` 后重建容器，再核对事实行与提示是否消失。
 
@@ -143,6 +157,8 @@ description: 面向 SRE 与运维人员说明 Tocsin 设置页、投递急停、
 | 现象 | 边界 |
 | --- | --- |
 | 修改 Compose 后设置页仍显示旧运行时值 | 需要 `docker compose up -d` 重建容器；刷新页面不能重读部署环境 |
+| 面板显示 `10 s`、`5 min`，与 Compose 中的毫秒数对不上 | 时长字段按整分/整秒渲染，变量值仍是毫秒；`10 s` 就是 `10000` 毫秒 |
+| 把 `NODE_ENV` 改成 development 后「运行环境」仍显示 `production` | 「运行环境」来自构建模式，不读 `NODE_ENV`；两者不能互相推断 |
 | 收件人打不开通知里的事件链接 | 在运行时面板检查通知直链基址；本机地址或「未配置」都会产生不可用直链，修正 `SERVER_URL` 后重建容器 |
 | 暂停投递后测试目标仍收到消息 | 测试动作绕过投递队列，是真实网络请求 |
 | 恢复投递后立即出现一批通知 | 暂停期间积压被保留，恢复后 Worker 会继续领取 |
