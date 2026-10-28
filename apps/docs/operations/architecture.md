@@ -54,7 +54,7 @@ Tocsin 的默认运行模型是**一个应用进程、一个本地 SQLite 数据
 4. 投递 Worker 按轮询间隔领取到期任务并调用 Destination。发送结果、尝试记录、错误和下次重试时间写回 SQLite。
 5. 电话加急进入单独队列，由加急 Worker 派发。主投递成功不等同于电话已经接通。
 
-因此排查时沿同一条链路读取证据：Event 证明收到什么，Route evidence 证明为何匹配，Delivery 证明向哪里发送以及结果如何。状态、退避与“至少一次”投递语义见[投递检索、生命周期与重试](/operations/deliveries)。
+因此排查时沿同一条链路读取证据：Event 证明收到什么，Route evidence 证明为何匹配，Delivery 证明向哪里发送以及结果如何。每一步读写哪张表、状态如何流转见[处理链路与概念](/guide/concepts#一条告警的时间线)；状态、退避与“至少一次”投递语义见[投递检索、生命周期与重试](/operations/deliveries)。
 
 ## 认证边界
 
