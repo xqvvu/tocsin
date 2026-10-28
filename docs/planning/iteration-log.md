@@ -2,6 +2,119 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 159 轮）
+
+- 时间：2026-10-28 23:36 CST 起（跨零点）。
+- 基线：`origin/main` @ `a6da067c`（第 158 轮 planning 提交）；main CI success；启动时无 open PR。
+- 类型：**UI 评审轮（未跑全量审计）**。距上次全量审计 2026-10-28 17:05 CST 已 6h31m，超过 6 小时
+  阈值；但 `ui-triage` 判定 `review_now`，按第 3 步「UI 评审触发时取代 requirements 成为主交付」，
+  本轮交付 UI 切片，**全量审计顺延到下一轮**并列为第一优先。
+- 全量审计时间戳：未更新，仍为 **2026-10-28 17:05 CST**（第 154 轮）。
+- 车道（并发 ≤3）：`requirements`（窄 brief）、`ui-triage`、`architecture`（轮转位）；
+  `architecture` 返回后第三个并发名额交给 `ui-review`。下一非必跑车道建议 **`quality`**
+  （最近一次为第 154 轮）。
+- `last_ui_review_at` = **2026-10-29 00:24 CST**（本轮真实浏览器评审，隔离临时实例）。
+- 工作树：`agent-iteration` 只用于并发锁与基线（目录不存在时重建仅用于锁，不对其做 git 写操作）；
+  实现、验证、PR 在会话工作树 `loving-albattani-bb8ed8`。
+
+### ui-triage 决策与理由
+
+- 决策：**`review_now`**。上次真实浏览器评审为 2026-10-28 20:02 CST（3.6h，远未达 48h），
+  自那时起 UI 路径合并 2 个；其中 `60b7049c`（22:41）新增「接入预演」对话框——一个从未进过浏览器的
+  新交互界面，该轮仅记录 `vp check` / `vp run -r test` / `vp run -r build`，无截图或 Playwright 记录。
+  55 条存量 UI 候选属饱和队列，不计为信号；触发点仅是这个覆盖缺口。
+
+### 专家发现
+
+**requirements（窄 brief，2 条新候选，REQ-318 复核）**
+
+- REQ-319（26）：事件列表按「未命中任何路由」过滤。`deliveryOutcome=none` 同时覆盖「没有路由命中」
+  与「命中但没产生投递」（`history.repository.ts:929-937` 注释自认）；列表已投影 `routeMatchCount`
+  （`packages/api/src/schemas/operations.ts:53`、`history.repository.ts:181`）却不能筛。
+- REQ-320（27）：事件列表按「通知目标类型」筛选。`destinationKind` 明确是 delivery-only
+  （`packages/api/src/schemas/operations.ts:316-317`），事件页只能逐个选目标 id
+  （`operation-search.ts:63`），无法回答「飞书整体故障时哪些告警发过飞书」。
+- REQ-318 复核成立，行号未漂移：`source-route-coverage.ts:19-26,41-50,53-55`、
+  `source-route-coverage-cell.tsx:10-15,21-34`；建议把条件判定收进
+  `packages/core/src/route/route.ts` 的纯函数（`evaluateRouteMatch:182-206`）。
+
+**architecture（窄 brief）**
+
+- ARCH-67 仍成立：`delivery/delivery.repository.ts:573-586` 的 `destinationUpdatedAt()` 直接
+  `selectFrom("destinations")`（`:578`），同方法链 `:525` 已正确使用 `this.destinations.get(...)`。
+- ARCH-68 仍成立，行号漂移 +1：`history/history.repository.ts:72` 的 `_deliveries` 未使用、
+  `:69` 与 `delivery/delivery.repository.ts:88` 的 `intake` 声明为具体类 `SqliteIntakeRepository`。
+- 最近 12 个提交无新增架构漂移：service 不抛 `ORPCError`（`source-rehearsal.service.ts:50` 抛
+  `RecordNotFoundError`）、entrypoint 仍薄（`server/orpc/features/sources/router.ts:23-26`）、
+  feature `model/*` 未导入 `#/infra`/`#/server`。
+
+**ui-review（真实浏览器，隔离实例 `TOCSIN_DATABASE_PATH=/tmp/tocsin-ui-review-159.db`，1440×806 与 390×844）**
+
+- UI-100（26，阻断）：预演对话框无高度上限，长载荷 + 结果态把弹层撑到 top=-345 / bottom=1151，
+  footer 落在 1103 且 body 被锁滚动，主操作不可达。截图
+  `/tmp/tocsin-ui-159-rehearsal-long-payload-1440.png`、`-result-1440.png`、`-result-390.png`。
+- UI-101（25）：运行中 Esc / 取消 / X 全部被吞（`source-rehearsal-dialog.tsx:94-98,186`），
+  请求挂起时只能刷新丢草稿。
+- UI-102（21）：非法 JSON 错误 `<p>` 无 id/`aria-describedby`/`role=alert`
+  （`source-rehearsal-dialog.tsx:170-172`），读屏只知无效不知原因。
+- UI-103（18）：空列表下「接入预演」禁用但 title 仍是动作说明（`sources-page.tsx:86,106`）。
+- UI-104（17）：关闭不清 `result`（`source-rehearsal-dialog.tsx:46-52`），重开仍是旧结果。
+- 已验证正常：Esc 关闭并把焦点还给触发按钮、空态禁用、非法 JSON 内联错误、Select 有可访问名。
+- 编排者额外核实 **UI-105**（22）：`sources.rehearsal.payloadPlaceholder` 是字面 JSON，`{` `}`
+  被 ICU 当作参数，`t()` 每次渲染抛 `INVALID_MESSAGE: MALFORMED_ARGUMENT` 并回退成裸 key；
+  开发服务器在一次评审里记录了 1 万条以上该错误（`/tmp/tocsin-dev-159.log`）。
+
+### 本轮交付
+
+- **PR #658 `fix(console): keep the source rehearsal dialog inside the viewport`**（UI-100 + UI-105）
+  - 弹层加 `max-h-[calc(100dvh-2rem)]` 与 `grid-rows-[auto_minmax(0,1fr)_auto]`：头部与底部固定、
+    只滚动中间一行；textarea 加 `max-h-48`；结果视图去掉嵌套的 `overflow-y-auto`。
+  - 占位符改用 `t.raw(...)`，与 `configuration.portableConfig.jsonPlaceholder` 的既有做法一致。
+  - 新增两条回归断言：占位符必须是 JSON 示例原文；弹层必须带视口上限、只有一个滚动区、
+    textarea 有高度上限。
+  - 验证：`vp check` 0 error（31 条既有 warning）、`vp run -r test` 225 文件 / 1287 tests、
+    `vp run -r build` 2/2；浏览器实测 1440×806（弹层 16–790、footer 742–774）与 390×844
+    （弹层 16–828、footer 740–812、页面 `scrollWidth=390`），修复后无新增 `MALFORMED_ARGUMENT`。
+- **docs PR**：backlog 新增 REQ-319/320、UI-100..UI-105；UI-90 重号旧行改号 UI-106 并标 shipped。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项。
+
+### 发布
+
+- 三位发布专家独立评估：
+  - 发布经理：**GO（#658 合入后）**——自 `v0.1.0-beta.127` 起的提交全是 docs，唯一用户可见变更
+    是 #658 的回归修复；建议 `0.1.0-beta.128`。
+  - 阻断审计：**GO**——main CI success；除本轮发布 PR 外无 open PR（docs-site 的 #657 在评估窗口内
+    合入）；无 migration/schema；`blocked-autonomous` 仅 REL-13/16/23 仓库治理项；无已知回归。
+  - 运维/回滚：**LOW**——Dockerfile / compose / env / runtime 无变化，迁移仍止于 `0005`，
+    回滚只需换回 `0.1.0-beta.127` 镜像。
+- 版本 PR #659 合入 `43611ed1`；合并后 main `CI` 与 `E2E` 均 success。
+- tag `v0.1.0-beta.128`（annotated）指向 `43611ed1`；GitHub Release（prerelease）已创建且 body 非空。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.128`（linux/amd64 + linux/arm64）：
+  index digest `sha256:505e5e44fdca25efb7f9bb20a1afb3f4f14bbd0a17b6d1b6ac7a1731d845c36d`，
+  amd64 `sha256:c00b767e803d6049f152f422355e8a5998b64c143803743062be7f1079763fb6`，
+  arm64 `sha256:1ad21736e098d7dfcc8eeb69e4fe55fd3c660a4389951bf17b2a1b54f85e663b`。
+  构建在 tag 的干净检出 `/tmp/tocsin-build-beta128` 中进行，`--provenance=false --sbom=false`，
+  未推 `latest`；回滚镜像 `0.1.0-beta.127`。
+
+### 收尾与同步
+
+- 工作树：已回收 `eager-kilby-e4308a`（状态干净、会话已停止、PR #651 已合并），
+  `git worktree prune` 清掉 `docs-site-20261028-231854` 的失效注册；
+  `.claude/worktrees` 由 805M 降到 782M（剩余主要是本会话工作树）。
+- 本会话工作树的 `node_modules` / `.output` / `.vite` / `coverage` 在轮末删除；
+  `/tmp/tocsin-build-beta128` 在镜像构建后移除。
+
+### 下一轮优先项
+
+1. **全量审计**（已超过 6 小时阈值，本轮因 UI 评审顺延）。
+2. REQ-318（28，S）告警源覆盖列区分全量/仅条件覆盖。
+3. UI-101（25）预演运行中可退出；UI-102（21）错误文案接 `aria-describedby`。
+4. ARCH-67/68 纯重构 chore（行号已复核）。
+5. REL-24 provider fixture 第一批（5 文件 / 10 payload）。
+
 ## 2026-10-28（第 158 轮）
 
 - 时间：2026-10-28 21:01 CST 起。
