@@ -5,7 +5,7 @@ description: Tocsin 首次 owner 初始化、dashboard 登录、会话审计、�
 
 # 认证与账号安全
 
-Tocsin 的 dashboard 使用 Better Auth 的邮箱与密码登录。它是单工作区的自托管控制台，不是带邀请、租户或用户目录的 SaaS 产品。
+Tocsin 的 dashboard 使用 Better Auth 的邮箱与密码登录。它是单工作区的自托管控制台，不是带邀请、租户或用户目录的 SaaS 产品。设置页的会话面板、投递急停与运行诊断边界见[设置与运行态操作](/operations/settings)。
 
 Dashboard 认证和 Webhook 接入是两条独立边界：
 
@@ -135,4 +135,4 @@ export SERVER_URL="https://tocsin.example.com"
 6. 为上游告警分别创建告警源 Token，不复用 dashboard 密码。
 7. 将用户、session 和账号安全数据纳入数据库备份范围，并演练恢复。
 
-相关页面：[环境变量与运行时配置](/operations/configuration) · [Docker 生产部署](/operations/deploy-docker) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [故障排查](/operations/troubleshooting) · [告警源接入参考](/integrations/providers)
+相关页面：[设置与运行态操作](/operations/settings) · [环境变量与运行时配置](/operations/configuration) · [Docker 生产部署](/operations/deploy-docker) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [故障排查](/operations/troubleshooting) · [告警源接入参考](/integrations/providers)
