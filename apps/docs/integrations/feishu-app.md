@@ -167,7 +167,7 @@ Delivery 详情的「电话加急」表按呼叫对象逐行显示：
 4. 在 5 分钟内重发相同告警，确认没有重复电话；再验证 `resolved` 或低于门槛的级别不会自动呼叫。
 5. 在投递详情手动发起一次小范围加急，确认操作者、呼叫时间和状态被记录。
 6. 检查 `tocsin.delivery`、`tocsin.oncall` 与 `tocsin.worker.oncall` 日志，确认失败原因已脱敏且与页面一致。
-7. 把应用凭证、飞书额度负责人和人工补呼流程写入值班手册。
+7. 把应用凭证、飞书额度负责人和人工补呼流程写入值班手册，并按[值班交接与通知链路验收](/operations/oncall-handoff)核对最近失败或状态未知的加急记录。
 
 日志类别与安全取日志方式见[日志与可观测性](/operations/observability)；认证或 Webhook 问题见[故障排查](/operations/troubleshooting)。
 
