@@ -1,3 +1,4 @@
+import { routeRuleHasEventConditions } from "@tocsin/core";
 import type { DestinationSummary, RouteDefinition } from "@tocsin/core";
 
 type RouteSummary = RouteDefinition;
@@ -10,10 +11,17 @@ export interface SourceRouteCoverage {
   deliverableRouteCount: number;
   /** Matching routes whose destinations are all disabled or missing. */
   blockedRouteCount: number;
+  /**
+   * Deliverable routes that only deliver when the event also matches a rule
+   * condition (severity, status, label, or text). They cover the source, but
+   * not all of its traffic.
+   */
+  conditionalRouteCount: number;
   directRouteCount: number;
   catchAllRouteCount: number;
   routeNames: string[];
   blockedRouteNames: string[];
+  conditionalRouteNames: string[];
 }
 
 export function sourceRouteCoverage(
@@ -38,15 +46,21 @@ export function sourceRouteCoverage(
     }
   }
 
+  const conditionalRoutes = deliverableRoutes.filter((route) =>
+    routeRuleHasEventConditions(route.rule),
+  );
+
   return {
     enabledRouteCount: enabledRoutes.length,
     deliverableRouteCount: deliverableRoutes.length,
     blockedRouteCount: blockedRoutes.length,
+    conditionalRouteCount: conditionalRoutes.length,
     directRouteCount: enabledRoutes.filter((route) => route.rule.sourceIds.includes(sourceId))
       .length,
     catchAllRouteCount: enabledRoutes.filter((route) => route.rule.sourceIds.length === 0).length,
     routeNames: enabledRoutes.map((route) => route.name),
     blockedRouteNames: blockedRoutes.map((route) => route.name),
+    conditionalRouteNames: conditionalRoutes.map((route) => route.name),
   };
 }
 

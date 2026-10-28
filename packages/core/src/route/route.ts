@@ -218,6 +218,29 @@ export function findMatchingRoutes(
   return routes.map((route) => evaluateRouteMatch(route, input)).filter((result) => result.matched);
 }
 
+/**
+ * Whether a rule narrows matching on the event itself rather than on its source.
+ *
+ * The Sources coverage column counts the routes that cover a source. A route
+ * that additionally requires a severity, status, label, or text match covers
+ * only part of that source's traffic, so the column has to say so instead of
+ * implying every alert from the source is delivered. `sourceIds` is not an
+ * event condition: covering the source is what the column already counts.
+ */
+export function routeRuleHasEventConditions(rule: RouteRuleInput): boolean {
+  return (
+    hasAnyValue(rule.severities) ||
+    hasAnyValue(rule.statuses) ||
+    hasAnyValue(rule.labels) ||
+    hasAnyValue(rule.titleContains) ||
+    hasAnyValue(rule.messageContains)
+  );
+}
+
+function hasAnyValue(values: readonly unknown[] | undefined): boolean {
+  return (values?.length ?? 0) > 0;
+}
+
 function resultFor(route: RouteDefinition, checks: RouteMatchCheck[]): RouteMatchResult {
   return {
     routeId: route.id,

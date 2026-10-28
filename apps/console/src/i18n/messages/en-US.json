@@ -1295,6 +1295,8 @@
   "sources.table.pagination.range": "{total, plural, one {# source} other {# sources}}",
   "sources.table.routes.blocked": "All targets off",
   "sources.table.routes.blockedTitle": "{count} enabled routes cover this source, but every linked destination is disabled so deliveries queue without sending: {names}",
+  "sources.table.routes.conditionalSuffix": " · {count} conditional",
+  "sources.table.routes.conditionalTitle": "{count} of them also need the event to match a severity, status, label, or text condition: {names}",
   "sources.table.routes.deliverable": "{count} deliverable",
   "sources.table.routes.deliverableTitle": "{count} enabled routes cover this source ({direct} direct, {catchAll} catch-all) and at least one linked destination is enabled: {names}",
   "sources.table.routes.none": "No active route",
