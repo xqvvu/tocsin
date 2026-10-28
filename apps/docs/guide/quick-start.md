@@ -28,7 +28,7 @@ curl -fsS http://localhost:3000/api/ready
 
 在 dashboard 中按以下顺序配置：
 
-1. 在「通知目标」新建一个目标，例如 Feishu、Slack、Email 或通用 Webhook。填入真实可达的接收端，并使用目标页的测试操作验证配置。Email 适配器当前标记为 experimental。字段、模板和安全边界见[通知目标参考](/integrations/destinations)；需要飞书电话加急时，先按[飞书应用与电话加急](/integrations/feishu-app)完成应用、群和呼叫对象配置。
+1. 在「通知目标」新建一个目标，例如 Feishu、Slack、Email 或通用 Webhook。填入真实可达的接收端，并使用目标页的测试操作验证配置。Email 适配器当前标记为 experimental，需要先准备 HTTP 邮件网关，接入与验收见[邮件网关接入与验收](/integrations/email-gateway)。字段、模板和其它通道的边界见[通知目标参考](/integrations/destinations)；需要飞书电话加急时，先按[飞书应用与电话加急](/integrations/feishu-app)完成应用、群和呼叫对象配置。
 2. 在「告警源」新建一个 `Generic Webhook` 告警源。创建后立即复制一次性显示的 Webhook URL 与接入 Token；Token 之后不会再次显示。创建、凭据轮换、停用和删除边界见[告警源接入与生命周期](/guide/sources)。
 3. 在「路由」新建规则，选择刚创建的告警源、一个或多个匹配条件及通知目标。仅匹配 `critical` 的规则可用于本例。
 
@@ -61,4 +61,4 @@ curl -i -X POST 'http://localhost:3000/api/sources/<source-id>/webhook' \
 告警源 Token 可放在 `Authorization: Bearer ...` 或 `X-Tocsin-Source-Token` 请求头中。也可使用该告警源配置的 Tocsin 侧共享密钥，通过 `X-Tocsin-Provider-Secret` 请求头认证；当前实现接受有效 Token 或有效共享密钥，不要求两者同时提供。Webhook 不使用 dashboard 登录 session。
 :::
 
-下一步：[查看各 Provider 的载荷契约](/integrations/providers) · [配置并测试通知目标](/integrations/destinations) · [理解事件、路由和抑制](/guide/concepts) · [掌握路由匹配规则](/guide/routes) · [核对环境变量与运行时限制](/operations/configuration) · [管理 owner 与登录会话](/operations/authentication) · [排查接入或投递问题](/operations/troubleshooting)
+下一步：[查看各 Provider 的载荷契约](/integrations/providers) · [配置并测试通知目标](/integrations/destinations) · [接入 HTTP 邮件网关](/integrations/email-gateway) · [理解事件、路由和抑制](/guide/concepts) · [掌握路由匹配规则](/guide/routes) · [核对环境变量与运行时限制](/operations/configuration) · [管理 owner 与登录会话](/operations/authentication) · [排查接入或投递问题](/operations/troubleshooting)
