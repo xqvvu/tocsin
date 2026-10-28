@@ -7,7 +7,7 @@ description: 为单实例 Tocsin 建立外部探针、日志告警、容量与�
 
 Tocsin 当前不提供 Prometheus/OpenTelemetry metrics endpoint、内置告警引擎或历史指标库。`/api/health`、`/api/ready`、运行日志和 dashboard 只提供观测信号；采集、聚合、通知与升级必须由部署方的监控系统完成。
 
-本页给出一套面向单实例部署的最小生产基线。阈值是起步建议，不是 Tocsin 内置默认值；上线两周后应按真实流量和目标重要性调整。日志字段、请求关联和脱敏边界见[日志与可观测性](/operations/observability)，故障处置顺序见[故障排查](/operations/troubleshooting)。
+本页给出一套面向单实例部署的最小生产基线。阈值是起步建议，不是 Tocsin 内置默认值；上线两周后应按真实流量和目标重要性调整。进程、SQLite、Worker 与外部依赖的故障边界见[单实例架构与故障边界](/operations/architecture)，日志字段、请求关联和脱敏边界见[日志与可观测性](/operations/observability)，故障处置顺序见[故障排查](/operations/troubleshooting)。
 
 ::: danger 不要用 Tocsin 自己监控 Tocsin
 如果把实例不可用、最终投递失败或磁盘告警发送到同一个 Tocsin 实例，那么该实例故障时监控和被监控对象会一起失效。Tocsin 自身的告警必须走独立的监控与通知链路。
@@ -131,4 +131,4 @@ dashboard 适合人工复核，但不能代替外部探针。每个班次至少�
 Tocsin 不提供长期 metrics、队列深度 API、浏览器错误上报、自动备份、证书管理或 synthetic monitor。设置页 Worker 状态是进程内快照，容器重启后会清空；投递健康只覆盖通知目标列表展示，不是 Prometheus exporter。需要这些能力时，应在外部监控系统实现，不要把 dashboard 当作唯一数据源。
 :::
 
-相关页面：[日志与可观测性](/operations/observability) · [故障排查](/operations/troubleshooting) · [投递生命周期与重试](/operations/deliveries) · [Docker 生产部署](/operations/deploy-docker) · [TLS 反向代理](/operations/reverse-proxy) · [数据保留与 SQLite 容量](/operations/data-retention) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [告警源接入与生命周期](/guide/sources) · [飞书应用与电话加急](/integrations/feishu-app)
+相关页面：[单实例架构与故障边界](/operations/architecture) · [日志与可观测性](/operations/observability) · [故障排查](/operations/troubleshooting) · [投递生命周期与重试](/operations/deliveries) · [Docker 生产部署](/operations/deploy-docker) · [TLS 反向代理](/operations/reverse-proxy) · [数据保留与 SQLite 容量](/operations/data-retention) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [告警源接入与生命周期](/guide/sources) · [飞书应用与电话加急](/integrations/feishu-app)
