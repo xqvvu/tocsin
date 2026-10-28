@@ -29,7 +29,7 @@ description: Tocsin 镜像升级、SQLite forward-only migration、readiness 失
 
 ## 当前 migration 台账
 
-以下内容核对到 `v0.1.0-beta.114`。升级其他版本时，以该版本 release notes 和 `schema_migrations` 实际内容为准。
+以下内容核对到 `v0.1.0-beta.122`。升级其他版本时，以该版本 release notes 和 `schema_migrations` 实际内容为准。
 
 | 版本 | 变更摘要 | 回退注意 |
 | --- | --- | --- |
@@ -43,7 +43,7 @@ description: Tocsin 镜像升级、SQLite forward-only migration、readiness 失
 
 - `v0.1.0-beta.89` 及更早：migration plan 到 `0003`。
 - `v0.1.0-beta.90` 至 `v0.1.0-beta.102`：migration plan 到 `0004`。
-- `v0.1.0-beta.103` 及之后：migration plan 到 `0005`；截至 beta.114 没有再增加 migration。
+- `v0.1.0-beta.103` 及之后：migration plan 到 `0005`；截至 beta.122 没有再增加 migration。
 
 这些边界只用于识别升级前风险。不要从版本号推断某个具体提交的数据兼容性；以对应 tag 的 release notes 为准。
 

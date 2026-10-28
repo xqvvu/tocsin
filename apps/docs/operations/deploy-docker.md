@@ -2,6 +2,8 @@
 
 Tocsin 的默认部署拓扑是**一个应用容器、一个持久数据卷、一个 SQLite 数据库文件**。当前仓库状态仍是可试用的自托管 MVP，并非稳定发布版；生产部署前请先完成备份恢复演练。
 
+进程、进程内 Worker、SQLite 与外部依赖之间的故障边界见[单实例架构与故障边界](/operations/architecture)。
+
 ## 部署前准备
 
 - 准备可持久化的 `BETTER_AUTH_SECRET`，可使用 `openssl rand -hex 32` 生成。生产环境未设置有效密钥时会拒绝正常提供服务。
@@ -56,4 +58,4 @@ docker compose ps
 一个实例对应一个 SQLite 数据库和进程内 Worker。不要运行多个副本争用同一数据卷，也不要把这个部署形态当作高可用集群。
 :::
 
-下一步：[环境变量与运行时配置](/operations/configuration) · [认证与账号安全](/operations/authentication) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [生产监控与告警基线](/operations/monitoring) · [健康检查和告警链路排障](/operations/troubleshooting)
+下一步：[单实例架构与故障边界](/operations/architecture) · [环境变量与运行时配置](/operations/configuration) · [认证与账号安全](/operations/authentication) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [生产监控与告警基线](/operations/monitoring) · [健康检查和告警链路排障](/operations/troubleshooting)

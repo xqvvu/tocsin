@@ -9,6 +9,7 @@ export default defineConfig({
     nav: [
       { text: "快速开始", link: "/guide/quick-start" },
       { text: "概念", link: "/guide/concepts" },
+      { text: "架构", link: "/operations/architecture" },
       { text: "事件", link: "/guide/events" },
       { text: "路由", link: "/guide/routes" },
       { text: "告警接入", link: "/integrations/providers" },
@@ -56,6 +57,7 @@ export default defineConfig({
         text: "部署与运维",
         collapsed: false,
         items: [
+          { text: "单实例架构与故障边界", link: "/operations/architecture" },
           { text: "Docker 生产部署", link: "/operations/deploy-docker" },
           { text: "TLS 反向代理", link: "/operations/reverse-proxy" },
           { text: "设置与运行态操作", link: "/operations/settings" },
