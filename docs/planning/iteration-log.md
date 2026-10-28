@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 162 轮）
+
+- 时间：2026-10-29 03:28 CST 起。
+- 基线：`origin/main` @ `999459f3`；启动时无 open PR。
+- 类型：**需求切片 + 仓库卫生修复 + 发布**（非 full-audit）。最近全量审计为第 160 轮
+  **2026-10-29 02:05 CST**，距今 < 6 小时；backlog 有 ≥27 分候选（REQ-325/326/327），
+  按第 1.5 步规则继续交付，不重跑全量审计。
+- 车道（并发 ≤3）：本轮不做审计车道 fan-out；实际使用发布评估 3 位专家
+  （release-manager / release-blocker / release-ops）+ `ui-triage` + `ui-review`。
+  下一非必跑车道建议 **`security-exposure`**（沿用第 161 轮轮转建议）。
+- `last_ui_review_at` = **2026-10-29 03:50 CST**（本轮 `ui-triage` 判 `review_now`，已做浏览器评审）。
+
+### ui-triage 决策与理由
+
+- 决策：**`review_now`**。距上次评审 3h31m（< 48h 不成立）；自 00:24 起触及 UI 路径的合并 5 个
+  （`4fd216dd`、`76571d84`、`96295053`、`3538194c`、`040d7e48`，≥3 成立）；UI- 存量 58 条属饱和队列、
+  无新增；但第 160/161 两轮都没有浏览器验证记录，而 #667 新增约 168 行回放面板、#668 新增脱敏提示条
+  从未在浏览器看过。
+- 建议补看 390 窄屏下目标覆盖徽标后缀换行/溢出。
+
+### 例行自检发现
+
+- **CH-1（HIGH，已修，`#671`）**：第 161 轮的 `docs(planning)` 提交 `7fa6be63` 把仓库根
+  `.agent-run.lock` 与 `.session-wt` 一并提交。每轮 `git worktree add` 检出时锁文件 mtime 变成
+  「刚刚」，`find "$LOCK" -mmin -90` 恒真 → routine 每轮自我判「另一轮仍在运行」并退出，
+  定时任务被永久饿死。本轮进入时即被误判为锁定；核对 `list_sessions` 确认没有任何 session
+  在跑、且锁文件内容来自被提交的历史后才接管。修复：`git rm --cached` + `.gitignore` 增两条。
+
+### ui-review 发现（浏览器 + 代码）
+
+- 已验证：Destinations 列表 390px 下的覆盖徽标（隔离实例 `localhost:6199`，
+  截图 `/tmp/ui-review-destinations-390b.png`）；6180 无监听，未触碰既有实例。
+  回放面板与预演脱敏提示因 10 分钟时间盒未做实测，仅代码级审阅。
+- **UI-107（中）**：390px 下徽标 `scrollWidth 130 / clientWidth 118`，`overflow:hidden` 硬截断，
+  尾字「条带条件」被切且无省略号；`title` 完整但触屏无 hover 不可达
+  （`features/destinations/ui/destination-route-coverage-cell.tsx:15`）。
+- **UI-108（低）**：预演「输出已脱敏」提示是 11px `muted-foreground` 裸段落，容易被略过
+  （`features/sources/ui/source-rehearsal-result.tsx:32`）。
+- **UI-109（低）**：回放面板同一行同时给「回放至投递创建时刻」「当时生效规则 N 条」，底部又重复
+  「启用状态取当前值」，限定语叠加稀释首屏结论
+  （`features/deliveries/ui/delivery-suppression-outlook.tsx:93-96,146`）。
+- 文案无 SRE 术语误用，「通知目标 / 告警源 / 路由规则」用法一致。
+
+### 本轮交付
+
+- PR `#671` `chore(repo): untrack autonomous-iteration run state` —— 取消跟踪运行态文件并加入
+  `.gitignore`，恢复并发闸门（CH-1）。
+- PR `#672` `feat(console): flag conditional routes in destination coverage` —— REQ-326；
+  模型加 `conditionalRouteCount/conditionalRouteNames`，徽标后缀 ` · M 条带条件` + title 名单；
+  PRD `docs/prd/destination-route-coverage-conditions.md`；模型测试 2 例、卡片测试 3 例。
+  验证：`vp check` exit 0、`vp run -r test`（console 227 文件 / 1308 测试）、`vp run -r build`。
+- PR `#673` `chore(release): v0.1.0-beta.130` —— 版本递增 + 修正 checklist 里过期的 beta.127 引用。
+
+### 发布
+
+- 三位专家一致 **GO**：release-manager 认定 3 个用户可见变更、建议 beta.130；release-blocker
+  5 项门槛全 PASS；release-ops 确认无迁移 / 无配置格式 / 无 env / 无依赖变化，回滚只需换镜像。
+  无分歧项，故未产生 `docs/planning/decisions/` 记录。
+- tag `v0.1.0-beta.130`（annotated）指向 `ef9cad34`，该 commit 的 CI 与 E2E 双绿后才打。
+- GitHub Release（prerelease，body 非空）；最近 10 个 tag 均已有对应 release，无缺失。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.130`（linux/amd64 + linux/arm64，
+  index digest `sha256:93115fabf9d3a7aa516cd319e67445551c02dfce2e1eece4ee112262ce403640`）；
+  回滚 `0.1.0-beta.129`，**无需数据库操作**。
+
+### 下一轮优先项
+
+1. REQ-325（28）接入预演披露真实送达判定（静默 / 全局暂停）。
+2. UI-107（中）窄屏覆盖徽标截断；UI-108 / UI-109 两句文案层级。
+3. REQ-327（27）飞书应用投递健康列。
+4. ARCH-69 / ARCH-70 交 EXPERT_PANEL（entrypoint 编排、基线迁移冻结）。
+5. Q-299（UI-100 断言口径）、Q-302（查询白名单表驱动守卫）。
+6. 下一非必跑车道：`security-exposure`。
+
 ## 2026-10-29（第 161 轮）
 
 - 时间：2026-10-29 02:50 CST 起。
