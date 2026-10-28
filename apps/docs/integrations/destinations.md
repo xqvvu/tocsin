@@ -18,7 +18,7 @@ description: Tocsin 飞书、Slack、邮件网关与通用 Webhook 通知目标�
 
 ## 验收顺序
 
-不要把“已经收到 Webhook”误认为“通知目标已经送达”。建议每次按下面的顺序验证：
+不要把“已经收到 Webhook”误认为“通知目标已经送达”。建议每次按下面的顺序验证；逐类型的验收条件与失败判读见[通知目标验收与失败判读](/integrations/destination-verification)：
 
 1. **预览（Preview）**：不发起网络请求，用内置样例或最近一条历史 Event 渲染目标载荷。适合检查模板变量和结构。
 2. **测试（Test）**：绕过投递队列，立即向真实目标发送一条消息，用于验证网络、凭证和上游接受规则。测试不会创建 Event 或 Delivery。
@@ -110,7 +110,7 @@ Slack 目标通过 Incoming Webhook 向频道发送 Block Kit 消息。
 }
 ```
 
-Slack HTTP `200` 且响应体为 `ok` 才视为发送成功。其他响应会成为目标拒绝或 HTTP 错误，应以 Delivery 中脱敏后的响应信息为准。
+Slack HTTP `2xx` 且响应体去空白后为 `ok` 才视为发送成功。其他响应会成为目标拒绝或 HTTP 错误，应以 Delivery 中脱敏后的响应信息为准。
 
 ## 通用 Webhook
 
@@ -295,4 +295,4 @@ JSON 模板（飞书卡片、Slack blocks、通用 Webhook JSON）只插值字�
 | 邮件网关拒绝请求 | 核对 JSON 信封、发件域、认证 Header 与网关幂等策略；按[邮件网关接入与验收](/integrations/email-gateway#故障排查)逐项排查 |
 | Delivery 停在 `pending` 或 `running` | 检查 readiness 中的 Worker、队列暂停状态和运行日志；查看下次重试时间与 attempt history |
 
-相关页面：[告警源接入参考](/integrations/providers) · [处理链路与概念](/guide/concepts) · [故障排查](/operations/troubleshooting)
+相关页面：[通知目标验收与失败判读](/integrations/destination-verification) · [告警源接入参考](/integrations/providers) · [处理链路与概念](/guide/concepts) · [故障排查](/operations/troubleshooting)

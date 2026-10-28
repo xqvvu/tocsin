@@ -29,7 +29,7 @@ features:
 3. [理解单实例架构与故障边界](/operations/architecture)
 4. [创建、轮换或停用告警源](/guide/sources)
 5. [定位 Event 并读取匹配证据](/guide/events)
-6. [选择并验证通知目标](/integrations/destinations)；邮件目标先完成[HTTP 邮件网关接入](/integrations/email-gateway)
+6. [选择通知目标](/integrations/destinations)并完成[逐类型验收](/integrations/destination-verification)；邮件目标先完成[HTTP 邮件网关接入](/integrations/email-gateway)
 7. [登记飞书应用并配置电话加急（可选）](/integrations/feishu-app)
 8. [配置路由匹配](/guide/routes)
 9. [检查投递状态与重试](/operations/deliveries)
