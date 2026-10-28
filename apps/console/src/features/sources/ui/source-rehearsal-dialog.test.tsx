@@ -77,6 +77,30 @@ describe("source rehearsal dialog", () => {
     cleanup();
   });
 
+  it("shows the JSON example as the payload placeholder", () => {
+    renderDialog(async () => result);
+    openDialog();
+
+    // The example is literal JSON. Interpolating it as an ICU message throws on
+    // every render and falls back to the bare key, so the operator sees
+    // "sources.rehearsal.payloadPlaceholder" instead of a usable example.
+    expect(screen.getByLabelText("Webhook body").getAttribute("placeholder")).toBe(
+      '{"title":"Checkout unavailable","labels":{"service":"checkout"}}',
+    );
+  });
+
+  it("caps the dialog height and keeps a single scrolling region", () => {
+    renderDialog(async () => result);
+    openDialog();
+
+    const content = document.querySelector('[data-slot="dialog-content"]');
+    // Without a viewport cap a long payload pushes the footer (run/cancel) out
+    // of a fixed, body-locked dialog, leaving no way to reach it.
+    expect(content?.className).toContain("max-h-[calc(100dvh-2rem)]");
+    expect(content?.querySelectorAll(".overflow-y-auto").length).toBe(1);
+    expect(screen.getByLabelText("Webhook body").className).toContain("max-h-48");
+  });
+
   it("rejects malformed JSON before calling the server", () => {
     const onRehearse = vi.fn(async () => result);
     renderDialog(onRehearse);
