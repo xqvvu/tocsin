@@ -135,8 +135,8 @@ Webhook 模式不会产生 `feishu_message_id`，因此不能从 Delivery 详情
 3. Test 的目标接收端、人工确认人、页面结果与目标返回码；只记录脱敏摘要。
 4. 隔离 Route、Event ID、Delivery ID、最终状态、HTTP 状态与外部回执。
 5. 是否验证 `resolved`、不同 severity、多目标扇出与重试路径。
-6. 凭证轮换、地址迁移、退信/积压处理和人工补呼的负责人。
+6. 凭证轮换、地址迁移、退信/积压处理和人工补呼的负责人；切换顺序见[通知目标凭证轮换与故障演练](/integrations/destination-rotation)。
 
 完成目标验收后，再按[值班交接与通知链路验收](/operations/oncall-handoff)做全链路 canary。目标测试、事件接入和真实投递是三个独立证据，不能用其中一个替代另外两个。
 
-相关页面：[通知目标参考](/integrations/destinations) · [邮件网关接入与验收](/integrations/email-gateway) · [飞书应用与电话加急](/integrations/feishu-app) · [投递检索、生命周期与重试](/operations/deliveries) · [值班交接与通知链路验收](/operations/oncall-handoff) · [故障排查](/operations/troubleshooting)
+相关页面：[通知目标参考](/integrations/destinations) · [通知目标凭证轮换与故障演练](/integrations/destination-rotation) · [邮件网关接入与验收](/integrations/email-gateway) · [飞书应用与电话加急](/integrations/feishu-app) · [投递检索、生命周期与重试](/operations/deliveries) · [值班交接与通知链路验收](/operations/oncall-handoff) · [故障排查](/operations/troubleshooting)
