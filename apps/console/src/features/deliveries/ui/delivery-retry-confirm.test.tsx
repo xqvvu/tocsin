@@ -21,9 +21,9 @@ vi.mock("#/features/operations/api/operations.queries", () => ({
   }),
 }));
 
-// The confirmation is one of three dialogs that mount this content; the
-// dialog wrapper itself is covered by its own entry points, so the unit here
-// only has to observe which state the content picks.
+// Three dialogs mount this content; none of them decides what it shows. The
+// dialog chrome is replaced with plain elements so this test only observes
+// which preview state the content renders.
 vi.mock("#/components/ui/alert-dialog", () => ({
   AlertDialogHeader: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   AlertDialogFooter: ({ children }: { children: ReactNode }) => <div>{children}</div>,
