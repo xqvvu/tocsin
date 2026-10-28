@@ -22,7 +22,7 @@ import {
   operationsQueryKeys,
   routeReplayPreviewQueryOptions,
 } from "#/features/operations/api/operations.queries";
-import { ReplayUrgentPagingNotice } from "#/features/operations/ui/replay-urgent-paging-notice";
+import { UrgentPagingNotice } from "#/features/operations/ui/urgent-paging-notice";
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function RouteReplayPrompt({
@@ -170,7 +170,7 @@ function RouteReplayPreviewBody({
         </Badge>
       </div>
 
-      <ReplayUrgentPagingNotice impact={preview.urgentPaging} />
+      <UrgentPagingNotice impact={preview.urgentPaging} action="replay" />
 
       {preview.candidates.length === 0 ? (
         <p className="text-muted-foreground text-xs leading-5">{t("routing.replay.empty")}</p>

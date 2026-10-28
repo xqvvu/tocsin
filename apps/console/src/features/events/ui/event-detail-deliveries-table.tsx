@@ -115,6 +115,9 @@ export function EventDetailDeliveriesTable({
                       id={delivery.id}
                       state={delivery.state}
                       lastError={delivery.lastError}
+                      destinationName={delivery.destinationName}
+                      attemptCount={delivery.attemptCount}
+                      maxAttempts={delivery.maxAttempts}
                     />
                   </TableCell>
                 </TableRow>

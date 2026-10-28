@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
@@ -48,6 +49,19 @@ vi.mock("sonner", () => ({
   toast: testState.toast,
 }));
 
+// The retry confirmation previews the urgent calls a successful retry could
+// place; this table does not need the transport for that question.
+vi.mock("#/features/operations/api/operations.queries", () => ({
+  deliveryRetryPreviewQueryOptions: (deliveryId: string) => ({
+    queryKey: ["test", "retry-preview", deliveryId],
+    queryFn: async () => ({
+      deliveryId,
+      urgentPaging: { destinations: [], deliveryCount: 0, receiverCount: 0 },
+    }),
+    staleTime: Infinity,
+  }),
+}));
+
 describe("event detail deliveries table", () => {
   beforeEach(() => {
     testState.retryDelivery.mockReset().mockResolvedValue({});
@@ -70,10 +84,14 @@ describe("event detail deliveries table", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
-  it("re-queues the failed delivery without leaving the event", async () => {
+  it("confirms, then re-queues the failed delivery without leaving the event", async () => {
     renderTable([delivery({ id: "delivery-failed", state: "failed" })]);
 
     fireEvent.click(screen.getByRole("button"));
+
+    // The same gate as the delivery list: no resend on a single click.
+    expect(testState.retryDelivery).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Retry now" }));
 
     await waitFor(() => {
       expect(testState.retryDelivery).toHaveBeenCalledExactlyOnceWith({ id: "delivery-failed" });
@@ -234,10 +252,14 @@ function listedDestinations() {
 }
 
 function renderTable(deliveries: EventDetailData["deliveries"]) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
   return render(
-    <AppIntlProvider locale="en-US">
-      <EventDetailDeliveriesTable deliveries={deliveries} />
-    </AppIntlProvider>,
+    <QueryClientProvider client={queryClient}>
+      <AppIntlProvider locale="en-US">
+        <EventDetailDeliveriesTable deliveries={deliveries} />
+      </AppIntlProvider>
+    </QueryClientProvider>,
   );
 }
 

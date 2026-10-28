@@ -2,18 +2,9 @@ import { RiRestartLine } from "@remixicon/react";
 import * as React from "react";
 
 import { IconTooltip } from "#/components/common/icon-tooltip";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "#/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogTrigger } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
+import { DeliveryRetryConfirmContent } from "#/features/deliveries/ui/delivery-retry-confirm";
 import type { Operations } from "#/features/operations/model/operation-types";
 import { useTranslations } from "#/i18n/use-i18n";
 
@@ -56,27 +47,17 @@ export function DeliveryRetryAction({
         </AlertDialogTrigger>
       </IconTooltip>
       <AlertDialogContent size="sm">
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t("deliveries.table.retryConfirm.title")}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t("deliveries.table.retryConfirm.description", {
-              destination: delivery.destinationName,
-              attempt: delivery.attemptCount,
-              max: delivery.maxAttempts,
-            })}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t("common.actions.cancel")}</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => {
-              setConfirming(false);
-              onRetry(delivery.id);
-            }}
-          >
-            {t("deliveries.table.retryConfirm.confirm")}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        <DeliveryRetryConfirmContent
+          deliveryId={delivery.id}
+          destinationName={delivery.destinationName}
+          attempt={delivery.attemptCount}
+          maxAttempts={delivery.maxAttempts}
+          pending={pending}
+          onConfirm={() => {
+            setConfirming(false);
+            onRetry(delivery.id);
+          }}
+        />
       </AlertDialogContent>
     </AlertDialog>
   );

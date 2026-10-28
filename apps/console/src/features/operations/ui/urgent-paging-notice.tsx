@@ -1,23 +1,30 @@
 import { RiAlarmWarningLine } from "@remixicon/react";
 
-import type { ReplayUrgentPagingImpact } from "@tocsin/core";
+import type { UrgentPagingImpact } from "@tocsin/core";
 
 import { useTranslations } from "#/i18n/use-i18n";
 
 /**
- * The urgent phone calls a replay can place, shown before the operator
+ * The urgent phone calls an action can place, shown before the operator
  * confirms.
  *
- * Replay itself is reversible — deliveries can be inspected and the targets
- * are listed next to this notice — but a page to someone's phone is not. The
- * preview is an upper bound: the delivery still has to succeed and return a
- * message reference, and the paging dedupe window can drop receivers, so the
- * copy says "may" rather than promising calls.
+ * Replay and retry are both reversible in their own way — deliveries can be
+ * inspected and the targets are listed next to this notice — but a page to
+ * someone's phone is not. The preview is an upper bound: the delivery still has
+ * to succeed and return a message reference, and the paging dedupe window can
+ * drop receivers, so the copy says "may" rather than promising calls.
  */
-export function ReplayUrgentPagingNotice({ impact }: { impact: ReplayUrgentPagingImpact }) {
+export function UrgentPagingNotice({
+  impact,
+  action,
+}: {
+  impact: UrgentPagingImpact;
+  /** Which action the title describes: a bulk replay or a single retry. */
+  action: "replay" | "retry";
+}) {
   const t = useTranslations();
 
-  if (impact.deliveryCount === 0) {
+  if (impact.receiverCount === 0) {
     return null;
   }
 
@@ -35,16 +42,20 @@ export function ReplayUrgentPagingNotice({ impact }: { impact: ReplayUrgentPagin
     <div role="note" className="border-destructive/40 flex flex-col gap-1 border p-2">
       <p className="text-destructive flex items-center gap-1 text-xs font-medium">
         <RiAlarmWarningLine data-icon="inline-start" aria-hidden />
-        {t("operations.replayUrgentPaging.title", {
-          calls: impact.receiverCount,
-          deliveries: impact.deliveryCount,
-        })}
+        {action === "replay"
+          ? t("operations.urgentPaging.replayTitle", {
+              calls: impact.receiverCount,
+              deliveries: impact.deliveryCount,
+            })
+          : t("operations.urgentPaging.retryTitle", {
+              calls: impact.receiverCount,
+            })}
       </p>
       <p className="text-muted-foreground text-[11px] leading-5">
-        {t("operations.replayUrgentPaging.destinations", { destinations })}
+        {t("operations.urgentPaging.destinations", { destinations })}
       </p>
       <p className="text-muted-foreground text-[11px] leading-5">
-        {t("operations.replayUrgentPaging.note")}
+        {t("operations.urgentPaging.note")}
       </p>
     </div>
   );

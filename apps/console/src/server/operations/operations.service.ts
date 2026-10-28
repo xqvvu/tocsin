@@ -3,9 +3,12 @@ import type {
   DeliveryDetail,
   DeliveryJob,
   DeliveryPingsResult,
+  DeliveryRetryPreview,
   EventFingerprintContext,
   OperationTimeRange,
+  UrgentPagingImpact,
 } from "@tocsin/core";
+import { feishuUrgentPagingReceivers } from "@tocsin/destinations/feishu";
 
 import type {
   ListOperationsInput,
@@ -113,6 +116,66 @@ export class OperationsService {
     });
   }
 
+  /**
+   * Who the automatic paging gate would ring if this failed delivery is
+   * retried.
+   *
+   * A retry only re-queues the job; the phone call happens later, when the
+   * worker sends it successfully. The answer is therefore an upper bound, and
+   * it mirrors the claim predicate: a delivery whose destination or route is
+   * disabled is never picked up, so it cannot page. Suppressions are resolved
+   * at claim time and are not part of this projection, which errs toward
+   * warning the operator rather than staying silent.
+   */
+  async previewDeliveryRetry(deliveryId: string): Promise<DeliveryRetryPreview | null> {
+    const job = await this.store.deliveries.getJob(deliveryId);
+
+    if (!job) {
+      return null;
+    }
+
+    return {
+      deliveryId: job.id,
+      urgentPaging: await this.retryUrgentPaging(job),
+    };
+  }
+
+  private async retryUrgentPaging(job: DeliveryJob): Promise<UrgentPagingImpact> {
+    const [event, destination, route] = await Promise.all([
+      this.store.intake.get(job.eventId),
+      this.store.destinations.get(job.destinationId),
+      job.routeId ? this.store.routes.get(job.routeId) : Promise.resolve(null),
+    ]);
+
+    // `claimNext` skips a disabled destination and a disabled route, so a
+    // retry that can never be claimed must not advertise a phone call.
+    if (!event || !destination || !destination.enabled || (job.routeId && !route?.enabled)) {
+      return emptyUrgentPaging();
+    }
+
+    const receivers = feishuUrgentPagingReceivers({
+      config: destination.config,
+      status: event.normalized.status,
+      severity: event.normalized.severity,
+    });
+
+    if (receivers.length === 0) {
+      return emptyUrgentPaging();
+    }
+
+    return {
+      destinations: [
+        {
+          destinationId: destination.id,
+          destinationName: destination.name,
+          receiverCount: receivers.length,
+        },
+      ],
+      deliveryCount: 1,
+      receiverCount: receivers.length,
+    };
+  }
+
   async retryDelivery(deliveryId: string): Promise<DeliveryJob> {
     return this.store.deliveries.retryNow({ deliveryId });
   }
@@ -178,4 +241,9 @@ function resolveRangeAnchor(anchorInput: string | undefined, now: Date): Date {
   const anchor = new Date(parsed);
 
   return anchor.getTime() > now.getTime() ? now : anchor;
+}
+
+/** A fresh "nobody would be called" projection; never shared between reads. */
+function emptyUrgentPaging(): UrgentPagingImpact {
+  return { destinations: [], deliveryCount: 0, receiverCount: 0 };
 }

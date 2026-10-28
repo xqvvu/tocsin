@@ -7,6 +7,7 @@ import {
   BuzzDeliveryOutputSchema,
   DeliveryBacklogSummarySchema,
   DeliveryDetailSchema,
+  DeliveryRetryPreviewSchema,
   EventReplayPreviewSchema,
   EventReplayResultSchema,
   EventDetailSchema,
@@ -63,6 +64,15 @@ export const operations = {
    * worker would claim next and when the oldest of them was created.
    */
   getDeliveryBacklog: oc.errors(dashboardErrors).output(DeliveryBacklogSummarySchema),
+
+  /**
+   * Read-only: who a successful retry of this delivery could phone. Null when
+   * the delivery no longer exists, matching the replay previews.
+   */
+  previewDeliveryRetry: oc
+    .input(OperationDetailInputSchema)
+    .errors(dashboardErrors)
+    .output(DeliveryRetryPreviewSchema.nullable()),
 
   retryDelivery: oc
     .input(OperationDetailInputSchema)

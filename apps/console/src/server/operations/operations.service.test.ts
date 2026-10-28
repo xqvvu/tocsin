@@ -524,6 +524,98 @@ describe("operations service event fingerprint filter", () => {
 
     await store.close();
   });
+
+  it("previews the urgent calls a successful retry could place", async () => {
+    const store = await createStore();
+    const service = new OperationsService({ store, oncall: new OncallService({ store }) });
+
+    await store.sources.create({
+      id: "source-1",
+      name: "Prometheus",
+      provider: "grafana",
+      tokenHash: "token-hash",
+    });
+    await store.destinations.create({
+      id: "destination-1",
+      name: "On-call Feishu",
+      kind: "feishu",
+      config: {
+        sendMode: "app",
+        app: { appRef: "feishu-app-1", chatId: "oc_oncall" },
+        urgent: {
+          autoEnabled: true,
+          severities: ["critical"],
+          receivers: ["ou_alice", "ou_bob"],
+        },
+      },
+    });
+    const event = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: "request-1",
+      normalized: {
+        title: "Checkout unavailable",
+        message: "checkout returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout:unavailable",
+        labels: { service: "checkout" },
+        occurredAt: now,
+      },
+      rawPayload: {},
+      routeMatches: [],
+    });
+    await store.routes.create({
+      id: "route-1",
+      name: "Critical checkout",
+      rule: { severities: ["critical"] },
+      destinationIds: ["destination-1"],
+    });
+    const delivery = (
+      await store.deliveries.enqueueForEvent({
+        event,
+        matches: [{ routeId: "route-1", destinationIds: ["destination-1"] }],
+        dedupeWindowStartsAt: now,
+        now,
+      })
+    ).created[0]!;
+    const claimed = (await store.deliveries.claimNext({ now, limit: 1 }))[0]!;
+    await store.deliveries.markFailed({
+      deliveryId: delivery.id,
+      attemptId: claimed.attempt.id,
+      error: "upstream unavailable",
+      retryAt: null,
+      finishedAt: now,
+    });
+
+    // The retry itself is a re-queue; the warning is about the call the worker
+    // would place once the resend succeeds.
+    await expect(service.previewDeliveryRetry(delivery.id)).resolves.toEqual({
+      deliveryId: delivery.id,
+      urgentPaging: {
+        destinations: [
+          {
+            destinationId: "destination-1",
+            destinationName: "On-call Feishu",
+            receiverCount: 2,
+          },
+        ],
+        deliveryCount: 1,
+        receiverCount: 2,
+      },
+    });
+
+    // `claimNext` skips a disabled destination, so a retry that can never run
+    // must not advertise a call.
+    await store.destinations.setEnabled("destination-1", false);
+    await expect(service.previewDeliveryRetry(delivery.id)).resolves.toMatchObject({
+      urgentPaging: { destinations: [], deliveryCount: 0, receiverCount: 0 },
+    });
+
+    // A deleted delivery is an explicit null, like the replay previews.
+    await expect(service.previewDeliveryRetry("delivery-missing")).resolves.toBeNull();
+
+    await store.close();
+  });
 });
 
 function oncallPing(): OncallPing {

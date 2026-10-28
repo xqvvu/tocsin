@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { DELIVERY_ACCEPTED_UNRECORDED_ERROR } from "@tocsin/core";
@@ -23,6 +25,17 @@ vi.mock("#/features/operations/api/operation.mutations", () => ({
   }),
 }));
 
+vi.mock("#/features/operations/api/operations.queries", () => ({
+  deliveryRetryPreviewQueryOptions: (deliveryId: string) => ({
+    queryKey: ["test", "retry-preview", deliveryId],
+    queryFn: async () => ({
+      deliveryId,
+      urgentPaging: { destinations: [], deliveryCount: 0, receiverCount: 0 },
+    }),
+    staleTime: Infinity,
+  }),
+}));
+
 vi.mock("#/i18n/use-i18n", () => ({
   useTranslations: () => (key: string) => key,
 }));
@@ -32,20 +45,30 @@ vi.mock("sonner", () => ({
 }));
 
 describe("delivery retry button", () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     testState.retryDelivery.mockReset().mockResolvedValue({});
     testState.invalidateOperations.mockReset().mockResolvedValue();
     testState.toast.success.mockReset();
     testState.toast.error.mockReset();
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   });
 
   afterEach(() => {
     cleanup();
+    queryClient.clear();
   });
 
-  it("re-queues a failed delivery and refreshes operations", async () => {
-    render(<DeliveryRetryButton id="delivery-1" state="failed" lastError={null} />);
+  it("confirms before re-queuing a failed delivery", async () => {
+    renderButton();
+
     fireEvent.click(retryButtonFixture());
+
+    expect(testState.retryDelivery).not.toHaveBeenCalled();
+    expect(screen.getByText("deliveries.retry.confirm.title")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "deliveries.retry.confirm.confirm" }));
 
     await waitFor(() => {
       expect(testState.retryDelivery).toHaveBeenCalledExactlyOnceWith({ id: "delivery-1" });
@@ -54,21 +77,27 @@ describe("delivery retry button", () => {
     expect(testState.invalidateOperations).toHaveBeenCalled();
   });
 
+  it("does not retry when the operator cancels", async () => {
+    renderButton();
+
+    fireEvent.click(retryButtonFixture());
+    fireEvent.click(screen.getByRole("button", { name: "common.actions.cancel" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("deliveries.retry.confirm.title")).toBeNull();
+    });
+    expect(testState.retryDelivery).not.toHaveBeenCalled();
+  });
+
   it("stays hidden for a delivery that cannot be retried", () => {
-    render(<DeliveryRetryButton id="delivery-1" state="succeeded" lastError={null} />);
+    renderButton({ state: "succeeded" });
 
     expect(screen.queryByRole("button")).toBeNull();
     expect(testState.retryDelivery).not.toHaveBeenCalled();
   });
 
   it("shows the reason instead of the action when the destination already accepted the alert", () => {
-    render(
-      <DeliveryRetryButton
-        id="delivery-1"
-        state="failed"
-        lastError={DELIVERY_ACCEPTED_UNRECORDED_ERROR}
-      />,
-    );
+    renderButton({ lastError: DELIVERY_ACCEPTED_UNRECORDED_ERROR });
 
     expect(screen.queryByRole("button")).toBeNull();
     expect(screen.getByText("deliveries.detail.retry.blockedByAccepted")).toBeTruthy();
@@ -82,12 +111,12 @@ describe("delivery retry button", () => {
     });
     testState.retryDelivery.mockReturnValueOnce(retryPromise);
 
-    render(<DeliveryRetryButton id="delivery-1" state="failed" lastError={null} />);
-    const button = retryButtonFixture();
-    fireEvent.click(button);
+    renderButton();
+    fireEvent.click(retryButtonFixture());
+    fireEvent.click(screen.getByRole("button", { name: "deliveries.retry.confirm.confirm" }));
 
     await waitFor(() => {
-      expect(button.disabled).toBe(true);
+      expect(retryButtonFixture().disabled).toBe(true);
     });
 
     resolveRetry?.();
@@ -100,8 +129,9 @@ describe("delivery retry button", () => {
   it("surfaces a refused retry as an error toast", async () => {
     testState.retryDelivery.mockRejectedValueOnce(new Error("delivery is not failed"));
 
-    render(<DeliveryRetryButton id="delivery-1" state="failed" lastError={null} />);
+    renderButton();
     fireEvent.click(retryButtonFixture());
+    fireEvent.click(screen.getByRole("button", { name: "deliveries.retry.confirm.confirm" }));
 
     await waitFor(() => {
       expect(testState.toast.error).toHaveBeenCalledWith(
@@ -111,8 +141,30 @@ describe("delivery retry button", () => {
     });
     expect(testState.invalidateOperations).not.toHaveBeenCalled();
   });
+
+  function renderButton(
+    overrides: {
+      state?: "failed" | "succeeded";
+      lastError?: string | null;
+    } = {},
+  ) {
+    const node: ReactNode = (
+      <DeliveryRetryButton
+        id="delivery-1"
+        state={overrides.state ?? "failed"}
+        lastError={overrides.lastError ?? null}
+        destinationName="Ops group"
+        attemptCount={2}
+        maxAttempts={3}
+      />
+    );
+
+    return render(<QueryClientProvider client={queryClient}>{node}</QueryClientProvider>);
+  }
 });
 
 function retryButtonFixture(): HTMLButtonElement {
-  return screen.getByRole("button") as HTMLButtonElement;
+  return screen.getByRole("button", {
+    name: "deliveries.detail.retry.action",
+  }) as HTMLButtonElement;
 }
