@@ -2,6 +2,43 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 147 轮）
+
+- 时间：2026-10-28 08:26 CST 起。
+- 基线：本轮开始时 `origin/main` @ `720837b`（main CI success；open PR #591 属 docs-site routine，非本 routine）。
+- 类型：**定向需求切片 + 发布评估**（非 full-audit）。距上次全量审计 **2026-10-28 08:20 CST** 约 6 分钟，
+  按第 1.5 步不展开全量审计；backlog 有 29 分候选 REQ-298，按第 146 轮「下一轮优先项」直接续做。
+- 全量审计时间戳：不变，仍为 **2026-10-28 08:20 CST**（下一轮开始时约 2h，仍 < 6 小时）。
+- 车道轮转位置：不变，下一非必跑车道仍为 **`release-infra`**（随后 `docs-drift`）。
+- `requirements` / `ui-triage`：本轮**未 spawn**。第 146 轮刚结束（相距约 6 分钟），main 之后只有 docs(site) 提交，
+  `last_ui_review_at` = 2026-10-28 08:20 CST；重跑只会重复相邻轮次结论（第 129 轮规则），直接续做已存在的高分候选。
+- `last_ui_review_at`：不变，**2026-10-28 08:20 CST**（48 小时到期点 2026-10-30 08:20）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `magical-chebyshev-7b372a`（写入隔离）。
+
+### 交付
+
+- **PR #592 `feat(console): filter events by exact fingerprint`**（REQ-298，AUTO_SHIP）
+  - URL/契约/服务/仓储新增精确 `fingerprint` 维度；列表与 `total` 共用 `events.fingerprint = ?`；
+    复用既有 `idx_events_fingerprint_received_at`，无迁移。
+  - 「同指纹」汇总区新增「在事件列表查看全部 N 次」链接（携带 `sourceId` + `fingerprint`）；
+    事件列表显示可清除指纹 chip；中英文案；中文 mini-PRD `docs/prd/event-fingerprint-filter.md`。
+  - **浏览器实测暴露真实缺陷**：客户端 `normalizeOperationFilters` 白名单没有新参数，请求体只有
+    `{limit,eventPage,sourceId}`，URL 有 chip 但列表仍显示全部 4 条——类型检查、单测、构建全绿也发现不了。
+    补参数后请求体带上 `fingerprint`，列表收敛为 2 条（排除前缀更长的 `checkout:unavailable:eu`
+    与正文引用该串的事件），`total=2`；清除 chip 后 URL 去掉参数、恢复 4 条。截图
+    `/tmp/tocsin-r147/fingerprint-filter.png`。同时补 `operations.queries.test.ts`
+    （参数进入请求与 query key、空值不发送、不同指纹不同 key）防回归。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 214 文件 / 1217 tests、
+    `vp run -r build` 通过。
+
+### 下一轮优先项
+
+1. **Q-290（24）** 抑制表单把已删除的源/目标渲染为可取消条目（AUTO_FIX，纯 UI）。
+2. **REQ-177（28）** 原始载荷保留窗口结束时间（纯前端，仍为 candidate）。
+3. EXPERT_PANEL：**Q-288 / Q-289**（配置删除语义、投递状态机栅栏）与 **REQ-299**（迁移前快照）。
+4. 车道轮转：`requirements` + `ui-triage` 必跑；第三名额 **`release-infra`**。
+
 ## 2026-10-28（第 146 轮）
 
 - 时间：2026-10-28 07:25 CST 起，约 09:20 CST 结束。
