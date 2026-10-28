@@ -5,8 +5,8 @@
 ## 2026-10-28（第 156 轮）
 
 - 时间：2026-10-28 18:26 CST 起。
-- 基线：`origin/main` @ `2a5ffa8`（第 155 轮 planning 提交，CI success）；启动时无 open PR
-  （docs-site 的 #638 已合入 `19d3d74`）。
+- 基线：`origin/main` @ `2a5ffa8`（第 155 轮 planning 提交，CI success）。启动时仍有 1 个 open PR
+  （docs-site 的 #638）；该 PR 本轮期间合入 `19d3d74`，此后到本轮合并前无 open PR。
 - 类型：**增量交付轮（未跑全量审计）**。距第 155 轮结束仅 9 分钟，`2a5ffa8` 之后代码零变化，
   按记忆「相邻两轮间隔很近时不要重跑车道」未 spawn `ui-triage` 与新审计车道：
   `last_ui_review_at` 为 15:05（< 48 小时），且自那以后没有新的 UI 合并，`ui-triage` 决策记为
