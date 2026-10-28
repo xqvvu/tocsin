@@ -61,6 +61,14 @@
 
 ### 收尾与同步
 
+- 工作树：已回收第 157 轮会话工作树 `interesting-archimedes-5043df`（状态干净，`git worktree remove --force`）；
+  删除已合并分支 `agent/source-intake-rehearsal`、`agent/release-beta-127`、`agent/round-158-planning`；
+  `agent-iteration` 与镜像构建用的 `/tmp/tocsin-build-beta127` 已移除；本会话工作树的
+  `node_modules` / `.output` / `.vite` / `coverage` 在轮末删除。
+- Obsidian 同步：已从 Obsidian 配置发现真实 vault
+  （`~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Vane/`），重写 `Vane Iteration Log`、
+  `Vane Iteration Backlog`，并同步 `Vane Release Checklist` 的版本引用到 `0.1.0-beta.127`。
+
 ### 下一轮优先项
 
 1. **architecture 车道**（轮转位）+ ARCH-67/68 纯重构小 PR。
