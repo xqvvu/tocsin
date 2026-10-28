@@ -66,6 +66,20 @@
 - 构建在 tag 的干净检出（临时 worktree `/tmp/tocsin-build-beta124`）里进行，未使用主 checkout；
   未推 `latest`。
 
+### 收尾与同步
+
+- 工作树已清理：专用工作树 `agent-iteration` 连同并发锁一并删除；本轮会话工作树
+  `jovial-goodall-1ad000` 的 `node_modules` / `apps/console/node_modules` / `.output` / `.vite` /
+  `coverage` 已删除；镜像构建用的 `/tmp/tocsin-build-beta124` 已移除；回收了第 154 轮遗留的
+  `objective-lehmann-3f16be`。`.claude/worktrees` 由 **1.5G 降到 698M**。
+- 已合并的 `agent/*` 分支按 PR 状态删除：`destination-outcome-filter`、`release-beta-124`、
+  `round-154-log`、`round-155-planning`；`round-88-log`、`round36-work`、`ui-inline-edit-layout`
+  查不到 PR 状态，按保守原则保留。
+- Obsidian 同步：已按 `obsidian-vault` 规范同步到真实 vault
+  （`~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Vane/`）：重写 `Vane Iteration Log`
+  与 `Vane Iteration Backlog`（后者原先落后数轮），新增 `Vane Operations Destination Outcome`
+  （PRD 原文 + Related wikilinks）并加入 `Vane Index`。
+
 ### 下一轮优先项
 
 1. **`architecture` 车道**（轮转位）+ 复跑 `release-infra`。
