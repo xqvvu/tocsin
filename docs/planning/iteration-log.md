@@ -2,6 +2,118 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 160 轮）
+
+- 时间：2026-10-29 02:05 CST 起。
+- 基线：`origin/main` @ `3afba69f`（第 159 轮 planning 提交）；启动时无 open PR，
+  main 最新 CI 尚在运行（本轮结束时 CI 与 E2E 均 success）。
+- 类型：**full-audit 轮**。距上次全量审计 2026-10-28 17:05 CST 已 9 小时，超过 6 小时阈值；
+  第 159 轮因 UI 评审顺延的全量审计在本轮执行。
+- 全量审计时间戳：**2026-10-29 02:05 CST**（本轮），第 1.5 步闸门下次以此时点为准。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`quality`（轮转位）。下一非必跑车道建议
+  **`architecture`**（轮转顺序 requirements → quality → architecture）。
+- `last_ui_review_at` = **2026-10-29 00:24 CST**（未更新，本轮 `ui-triage` 判 `defer`）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线；实现、验证、PR 在会话工作树
+  `exciting-lumiere-99ff2b`。本轮修复了 `agent-iteration` 目录存在但未注册为 git worktree
+  的孤儿状态（`git worktree prune` 后重新 `worktree add`）。
+
+### ui-triage 决策与理由
+
+- 决策：**`defer`**。三条强信号均不成立：`last_ui_review_at` 距今 1h41m（< 48h）；自 00:24 起
+  触及 UI 路径的提交仅 1 个（`4fd216dd`，< 3）；candidate 状态的 UI 条目 58 条属饱和存量队列。
+  上一轮刚完成真实浏览器评审（1440×806 与 390×844），修复已双宽度复验、`MALFORMED_ARGUMENT` 清零；
+  快读 `source-rehearsal-dialog.tsx:121-127,193-200` 与 `sources-page.tsx:83-108` 未发现新增不一致。
+
+### 专家发现
+
+**requirements（4 条新候选，均已写入 backlog）**
+
+- **REQ-321（29）** 投递详情「为什么没有被静默」判定透视。抑制 PRD 故事 26 要求回答
+  「was or was not silenced」（`docs/prd/alert-suppression.md:221`），但代码只实现「被静默」：
+  `delivery-detail-view.tsx:21` 仅在 `job.state === "suppressed"` 渲染，
+  `delivery-suppression-checks.tsx:23-30` 无 `suppressionId` 直接返回 null。核心能力已具备：
+  `suppressionStateAt` / `evaluateSuppressionMatch`（`packages/core/src/suppression/suppression.ts:82,186`）。
+- **REQ-322（27）** 路由列表跨页多选批量启停。路由表无选择列
+  （`features/routes/ui/routes-section.tsx:133-193`、`components/common/table-features.ts:16-20`），
+  启停只能逐行确认（`routes-page.tsx:104-111`）；契约仅单条 `id`
+  （`packages/api/src/contract/routes.ts:35-39`）。方案为浏览器侧串行编排，不新增批量端点。
+- **REQ-323（27）** Settings 存储面板展示 SQLite 实际磁盘占用（主库 + WAL + SHM）。
+  面板只有逻辑体积（`features/configuration/ui/settings-storage-panel.tsx:34-75`、
+  `infra/sqlite/storage-health.ts:8-26`），而 WAL 已启用（`infra/sqlite/connection.ts:29-31`）。
+- **REQ-324（28）** 事件详情路由投递结果一键下钻到投递列表。结果徽标不可点
+  （`features/events/ui/event-route-delivery-outcome-cell.tsx:38-53`），而投递列表已支持
+  `eventId`/`routeId`/`deliveryState`（`packages/api/src/schemas/operations.ts:319-331`）。
+
+**quality（6 条发现）**
+
+- **Q-297（MEDIUM，待 EXPERT_PANEL）** 预演成功 DTO 未走读取边界脱敏：
+  `server/sources/source-rehearsal.service.ts:87-97` 原样返回 normalizedEvent / providerMetadata /
+  routes，对话框会展示 title/message/labels 与 `checks.actual`；对照
+  `event-replay.service.ts:200` 的 `redactEventRecord` 投影。输入为操作员自贴、暴露有限，
+  但属于 SEC-7 边界问题，涉及脱敏范围取舍 → 下一轮交 EXPERT_PANEL。
+- **Q-298（MEDIUM，本轮已交付部分）** 预演目标缺失/配置无效分支与结果视图零测试。
+  服务层两条分支与 `providerMetadata`、零发送断言由 #663 补齐；结果视图
+  `source-rehearsal-result.tsx:29-34,166-168` 的停用提示与 `ok:false` 分支仍无用例。
+- **Q-299（LOW）** UI-100 回归断言未钉住「单一滚动区」：`source-rehearsal-dialog.test.tsx:92-102`
+  只统计 `.overflow-y-auto`，结果视图仍保留 `max-h-64 overflow-auto`
+  （`source-rehearsal-result.tsx:160`），被 mock 的 JSON 块也自带 overflow-auto。
+- **Q-300（LOW）** 预演服务容器装配无测试：`server/runtime/container.ts:261-268` 的
+  registry 传参无覆盖，传反或漏 store 均不失败。
+- **Q-301（LOW，本轮已交付）** 「只读、不触达 transport」断言不完整；#663 已 spy
+  `destinations.send` 断言零调用。
+- **Q-302（LOW）** 查询白名单回归守卫只覆盖 fingerprint（`operations.queries.test.ts:35-49`），
+  第 155 轮 `destinationOutcome` 规则无客户端断言。
+
+### 本轮交付
+
+- **PR #662 `feat(console): flag conditional routes in source coverage`**（REQ-318）
+  - `packages/core/src/route/route.ts` 新增 `routeRuleHasEventConditions(rule)`，与
+    `evaluateRouteMatch` 同源；`sourceIds` 不算事件条件。
+  - `SourceRouteCoverage` 增 `conditionalRouteCount` / `conditionalRouteNames`，只统计可投递路由。
+  - 徽标在存在条件路由时追加「 · N 条带条件」，`title` 追加说明并列出名单；四种既有分支不变。
+  - 新增 PRD `docs/prd/source-coverage-condition-awareness.md`，并在
+    `docs/prd/source-deliverable-coverage.md` 加交叉引用。
+  - 验证：`vp check` 0 error；`vp run -r test` 4/4；`vp run -r build` 2/2；PR CI 与 E2E success。
+- **PR #663 `test(console): cover rehearsal failure branches and no-send guarantee`**（Q-298/Q-301）
+  - 新增「路由目标已不存在」「目标存储配置无法解析」两条分支用例；成功用例断言
+    `providerMetadata` 并 spy `destinations.send` 零调用。纯测试改动。
+  - 验证：`vp check` 0 error；`vp run -r test` 4/4；`vp run -r build` 2/2；PR CI 与 E2E success。
+
+### EXPERT_PANEL
+
+- 本轮无 EXPERT_PANEL 事项执行。新发现 **Q-297**（预演成功 DTO 脱敏边界）按纪律转入下一轮
+  EXPERT_PANEL（三位专家：安全与可靠性 / 产品与运维 / 独立评估者），证据与建议方案已写入 backlog。
+
+### 发布
+
+- 三位发布专家独立评估：
+  - 发布经理：**GO**——自 `v0.1.0-beta.128` 起唯一用户可见变更是 #662（Sources 覆盖列条件标记），
+    其余为 docs/test；建议 `0.1.0-beta.129`。
+  - 阻断审计：**GO（等待 CI 后）**——`9671fbb7` 的 CI/E2E 由 pending 转 success 后放行；
+    open PR 为空；#662/#663 无 migration/schema/lockfile；`migrate/` 仍为 0001–0005
+    forward-only。REL-13/16/23 属仓库治理项，沿用前几轮口径不阻断。
+  - 运维/回滚：**LOW**——Dockerfile / compose / env / runtime / migrate 零改动，无持久状态写入；
+    回滚只需换回 `0.1.0-beta.128` 镜像，无需数据库操作。
+- 版本 PR #664 合入 `574255ab`；合并后 main `CI` 与 `E2E` 均 success。
+- tag `v0.1.0-beta.129`（annotated）指向 `574255ab`；GitHub Release（prerelease）已创建且 body 非空。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.129`（linux/amd64 + linux/arm64），
+  index digest `sha256:5dc8d4364d16604ef1b17239241b941ed9858cddd19c9cee439bc348ddb77846`；
+  构建在 tag 的干净检出 `/tmp/tocsin-build-beta129` 中进行，`--provenance=false --sbom=false`，
+  未推 `latest`；回滚镜像 `0.1.0-beta.128`。
+
+### 收尾与同步
+
+- 工作树与锁的处理见本轮末清理记录（`docs/planning/iteration-backlog.md` 无单独行）。
+
+### 下一轮优先项
+
+1. **EXPERT_PANEL：Q-297** 预演成功 DTO 的脱敏边界（SEC-7）。
+2. REQ-321（29）投递详情「为什么没有被静默」判定透视。
+3. REQ-324（28）事件详情路由投递结果下钻；REQ-322/323（27）。
+4. Q-299（UI-100 断言口径）、Q-302（查询白名单表驱动守卫）。
+5. UI-101（25）预演运行中可退出；UI-102（21）错误文案接 `aria-describedby`。
+6. 下一非必跑车道：`architecture`（补跑 ARCH-67/68 复核）。
+
 ## 2026-10-29（第 159 轮）
 
 - 时间：2026-10-28 23:36 CST 起（跨零点）。
