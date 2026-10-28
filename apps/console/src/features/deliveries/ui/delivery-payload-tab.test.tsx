@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
@@ -18,6 +19,24 @@ vi.mock("#/features/deliveries/ui/delivery-json-block", () => ({
     </div>
   ),
 }));
+
+vi.mock("#/features/configuration/api/configuration.queries", () => ({
+  appSettingsQueryOptions: () => ({
+    queryKey: ["test", "app-settings"],
+    queryFn: async () => ({ rawPayloadRetentionDays: 30 }),
+    staleTime: Infinity,
+  }),
+}));
+
+// The retention line decides its sentence from settings plus `receivedAt`; the
+// timestamp itself is client-only and time-zone aware, so it renders its ISO
+// value here.
+vi.mock("#/features/operations/ui/operation-timestamp", () => ({
+  OperationTimestamp: ({ value }: { value: string }) => <time dateTime={value}>{value}</time>,
+}));
+
+const NOW = new Date("2026-10-28T00:00:00.000Z");
+const RECEIVED_AT = "2026-10-27T00:00:00.000Z";
 
 describe("delivery payload tab", () => {
   afterEach(() => {
@@ -57,6 +76,28 @@ describe("delivery payload tab", () => {
     expect(screen.getByText("Rendered payload")).toBeTruthy();
     expect(container.textContent).toContain("Disk usage is 92%");
   });
+
+  it("tells the operator when the retained raw payload will be pruned", async () => {
+    renderTab({
+      rawPayload: { title: "Disk almost full", value: 92 },
+      renderedPayload: { text: "Disk usage is 92%" },
+    });
+
+    const note = await screen.findByRole("note");
+
+    expect(note.textContent).toContain("Raw payload retained until");
+    expect(note.textContent).toContain("2026-11-26T00:00:00.000Z");
+  });
+
+  it("does not promise a window once the raw payload is already pruned", () => {
+    renderTab({
+      rawPayloadPruned: true,
+      rawPayload: { retentionPruned: true },
+      renderedPayload: { text: "Disk usage is 92%" },
+    });
+
+    expect(screen.queryByRole("note")).toBeNull();
+  });
 });
 
 function renderTab(overrides: {
@@ -65,9 +106,11 @@ function renderTab(overrides: {
   renderedPayload: unknown;
 }) {
   return render(
-    <AppIntlProvider locale="en-US">
-      <DeliveryPayloadTab detail={detailFixture(overrides)} />
-    </AppIntlProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <AppIntlProvider locale="en-US" now={NOW}>
+        <DeliveryPayloadTab detail={detailFixture(overrides)} />
+      </AppIntlProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -81,6 +124,7 @@ function detailFixture(overrides: {
     event: {
       rawPayload: overrides.rawPayload,
       rawHeaders: {},
+      receivedAt: RECEIVED_AT,
     },
     renderedPayload: overrides.renderedPayload,
   } as unknown as DeliveryDetailData;
