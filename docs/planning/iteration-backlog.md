@@ -611,7 +611,7 @@
 | REQ-168 | 加急呼叫失败原因可完整查看 | requirements lane（第 39 轮） | 28 | shipped | #343 | pings 表错误列只有 `truncate`，无 title/对话框/复制（`delivery-pings-table.tsx:104-105`），attempts 表已有完整查看对话框（`delivery-attempt-detail-dialog.tsx:23-30`）；长错误恰是排障关键；纯前端 |
 | REQ-169 | 手动 Worker 显示积压与批次上限 | requirements lane（第 39 轮） | 27 | candidate | — | UI 固定每次 10 条（`deliveries-page.tsx:100-107`），契约允许 1–50（`operations.ts:227-231`），工具栏无 pending 积压数（`deliveries-page-toolbar.tsx:18-48`）；展示 pending total + 10/25/50 批次，运行后刷新；只读查询 + 现有参数 |
 | REQ-170 | 通知目标停用确认披露自动加急影响 | requirements lane（第 40 轮） | 29 | shipped | #225 | 停用确认框在 `urgentAutoEnabled` 时追加 destructive 警示与呼叫对象人数；3 个 i18n 键 ×2 语言；PRD `docs/prd/destination-disable-urgent-disclosure.md` |
-| REQ-171 | 补投预览披露将触发的自动加急呼叫 | requirements lane（第 40 轮） | 28 | in-progress | #602 | 补投会创建真实投递并正常执行（`event-replay.service.ts:64-83,139-152`），但预览 DTO 无加急字段（`packages/core/src/operations.ts:196-255`）、确认框无警告（`route-replay-prompt.tsx:100-112`）；需只读 `urgentImpact` 投影与两个预览面展示；与 REQ-83 协同 |
+| REQ-171 | 补投预览披露将触发的自动加急呼叫 | requirements lane（第 40 轮） | 28 | shipped | #602 | 补投会创建真实投递并正常执行（`event-replay.service.ts:64-83,139-152`），但预览 DTO 无加急字段（`packages/core/src/operations.ts:196-255`）、确认框无警告（`route-replay-prompt.tsx:100-112`）；需只读 `urgentImpact` 投影与两个预览面展示；与 REQ-83 协同 |
 | REQ-172 | 告警源/通知目标列表显示生效中的静默引用 | requirements lane（第 40 轮） | 27 | candidate | — | 两页都不加载静默规则（`sources-page.tsx:25-27`、`destinations-page.tsx:47-60`）；active 直接引用显示「静默规则引用中」，matcher 维度为空显示「存在未限定规则」；复用 `suppressionsQueryOptions()`，纯前端 |
 | REQ-173 | 去重缺口中的首发事件可直达 | requirements lane（第 42 轮） | 29 | shipped | #233 | 第 43 轮交付：`duplicate_within_window` 且 `firstEventId` 非空时渲染 `/events/$eventId` 类型化链接；文案改 `<event>` 富文本标签；新增 4 条组件测试；PRD `docs/prd/delivery-gap-first-event-link.md` |
 | REQ-174 | 失败投递重试前的可执行性预检 | requirements lane（第 42 轮） | 25 | candidate | — | `retryNow` 仅校验 failed 并把投递置 pending（`delivery.repository.ts:417-440`），但 `claimNext` 要求目标/路由启用（`:229-230`）；目标或路由停用时重试仍提示「已重新入队」但永不投递（`delivery-retry-button.tsx:27-37`）；建议 EXPERT_PANEL 判断是否并入 REQ-60/REQ-89 |
@@ -881,6 +881,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.118` | `51d49ff` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.118`（linux/amd64 + linux/arm64，index digest `sha256:1bc3ebe98fd2…`，amd64 `sha256:62f110254e64…`，arm64 `sha256:563ef3995696…`） | 补投预览披露加急电话影响（#602，REQ-171）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.117` |
 | `0.1.0-beta.117` | `2cd06dd` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.117`（linux/amd64 + linux/arm64，index digest `sha256:c6081374c352…`，amd64 `sha256:a7ba7c1d915a…`，arm64 `sha256:5d104a2249d2…`） | 事件/投递详情显示原始载荷保留窗口结束时间（#595，REQ-177）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.116` |
 | `0.1.0-beta.116` | `00b3fe8` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.116`（linux/amd64 + linux/arm64，index digest `sha256:56b0d42f7a8c…`，amd64 `sha256:8b7450f94209…`，arm64 `sha256:d76772fac525…`） | 事件列表精确指纹过滤（#592，REQ-298）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.115` |
 | `0.1.0-beta.115` | `7f5e2e7` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.115`（linux/amd64 + linux/arm64，index digest `sha256:752a6c0c72e7…`，amd64 `sha256:17bf6f1d…`，arm64 `sha256:1a63c65c…`） | 静默列表窄屏固定操作列（#587，UI-85）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.114` |

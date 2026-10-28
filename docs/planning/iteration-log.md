@@ -2,6 +2,87 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 149 轮）
+
+- 时间：2026-10-28 11:12 CST 起，约 13:05 CST 结束。
+- 基线：本轮开始时 `origin/main` @ `e9c1fc3`（main CI success；open PR #600 属 docs-site routine，非本 routine）。
+- 类型：**需求切片 + 三车道审计 + 发布**（非 full-audit）。距上次全量审计 **2026-10-28 08:20 CST** 约 3 小时，
+  按第 1.5 步不展开全量审计；backlog 有 7 条 28 分候选，按第 148 轮「下一轮优先项」续做 REQ-171。
+- 全量审计时间戳：不变，仍为 **2026-10-28 08:20 CST**（下一次最早 2026-10-28 14:20 CST）。
+- 车道轮转位置：本轮跑 `requirements` + `ui-triage` + `docs-drift`；下一非必跑车道为 **`security-exposure`**
+  （随后 `release-infra`）。
+- `ui-triage` 决策：**`defer`**。理由：距 `last_ui_review_at` 约 3 小时（<48h）、自那次评审以来 UI 路径合并 2 个（<3）、
+  未解决 `UI-*` 47 条属存量且第 147/148 轮新增 0 条；唯一缺口是 `505cbfc`（载荷保留窗口提示）没有人工浏览器记录，
+  若下轮仍无则单此一条即可 `review_now`。
+- `last_ui_review_at`：不变，**2026-10-28 08:20 CST**（48 小时到期点 2026-10-30 08:20）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、PR 在会话工作树
+  `peaceful-taussig-0efccf`（写入隔离）。
+
+### 本轮交付
+
+- **PR #602 `feat(console): disclose urgent paging impact in replay previews`**（REQ-171，AUTO_SHIP，rebase 合入 `d97e800`）
+  - 新增 `@tocsin/destinations/feishu` 纯闸门 `feishuUrgentPagingReceivers`：`OncallService.triggerPingsForDelivery`
+    与补投预览共用同一判据（Feishu + app 模式 + 自动加急 + firing + severity 命中），触发行为不变。
+  - `EventReplayPreview` / `RouteReplayPreview` 新增只读 `urgentPaging`（目标、通过闸门的新投递数、接收人上限）；
+    只统计新投递与启用目标，不返回接收人 id。事件「重新匹配」与路由批量补投确认框显示可能触发的加急电话，
+    路由侧按候选汇总；中英文案；`docs/prd/replay-urgent-paging-impact.md`。
+  - 验证：`vp check` 0 error（24 条既有 warning）、`vp run -r test` 217 文件 / 1230 tests、`vp run -r build` 通过；
+    PR 的 `check · test · build` 与 `playwright · chromium` 双绿。
+- **PR #603 `chore(release): v0.1.0-beta.118`**（rebase 合入 `51d49ff`）→ tag / GitHub Release / 双平台镜像（见下）。
+
+### 各车道发现
+
+**requirements（返回，5 条新候选）**
+- REQ-303（29，planned）：投递搜索覆盖每一次尝试的错误。`deliveries.last_error` 成功时被清空
+  （`infra/sqlite/repositories/delivery/delivery.repository.ts:415-420`），搜索只匹配该列
+  （`infra/sqlite/repositories/history/history.repository.ts:842-870`），attempt 错误已落库
+  （`migrate/schema.ts:140-162`）且详情页可见（`features/deliveries/ui/delivery-attempts-table.tsx:34-46`）。
+- REQ-304（28）：目标 × 投递结果需在同一条投递上求交；现为两个独立 EXISTS
+  （`history.repository.ts:878-918`），会产生假阳性。
+- REQ-305（27）：Events 搜索覆盖 `provider_ref_value`（投递侧已有，事件侧只搜投递 id，`:802-820`）。
+- REQ-306（26）：筛选/翻页未用 `replace`，累积浏览器历史（`routes/_dashboard.events.tsx:43-47`、
+  `routes/_dashboard.deliveries.tsx:51-55`）。
+- REQ-307（26）：投递搜索覆盖 `oncall_pings.receiver`（`migrate/schema.ts:188-221`）。
+
+**docs-drift（返回，10 条，HIGH 0）**
+- 新增 DOC-97..DOC-104：`sqlite-store.md:13` repository 计数 10→11 且接口块漏 `sessions`/`storageHealth()`
+  （`infra/sqlite/store.ts:52-64,76`）；`orpc-api-layer.md:210` 称中间件都不挂根 `os`，实际 `requestId` 挂根
+  （`server/orpc/os.ts:37`）；`destination-adapter.md:69` 把 F3 误标为已落地；适配器 PRD、保留/抑制文档、
+  ADR 0009 的行号漂移与 post-MVP 章节锚点过期。DOC-95/96 仍未修复。
+- 发布/部署类断言（E2E workflow、provider fixtures、抑制 UI、备份恢复、版本号、pnpm、`just` 命令）全部核验无误。
+
+**ui-triage**：`defer`（见上）。
+
+### EXPERT_PANEL：发布评估
+
+三位专家一致：**发布**。
+
+- **发布经理**：`v0.1.0-beta.117..origin/main` 仅 1 条用户可见变化（PR #602 补投加急提示），其余为 docs(site)
+  与规划记录；建议预发布递增 `0.1.0-beta.118`，版本唯一来源为根 `package.json:3`。
+- **阻断审计**：`d97e800` 上 CI 与 E2E 双绿；open PR 仅 #600（docs-site，按先例不阻断）；区间内迁移、依赖、
+  Dockerfile、compose 零 diff；`blocked-autonomous` 仅 REL-13/16/23（仓库治理类）；`v0.1.0-beta.117` Release body 非空。
+- **运维/回滚**：Dockerfile/compose/env/端口/卷/健康检查零 diff，最新 migration 仍为 `0005`；
+  回滚只需换回 `0.1.0-beta.117` 镜像，无数据库操作。
+
+### 发布
+
+- 版本：**0.1.0-beta.118**，PR #603 rebase 合入 → `51d49ff`（main CI 与 E2E 双绿后打 tag）。
+- tag `v0.1.0-beta.118` → `51d49ff`；Release `Tocsin v0.1.0-beta.118`（prerelease，body 非空）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.118`
+  （linux/amd64 + linux/arm64，`--provenance=false --sbom=false`，index digest `sha256:1bc3ebe98fd2…`，
+  amd64 `sha256:62f110254e64…`，arm64 `sha256:563ef3995696…`）。
+- 回滚镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.117`；无需数据库操作。
+- Obsidian 同步：`obsidian-vault` skill 未在本会话暴露，按 AGENTS.md 允许的 fallback 跳过同步。
+
+### 下一轮优先项
+
+1. **REQ-303（29，planned）** 投递搜索覆盖每次尝试的错误（最便宜的排障盲区）。
+2. DOC-97..DOC-104 一批 AUTO_FIX 文档更正（可并入一个小 PR）。
+3. EXPERT_PANEL 续议：**Q-288 / Q-289**（配置清除语义、投递状态机栅栏）、**REQ-299**（迁移前快照）、
+   **REL-72**（Docker 构建期 Vite+ 与 workspace 不同源）。
+4. 车道轮转：`requirements` + `ui-triage` 必跑；第三名额 **`security-exposure`**；
+   若 `505cbfc` 仍无人工浏览器记录，`ui-triage` 应判 `review_now`。
+
 ## 2026-10-28（第 148 轮）
 
 - 时间：2026-10-28 09:53 CST 起，约 11:20 CST 结束。
