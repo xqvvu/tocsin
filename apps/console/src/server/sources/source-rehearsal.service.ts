@@ -1,18 +1,26 @@
 import {
   RehearseSourceCommandSchema,
   evaluateRouteMatch,
+  formatSuppressionReason,
   redactJsonText,
   redactNormalizedEvent,
+  redactRouteMatchChecks,
   redactRouteMatchResults,
   redactText,
+  selectSuppressionForDelivery,
   type JsonObject,
   type NormalizedEvent,
   type RehearseSourceCommand,
   type RouteMatchResult,
+  type SourceRehearsalDelivery,
   type SourceRehearsalRender,
   type SourceRehearsalResult,
+  type SourceRehearsalSuppression,
+  type SourceRehearsalVerdict,
   type SourceSummary,
+  type Suppression,
 } from "@tocsin/core";
+import type { DestinationPresentation } from "@tocsin/destinations";
 import type { ProviderParseResult } from "@tocsin/providers";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
@@ -59,6 +67,13 @@ export class SourceRehearsalService {
       enabled: source.enabled,
     };
     const receivedAt = this.now();
+    // Read before parsing so a parse failure still reports whether the real
+    // chain would send the alert at all; the queue keeps running either way.
+    const settings = await this.store.settings.get();
+    const delivery: SourceRehearsalDelivery = {
+      paused: settings.deliveryPaused,
+      pausedAt: settings.deliveryPausedAt,
+    };
     const parsed = this.parsePayload(source, summary, input.payload, receivedAt);
 
     if (!parsed.ok) {
@@ -71,6 +86,7 @@ export class SourceRehearsalService {
           message: redactText(parsed.message),
         },
         routes: [],
+        delivery,
         renders: [],
       };
     }
@@ -90,7 +106,13 @@ export class SourceRehearsalService {
       matches,
       source: summary,
       normalizedEvent: displayEvent,
+      // Suppression matching keeps the raw event for the same reason route
+      // matching does: redacting first could change which rule matches.
+      rawEvent: parsed.normalized,
       payload: input.payload,
+      receivedAt,
+      presentation: { locale: settings.locale, timeZone: settings.timeZone },
+      delivery,
     });
 
     return {
@@ -102,6 +124,7 @@ export class SourceRehearsalService {
         providerMetadata: redactJsonText(parsed.providerMetadata) as JsonObject,
       },
       routes: redactRouteMatchResults(matches),
+      delivery,
       renders,
     };
   }
@@ -141,7 +164,11 @@ export class SourceRehearsalService {
     matches: RouteMatchResult[];
     source: SourceSummary;
     normalizedEvent: NormalizedEvent;
+    rawEvent: NormalizedEvent;
     payload: RehearseSourceCommand["payload"];
+    receivedAt: string;
+    presentation: DestinationPresentation;
+    delivery: SourceRehearsalDelivery;
   }): Promise<SourceRehearsalRender[]> {
     const destinationIds = [
       ...new Set(
@@ -153,8 +180,11 @@ export class SourceRehearsalService {
       return [];
     }
 
-    const settings = await this.store.settings.get();
-    const presentation = { locale: settings.locale, timeZone: settings.timeZone };
+    // The same rule set the enqueue path reads inside its transaction, so the
+    // verdict is the enqueue-time decision rather than a second interpretation
+    // of the matcher.
+    const suppressions = await this.store.suppressions.list();
+    const presentation = input.presentation;
     // Same projection the outbound path applies to the raw payload before it
     // reaches a template: value-shape-only redaction misses `{"text":"token=…"}`
     // under a neutral key, and the rehearsal must not diverge from production.
@@ -172,9 +202,24 @@ export class SourceRehearsalService {
           ok: false,
           renderedPayload: "",
           errorMessage: `Destination not found: ${destinationId}`,
+          verdict: "destination_disabled",
+          suppression: null,
         });
         continue;
       }
+
+      const suppression = this.suppressionForDelivery({
+        suppressions,
+        sourceId: input.source.id,
+        destinationId,
+        rawEvent: input.rawEvent,
+        receivedAt: input.receivedAt,
+      });
+      const verdict = rehearsalVerdict({
+        suppression,
+        destinationEnabled: destination.enabled,
+        paused: input.delivery.paused,
+      });
 
       try {
         const config = parseDestinationConfig(
@@ -204,6 +249,8 @@ export class SourceRehearsalService {
           ok: true,
           renderedPayload: JSON.stringify(redactJsonText(rendered), null, 2),
           errorMessage: null,
+          verdict,
+          suppression,
         });
       } catch (error) {
         renders.push({
@@ -213,10 +260,75 @@ export class SourceRehearsalService {
           ok: false,
           renderedPayload: "",
           errorMessage: redactText(error instanceof Error ? error.message : String(error)),
+          verdict,
+          suppression,
         });
       }
     }
 
     return renders;
   }
+
+  /**
+   * The rule the enqueue path would pick for this `(event, target)` pair.
+   *
+   * `selectSuppressionForDelivery` only returns active, matched rules, so a
+   * scheduled or expired window never becomes a verdict here.
+   */
+  private suppressionForDelivery(input: {
+    suppressions: Suppression[];
+    sourceId: string;
+    destinationId: string;
+    rawEvent: NormalizedEvent;
+    receivedAt: string;
+  }): SourceRehearsalSuppression | null {
+    const match = selectSuppressionForDelivery(
+      input.suppressions,
+      {
+        sourceId: input.sourceId,
+        destinationId: input.destinationId,
+        event: input.rawEvent,
+      },
+      input.receivedAt,
+    );
+
+    if (!match) {
+      return null;
+    }
+
+    const rule = input.suppressions.find((candidate) => candidate.id === match.suppressionId);
+
+    if (!rule) {
+      return null;
+    }
+
+    return {
+      id: rule.id,
+      name: rule.name,
+      kind: rule.kind,
+      reason: formatSuppressionReason(rule),
+      checks: redactRouteMatchChecks(match.checks),
+    };
+  }
+}
+
+/**
+ * Which gate the real delivery chain would hit, in the order it applies them:
+ * suppression makes the row terminal at enqueue, a disabled target is never
+ * claimed, and a global pause leaves the row pending.
+ */
+function rehearsalVerdict(input: {
+  suppression: SourceRehearsalSuppression | null;
+  destinationEnabled: boolean;
+  paused: boolean;
+}): SourceRehearsalVerdict {
+  if (input.suppression) {
+    return "suppressed";
+  }
+
+  if (!input.destinationEnabled) {
+    return "destination_disabled";
+  }
+
+  return input.paused ? "queued_paused" : "deliver";
 }

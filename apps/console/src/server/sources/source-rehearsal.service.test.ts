@@ -112,6 +112,7 @@ describe("source rehearsal service", () => {
       "title",
       "message",
     ]);
+    expect(result.delivery).toEqual({ paused: false, pausedAt: null });
     expect(result.renders).toHaveLength(1);
     expect(result.renders[0]).toMatchObject({
       destinationId: "destination-1",
@@ -119,6 +120,9 @@ describe("source rehearsal service", () => {
       enabled: true,
       ok: true,
       errorMessage: null,
+      // Every gate is open: the real chain would deliver this alert.
+      verdict: "deliver",
+      suppression: null,
     });
     expect(result.renders[0]?.renderedPayload).toContain("Checkout unavailable");
 
@@ -275,6 +279,8 @@ describe("source rehearsal service", () => {
         ok: false,
         renderedPayload: "",
         errorMessage: "Destination not found: destination-missing",
+        verdict: "destination_disabled",
+        suppression: null,
       },
     ]);
   });
@@ -291,6 +297,107 @@ describe("source rehearsal service", () => {
       renderedPayload: "",
     });
     expect(result.renders[0]?.errorMessage).toBeTruthy();
+  });
+
+  it("discloses the silence rule the real enqueue would apply", async () => {
+    const { destinations, service, store } = await createHarness();
+    await store.suppressions.create({
+      id: "suppression-1",
+      name: "Checkout maintenance",
+      kind: "maintenance_window",
+      matcher: { severities: ["critical"] },
+      startsAt: "2026-10-28T11:00:00.000Z",
+      endsAt: "2026-10-28T13:00:00.000Z",
+    });
+    const enqueue = vi.spyOn(store.deliveries, "enqueueForEvent");
+    const preview = vi.spyOn(destinations, "preview");
+    const send = vi.spyOn(destinations, "send");
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    expect(result.renders[0]).toMatchObject({
+      destinationId: "destination-1",
+      verdict: "suppressed",
+      suppression: {
+        id: "suppression-1",
+        name: "Checkout maintenance",
+        kind: "maintenance_window",
+      },
+    });
+    expect(result.renders[0]?.suppression?.reason).toContain("Checkout maintenance");
+    expect(
+      result.renders[0]?.suppression?.checks.find((check) => check.field === "severity"),
+    ).toMatchObject({ matched: true, actual: "critical" });
+
+    // The preview still renders — the operator is validating the payload — but
+    // the verdict says production would never send it.
+    expect(preview).toHaveBeenCalled();
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("redacts the values it discloses in silence checks", async () => {
+    const parse = vi.fn<ProviderRegistry["parse"]>(() => ({
+      ok: true,
+      idempotencyKey: "evt-123",
+      normalized: {
+        title: "Checkout token=super-secret-value failed",
+        message: "upstream returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout-fingerprint",
+        labels: { service: "checkout", authorization: "Bearer abcdefgh1234" },
+        occurredAt: "2026-10-28T11:59:00.000Z",
+      },
+      providerMetadata: {},
+    }));
+    const { service, store } = await createHarness({
+      providers: { parse } as unknown as ProviderRegistry,
+      routeTitleContains: ["Checkout"],
+    });
+    await store.suppressions.create({
+      id: "suppression-1",
+      name: "Checkout freeze",
+      kind: "silence",
+      matcher: {
+        titleContains: ["Checkout"],
+        labels: [{ key: "authorization", operator: "equals", value: "Bearer abcdefgh1234" }],
+      },
+      startsAt: "2026-10-28T11:00:00.000Z",
+      endsAt: "2026-10-28T13:00:00.000Z",
+    });
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    expect(result.renders[0]?.verdict).toBe("suppressed");
+    const checks = result.renders[0]?.suppression?.checks ?? [];
+    const titleCheck = checks.find((check) => check.field === "title");
+    expect(titleCheck?.actual).toContain("[REDACTED]");
+    expect(titleCheck?.actual).not.toContain("super-secret-value");
+    expect(checks.find((check) => check.field === "label")?.actual).toBe("[REDACTED]");
+  });
+
+  it("reports a global delivery pause as queued instead of delivered", async () => {
+    const { service, store } = await createHarness();
+    await store.settings.update({ deliveryPaused: true, actor: "oncall@example.test" });
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    expect(result.delivery).toEqual({ paused: true, pausedAt: now });
+    expect(result.renders[0]).toMatchObject({ verdict: "queued_paused", suppression: null });
+  });
+
+  it("reports a disabled target as never claimed", async () => {
+    const { service, store } = await createHarness();
+    await store.destinations.setEnabled("destination-1", false);
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    expect(result.renders[0]).toMatchObject({
+      enabled: false,
+      verdict: "destination_disabled",
+      suppression: null,
+    });
   });
 
   it("rejects an oversized payload at the boundary", async () => {

@@ -3,7 +3,7 @@ import { mapValues } from "es-toolkit/object";
 import type { EventRecord } from "#core/event/event";
 import type { NormalizedEvent } from "#core/event/normalized-event";
 import type { JsonObject, JsonValue } from "#core/json";
-import type { RouteMatchResult } from "#core/route/route";
+import type { RouteMatchCheck, RouteMatchResult } from "#core/route/route";
 
 /**
  * Keys that are sensitive only when they appear verbatim. Keys are normalized
@@ -390,22 +390,33 @@ export function redactNormalizedEvent(event: NormalizedEvent): NormalizedEvent {
 export function redactRouteMatchResults(results: RouteMatchResult[]): RouteMatchResult[] {
   return results.map((result) => ({
     ...result,
-    checks: result.checks.map((check) => {
-      if (check.actual === undefined) {
-        return check;
-      }
-
-      // A label check names the key it compared. When that key is
-      // credential-shaped, hide the value entirely — the same rule the
-      // normalized event applies to its labels.
-      const actual =
-        check.labelKey !== undefined && isSensitiveKey(check.labelKey)
-          ? REDACTED_VALUE
-          : redactText(check.actual);
-
-      return { ...check, actual };
-    }),
+    checks: redactRouteMatchChecks(result.checks),
   }));
+}
+
+/**
+ * Redacts the per-condition evidence of one match.
+ *
+ * Shared by route matches and the suppression checks a rehearsal discloses, so
+ * a new condition dimension cannot be redacted on one path and leak through
+ * the other.
+ */
+export function redactRouteMatchChecks(checks: RouteMatchCheck[]): RouteMatchCheck[] {
+  return checks.map((check) => {
+    if (check.actual === undefined) {
+      return check;
+    }
+
+    // A label check names the key it compared. When that key is
+    // credential-shaped, hide the value entirely — the same rule the
+    // normalized event applies to its labels.
+    const actual =
+      check.labelKey !== undefined && isSensitiveKey(check.labelKey)
+        ? REDACTED_VALUE
+        : redactText(check.actual);
+
+    return { ...check, actual };
+  });
 }
 
 /**

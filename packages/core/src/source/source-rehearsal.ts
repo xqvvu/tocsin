@@ -2,8 +2,9 @@ import { z } from "zod";
 
 import { NormalizedEventSchema } from "#core/event/normalized-event";
 import { JsonObjectSchema, JsonValueSchema } from "#core/json";
-import { RouteMatchResultSchema } from "#core/route/route";
+import { RouteMatchCheckSchema, RouteMatchResultSchema } from "#core/route/route";
 import { SourceSummarySchema } from "#core/source/source";
+import { SuppressionKindSchema } from "#core/suppression/suppression";
 
 /**
  * Read-only intake rehearsal for a Source.
@@ -64,10 +65,56 @@ export const SourceRehearsalParseSchema = z.discriminatedUnion("ok", [
 export type SourceRehearsalParse = z.infer<typeof SourceRehearsalParseSchema>;
 
 /**
+ * Whether the rehearsed delivery would actually reach its target.
+ *
+ * A rehearsal renders a matched target even when production would never send
+ * the alert, so the result has to say which gate the real chain would hit.
+ * `suppressed` is terminal at enqueue; `destination_disabled` is never claimed;
+ * `queued_paused` is enqueued but waits out a global pause; `deliver` passes
+ * every gate.
+ */
+export const SourceRehearsalVerdictSchema = z.enum([
+  "deliver",
+  "suppressed",
+  "queued_paused",
+  "destination_disabled",
+]);
+export type SourceRehearsalVerdict = z.infer<typeof SourceRehearsalVerdictSchema>;
+
+/**
+ * The suppression rule that would silence the rehearsed delivery.
+ *
+ * `reason` mirrors the audit text written to `deliveries.suppress_reason`, and
+ * `checks` is the same per-condition evidence a route match shows; the server
+ * redacts the check values before returning, exactly like route matches.
+ */
+export const SourceRehearsalSuppressionSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  kind: SuppressionKindSchema,
+  reason: z.string(),
+  checks: z.array(RouteMatchCheckSchema),
+});
+export type SourceRehearsalSuppression = z.infer<typeof SourceRehearsalSuppressionSchema>;
+
+/**
+ * Global delivery state at the rehearsal instant.
+ *
+ * `pausedAt` is the server timestamp recorded when the pause started, so the
+ * result explains a `queued_paused` verdict without a second settings read.
+ */
+export const SourceRehearsalDeliverySchema = z.object({
+  paused: z.boolean(),
+  pausedAt: z.string().nullable(),
+});
+export type SourceRehearsalDelivery = z.infer<typeof SourceRehearsalDeliverySchema>;
+
+/**
  * What a matched destination would send for the rehearsed event.
  *
  * Rendering only: the adapter's transport is never called. `renderedPayload` is
  * the same JSON text the operator sees in the destination preview, redacted.
+ * `verdict` reports what the real delivery chain would do with the same event.
  */
 export const SourceRehearsalRenderSchema = z.object({
   destinationId: z.string().min(1),
@@ -77,6 +124,9 @@ export const SourceRehearsalRenderSchema = z.object({
   renderedPayload: z.string(),
   /** Null when rendering succeeded; a redacted message otherwise. */
   errorMessage: z.string().nullable(),
+  verdict: SourceRehearsalVerdictSchema,
+  /** The rule that would silence this delivery; null when none matches. */
+  suppression: SourceRehearsalSuppressionSchema.nullable(),
 });
 export type SourceRehearsalRender = z.infer<typeof SourceRehearsalRenderSchema>;
 
@@ -90,6 +140,8 @@ export const SourceRehearsalResultSchema = z.object({
    * condition rejected the payload instead of only the routes that passed.
    */
   routes: z.array(RouteMatchResultSchema),
+  /** Global delivery state at the rehearsal instant. */
+  delivery: SourceRehearsalDeliverySchema,
   /** Rendered previews for the destinations of matched routes. */
   renders: z.array(SourceRehearsalRenderSchema),
 });
