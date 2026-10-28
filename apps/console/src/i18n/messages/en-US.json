@@ -1252,6 +1252,7 @@
   "sources.rehearsal.reasons.invalid_payload": "invalid payload",
   "sources.rehearsal.reasons.unknown_error": "unknown error",
   "sources.rehearsal.reasons.unsupported_payload": "unsupported payload",
+  "sources.rehearsal.redactedNotice": "Rehearsal output is redacted — credential-shaped values show as [REDACTED], and your original body is unchanged in the editor above",
   "sources.rehearsal.rendersEmpty": "No matched target to render",
   "sources.rehearsal.rendersTitle": "Target preview",
   "sources.rehearsal.requestFailed": "Rehearsal failed",

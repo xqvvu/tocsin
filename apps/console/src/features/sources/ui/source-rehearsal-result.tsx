@@ -26,6 +26,11 @@ export function SourceRehearsalResultView({ result }: { result: SourceRehearsalR
 
   return (
     <div className="flex min-h-0 flex-col gap-4">
+      {/* The server projects the result the same way a stored event is projected
+          at its read boundary; say so, because the payload in the editor still
+          carries the operator's original values. */}
+      <p className="text-muted-foreground text-[11px]">{t("sources.rehearsal.redactedNotice")}</p>
+
       {result.source.enabled ? null : (
         <Alert>
           <AlertTitle>{t("sources.rehearsal.sourceDisabledTitle")}</AlertTitle>
