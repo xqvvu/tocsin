@@ -408,6 +408,8 @@
   "deliveries.suppressionOutlook.wouldSilence": "Would match under current rules",
   "deliveries.retry.confirm.title": "Retry this delivery?",
   "deliveries.retry.confirm.description": "This re-queues the job immediately and sends the alert to {destination} again, {attempt} of {max} attempts used",
+  "deliveries.retry.confirm.previewPending": "Checking whether this retry can place urgent calls…",
+  "deliveries.retry.confirm.previewUnavailable": "Urgent call preview unavailable — the retry still proceeds",
   "deliveries.retry.confirm.confirm": "Retry now",
   "deliveries.table.clearFiltersLabel": "Clear filters and show all deliveries",
   "deliveries.table.empty": "No deliveries yet",

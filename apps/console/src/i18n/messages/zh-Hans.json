@@ -408,6 +408,8 @@
   "deliveries.suppressionOutlook.wouldSilence": "按当前规则会命中",
   "deliveries.retry.confirm.title": "重新发送这次投递？",
   "deliveries.retry.confirm.description": "将立即重新入队并再次向「{destination}」发送这条告警，已尝试 {attempt} / {max} 次",
+  "deliveries.retry.confirm.previewPending": "正在检查这次重试可能触发的加急电话…",
+  "deliveries.retry.confirm.previewUnavailable": "加急电话预览暂不可用，重试仍会继续",
   "deliveries.retry.confirm.confirm": "立即重试",
   "deliveries.table.clearFiltersLabel": "清除筛选并显示全部投递",
   "deliveries.table.empty": "还没有投递",
