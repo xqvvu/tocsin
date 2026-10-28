@@ -171,6 +171,8 @@ Slack HTTP `200` 且响应体为 `ok` 才视为发送成功。其他响应会成
 
 邮件通道当前标记为 experimental。它不直接连接 SMTP，而是把一个 JSON 请求发送给你控制的 HTTP 邮件网关。
 
+网关请求与响应契约、超时和幂等策略、发件域前置条件与生产验收见[邮件网关接入与验收](/integrations/email-gateway)。本页只保留目标字段与通用投递语义。
+
 | 配置 | 说明 |
 | --- | --- |
 | `endpointUrl` | 必填邮件网关地址，按服务端密钥处理 |
@@ -290,7 +292,7 @@ JSON 模板（飞书卡片、Slack blocks、通用 Webhook JSON）只插值字�
 | 目标返回 `401`、`403` 或飞书业务码 | 重新核对服务端保存的 Webhook、签名密钥、应用凭证与目标群权限 |
 | Slack 返回 `invalid_blocks` | 用 `slack_blocks` 预览检查对象根、Block Kit 结构和字段长度 |
 | 通用 Webhook 持续 `4xx` | 核对 URL、方法、Header、JSON 结构与接收端幂等策略；不要只根据 TLS 连通性判断 |
-| 邮件网关拒绝请求 | 确认网关接受 Tocsin 的 JSON 信封、发件人和收件人格式，并检查附加 Header |
+| 邮件网关拒绝请求 | 核对 JSON 信封、发件域、认证 Header 与网关幂等策略；按[邮件网关接入与验收](/integrations/email-gateway#故障排查)逐项排查 |
 | Delivery 停在 `pending` 或 `running` | 检查 readiness 中的 Worker、队列暂停状态和运行日志；查看下次重试时间与 attempt history |
 
 相关页面：[告警源接入参考](/integrations/providers) · [处理链路与概念](/guide/concepts) · [故障排查](/operations/troubleshooting)

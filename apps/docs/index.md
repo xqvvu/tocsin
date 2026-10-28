@@ -28,7 +28,7 @@ features:
 2. [理解告警处理链路](/guide/concepts)
 3. [创建、轮换或停用告警源](/guide/sources)
 4. [定位 Event 并读取匹配证据](/guide/events)
-5. [选择并验证通知目标](/integrations/destinations)
+5. [选择并验证通知目标](/integrations/destinations)；邮件目标先完成[HTTP 邮件网关接入](/integrations/email-gateway)
 6. [登记飞书应用并配置电话加急（可选）](/integrations/feishu-app)
 7. [配置路由匹配](/guide/routes)
 8. [检查投递状态与重试](/operations/deliveries)
