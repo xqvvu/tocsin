@@ -382,7 +382,7 @@ describe("history search", () => {
     expect(page.total).toBe(1);
   });
 
-  it("matches the external message reference shown on delivery detail", async () => {
+  it("matches the external message reference on both lists", async () => {
     const repository = await repositoryWithSearchFixtures();
 
     const deliveries = await repository.listDeliveries({ q: "om_ref_5d2f" });
@@ -390,9 +390,21 @@ describe("history search", () => {
 
     expect(ids(deliveries.items)).toEqual(["dlv-provider-ref"]);
     expect(deliveries.total).toBe(1);
-    // The reference belongs to the delivery, not to the event payload, so the
-    // events list keeps its narrower search scope.
-    expect(events.total).toBe(0);
+    // The reference belongs to the delivery, so the event is reached through
+    // its deliveries: a message id pasted from chat still leads back to the
+    // alert that produced it.
+    expect(ids(events.items)).toEqual(["event-feishu"]);
+    expect(events.total).toBe(1);
+  });
+
+  it("does not search the machine-readable reference type on the events list", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    // `provider_ref_type` is a machine value (`feishu_message_id`), not the
+    // handle on-call receives; only the reference value participates in search.
+    const page = await repository.listEvents({ q: "feishu_message_id" });
+
+    expect(page.total).toBe(0);
   });
 
   it("treats % as a literal character instead of a wildcard", async () => {

@@ -821,8 +821,12 @@ function countMatchedRoutes(routeMatchesJson: string | null): number {
  * Labels and provider metadata are matched against their stored JSON text, the
  * same way title and message are matched: matching uses the raw value, while
  * the DTO projection still redacts credential-shaped content, and a hit only
- * reveals that a row exists. Raw payloads and headers stay out of scope: they
- * are uncurated upstream documents that are only ever displayed as redacted
+ * reveals that a row exists. Delivery facts follow the same rule through the
+ * correlated `EXISTS`: a delivery id or the external message reference a
+ * destination provider returned leads back to the alert that produced it, so a
+ * message id pasted from chat finds the event without a detour through the
+ * deliveries list. Raw payloads and headers stay out of scope: they are
+ * uncurated upstream documents that are only ever displayed as redacted
  * projections, so matching them would widen that existence check without
  * helping on-call find an alert by its identity fields.
  *
@@ -855,7 +859,10 @@ function eventTermPredicate(term: string) {
     OR EXISTS (
       SELECT 1 FROM deliveries AS searched_deliveries
       WHERE searched_deliveries.event_id = events.id
-        AND searched_deliveries.id LIKE ${pattern} ESCAPE '\\'
+        AND (
+          searched_deliveries.id LIKE ${pattern} ESCAPE '\\'
+          OR searched_deliveries.provider_ref_value LIKE ${pattern} ESCAPE '\\'
+        )
     )
   )`;
 }
