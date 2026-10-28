@@ -7,6 +7,7 @@ import type {
   DestinationKind,
   EventDeliveryOutcome,
   EventDestinationMatch,
+  EventDestinationOutcome,
   EventDetail,
   EventFingerprintContext,
   EventListItem,
@@ -85,6 +86,13 @@ export interface EventListQuery {
    */
   destinationId?: string;
   destinationMatch?: EventDestinationMatch;
+  /**
+   * Only events whose delivery to `destinationId` is in this state. Requires
+   * `destinationId`, and describes the same delivery row as `destinationMatch`
+   * so "the pager send failed" cannot be satisfied by another target's
+   * successful send. `missing` coverage stays with `destinationMatch`.
+   */
+  destinationOutcome?: EventDestinationOutcome;
   /** Inclusive lower bound on `events.received_at`, as an ISO timestamp. */
   since?: string;
   /**

@@ -6,6 +6,7 @@ import type {
   DestinationKind,
   EventDeliveryOutcome,
   EventDestinationMatch,
+  EventDestinationOutcome,
   EventListItem,
   NormalizedEvent,
   NumberedPage,
@@ -40,6 +41,11 @@ export interface ListOperationsInput {
   destinationId?: string;
   /** Events-only: did the alert reach that destination, or never get there. */
   destinationMatch?: EventDestinationMatch;
+  /**
+   * Events-only: the state of the delivery to `destinationId`. Requires the
+   * destination; `missing` coverage stays with `destinationMatch`.
+   */
+  destinationOutcome?: EventDestinationOutcome;
   /** Delivery-only: one destination adapter kind. */
   destinationKind?: DestinationKind;
   routeId?: string;

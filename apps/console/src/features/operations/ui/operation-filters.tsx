@@ -252,6 +252,16 @@ function OperationFiltersPanel({
     { value: "delivered", label: t("operations.filters.destinationMatchOptions.delivered") },
     { value: "missing", label: t("operations.filters.destinationMatchOptions.missing") },
   ];
+  // The per-target outcome sits next to the match and has no `none`: "no
+  // delivery to this target" is the `missing` half of the match select, and
+  // the state only describes deliveries that exist.
+  const destinationOutcomeItems = [
+    { value: null, label: t("operations.filters.anyDestinationOutcome") },
+    ...DeliveryStateSchema.options.map((state) => ({
+      value: state,
+      label: t(`operations.filters.destinationOutcomeOptions.${state}`),
+    })),
+  ];
   const destinationKindItems = [
     { value: null, label: t("operations.filters.anyDestinationKind") },
     ...DestinationKindSchema.options.map((kind) => ({
@@ -464,6 +474,37 @@ function OperationFiltersPanel({
               <SelectGroup>
                 {destinationMatchItems.map((item) => (
                   <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </UiField>
+      ) : null}
+      {scope === "events" && search.destinationId && search.destinationMatch !== "missing" ? (
+        <UiField>
+          <FieldLabel htmlFor="operation-destination-outcome">
+            {t("operations.filters.destinationOutcome")}
+          </FieldLabel>
+          <Select
+            id="operation-destination-outcome"
+            items={destinationOutcomeItems}
+            value={search.destinationOutcome || null}
+            disabled={pending}
+            onValueChange={(value) =>
+              onChange({
+                destinationOutcome: (value ?? "") as DashboardOperationSearch["destinationOutcome"],
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("operations.filters.anyDestinationOutcome")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {destinationOutcomeItems.map((item) => (
+                  <SelectItem key={item.value ?? "any"} value={item.value}>
                     {item.label}
                   </SelectItem>
                 ))}
@@ -789,6 +830,15 @@ function activeFilterChips(
       label: t("operations.filters.destinationMatch"),
       valueLabel: t(`operations.filters.destinationMatchOptions.${search.destinationMatch}`),
       clear: { destinationMatch: "" },
+    });
+  }
+
+  if (scope === "events" && search.destinationOutcome) {
+    chips.push({
+      key: "destinationOutcome",
+      label: t("operations.filters.destinationOutcome"),
+      valueLabel: t(`operations.filters.destinationOutcomeOptions.${search.destinationOutcome}`),
+      clear: { destinationOutcome: "" },
     });
   }
 

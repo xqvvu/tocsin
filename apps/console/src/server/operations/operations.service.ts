@@ -49,6 +49,9 @@ export class OperationsService {
         // answerable without opening each event.
         destinationId: input.destinationId,
         destinationMatch: input.destinationMatch,
+        // Scopes the state question to that target: the event-level
+        // `deliveryOutcome` still answers "any delivery anywhere".
+        destinationOutcome: input.destinationOutcome,
         q: input.q,
         // Exact identity rather than a search: the recurrence view links here
         // so "see every occurrence" cannot drift into substring matches.

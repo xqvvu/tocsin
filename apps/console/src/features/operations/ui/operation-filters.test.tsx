@@ -78,6 +78,38 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByText("Destination delivery")).toBeNull();
   });
 
+  it("reveals the per-target outcome next to a destination, not next to a missing match", () => {
+    renderFilters("events", { destinationId: "destination-1" });
+    expect(screen.getByText("Destination delivery outcome")).toBeTruthy();
+
+    cleanup();
+    // A state cannot describe a target that produced no delivery at all.
+    renderFilters("events", { destinationId: "destination-1", destinationMatch: "missing" });
+    expect(screen.queryByText("Destination delivery outcome")).toBeNull();
+
+    cleanup();
+    renderFilters("events", { destinationId: "", destinationOutcome: "failed" });
+    expect(screen.queryByText("Destination delivery outcome")).toBeNull();
+  });
+
+  it("names the per-target outcome chip and keeps it off the deliveries page", () => {
+    renderFilters(
+      "events",
+      { destinationId: "destination-1", destinationOutcome: "failed" },
+      "toolbar",
+    );
+    expect(screen.getByTitle("Clear Destination delivery outcome")).toBeTruthy();
+    expect(screen.getByText("Destination delivery failed")).toBeTruthy();
+
+    cleanup();
+    renderFilters(
+      "deliveries",
+      { destinationId: "destination-1", destinationOutcome: "failed" },
+      "toolbar",
+    );
+    expect(screen.queryByTitle("Clear Destination delivery outcome")).toBeNull();
+  });
+
   it("shows every filter on the deliveries page", () => {
     renderFilters("deliveries");
 
@@ -161,6 +193,7 @@ describe("operation filters by page scope", () => {
       destinationId: "",
       destinationKind: "",
       destinationMatch: "",
+      destinationOutcome: "",
       routeId: "",
       eventId: "",
       fingerprint: "",

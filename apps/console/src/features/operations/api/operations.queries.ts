@@ -182,6 +182,13 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.destinationId && filters.destinationMatch
       ? { destinationMatch: filters.destinationMatch }
       : {}),
+    // Same rule as the match: a state only describes a delivery to the
+    // selected target, and `missing` contradicts it.
+    ...(filters.destinationId &&
+    filters.destinationOutcome &&
+    filters.destinationMatch !== "missing"
+      ? { destinationOutcome: filters.destinationOutcome }
+      : {}),
     ...(filters.destinationKind ? { destinationKind: filters.destinationKind } : {}),
     ...(filters.routeId ? { routeId: filters.routeId } : {}),
     ...(filters.eventId ? { eventId: filters.eventId } : {}),
