@@ -5,7 +5,7 @@ description: Tocsin 告警源、路由规则、通知目标与飞书应用的导
 
 # 可移植配置（TOML / JSON）
 
-「设置 → 可移植配置」用于把基础设置、飞书应用、告警源、通知目标和路由规则整理成一份可审阅、可迁移的文件。TOML 是首选格式；JSON 使用同一份文档结构和相同的 snake_case 字段名。
+「设置 → TOML/JSON」用于把基础设置、飞书应用、告警源、通知目标和路由规则整理成一份可审阅、可迁移的文件。TOML 是首选格式；JSON 使用同一份文档结构和相同的 snake_case 字段名。设置页的完整面板结构与运行态边界见[设置与运行态操作](/operations/settings)。
 
 ::: warning 配置导出不是数据库备份
 可移植配置不包含 Event、Delivery、请求历史、告警静默、dashboard 用户、session、Source Token、Delivery 暂停状态或任何明文密钥。它适合复制配置和做 code review，不能用于完整恢复实例。数据库备份见[备份与恢复](/operations/backup-restore)。
@@ -339,4 +339,4 @@ TOML 与 JSON 文件不能在同一页签之间自动转换。TOML 页只能导�
 配置迁移无法恢复历史 Event、Delivery、告警静默或 dashboard 用户。跨实例迁移时先备份源实例与目标实例，并在非生产环境演练导入，再更新上游 Webhook Token。
 :::
 
-相关页面：[备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [Docker 生产部署](/operations/deploy-docker) · [告警源接入参考](/integrations/providers) · [通知目标参考](/integrations/destinations) · [故障排查](/operations/troubleshooting)
+相关页面：[设置与运行态操作](/operations/settings) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [Docker 生产部署](/operations/deploy-docker) · [告警源接入参考](/integrations/providers) · [通知目标参考](/integrations/destinations) · [故障排查](/operations/troubleshooting)

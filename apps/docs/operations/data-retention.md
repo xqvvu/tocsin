@@ -146,4 +146,4 @@ Tocsin 会递归替换常见敏感键并对自由文本做脱敏，再保存原�
 - 不要把源 Token、目标密码、签名密钥或未脱敏请求体写入工单、工单附件、聊天记录或公开日志。
 - 备份文件应视同凭据材料保护，并设置独立于业务数据库的保留期，见[备份与恢复](/operations/backup-restore)。
 
-相关页面：[事件检索与证据](/guide/events) · [环境变量与运行时配置](/operations/configuration) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [日志与可观测性](/operations/observability) · [故障排查](/operations/troubleshooting)
+相关页面：[设置与运行态操作](/operations/settings) · [事件检索与证据](/guide/events) · [环境变量与运行时配置](/operations/configuration) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [日志与可观测性](/operations/observability) · [故障排查](/operations/troubleshooting)

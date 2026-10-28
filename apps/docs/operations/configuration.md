@@ -5,7 +5,7 @@ description: Tocsin 的认证、外部 URL、SQLite、Webhook、Worker、日志�
 
 # 环境变量与运行时配置
 
-Tocsin 的部署行为由进程环境决定。本页是公开站点的运行时变量参考，说明默认值、范围和生效方式；Docker 拓扑与首次上线步骤见[Docker 生产部署](/operations/deploy-docker)，账号安全操作见[认证与账号安全](/operations/authentication)。
+Tocsin 的部署行为由进程环境决定。本页是公开站点的运行时变量参考，说明默认值、范围和生效方式；设置页中的可写偏好、投递急停与只读运行诊断见[设置与运行态操作](/operations/settings)，Docker 拓扑与首次上线步骤见[Docker 生产部署](/operations/deploy-docker)，账号安全操作见[认证与账号安全](/operations/authentication)。
 
 ::: warning 不要把真实值写进部署文件
 本页只使用示例域名和占位值。认证密钥、Source Token、通知目标密码与签名密钥不能写入仓库、镜像、工单或公开日志。
@@ -16,7 +16,7 @@ Tocsin 的部署行为由进程环境决定。本页是公开站点的运行时�
 - `apps/console/src/env.ts` 定义应用环境变量的 schema。应用同时读取进程环境与 Vite 环境；空字符串按“未设置”处理，因此删除变量或设为空会触发对应默认值。
 - 环境变量在进程启动时形成运行时配置。应用没有热重载端点；修改后必须重启或重建容器。
 - 修改 Compose/override 的 `environment` 后，用 `docker compose up -d` 重建容器才能应用新值。只替换同路径 secret 文件内容时，`docker compose restart console` 会重新启动并读取文件。
-- 设置页的「运行时与生效参数」显示已生效的超时、Webhook 上限、Worker 参数与日志配置，并显示通知直链基址（`SERVER_URL`，缺失时回落到 `BETTER_AUTH_URL`）；基址为空或指向本机时面板会给出提示。它不显示密钥或环境变量来源，也不能替代部署清单。
+- 设置页的「运行时与生效参数」显示已生效的超时、Webhook 上限、Worker 参数与日志配置，并显示通知直链基址（`SERVER_URL`，缺失时回落到 `BETTER_AUTH_URL`）；基址为空或指向本机时面板会给出提示。它不显示密钥或环境变量来源，也不能替代部署清单；各面板与急停边界见[设置与运行态操作](/operations/settings)。
 - 语言、时区、[原始载荷保留天数](/operations/data-retention)和全局投递暂停属于数据库中的运行设置，不是环境变量。可移植配置里的 `secret_refs` 只用于导入时解析密钥值，也不等同于部署变量。
 
 ## 认证与外部 URL
@@ -126,4 +126,4 @@ services:
 | 导入可移植配置时报缺少环境变量 | `secret_refs` 指向的变量不在导入进程环境中，或误以为支持 `_FILE` | 把变量注入当前实例后重试，或修改引用名。 |
 | 日志量突然增大 | 临时把 `TOCSIN_LOG_LEVEL` 设为 `debug` 或 `trace` 后未恢复 | 恢复为 `info` 并重启；成功探针日志在 `info` 下正常不可见。 |
 
-相关页面：[Docker 生产部署](/operations/deploy-docker) · [认证与账号安全](/operations/authentication) · [日志与可观测性](/operations/observability) · [投递检索、生命周期与重试](/operations/deliveries) · [可移植配置参考](/operations/portable-config) · [故障排查](/operations/troubleshooting)
+相关页面：[设置与运行态操作](/operations/settings) · [Docker 生产部署](/operations/deploy-docker) · [认证与账号安全](/operations/authentication) · [日志与可观测性](/operations/observability) · [投递检索、生命周期与重试](/operations/deliveries) · [可移植配置参考](/operations/portable-config) · [故障排查](/operations/troubleshooting)

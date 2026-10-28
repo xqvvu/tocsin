@@ -176,7 +176,7 @@ Tocsin 不会给 Slack 或飞书发送幂等键，重试时也不会查询目标
 
 ## 全局暂停出站投递
 
-设置页的「暂停出站投递」是实例级急停开关，适合上游大面积故障、目标服务维护或通知风暴期间使用。
+设置页的「暂停出站投递」是实例级急停开关，适合上游大面积故障、目标服务维护或通知风暴期间使用。设置页各面板、账号安全与只读诊断的统一入口见[设置与运行态操作](/operations/settings)。
 
 暂停期间：
 
@@ -237,4 +237,4 @@ Worker 只领取同时满足以下条件的 `pending` 投递：
 | `suppressed` | 命中静默 | 查看静默原因与窗口；不会自动补发，等待新 Event。 |
 | 积压持续增长 | 目标故障或 Worker 未运行 | 检查 Worker 状态、目标连通性和通知目标的投递健康数据。 |
 
-相关页面：[告警源接入与生命周期](/guide/sources) · [路由规则与匹配](/guide/routes) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [故障排查](/operations/troubleshooting) · [Docker 生产部署](/operations/deploy-docker)
+相关页面：[设置与运行态操作](/operations/settings) · [告警源接入与生命周期](/guide/sources) · [路由规则与匹配](/guide/routes) · [通知目标参考](/integrations/destinations) · [告警静默与维护时段](/operations/suppressions) · [故障排查](/operations/troubleshooting) · [Docker 生产部署](/operations/deploy-docker)

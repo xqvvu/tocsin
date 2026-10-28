@@ -35,13 +35,14 @@ features:
 9. [在变更窗口内静默告警](/operations/suppressions)
 10. [生产 Docker 部署](/operations/deploy-docker)
 11. [配置 TLS 反向代理](/operations/reverse-proxy)
-12. [核对环境变量与运行时限制](/operations/configuration)
-13. [规划数据保留与 SQLite 容量](/operations/data-retention)
-14. [完成首个 owner 与账号安全设置](/operations/authentication)
-15. [备份与恢复数据库](/operations/backup-restore)
-16. [规划镜像升级与回滚](/operations/upgrade-rollback)
-17. [查看日志、健康检查与 Worker 状态](/operations/observability)
-18. [建立生产监控、值班告警与恢复验收](/operations/monitoring)
+12. [操作设置、投递急停与运行态诊断](/operations/settings)
+13. [核对环境变量与运行时限制](/operations/configuration)
+14. [规划数据保留与 SQLite 容量](/operations/data-retention)
+15. [完成首个 owner 与账号安全设置](/operations/authentication)
+16. [备份与恢复数据库](/operations/backup-restore)
+17. [规划镜像升级与回滚](/operations/upgrade-rollback)
+18. [查看日志、健康检查与 Worker 状态](/operations/observability)
+19. [建立生产监控、值班告警与恢复验收](/operations/monitoring)
 
 ::: warning 发布状态
 Tocsin 当前是可试用的自托管 MVP，尚非稳定发布版。生产使用前请评估单实例限制，并先演练备份与恢复。

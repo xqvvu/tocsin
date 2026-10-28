@@ -20,7 +20,14 @@ export default defineConfig({
           { text: "飞书应用与电话加急", link: "/integrations/feishu-app" },
         ],
       },
-      { text: "运维", link: "/operations/deploy-docker" },
+      {
+        text: "运维",
+        items: [
+          { text: "设置与运行态操作", link: "/operations/settings" },
+          { text: "Docker 生产部署", link: "/operations/deploy-docker" },
+          { text: "故障排查", link: "/operations/troubleshooting" },
+        ],
+      },
       { text: "GitHub", link: "https://github.com/xqvvu/tocsin" },
     ],
     sidebar: [
@@ -51,6 +58,7 @@ export default defineConfig({
         items: [
           { text: "Docker 生产部署", link: "/operations/deploy-docker" },
           { text: "TLS 反向代理", link: "/operations/reverse-proxy" },
+          { text: "设置与运行态操作", link: "/operations/settings" },
           { text: "环境变量与运行时配置", link: "/operations/configuration" },
           { text: "数据保留与 SQLite 容量", link: "/operations/data-retention" },
           { text: "认证与账号安全", link: "/operations/authentication" },
