@@ -103,7 +103,17 @@
 
 ### 收尾与同步
 
-- 工作树与锁的处理见本轮末清理记录（`docs/planning/iteration-backlog.md` 无单独行）。
+- 清理：回收 `loving-albattani-bb8ed8`（第 159 轮会话工作树，`git status` 干净、会话已停止、
+  PR #658 已合并）与 `/tmp/tocsin-build-beta129`；删除本地分支
+  `agent/source-coverage-conditional`、`agent/release-beta129`、`agent/round-159-planning`、
+  `agent/round-160-planning`（`agent/rehearsal-failure-tests` 已随远端合并删除）。
+  `.claude/worktrees` 由 **1.4G 降到 23M**；本会话工作树删除 `node_modules` / `.output` /
+  `.vite` / `coverage` 后为 23M。
+- 并发锁 `agent-iteration/.agent-run.lock` 随该工作树一并移除（本轮该目录曾被重建并重新注册）。
+- Obsidian 同步：已按 AGENTS.md 从 Obsidian 配置发现真实 vault
+  （`~/Library/Mobile Documents/iCloud~md~obsidian/Documents/Vane/`），更新
+  `Vane Iteration Log`、`Vane Iteration Backlog`、`Vane Source Deliverable Coverage`，
+  并新增 `Vane Source Coverage Condition Awareness`。
 
 ### 下一轮优先项
 
