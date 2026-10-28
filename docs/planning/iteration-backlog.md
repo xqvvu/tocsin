@@ -891,6 +891,7 @@
 
 | 版本 | tag 指向 | 镜像 | 说明 |
 |---|---|---|---|
+| `0.1.0-beta.120` | `4a5a37e` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.120`（linux/amd64 + linux/arm64，index digest `sha256:bed25465682e…`，amd64 `sha256:86a9c95d79d1…`，arm64 `sha256:0c7331466dba…`） | 运维列表翻页结果集锚定（#611，REQ-308）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.119` |
 | `0.1.0-beta.119` | `5ad9a5b` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.119`（linux/amd64 + linux/arm64，index digest `sha256:39f64b45a473…`，amd64 `sha256:d5ea7571e10a…`，arm64 `sha256:ae6488e3d2a1…`） | 投递搜索覆盖任一次尝试的错误（#605，REQ-303）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.118` |
 | `0.1.0-beta.118` | `51d49ff` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.118`（linux/amd64 + linux/arm64，index digest `sha256:1bc3ebe98fd2…`，amd64 `sha256:62f110254e64…`，arm64 `sha256:563ef3995696…`） | 补投预览披露加急电话影响（#602，REQ-171）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.117` |
 | `0.1.0-beta.117` | `2cd06dd` | `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.117`（linux/amd64 + linux/arm64，index digest `sha256:c6081374c352…`，amd64 `sha256:a7ba7c1d915a…`，arm64 `sha256:5d104a2249d2…`） | 事件/投递详情显示原始载荷保留窗口结束时间（#595，REQ-177）；无迁移/配置/环境变量/依赖变化；回滚镜像 `0.1.0-beta.116` |
