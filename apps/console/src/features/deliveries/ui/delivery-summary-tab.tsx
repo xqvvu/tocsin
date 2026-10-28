@@ -5,6 +5,7 @@ import { DeliveryDetailSectionHeader } from "#/features/deliveries/ui/delivery-d
 import { DeliveryDetailTerm } from "#/features/deliveries/ui/delivery-detail-term";
 import type { DeliveryDetailData } from "#/features/deliveries/ui/delivery-detail-types";
 import { DeliveryRouteEvidence } from "#/features/deliveries/ui/delivery-route-evidence";
+import { DeliverySuppressionOutlook } from "#/features/deliveries/ui/delivery-suppression-outlook";
 import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp";
 import { useTranslations } from "#/i18n/use-i18n";
 
@@ -114,6 +115,9 @@ export function DeliverySummaryTab({ detail }: { detail: DeliveryDetailData }) {
         </dl>
       </section>
       <DeliveryRouteEvidence detail={detail} />
+      {/* A suppressed delivery already carries the "why" notice above the tabs;
+          every other delivery gets the converse question answered here. */}
+      {detail.job.state === "suppressed" ? null : <DeliverySuppressionOutlook detail={detail} />}
     </div>
   );
 }

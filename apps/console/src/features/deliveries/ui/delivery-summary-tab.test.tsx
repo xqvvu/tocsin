@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
@@ -12,6 +13,16 @@ import { AppIntlProvider } from "#/i18n/provider";
 
 vi.mock("#/features/operations/ui/operation-timestamp", () => ({
   OperationTimestamp: ({ value }: { value: string }) => <span>{value}</span>,
+}));
+
+// The summary mounts the suppression outlook; an empty rule list keeps these
+// field-level assertions focused on the delivery facts.
+vi.mock("#/features/suppressions/api/suppression.queries", () => ({
+  suppressionsQueryOptions: () => ({
+    queryKey: ["test", "suppressions"],
+    queryFn: async () => [],
+    staleTime: Infinity,
+  }),
 }));
 
 // The summary only needs Link's destination; rendering a plain anchor keeps this
@@ -102,6 +113,34 @@ describe("delivery summary tab", () => {
     );
   });
 
+  it("asks the suppression outlook only when the delivery was not suppressed", async () => {
+    renderSummary(
+      detailFixture({
+        createdAt: "2026-10-12T10:00:00.000Z",
+        finishedAt: "2026-10-12T10:00:20.000Z",
+      }),
+      [],
+    );
+
+    expect(await screen.findByText("Not suppressed")).toBeTruthy();
+    expect(screen.getByText("Suppression decision outlook")).toBeTruthy();
+  });
+
+  it("replaces the outlook with the suppression notice on a suppressed delivery", () => {
+    renderSummary(
+      detailFixture({
+        createdAt: "2026-10-12T10:00:00.000Z",
+        finishedAt: null,
+        state: "suppressed",
+      }),
+      [],
+    );
+
+    // The delivery-level notice above the tabs already answers "why was it not sent".
+    expect(screen.queryByText("Suppression decision outlook")).toBeNull();
+    expect(screen.queryByText("Not suppressed")).toBeNull();
+  });
+
   it("does not offer a copy action when the delivery has no message reference", () => {
     renderSummary(
       detailFixture({
@@ -117,16 +156,21 @@ describe("delivery summary tab", () => {
 });
 
 function renderSummary(detail: DeliveryDetailData, attempts: DeliveryAttempt[]): void {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
   render(
-    <AppIntlProvider locale="en-US">
-      <DeliverySummaryTab detail={{ ...detail, attempts }} />
-    </AppIntlProvider>,
+    <QueryClientProvider client={queryClient}>
+      <AppIntlProvider locale="en-US">
+        <DeliverySummaryTab detail={{ ...detail, attempts }} />
+      </AppIntlProvider>
+    </QueryClientProvider>,
   );
 }
 
 function detailFixture(overrides: {
   createdAt: string;
   finishedAt: string | null;
+  state?: DeliveryDetailData["job"]["state"];
   providerReference?: DeliveryDetailData["providerReference"];
 }): DeliveryDetailData {
   return {
@@ -135,7 +179,7 @@ function detailFixture(overrides: {
       eventId: "event-1",
       destinationId: "destination-1",
       routeId: null,
-      state: overrides.finishedAt ? "succeeded" : "pending",
+      state: overrides.state ?? (overrides.finishedAt ? "succeeded" : "pending"),
       attemptCount: 1,
       maxAttempts: 5,
       nextAttemptAt: null,
