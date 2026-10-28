@@ -14,3 +14,10 @@
 .VPFeature {
   border-radius: 2px;
 }
+
+/* Dense reference tables stay readable on mobile without expanding the page. */
+.vp-doc table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
