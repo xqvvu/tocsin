@@ -41,6 +41,7 @@ features:
 15. [备份与恢复数据库](/operations/backup-restore)
 16. [规划镜像升级与回滚](/operations/upgrade-rollback)
 17. [查看日志、健康检查与 Worker 状态](/operations/observability)
+18. [建立生产监控、值班告警与恢复验收](/operations/monitoring)
 
 ::: warning 发布状态
 Tocsin 当前是可试用的自托管 MVP，尚非稳定发布版。生产使用前请评估单实例限制，并先演练备份与恢复。
