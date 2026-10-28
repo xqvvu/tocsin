@@ -16,17 +16,53 @@ export function DestinationRouteCoverageCell({ coverage }: { coverage: Destinati
         title={title}
       >
         <RiRouteLine data-icon="inline-start" aria-hidden />
-        {coverage.enabledRouteCount > 0
-          ? t("destinations.table.routes.covered", {
-              count: coverage.enabledRouteCount,
-            })
-          : t("destinations.table.routes.none")}
+        {coverageLabel(coverage, t)}
       </Badge>
     </div>
   );
 }
 
+function coverageLabel(
+  coverage: DestinationRouteCoverage,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  if (coverage.enabledRouteCount === 0) {
+    return t("destinations.table.routes.none");
+  }
+
+  const base = t("destinations.table.routes.covered", {
+    count: coverage.enabledRouteCount,
+  });
+
+  if (coverage.conditionalRouteCount === 0) {
+    return base;
+  }
+
+  // A route that also requires a severity, status, label, or text condition
+  // reaches this destination only for matching traffic. The bare count read as
+  // "everything routed here is delivered", so state the condition next to it.
+  return `${base}${t("destinations.table.routes.conditionalSuffix", {
+    count: coverage.conditionalRouteCount,
+  })}`;
+}
+
 function routeCoverageTitle(
+  coverage: DestinationRouteCoverage,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  const base = routeCoverageBaseTitle(coverage, t);
+
+  if (coverage.conditionalRouteCount === 0) {
+    return base;
+  }
+
+  return `${base} ${t("destinations.table.routes.conditionalTitle", {
+    count: coverage.conditionalRouteCount,
+    names: coverage.conditionalRouteNames.join(", "),
+  })}`;
+}
+
+function routeCoverageBaseTitle(
   coverage: DestinationRouteCoverage,
   t: ReturnType<typeof useTranslations>,
 ): string {

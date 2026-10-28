@@ -666,6 +666,8 @@
   "destinations.table.pagination.page": "第 {page} / {pageCount} 页",
   "destinations.table.pagination.previous": "上一页",
   "destinations.table.pagination.range": "共 {total} 个通知目标",
+  "destinations.table.routes.conditionalSuffix": " · {count} 条带条件",
+  "destinations.table.routes.conditionalTitle": "其中 {count} 条还需事件满足级别、状态、标签或文本条件才会投递：{names}",
   "destinations.table.routes.covered": "{count} 条生效",
   "destinations.table.routes.coveredTitle": "{count} 条已启用的路由规则会投递到这个通知目标（另有 {disabled} 条停用引用）：{names}",
   "destinations.table.routes.disabledOnlyTitle": "{count} 条停用路由规则引用这个通知目标，但当前没有已启用路由会投递到它",

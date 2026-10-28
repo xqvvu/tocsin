@@ -666,6 +666,8 @@
   "destinations.table.pagination.page": "Page {page} of {pageCount}",
   "destinations.table.pagination.previous": "Previous",
   "destinations.table.pagination.range": "{total, plural, one {# destination} other {# destinations}}",
+  "destinations.table.routes.conditionalSuffix": " · {count} conditional",
+  "destinations.table.routes.conditionalTitle": "{count} of them also need the event to match a severity, status, label, or text condition: {names}",
   "destinations.table.routes.covered": "{count} active",
   "destinations.table.routes.coveredTitle": "{count} enabled routes send to this destination ({disabled} disabled references): {names}",
   "destinations.table.routes.disabledOnlyTitle": "{count} disabled routes reference this destination, but no enabled route currently sends to it",

@@ -17,7 +17,29 @@ describe("destination route coverage", () => {
     ).toEqual({
       enabledRouteCount: 1,
       disabledRouteCount: 1,
+      conditionalRouteCount: 0,
       routeNames: ["Primary paging"],
+      conditionalRouteNames: [],
+    });
+  });
+
+  it("flags enabled routes that only deliver matching events", () => {
+    expect(
+      destinationRouteCoverage("destination-1", [
+        routeFixture("route-1", "All checkout", ["destination-1"], true),
+        routeFixture("route-2", "Critical only", ["destination-1"], true, {
+          severities: ["critical"],
+        }),
+        routeFixture("route-3", "Paused critical", ["destination-1"], false, {
+          severities: ["critical"],
+        }),
+      ]),
+    ).toEqual({
+      enabledRouteCount: 2,
+      disabledRouteCount: 1,
+      conditionalRouteCount: 1,
+      routeNames: ["All checkout", "Critical only"],
+      conditionalRouteNames: ["Critical only"],
     });
   });
 });
@@ -27,6 +49,7 @@ function routeFixture(
   name: string,
   destinationIds: string[],
   enabled: boolean,
+  conditions: Partial<RouteSummary["rule"]> = {},
 ): RouteSummary {
   return {
     id,
@@ -39,6 +62,7 @@ function routeFixture(
       labels: [],
       titleContains: [],
       messageContains: [],
+      ...conditions,
     },
     destinationIds,
   };
