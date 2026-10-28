@@ -1,6 +1,6 @@
 # 故障排查
 
-按「接收 → 解析 → 匹配 → 投递」顺序排查。先核对应用 readiness，再定位具体 Event 或 Delivery；事件页各标签的读取顺序见[事件检索与证据](/guide/events)，日志格式、级别、类别、request id 关联与安全取日志方式见[日志与可观测性](/operations/observability)。不要把入站接受误认为出站送达。
+按「接收 → 解析 → 匹配 → 投递」顺序排查。先核对应用 readiness，再定位具体 Event 或 Delivery；事件页各标签的读取顺序见[事件检索与证据](/guide/events)，日志格式、级别、类别、request id 关联与安全取日志方式见[日志与可观测性](/operations/observability)。外部探针与值班告警的配置见[生产监控与告警基线](/operations/monitoring)。不要把入站接受误认为出站送达。
 
 ## 实例不可用
 
@@ -45,4 +45,4 @@
 Webhook 返回 `202 Accepted` 表示接入已接受。它不确认 Route 已命中，也不确认任何 Destination 已完成发送；最终结果以 Event 与 Delivery history 为准。
 :::
 
-相关页面：[快速开始与验证首条 Delivery](/guide/quick-start) · [认证与账号安全](/operations/authentication) · [通知目标参考](/integrations/destinations) · [邮件网关接入与验收](/integrations/email-gateway) · [告警静默与维护时段](/operations/suppressions) · [健康检查与 Docker 限制](/operations/deploy-docker) · [可移植配置与 `secret_refs`](/operations/portable-config) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback)
+相关页面：[生产监控与告警基线](/operations/monitoring) · [快速开始与验证首条 Delivery](/guide/quick-start) · [认证与账号安全](/operations/authentication) · [通知目标参考](/integrations/destinations) · [邮件网关接入与验收](/integrations/email-gateway) · [告警静默与维护时段](/operations/suppressions) · [健康检查与 Docker 限制](/operations/deploy-docker) · [可移植配置与 `secret_refs`](/operations/portable-config) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback)
