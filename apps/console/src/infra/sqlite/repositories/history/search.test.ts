@@ -103,6 +103,9 @@ async function repositoryWithSearchFixtures(): Promise<
       // lookup can only hit through the intended branch.
       event("evt-opaque-7f3a", "fp-opaque", "Node down", "node"),
       event("event-feishu", "fp-feishu", "Edge latency", "latency"),
+      // Retried until it succeeded, so `last_error` is cleared and only the
+      // attempt history still carries the failure on-call searched for.
+      event("event-retried", "fp-retried", "Flaky target", "quux11"),
       event("event-labels", "fp-labels", "Latency", "p99", {
         labels_json: '{"service":"checkout","env":"prod"}',
       }),
@@ -178,6 +181,17 @@ async function repositoryWithSearchFixtures(): Promise<
         updated_at: NOW,
       },
       {
+        // Succeeded on the second attempt: `last_error` is null, and the
+        // first attempt's error lives only in `delivery_attempts`.
+        id: "dlv-retried-success",
+        event_id: "event-retried",
+        destination_id: "dest-1",
+        state: "succeeded" as const,
+        last_error: null,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+      {
         // Delivered through Feishu, so the provider returned a message id.
         id: "dlv-provider-ref",
         event_id: "event-feishu",
@@ -211,6 +225,31 @@ async function repositoryWithSearchFixtures(): Promise<
         created_at: NOW,
         updated_at: NOW,
       })),
+    ])
+    .execute();
+
+  await db
+    .insertInto("delivery_attempts")
+    .values([
+      {
+        id: "attempt-retried-1",
+        delivery_id: "dlv-retried-success",
+        attempt_number: 1,
+        state: "failed",
+        response_status: 503,
+        error: "attempt-only handshake timeout",
+        started_at: NOW,
+        finished_at: NOW,
+      },
+      {
+        id: "attempt-retried-2",
+        delivery_id: "dlv-retried-success",
+        attempt_number: 2,
+        state: "succeeded",
+        response_status: 200,
+        started_at: NOW,
+        finished_at: NOW,
+      },
     ])
     .execute();
 
@@ -309,6 +348,18 @@ describe("history search", () => {
 
     expect(ids(page.items)).toEqual(["delivery-event-message"]);
     expect(page.total).toBe(1);
+  });
+
+  it("matches an error that only the attempt history keeps", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    const page = await repository.listDeliveries({ q: "handshake timeout" });
+
+    expect(ids(page.items)).toEqual(["dlv-retried-success"]);
+    expect(page.total).toBe(1);
+    // The delivery succeeded, so the latest-error column is already cleared:
+    // the hit can only come from the failed attempt.
+    expect(page.items[0]?.lastError).toBeNull();
   });
 
   it("matches the destination name shown in the deliveries table", async () => {
