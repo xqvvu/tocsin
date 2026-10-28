@@ -7,7 +7,7 @@ description: 面向 SRE 与运维人员：Tocsin 日志格式与级别、JSON Li
 
 Tocsin 是单实例、单进程服务。运行日志只写 stdout/stderr：不写入业务 SQLite，不默认创建本地日志文件，也不要求先部署日志系统。容器的日志驱动、systemd journal 或 Kubernetes 采集负责保存与轮转。
 
-本页说明日志格式、级别、类别、请求关联和脱敏边界，以及如何把运行日志与 `/api/health`、`/api/ready`、设置页的 Worker 状态区分开。外部探针、日志告警阈值和值班验收见[生产监控与告警基线](/operations/monitoring)；按告警链路逐段排查的步骤见[故障排查](/operations/troubleshooting)；投递状态与重试语义见[投递生命周期与重试](/operations/deliveries)。
+本页说明日志格式、级别、类别、请求关联和脱敏边界，以及如何把运行日志与 `/api/health`、`/api/ready`、设置页的 Worker 状态区分开。外部探针、日志告警阈值和值班验收见[生产监控与告警基线](/operations/monitoring)；按告警链路逐段排查的步骤见[故障排查](/operations/troubleshooting)；投递状态与重试语义见[投递检索、生命周期与重试](/operations/deliveries)。
 
 ## 格式与级别
 
@@ -134,7 +134,7 @@ docker compose logs --no-log-prefix --since=30m console \
 - `空闲` + 有上次完成时间：Worker 在轮询，没有到期任务也是正常结果。
 - `失败`：先看「上次错误」，再到日志中按 `tocsin.worker.delivery` 或 `tocsin.worker.oncall` 搜索同一时间段。
 
-Worker 健康是进程内状态，容器重启后会清空；它不是持久化的审计记录。队列为什么停滞、暂停开关和积压判读见[投递生命周期与重试](/operations/deliveries#队列滞留与积压)。
+Worker 健康是进程内状态，容器重启后会清空；它不是持久化的审计记录。队列为什么停滞、暂停开关和积压判读见[投递检索、生命周期与重试](/operations/deliveries#队列滞留与积压)。
 
 ## 脱敏边界
 
@@ -179,4 +179,4 @@ sink 会把敏感键（如 `authorization`、`token`、`password`、`secret`、`
 | Delivery 停在 `pending` | 设置页 Worker 状态与暂停开关 | `tocsin.worker.delivery` 批次摘要与最后错误 |
 | 电话没有拨出 | 加急 Worker 状态 | `tocsin.oncall` 的入队、退避与失败行 |
 
-相关页面：[生产监控与告警基线](/operations/monitoring) · [故障排查](/operations/troubleshooting) · [投递生命周期与重试](/operations/deliveries) · [飞书应用与电话加急](/integrations/feishu-app) · [Docker 生产部署](/operations/deploy-docker) · [TLS 反向代理](/operations/reverse-proxy) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [认证与账号安全](/operations/authentication)
+相关页面：[生产监控与告警基线](/operations/monitoring) · [故障排查](/operations/troubleshooting) · [投递检索、生命周期与重试](/operations/deliveries) · [飞书应用与电话加急](/integrations/feishu-app) · [Docker 生产部署](/operations/deploy-docker) · [TLS 反向代理](/operations/reverse-proxy) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [认证与账号安全](/operations/authentication)

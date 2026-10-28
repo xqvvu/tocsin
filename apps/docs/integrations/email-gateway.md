@@ -157,7 +157,7 @@ Tocsin 只按 HTTP 状态判断本次请求成功或失败：
 
 建议网关以 `metadata.eventId + metadata.destinationId` 建立幂等键。相同键再次到达时，如果原邮件已入队，返回 `2xx` 并跳过第二次发送。这样既能吸收 Tocsin 的不确定结果，也能覆盖例如同一 Event 发往多个邮件目标的情况。
 
-默认最多尝试 3 次，退避从 30 秒开始指数增长，单次上限 15 分钟。Tocsin 使用自己的固定退避，不依赖网关的 `Retry-After` Header。完整状态和人工重试语义见[投递生命周期与重试](/operations/deliveries)。
+默认最多尝试 3 次，退避从 30 秒开始指数增长，单次上限 15 分钟。Tocsin 使用自己的固定退避，不依赖网关的 `Retry-After` Header。完整状态和人工重试语义见[投递检索、生命周期与重试](/operations/deliveries)。
 
 ## 主题与正文
 
@@ -237,4 +237,4 @@ HTML 模板的规则是“标记可信、变量转义”：
 8. 验证 `resolved`、不同 severity 和多目标 Route 的邮件主题与收件人。
 9. 把网关负责人、退信处理入口、队列积压告警和凭证轮换步骤写入值班手册。
 
-相关页面：[通知目标参考](/integrations/destinations) · [投递生命周期与重试](/operations/deliveries) · [环境变量与运行时配置](/operations/configuration) · [可移植配置参考](/operations/portable-config) · [日志与可观测性](/operations/observability) · [故障排查](/operations/troubleshooting)
+相关页面：[通知目标参考](/integrations/destinations) · [投递检索、生命周期与重试](/operations/deliveries) · [环境变量与运行时配置](/operations/configuration) · [可移植配置参考](/operations/portable-config) · [日志与可观测性](/operations/observability) · [故障排查](/operations/troubleshooting)

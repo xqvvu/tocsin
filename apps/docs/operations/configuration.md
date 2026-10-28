@@ -47,7 +47,7 @@ Tocsin 的部署行为由进程环境决定。本页是公开站点的运行时�
 
 `TOCSIN_DESTINATION_TIMEOUT_MS` 是全局值，不能按 Destination 单独设置。为了一个慢目标放宽它，也会放宽所有目标的测试与发送 deadline。
 
-Worker 参数同时影响两类进程内队列。把 `TOCSIN_WORKER_INTERVAL_MS` 设为很小、把批量设为很大，会增加 SQLite 与出站请求压力；把 `TOCSIN_WORKER_STALE_RUNNING_MS` 设得短于正常批次耗时，则可能在任务仍发送时被回收。调整后应观察设置页 Worker 状态、`tocsin.worker.delivery`、`tocsin.worker.oncall` 日志以及重复通知风险。状态与退避语义见[投递生命周期与重试](/operations/deliveries)。
+Worker 参数同时影响两类进程内队列。把 `TOCSIN_WORKER_INTERVAL_MS` 设为很小、把批量设为很大，会增加 SQLite 与出站请求压力；把 `TOCSIN_WORKER_STALE_RUNNING_MS` 设得短于正常批次耗时，则可能在任务仍发送时被回收。调整后应观察设置页 Worker 状态、`tocsin.worker.delivery`、`tocsin.worker.oncall` 日志以及重复通知风险。状态与退避语义见[投递检索、生命周期与重试](/operations/deliveries)。
 
 ## 日志
 
@@ -126,4 +126,4 @@ services:
 | 导入可移植配置时报缺少环境变量 | `secret_refs` 指向的变量不在导入进程环境中，或误以为支持 `_FILE` | 把变量注入当前实例后重试，或修改引用名。 |
 | 日志量突然增大 | 临时把 `TOCSIN_LOG_LEVEL` 设为 `debug` 或 `trace` 后未恢复 | 恢复为 `info` 并重启；成功探针日志在 `info` 下正常不可见。 |
 
-相关页面：[Docker 生产部署](/operations/deploy-docker) · [认证与账号安全](/operations/authentication) · [日志与可观测性](/operations/observability) · [投递生命周期与重试](/operations/deliveries) · [可移植配置参考](/operations/portable-config) · [故障排查](/operations/troubleshooting)
+相关页面：[Docker 生产部署](/operations/deploy-docker) · [认证与账号安全](/operations/authentication) · [日志与可观测性](/operations/observability) · [投递检索、生命周期与重试](/operations/deliveries) · [可移植配置参考](/operations/portable-config) · [故障排查](/operations/troubleshooting)

@@ -93,7 +93,7 @@ Provider 拒绝 Webhook 载荷时，Tocsin 仍会保存一条用于审计的 Eve
 
 「投递」标签列出该事件产生的所有 Delivery。目标名称可进入 Delivery 详情；在那里继续核对状态、尝试次数、下次重试时间、渲染载荷、目标回执与错误。
 
-投递状态、自动退避、手动重试和积压处置见[投递生命周期与重试](/operations/deliveries)。若 Delivery 为 `suppressed`，说明它命中了静默规则或维护时段，并不代表发送失败；具体规则见[告警静默与维护时段](/operations/suppressions)。
+投递列表检索、状态、自动退避、手动重试和积压处置见[投递检索、生命周期与重试](/operations/deliveries)。若 Delivery 为 `suppressed`，说明它命中了静默规则或维护时段，并不代表发送失败；具体规则见[告警静默与维护时段](/operations/suppressions)。
 
 ## 判断是否重复发生
 
@@ -152,4 +152,4 @@ tocsin-event-<event-id>-<UTC timestamp>.json
 
 适用场景是“事件已经恢复，但当时路由没有配置正确，目标后来才补上”。如果目标已经成功接收消息、只是成功状态没有落库，不要用重新匹配盲目重发，以免产生重复通知。
 
-相关页面：[处理链路与概念](/guide/concepts) · [路由规则与匹配](/guide/routes) · [通知目标参考](/integrations/destinations) · [投递生命周期与重试](/operations/deliveries) · [故障排查](/operations/troubleshooting)
+相关页面：[处理链路与概念](/guide/concepts) · [路由规则与匹配](/guide/routes) · [通知目标参考](/integrations/destinations) · [投递检索、生命周期与重试](/operations/deliveries) · [故障排查](/operations/troubleshooting)

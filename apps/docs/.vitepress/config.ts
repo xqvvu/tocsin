@@ -57,7 +57,7 @@ export default defineConfig({
           { text: "可移植配置参考", link: "/operations/portable-config" },
           { text: "备份与恢复", link: "/operations/backup-restore" },
           { text: "版本升级与回滚", link: "/operations/upgrade-rollback" },
-          { text: "投递生命周期与重试", link: "/operations/deliveries" },
+          { text: "投递检索、生命周期与重试", link: "/operations/deliveries" },
           { text: "日志与可观测性", link: "/operations/observability" },
           { text: "生产监控与告警基线", link: "/operations/monitoring" },
           { text: "告警静默与维护时段", link: "/operations/suppressions" },
