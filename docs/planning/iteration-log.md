@@ -2,6 +2,107 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-28（第 157 轮）
+
+- 时间：2026-10-28 19:27 CST 起。
+- 基线：`origin/main` @ `4beec24`（第 156 轮 planning 提交，main CI success）。启动时 1 个 open PR
+  （docs-site 的 #643，19:24 创建、双 check 绿；本轮期间由 docs-site 车道合入）。
+- 类型：**增量交付轮 + UI 评审（未跑全量审计）**。距上次全量审计 17:05 仅 2h22m（< 6 小时），
+  且 backlog 仍有 ≥27 候选（REQ-312 / REQ-295，均待 EXPERT_PANEL），按第 1.5 步继续交付。
+- 全量审计时间戳：沿用 **2026-10-28 17:05 CST**（第 154 轮）。
+- 车道轮转位置：本轮跑 `requirements` + `ui-triage` + `architecture`；`ui-triage` 判定
+  `review_now`，第三个并发名额随后给了 `ui-review`。下一非必跑车道为 **`release-infra`**。
+- `last_ui_review_at` = **2026-10-28 20:02 CST**（本轮真实浏览器评审）。
+- 工作树：`agent-iteration` 只用于并发锁与基线；实现、验证、PR 在会话工作树
+  `interesting-archimedes-5043df`。
+
+### ui-triage 决策与理由
+
+- 决策：**`review_now`**。距上次评审仅 4h23m（< 48h），但自 15:05 起有 **5 个 UI 合并**
+  （`1879548`、`10a695c`、`70287d5`、`f9c40b9`、`c6acd76`），其中两个新界面从未进过浏览器
+  （`settings-public-base-url-notice.tsx`、`delivery-retry-action.tsx`），且 backlog 有 3 条
+  未解决 UI 发现（UI-91/93/94）。第 156 轮日志「自那以后没有新的 UI 合并」以该轮基线为参照，
+  实际不成立。
+
+### ui-review（真实浏览器）
+
+- 隔离实例 `TOCSIN_DATABASE_PATH=/tmp/tocsin-ui-review-*.db vp -C apps/console dev
+  --port 6191 --host localhost`，Chrome DevTools MCP，1440×1000 + 390×844，setup 凭据
+  `admin@example.test`。截图在 `/tmp/tocsin-ui-review-*.png`；实例与临时库已清理。
+- 发现（按用户影响 × 成本）：
+  1. **UI-93 仍成立（S）**：chip 的 `aria-label`/`title` 只有维度名
+     （`operation-filters.tsx:196-197`），新增「目标投递结果」chip 复制了缺陷 → 本轮交付。
+  2. **UI-95（新，S）**：设置页运行时 4 列网格末行剩 3 格露出 `bg-border` 灰腔
+     （约 50,626 px²，`settings-runtime-panel.tsx:23,67-75`），像未加载占位。
+  3. **UI-96（新，S）**：`publicBaseUrl` 提示是 `role="alert"`（assertive live region），
+     持久配置状态每次进页都被读屏立即播报；长 localhost 基址在 390 溢出
+     （`settings-public-base-url-notice.tsx:42-51`、`components/ui/alert.tsx:30`）。
+  4. **UI-97（新，S）**：`destinationMatch=missing` 时 outcome 下拉被隐藏
+     （`operation-filters.tsx:485`），outcome chip 仍渲染（`:836-843`），出现无法编辑、
+     只能整条清除的筛选条件。
+  5. **UI-98（新，S）**：运行时 `publicBaseUrl` 事实值仅 `truncate` + `title`
+     （`settings-runtime-panel.tsx:71`），触屏无法展开。
+  6. **UI-99（新，M）**：`IconTooltip` 包 `AlertDialogTrigger`
+     （`delivery-retry-action.tsx:42-57`），组件测试 mock 掉 tooltip
+     （`delivery-retry-action.test.tsx:21-24`），点击/焦点/禁用态零覆盖；空库无失败投递未实测。
+     与 `destination-actions.tsx:121-140` 同构，属共享既有风险。
+- 被推翻的假设：390px 下 7 枚 chip 正常换行 5 行（容器 332×144，无溢出/重叠）；390px Popover
+  单列、中文长标签未截断；通知提示与 `dl` 之间无错位（灰带来自发现 2）。
+
+### requirements（新候选）
+
+1. **REQ-316 告警接入链路预演**（27/30，成本 M，候选）：把已存在但互不相连的 parser、matcher、
+   模板渲染合成只读「接入预演」。证据：`destination.service.ts:325-370` 只覆盖配置→渲染→发送；
+   `intake.service.ts:93` 的路由匹配要写库；manifest 的 `testPayload` 位
+   （`packages/providers/src/types.ts:60-65`）全仓无消费者（仅 `registry.test.ts:32` 假 manifest）；
+   Sources 页无入口（`sources-page-toolbar.tsx:6-15`、`packages/api/src/contract/sources.ts:31-59`）。
+   范围：加法只读 `sources.rehearse` procedure + service 编排 + Sheet 三段式展示；验收含
+   events/deliveries 行数不变且不产生 job。无 schema/迁移。
+2. **REQ-317 投递列表按静默规则筛选**（26/30，成本 S，候选）：仓储已有
+   `DeliveryListQuery.suppressionId`（`history.interface.ts:141-142`，列表/计数共用
+   `history.repository.ts:431-432,730-731`），唯一调用方是抑制详情命中表
+   （`suppression.service.ts:115-121`）；契约、URL schema、筛选面板均无该维度
+   （`packages/api/src/schemas/operations.ts:289`、`operation-search.ts:31`）。
+
+### architecture
+
+- 近期三个功能 PR（#639 `c6acd76`、#633 `f9c40b9`、#627 `70287d5`）分层干净：谓词都在
+  `history.repository.ts`，service 只透传，契约在 core/api，router 一行委托；无 service 抛
+  `ORPCError`、无模块级单例、新字段进 query key。无 HIGH。
+- ARCH-66 仍成立：事务内依赖图三处重复（`store.ts:84-108,250-251`、
+  `delivery.repository.ts:606-623`、`oncall.repository.ts:333-338`），成本 M。
+- ARCH-67 仍成立：`delivery.repository.ts:573-584` 直读 destinations 表，而 `:525` 已用
+  `this.destinations.get()`；建议加 `getUpdatedAt(id)`，成本 S。
+- ARCH-68 仍成立：`history.repository.ts:69,72` 死 `_deliveries` 依赖、`delivery.repository.ts:88`
+  具体类 `SqliteIntakeRepository`（行号较 backlog 漂移 1 行），成本 S。
+- 新发现：`operation-filters.tsx` 972 行组件簇（`:61,220,947`），最近两个 PR 仍在往里加；
+  `features/deliveries/model/urgent-ping-explanation.test.ts:7` 反向导入 `#/infra/*`；
+  `operations/router.ts:72-86` 的 `runDeliveryWorker` 仍在 controller 编排（既有例外）。
+- 建议下一轮把 ARCH-67+68 合成 S 成本纯重构 PR。
+
+### 本轮交付
+
+- **PR #644 `fix(console): announce filter chip values to assistive tech`**（UI-93）：
+  chip 的 `aria-label`/`title` 改用 `operations.filters.clearChipValue`，插值维度与取值
+  （中文「清除{label}：{value}」，英文 `Clear {label}: {value}`）；15 处旧断言改为「维度 + 取值」，
+  新增 severity chip 可访问名称断言，并断言「目标投递结果」chip 名称含取值。可见文本不变。
+  验证：`vp check` 0 error（27 条既有 warning）、`vp run -r test` 222 文件 / 1273 tests、
+  `vp run -r build` 2/2。视觉零变化，未重复浏览器实测（缺陷已由本轮 ui-review 浏览器复现，
+  修复由 `getByRole` 名称断言覆盖）。
+
+### 发布
+
+- 发布评估在 PR 合并后由三位发布专家独立裁决；结果与 tag/镜像（若 GO）记录在后续
+  `docs(planning)` 提交与 backlog「已发布版本」表。
+
+### 下一轮优先项
+
+1. **`release-infra` 车道**（轮转位）+ ARCH-67/68 纯重构小 PR。
+2. REQ-316（27，M）接入链路预演：新 procedure + service + Sheet，单轮可交付但需完整验证。
+3. REQ-317（26，S）投递按静默规则筛选。
+4. Q-293 / Q-292 / Q-294（26/25/25）测试补齐；UI-95..UI-99。
+5. REQ-314 / REQ-315（schema，需 EXPERT_PANEL 三人裁决）。
+
 ## 2026-10-28（第 156 轮）
 
 - 时间：2026-10-28 18:26 CST 起。
