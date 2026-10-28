@@ -99,10 +99,10 @@ export const DashboardOperationSearchSchema = z.object({
     .catch("")
     .optional(),
   q: z.string().catch("").optional(),
-  // Events-only: one exact fingerprint. The search box matches fingerprints as
+  // Both lists: one exact fingerprint. The search box matches fingerprints as
   // substrings among many fields, so a pasted fingerprint there also returns
-  // unrelated rows; this dimension keeps "every occurrence of this alert"
-  // exact. Empty means "any fingerprint".
+  // unrelated rows; this dimension keeps "every occurrence of this alert" —
+  // and "every notification it ever sent" — exact. Empty means "any".
   fingerprint: z.string().catch("").optional(),
   eventPage: z.coerce.number().int().min(1).catch(1).optional(),
   deliveryPage: z.coerce.number().int().min(1).catch(1).optional(),

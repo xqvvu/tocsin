@@ -185,7 +185,7 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.destinationKind ? { destinationKind: filters.destinationKind } : {}),
     ...(filters.routeId ? { routeId: filters.routeId } : {}),
     ...(filters.eventId ? { eventId: filters.eventId } : {}),
-    // Events-only exact identity. Leaving it out here would drop the filter
+    // Exact identity on both lists. Leaving it out here would drop the filter
     // from the request and the query key, so the list would look unfiltered
     // while the chip claimed otherwise.
     ...(filters.fingerprint ? { fingerprint: filters.fingerprint } : {}),

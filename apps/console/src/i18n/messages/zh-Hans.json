@@ -704,6 +704,7 @@
   "events.detail.fingerprint.notFound": "该事件已不存在",
   "events.detail.fingerprint.occurrencesTitle": "最近出现记录",
   "events.detail.fingerprint.viewAll": "在事件列表查看全部 {count} 次",
+  "events.detail.fingerprint.viewDeliveries": "在投递列表查看该指纹的全部投递",
   "events.detail.evidence.action": "下载证据包",
   "events.detail.evidence.toast.success": "已下载事件证据包",
   "events.detail.json.normalizedEvent": "标准化事件",

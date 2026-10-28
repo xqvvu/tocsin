@@ -66,6 +66,9 @@ export class OperationsService {
         destinationKind: input.destinationKind,
         routeId: input.routeId,
         eventId: input.eventId,
+        // Shared with the events list: the recurrence view answers "every
+        // notification this alert ever sent", which is a delivery question.
+        fingerprint: input.fingerprint,
         receipt: input.receipt,
         state: input.deliveryState,
         minAttempts: input.minAttempts,

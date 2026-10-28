@@ -123,6 +123,13 @@ export interface DeliveryListQuery {
    * of a fuzzy id search.
    */
   eventId?: string;
+  /**
+   * Only deliveries whose event carries exactly this fingerprint, across every
+   * occurrence of the alert. Unlike `q`, no other field is considered, so
+   * "every notification this alert ever sent" cannot pick up rows whose text
+   * merely contains the same characters. The recurrence view links here.
+   */
+  fingerprint?: string;
   /** Only the deliveries silenced by one rule ("what did this rule hit?"). */
   suppressionId?: string;
   /**

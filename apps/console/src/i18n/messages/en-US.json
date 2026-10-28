@@ -704,6 +704,7 @@
   "events.detail.fingerprint.notFound": "This event no longer exists",
   "events.detail.fingerprint.occurrencesTitle": "Recent occurrences",
   "events.detail.fingerprint.viewAll": "View all {count} occurrences",
+  "events.detail.fingerprint.viewDeliveries": "View every delivery for this fingerprint",
   "events.detail.evidence.action": "Download evidence",
   "events.detail.evidence.toast.success": "Event evidence downloaded",
   "events.detail.json.normalizedEvent": "Normalized event",
