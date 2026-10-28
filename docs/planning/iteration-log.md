@@ -11,8 +11,8 @@
   按第 1 步「有达标候选则继续」优先续做评分最高且已排期的一项，未展开全量审计。
 - 全量审计时间戳：不变，仍为 **2026-10-28 08:20 CST**。**下一轮应展开全量审计**（6 小时闸门已过）。
 - 车道轮转位置：本轮跑 `requirements` + `ui-triage` + **`architecture`**（轮转位），并按 `ui-triage`
-  的 `review_now` 追加 `ui-review`；`requirements` 与 `architecture` 两条车道超时未返回（见下）。
-  下一非必跑车道为 **`docs-drift`**。
+  的 `review_now` 追加 `ui-review`；`requirements` 与 `architecture` 两条车道**跑满约 64/66 分钟**
+  才返回（已超出实现窗口），发现只入 backlog、本轮不实现。下一非必跑车道为 **`docs-drift`**。
 - `ui-triage` 决策：**`review_now`**。理由：`last_ui_review_at` 13:45 早于 `61d5ca0`（翻页锚定 chip）
   16 分钟，新 chip 只有 jsdom 断言、无浏览器记录；未解决 `UI-*` 49 条，其中 UI-90/UI-91 正是上次评审
   新发现且未闭环。信号 (c) 成立，与第 150 轮判 `review_now` 的触发条件同型。
@@ -75,10 +75,39 @@
 - 无问题的区域：`/suppressions` 空态与新增入口、`/destinations` 密度与健康摘要、两个列表的空态
   （都有原因说明与「清除全部筛选」）、错误边界（一次 schema 解码失败触发带脱敏摘要的应用错误页）。
 
-**requirements（超时未返回）**：本轮 spawn 后约 40 分钟未返回，按第 3 步时间预算终止，未产出新候选。
-下一轮补跑。
+**requirements（超时返回，收尾时并入）**：跑满约 64 分钟才返回，已超出实现窗口，只产出候选不实现。
+它先确认 backlog 覆盖极密（post-MVP 方向 4 剩余项、RC 未勾 gate、接入可观测等均已有条目），
+因此只提 2 条新候选：
 
-**architecture（超时未返回）**：同上。下一轮轮转仍从 `architecture` 开始。
+- **REQ-312（27，candidate）**：部署/重启无优雅停机。`apps/console/src/server.ts:20-74` 全文件无
+  `SIGTERM`/`SIGINT` 处理；`delivery-worker-runner.ts:118-121` 的 `stop()` 只 `clearInterval`，
+  不等在途批次；`container.ts:468-501` 的 `dispose()` 在 `stop()` 后立即 `close()` SQLite；
+  `docker-compose.yml` 无 `stop_grace_period`，Docker 默认 10s 后 SIGKILL。一批最多 10 条串行、
+  每条最长 10s 超时（`delivery-worker.service.ts:105-115`），被打断后 `reclaimStaleRunning`
+  （`delivery.repository.ts:192-239`）按「结果未知」在 5 分钟后重发 → 部署后可能重复告警/重复电话。
+  依赖侧 `srvx@1.0.7` 的 `gracefulShutdownPlugin` 只关 HTTP server（属已安装依赖核实，非仓库源码）。
+- **REQ-313（27，candidate）**：通知直链基址不可见。`tocsin.eventUrl` 取
+  `env.SERVER_URL ?? env.BETTER_AUTH_URL`（`container.ts:216`），缺失时渲染空串
+  （`lib/event-url.ts:11-13`、`template.ts:403`）；`docker-compose.yml:16,24` 默认
+  `http://localhost:3000`，收件人点开即死链；运行时投影 12 个字段里没有它
+  （`packages/api/src/schemas/settings.ts:28-43`），控制台无任何提示。
+- **Q-52（新，AUTO_FIX）**：`server/operations/operations.service.test.ts:446-523` 的用例名与注释
+  仍写「leaves the delivery list alone」「Events-only dimension」，而 REQ-311 之后投递列表也吃
+  `fingerprint`。当前断言恰好仍通过（第三个事件没有投递），但**测试已不能证明它声称的行为**。
+  下一轮补一条「为前缀更长的指纹也建投递，断言只返回 2 条」并改名。
+
+**architecture（超时返回，收尾时并入）**：跑满约 66 分钟才返回。分层、service 纯度（`ORPCError`
+在 `*.service.ts` 中 0 命中）、DI/单例、导入边界、feature 形状、`components/common` 纯度、i18n、
+adapter 形状、超大文件、loader 边界**均 clean**，无新增整改。新增 3 条仓储层契约问题：
+
+- **ARCH-66（MEDIUM）**：`delivery.repository.ts:606` 与 `oncall.repository.ts:333` 的 `withContext`
+  在事务内手工重建整张 repository 依赖图，而 `store.ts:84` 的 `createSqliteRepositories` 是唯一
+  组装点。建议注入窄工厂 `rebind(context)`。
+- **ARCH-67（LOW）**：`delivery.repository.ts:578` 绕过 `DestinationRepository` 直读 `destinations` 表
+  （同类的 `:525` 已正确使用接口）。
+- **ARCH-68（LOW）**：`history.repository.ts:71` 的 `_deliveries` 构造参数从未使用；
+  `history.repository.ts:68` 与 `delivery.repository.ts:88` 的 `intake` 声明为具体类，
+  实际只用接口方法。
 
 ### EXPERT_PANEL
 
@@ -105,13 +134,18 @@
 
 ### 下一轮优先项
 
-1. **全量审计**（6 小时闸门已过，08:20 之后未跑）：至少覆盖 `requirements` + `docs-drift` +
-   `security-exposure`；补跑本轮超时的 `requirements` 与 `architecture`。
-2. **UI-92（MEDIUM，S）**：投递列表的重试加确认，防误点即发往生产渠道。
-3. **UI-93 / UI-94 / UI-91（LOW，S）**：chip 可访问名称、390px 投递行截断、补投空态主按钮。
-4. **SEC-39 EXPERT_PANEL**：密码缩写脱敏取舍。
-5. **REQ-304（28）**：事件筛选「目标 × 投递结果」按同一条投递求交；**REQ-305（27）** 事件搜索覆盖
+1. **全量审计**（6 小时闸门已过，08:20 之后未跑）：至少覆盖 `docs-drift` + `security-exposure` +
+   `quality`，并复跑 `release-infra`。
+2. **Q-52（AUTO_FIX）**：把 `operations.service.test.ts:446-523` 的用例名/注释改成「两份列表同收窄」，
+   并补「为前缀更长的指纹也建投递」的断言——现在这条测试已经证明不了它声称的行为。
+3. **UI-92（MEDIUM，S）**：投递列表的重试加确认，防误点即发往生产渠道。
+4. **UI-93 / UI-94 / UI-91（LOW，S）**：chip 可访问名称、390px 投递行截断、补投空态主按钮。
+5. **REQ-312（27）优雅停机 drain** 与 **REQ-313（27）通知直链基址可见性** 交 EXPERT_PANEL
+   （前者触及部署语义，后者是加法 DTO）。
+6. **SEC-39 EXPERT_PANEL**：密码缩写脱敏取舍。
+7. **REQ-304（28）**：事件筛选「目标 × 投递结果」按同一条投递求交；**REQ-305（27）** 事件搜索覆盖
    provider reference；**REQ-295（27）** raw 载荷保全（需迁移，交专家小组）。
+8. **ARCH-66/67/68**：仓储层契约一致性；ARCH-66 优先，67/68 可并成一个小 chore。
 
 ## 2026-10-28（第 151 轮）
 
