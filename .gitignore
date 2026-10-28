@@ -39,6 +39,11 @@ dist-ssr
 !.vscode/extensions.json
 .wayfinder
 
+# Autonomous-iteration run state. Local artifacts only: committing the lock
+# makes every fresh worktree checkout look like a run is already in progress.
+/.agent-run.lock
+/.session-wt
+
 # MCP
 .playwright-mcp
 # Playwright artifacts: traces, screenshots and failure contexts are per-run
