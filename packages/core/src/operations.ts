@@ -68,6 +68,21 @@ export const EventDestinationMatchSchema = z.enum(["delivered", "missing"]);
 export type EventDestinationMatch = z.infer<typeof EventDestinationMatchSchema>;
 
 /**
+ * Narrows the events list by the state of the delivery to one destination.
+ *
+ * Only meaningful together with `destinationId`: it answers "did this alert's
+ * notification to that target succeed", which the event-level
+ * `deliveryOutcome` cannot. That filter asks whether any delivery anywhere is
+ * in the state, so pairing the two independent questions would return an alert
+ * whose PagerDuty send failed whenever its email send succeeded. "No delivery
+ * to that target" stays with `destinationMatch: "missing"`, so this dimension
+ * has no `none` value.
+ */
+export const EventDestinationOutcomeSchema = DeliveryStateSchema;
+
+export type EventDestinationOutcome = DeliveryState;
+
+/**
  * Narrows the deliveries list by whether the target returned a message
  * reference.
  *

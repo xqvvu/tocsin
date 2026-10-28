@@ -11,10 +11,13 @@ const NOW = "2026-10-27T10:00:00.000Z";
 
 /**
  * One event per way an alert can relate to a destination: a delivery in an
- * ordinary state, a delivery that was silenced, two targets at once, and none
- * at all (no route matched). The suppressed row is the important one: it is
- * still a delivery record, so "has delivery to destination" must include it and
- * the state dimension stays with `deliveryOutcome`.
+ * ordinary state, a delivery that was silenced, two targets at once, a target
+ * that was retried (so one target holds two rows in different states), and none
+ * at all (no route matched). The suppressed row is the important one for the
+ * coverage question: it is still a delivery record, so "has delivery to
+ * destination" must include it. The retried pair is what separates the
+ * per-target state from the event-level one: `event-mixed`'s Pager send failed
+ * while its email send succeeded.
  */
 async function repositoryWithDestinationFixtures(): Promise<
   ReturnType<typeof createSqliteRepositories>["history"]
@@ -79,6 +82,7 @@ async function repositoryWithDestinationFixtures(): Promise<
       event("event-to-email", "Only email was told"),
       event("event-suppressed-pager", "Pager delivery was silenced"),
       event("event-mixed", "Both targets were used"),
+      event("event-pager-retried", "Pager was retried"),
       event("event-unrouted", "Nobody was told"),
     ])
     .execute();
@@ -100,6 +104,10 @@ async function repositoryWithDestinationFixtures(): Promise<
       delivery("del-suppressed", "event-suppressed-pager", "dest-pager", "suppressed"),
       delivery("del-mixed-pager", "event-mixed", "dest-pager", "failed"),
       delivery("del-mixed-email", "event-mixed", "dest-email", "succeeded"),
+      // The failed attempt stays in history after the retry succeeds, so a
+      // per-target state filter must count the event once, not once per match.
+      delivery("del-retried-failed", "event-pager-retried", "dest-pager", "failed"),
+      delivery("del-retried-succeeded", "event-pager-retried", "dest-pager", "succeeded"),
     ])
     .execute();
 
@@ -120,8 +128,13 @@ describe("events filtered by destination", () => {
 
     // Any delivery state counts, including the silenced one: the filter asks
     // "was this target covered", not "did the message arrive".
-    expect(eventIds(page)).toEqual(["event-mixed", "event-suppressed-pager", "event-to-pager"]);
-    expect(page.total).toBe(3);
+    expect(eventIds(page)).toEqual([
+      "event-mixed",
+      "event-pager-retried",
+      "event-suppressed-pager",
+      "event-to-pager",
+    ]);
+    expect(page.total).toBe(4);
   });
 
   it("finds the events that never reached the destination", async () => {
@@ -150,7 +163,7 @@ describe("events filtered by destination", () => {
     // `event-mixed` has a second delivery row to another destination; the
     // grouped page query and the count query must still see one row.
     expect(page.items).toHaveLength(1);
-    expect(page.total).toBe(3);
+    expect(page.total).toBe(4);
   });
 
   it("returns an empty list for a destination id nothing was delivered to", async () => {
@@ -166,7 +179,7 @@ describe("events filtered by destination", () => {
     expect(delivered.total).toBe(0);
     // Every event lacks a delivery to an unknown destination, so the reverse
     // filter is the whole history rather than an error.
-    expect(missing.total).toBe(5);
+    expect(missing.total).toBe(6);
   });
 
   it("combines the destination filter with the other event filters", async () => {
@@ -180,5 +193,79 @@ describe("events filtered by destination", () => {
 
     expect(eventIds(page)).toEqual(["event-to-email"]);
     expect(page.total).toBe(1);
+  });
+});
+
+describe("events filtered by the delivery state to one destination", () => {
+  it("keeps only events whose delivery to that destination is in the state", async () => {
+    const history = await repositoryWithDestinationFixtures();
+
+    const page = await history.listEvents({
+      destinationId: "dest-pager",
+      destinationOutcome: "failed",
+    });
+
+    // `event-pager-retried` matches through its failed first attempt even
+    // though a later attempt succeeded.
+    expect(eventIds(page)).toEqual(["event-mixed", "event-pager-retried"]);
+    expect(page.total).toBe(2);
+  });
+
+  it("does not let another destination's state answer the question", async () => {
+    const history = await repositoryWithDestinationFixtures();
+
+    const scoped = await history.listEvents({
+      destinationId: "dest-pager",
+      destinationOutcome: "succeeded",
+    });
+
+    // `event-mixed` reached email successfully, but its Pager send failed.
+    expect(eventIds(scoped)).toEqual(["event-pager-retried", "event-to-pager"]);
+
+    // The event-level outcome is the one that cannot tell the two apart, which
+    // is why the per-target dimension exists.
+    expect(eventIds(await history.listEvents({ deliveryOutcome: "succeeded" }))).toEqual([
+      "event-mixed",
+      "event-pager-retried",
+      "event-to-email",
+      "event-to-pager",
+    ]);
+  });
+
+  it("counts an event once when the target has several deliveries", async () => {
+    const history = await repositoryWithDestinationFixtures();
+
+    const page = await history.listEvents({
+      destinationId: "dest-pager",
+      destinationOutcome: "succeeded",
+      limit: 1,
+      page: 1,
+    });
+
+    // Two Pager rows qualify for `event-pager-retried` plus one for
+    // `event-to-pager`; the list shows events, so the page still holds two.
+    expect(page.items).toHaveLength(1);
+    expect(page.total).toBe(2);
+  });
+
+  it("reads a missing match with a state as the absence of that state", async () => {
+    const history = await repositoryWithDestinationFixtures();
+
+    const page = await history.listEvents({
+      destinationId: "dest-pager",
+      destinationMatch: "missing",
+      destinationOutcome: "failed",
+    });
+
+    // A hand-edited URL can pair the two. Both live in the same subquery, so
+    // the pair means "no failed delivery to that target" rather than a
+    // contradiction or a second, unrelated predicate.
+    expect(eventIds(page)).toEqual([
+      "event-suppressed-pager",
+      "event-to-email",
+      "event-to-pager",
+      "event-unrouted",
+    ]);
+    expect(page.total).toBe(4);
   });
 });

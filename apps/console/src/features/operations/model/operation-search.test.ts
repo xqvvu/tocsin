@@ -157,6 +157,60 @@ describe("destination filter in the operation search", () => {
     ).toBeUndefined();
   });
 
+  it("keeps the per-target outcome only next to a destination it can describe", () => {
+    // Without a destination the state would be a filter that silently does
+    // nothing, so it never reaches the URL on its own.
+    expect(pruneSearch({ destinationOutcome: "failed" }).destinationOutcome).toBeUndefined();
+    expect(
+      pruneSearch({ destinationId: "destination-1", destinationOutcome: "failed" })
+        .destinationOutcome,
+    ).toBe("failed");
+    expect(
+      operationFiltersFromSearch({
+        destinationId: "destination-1",
+        destinationOutcome: "failed",
+      }).destinationOutcome,
+    ).toBe("failed");
+
+    // `missing` already says the target produced no delivery at all, so a
+    // state next to it would contradict rather than narrow it.
+    expect(
+      pruneSearch({
+        destinationId: "destination-1",
+        destinationMatch: "missing",
+        destinationOutcome: "failed",
+      }).destinationOutcome,
+    ).toBeUndefined();
+
+    // Clearing the destination drops the state with it.
+    const cleared = mergeOperationSearch(
+      { destinationId: "destination-1", destinationOutcome: "failed" },
+      { destinationId: "" },
+    );
+    expect(cleared.destinationOutcome).toBeUndefined();
+  });
+
+  it("starts a fresh result set when the per-target outcome changes", () => {
+    const merged = mergeOperationSearch(
+      { eventPage: 4, deliveryPage: 3, destinationId: "destination-1" },
+      { destinationOutcome: "failed" },
+    );
+
+    expect(merged.destinationOutcome).toBe("failed");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+
+  it("falls back to any per-target outcome instead of throwing on an unknown value", () => {
+    // The URL is user-editable; an unknown value must mean "no extra filter".
+    expect(
+      DashboardOperationSearchSchema.parse({ destinationOutcome: "sent" }).destinationOutcome,
+    ).toBe("");
+    expect(
+      DashboardOperationSearchSchema.parse({ destinationOutcome: "failed" }).destinationOutcome,
+    ).toBe("failed");
+  });
+
   it("resets both lists when the destination match changes", () => {
     const merged = mergeOperationSearch(
       { eventPage: 4, deliveryPage: 3, destinationId: "destination-1" },
@@ -482,6 +536,7 @@ describe("clearing the operation search", () => {
       "destinationId",
       "destinationKind",
       "destinationMatch",
+      "destinationOutcome",
       "eventId",
       "fingerprint",
       "minAttempts",

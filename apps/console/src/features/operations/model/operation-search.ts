@@ -10,6 +10,7 @@ import type {
   DestinationKind,
   EventDeliveryOutcome,
   EventDestinationMatch,
+  EventDestinationOutcome,
   OperationTimeRange,
 } from "@tocsin/core";
 import {
@@ -21,6 +22,7 @@ import {
   DestinationKindSchema,
   EventDeliveryOutcomeSchema,
   EventDestinationMatchSchema,
+  EventDestinationOutcomeSchema,
   OperationTimeRangeSchema,
   OPERATION_SEARCH_MAX_LENGTH,
   EVENT_FINGERPRINT_FILTER_MAX_LENGTH,
@@ -48,6 +50,14 @@ export const DashboardOperationSearchSchema = z.object({
   // which is the case no delivery-level filter can find.
   destinationMatch: z
     .union([EventDestinationMatchSchema, z.literal("")])
+    .catch("")
+    .optional(),
+  // Events-only: the state of the delivery to the selected destination.
+  // Scoped to that target, so it cannot be satisfied by another target's
+  // delivery; empty means "any state", and the URL keeps it out unless a
+  // destination can describe it.
+  destinationOutcome: z
+    .union([EventDestinationOutcomeSchema, z.literal("")])
     .catch("")
     .optional(),
   destinationKind: z
@@ -115,6 +125,7 @@ export interface DashboardOperationSearch {
   deliveryOutcome?: EventDeliveryOutcome | "";
   destinationId?: string;
   destinationMatch?: EventDestinationMatch | "";
+  destinationOutcome?: EventDestinationOutcome | "";
   destinationKind?: DestinationKind | "";
   routeId?: string;
   eventId?: string;
@@ -138,6 +149,7 @@ export type OperationFilterData = {
   deliveryOutcome?: EventDeliveryOutcome;
   destinationId?: string;
   destinationMatch?: EventDestinationMatch;
+  destinationOutcome?: EventDestinationOutcome;
   destinationKind?: DestinationKind;
   routeId?: string;
   eventId?: string;
@@ -169,6 +181,7 @@ export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
   deliveryOutcome: "",
   destinationId: "",
   destinationMatch: "",
+  destinationOutcome: "",
   destinationKind: "",
   routeId: "",
   eventId: "",
@@ -195,6 +208,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.status ||
     search.deliveryOutcome ||
     search.destinationId ||
+    search.destinationOutcome ||
     search.destinationKind ||
     search.routeId ||
     search.eventId ||
@@ -240,6 +254,14 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
         search.destinationId && search.destinationMatch === "missing"
           ? search.destinationMatch
           : undefined,
+      // The outcome describes the delivery to one destination, so it means
+      // nothing without one. `missing` already says the target produced no
+      // delivery at all, so a state would contradict it instead of narrowing
+      // it.
+      destinationOutcome:
+        search.destinationId && search.destinationMatch !== "missing"
+          ? search.destinationOutcome
+          : undefined,
       // An anchor only means something together with the window it was captured
       // for; keeping it after the window is cleared would attach a stale instant
       // to the next window the operator picks.
@@ -280,6 +302,7 @@ export function mergeOperationSearch(
     "deliveryOutcome",
     "destinationId",
     "destinationMatch",
+    "destinationOutcome",
     "destinationKind",
     "routeId",
     "eventId",

@@ -8,6 +8,7 @@ import type {
   DestinationKind,
   EventDeliveryOutcome,
   EventDestinationMatch,
+  EventDestinationOutcome,
   EventDetail,
   EventFingerprintContext,
   EventListItem,
@@ -132,7 +133,11 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.destinationId) {
       builder = builder.where(
-        eventDestinationPredicate(query.destinationId, query.destinationMatch ?? "delivered"),
+        eventDestinationPredicate(
+          query.destinationId,
+          query.destinationMatch ?? "delivered",
+          query.destinationOutcome,
+        ),
       );
     }
 
@@ -636,7 +641,11 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.destinationId) {
       builder = builder.where(
-        eventDestinationPredicate(query.destinationId, query.destinationMatch ?? "delivered"),
+        eventDestinationPredicate(
+          query.destinationId,
+          query.destinationMatch ?? "delivered",
+          query.destinationOutcome,
+        ),
       );
     }
 
@@ -936,18 +945,32 @@ function eventDeliveryOutcomePredicate(outcome: EventDeliveryOutcome) {
  *
  * `delivered` is `EXISTS` over the event's deliveries to that destination, so
  * any state — failed, silenced, still queued — counts: the filter answers "was
- * this target covered", and the state dimension belongs to `deliveryOutcome`
- * and the delivery list. `missing` is the negation, including events that
+ * this target covered". `missing` is the negation, including events that
  * produced no delivery at all; that is the half a delivery-level filter can
- * never show. A correlated `EXISTS` keyed on `idx_deliveries_event_id` keeps
- * the count query's shape unchanged and cannot duplicate an event row the way a
- * second join would.
+ * never show.
+ *
+ * `outcome` narrows the same `EXISTS` to one state instead of adding a second
+ * predicate: "the pager send failed" must describe the delivery to that
+ * target, not merely co-exist with a successful send to another one. Keeping
+ * it inside one subquery is also what lets `missing` read as "no delivery to
+ * that target in that state" when a hand-edited URL pairs the two.
+ *
+ * A correlated `EXISTS` keyed on `idx_deliveries_event_id` keeps the count
+ * query's shape unchanged and cannot duplicate an event row the way a second
+ * join would.
  */
-function eventDestinationPredicate(destinationId: string, match: EventDestinationMatch) {
+function eventDestinationPredicate(
+  destinationId: string,
+  match: EventDestinationMatch,
+  outcome?: EventDestinationOutcome,
+) {
+  const stateClause = outcome ? sql`AND destination_deliveries.state = ${outcome}` : sql``;
+
   const reached = sql<boolean>`EXISTS (
     SELECT 1 FROM deliveries AS destination_deliveries
     WHERE destination_deliveries.event_id = events.id
       AND destination_deliveries.destination_id = ${destinationId}
+      ${stateClause}
   )`;
 
   return match === "missing" ? sql<boolean>`NOT ${reached}` : reached;

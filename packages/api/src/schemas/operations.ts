@@ -8,6 +8,7 @@ import {
   DestinationKindSchema,
   EventDeliveryOutcomeSchema,
   EventDestinationMatchSchema,
+  EventDestinationOutcomeSchema,
   EVENT_FINGERPRINT_CHANGE_FIELDS,
   EVENT_FINGERPRINT_FILTER_MAX_LENGTH,
   DestinationSummarySchema,
@@ -299,6 +300,13 @@ export const ListOperationsInputSchema = z
      * which already has the exact `deliveryState` dimension.
      */
     destinationMatch: EventDestinationMatchSchema.optional(),
+    /**
+     * Events-only: the state of the delivery to the selected `destinationId`,
+     * so "the pager send failed" cannot be satisfied by a successful send to
+     * another target. Ignored without `destinationId`; missing coverage stays
+     * with `destinationMatch`, so there is no `none` value here.
+     */
+    destinationOutcome: EventDestinationOutcomeSchema.optional(),
     /**
      * Restricts the events list to alerts whose fan-out produced no delivery
      * (`none`) or at least one delivery in the given state. Ignored by the
