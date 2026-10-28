@@ -3,6 +3,9 @@ import { os } from "#/server/orpc/os";
 
 /** Alert source (告警源) administration. Every procedure needs a dashboard session. */
 const withSourceService = withDashboardService((container) => container.createSourceService());
+const withSourceRehearsalService = withDashboardService((container) =>
+  container.createSourceRehearsalService(),
+);
 
 export const sourcesRouter = os.sources.router({
   list: os.sources.list
@@ -16,6 +19,11 @@ export const sourcesRouter = os.sources.router({
   update: os.sources.update
     .use(withSourceService)
     .handler(({ context, input }) => context.service.updateSource(input)),
+
+  // Read-only: replay a pasted payload through the parser and current routes.
+  rehearse: os.sources.rehearse
+    .use(withSourceRehearsalService)
+    .handler(({ context, input }) => context.service.rehearseSource(input)),
 
   rotateToken: os.sources.rotateToken
     .use(withSourceService)

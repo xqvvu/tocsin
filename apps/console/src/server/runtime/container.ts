@@ -56,6 +56,8 @@ import type { StorageHealthServiceOptions } from "#/server/runtime/storage-healt
 import { WorkerHealthService } from "#/server/runtime/worker-health.service";
 import { SessionSecurityService } from "#/server/security/session-security.service";
 import type { SessionSecurityServiceOptions } from "#/server/security/session-security.service.types";
+import { SourceRehearsalService } from "#/server/sources/source-rehearsal.service";
+import type { SourceRehearsalServiceOptions } from "#/server/sources/source-rehearsal.service.types";
 import { SourceService } from "#/server/sources/source.service";
 import type { SourceServiceOptions } from "#/server/sources/source.service.types";
 import { SuppressionService } from "#/server/suppressions/suppression.service";
@@ -93,6 +95,9 @@ export interface ApplicationContainer {
   createSourceService(
     options?: Partial<Omit<SourceServiceOptions, "store">>,
   ): Promise<SourceService>;
+  createSourceRehearsalService(
+    options?: Partial<Omit<SourceRehearsalServiceOptions, "store" | "providers" | "destinations">>,
+  ): Promise<SourceRehearsalService>;
   createDestinationService(
     options?: Partial<Omit<DestinationServiceOptions, "store" | "destinations">>,
   ): Promise<DestinationService>;
@@ -249,6 +254,15 @@ export function createApplicationContainer(
     async createSourceService(serviceOptions = {}) {
       return new SourceService({
         store: await container.getSqliteStore(),
+        ...serviceOptions,
+      });
+    },
+
+    async createSourceRehearsalService(serviceOptions = {}) {
+      return new SourceRehearsalService({
+        store: await container.getSqliteStore(),
+        providers: container.getProviderRegistry(),
+        destinations: container.getDestinationRegistry(),
         ...serviceOptions,
       });
     },

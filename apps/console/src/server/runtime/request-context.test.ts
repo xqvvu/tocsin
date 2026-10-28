@@ -185,6 +185,9 @@ function createFakeContainer(): ApplicationContainer {
     createSourceService: async () => {
       throw new Error("Configuration services are not used by request context tests");
     },
+    createSourceRehearsalService: async () => {
+      throw new Error("Configuration services are not used by request context tests");
+    },
     createDestinationService: async () => {
       throw new Error("Configuration services are not used by request context tests");
     },

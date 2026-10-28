@@ -2,6 +2,7 @@ import { oc } from "@orpc/contract";
 import {
   CreateSourceCommandSchema,
   DeleteSourceCommandSchema,
+  RehearseSourceCommandSchema,
   RotateSourceTokenCommandSchema,
   UpdateSourceCommandSchema,
 } from "@tocsin/core";
@@ -13,6 +14,7 @@ import {
   SourceDeleteOutputSchema,
   SourceListOutputSchema,
   SourceOutputSchema,
+  SourceRehearsalOutputSchema,
   SourceTokenOutputSchema,
 } from "../schemas/sources";
 
@@ -48,6 +50,14 @@ export const sources = {
     .errors(dashboardErrors)
     .errors(resourceErrors.error)
     .output(SourceTokenOutputSchema),
+
+  // Read-only replay of a pasted upstream payload: parse, route match, and
+  // rendered destination previews. Writes nothing and contacts no destination.
+  rehearse: oc
+    .input(RehearseSourceCommandSchema)
+    .errors(dashboardErrors)
+    .errors(resourceErrors.error)
+    .output(SourceRehearsalOutputSchema),
 
   // Read-only disclosure of the history the delete cascades to. The console
   // calls it when the confirmation dialog opens, never as part of the delete.

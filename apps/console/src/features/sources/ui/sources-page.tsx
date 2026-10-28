@@ -11,6 +11,7 @@ import { sourcesQueryOptions } from "#/features/sources/api/source.queries";
 import { sourceWebhookPath } from "#/features/sources/model/source-webhook";
 import { SourcesAddDialog } from "#/features/sources/ui/source-add-dialog";
 import { SourcesEditDialog } from "#/features/sources/ui/source-edit-dialog";
+import { SourceRehearsalDialog } from "#/features/sources/ui/source-rehearsal-dialog";
 import {
   SourceTokenNoticePanel,
   type SourceTokenNotice,
@@ -25,8 +26,14 @@ export function SourcesPage() {
   const [{ data: sources }, { data: routes }, { data: destinations }] = useSuspenseQueries({
     queries: [sourcesQueryOptions(), routesQueryOptions(), destinationsQueryOptions()],
   });
-  const { deleteSource, invalidateSources, previewDeleteSource, rotateSourceToken, updateSource } =
-    useSourceMutations();
+  const {
+    deleteSource,
+    invalidateSources,
+    previewDeleteSource,
+    rehearseSource,
+    rotateSourceToken,
+    updateSource,
+  } = useSourceMutations();
   const requestDeleteImpact = React.useCallback(
     (id: string) => previewDeleteSource({ id }),
     [previewDeleteSource],
@@ -76,6 +83,12 @@ export function SourcesPage() {
           <SourcesPageToolbar
             actions={
               <>
+                <SourceRehearsalDialog
+                  sources={sources}
+                  disabled={pending}
+                  onRehearse={rehearseSource}
+                />
+
                 <SourcesAddDialog disabled={pending} onCreated={setTokenNotice} />
 
                 <Button

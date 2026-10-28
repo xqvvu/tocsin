@@ -1,0 +1,187 @@
+import type { SourceRehearsalResult } from "@tocsin/core";
+
+import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
+import { Badge } from "#/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "#/components/ui/table";
+import { EventJsonBlock } from "#/features/events/ui/event-json-block";
+import { SeverityBadge } from "#/features/events/ui/severity-badge";
+import { RouteMatchCheckBadges } from "#/features/routes/ui/route-match-check-badges";
+import { RouteMatchResultBadge } from "#/features/routes/ui/route-match-result-badge";
+import { useTranslations } from "#/i18n/use-i18n";
+
+/**
+ * Result of a read-only intake rehearsal: what the parser understood, how every
+ * current route judged it, and what each matched target would send.
+ */
+export function SourceRehearsalResultView({ result }: { result: SourceRehearsalResult }) {
+  const t = useTranslations();
+  const matchedRouteCount = result.routes.filter((route) => route.matched).length;
+
+  return (
+    <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
+      {result.source.enabled ? null : (
+        <Alert>
+          <AlertTitle>{t("sources.rehearsal.sourceDisabledTitle")}</AlertTitle>
+          <AlertDescription>{t("sources.rehearsal.sourceDisabledDescription")}</AlertDescription>
+        </Alert>
+      )}
+
+      <section className="flex flex-col gap-2">
+        <h3 className="text-xs font-medium">{t("sources.rehearsal.parseTitle")}</h3>
+        {result.parse.ok ? (
+          <div className="border-border flex flex-col gap-2 border p-3">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <SeverityBadge severity={result.parse.normalizedEvent.severity} />
+              <Badge
+                variant={
+                  result.parse.normalizedEvent.status === "firing" ? "destructive" : "secondary"
+                }
+              >
+                {t(`common.alertStatus.${result.parse.normalizedEvent.status}`)}
+              </Badge>
+              <span className="text-sm font-medium wrap-break-word">
+                {result.parse.normalizedEvent.title}
+              </span>
+            </div>
+            {result.parse.normalizedEvent.message ? (
+              <p className="text-muted-foreground text-xs wrap-break-word">
+                {result.parse.normalizedEvent.message}
+              </p>
+            ) : null}
+            <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+              <Fact
+                label={t("sources.rehearsal.facts.fingerprint")}
+                value={result.parse.normalizedEvent.fingerprint}
+                mono
+              />
+              <Fact
+                label={t("sources.rehearsal.facts.occurredAt")}
+                value={result.parse.normalizedEvent.occurredAt}
+                mono
+              />
+            </dl>
+            {Object.keys(result.parse.normalizedEvent.labels).length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1">
+                {Object.entries(result.parse.normalizedEvent.labels).map(([key, value]) => (
+                  <Badge
+                    key={key}
+                    variant="outline"
+                    className="max-w-full justify-start font-mono text-[11px]"
+                    title={`${key}=${value}`}
+                  >
+                    <span className="text-muted-foreground">{key}=</span>
+                    <span className="truncate">{value}</span>
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <Alert variant="destructive">
+            <AlertTitle>
+              {t("sources.rehearsal.parseFailed", {
+                reason: t(`sources.rehearsal.reasons.${result.parse.reason}`),
+              })}
+            </AlertTitle>
+            <AlertDescription className="font-mono text-xs break-words">
+              {result.parse.message}
+            </AlertDescription>
+          </Alert>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h3 className="text-xs font-medium">
+          {t("sources.rehearsal.routesTitle", {
+            matched: matchedRouteCount,
+            total: result.routes.length,
+          })}
+        </h3>
+        {result.routes.length === 0 ? (
+          <p className="text-muted-foreground text-xs">{t("sources.rehearsal.routesEmpty")}</p>
+        ) : (
+          <div className="border-border overflow-x-auto border">
+            <Table>
+              <TableHeader className="bg-muted/50 text-muted-foreground">
+                <TableRow>
+                  <TableHead>{t("sources.rehearsal.routeHeaders.route")}</TableHead>
+                  <TableHead>{t("sources.rehearsal.routeHeaders.result")}</TableHead>
+                  <TableHead>{t("sources.rehearsal.routeHeaders.targets")}</TableHead>
+                  <TableHead>{t("sources.rehearsal.routeHeaders.checks")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {result.routes.map((route) => (
+                  <TableRow key={route.routeId} className="align-top">
+                    <TableCell className="max-w-48 truncate font-medium" title={route.routeName}>
+                      {route.routeName}
+                    </TableCell>
+                    <TableCell>
+                      <RouteMatchResultBadge matched={route.matched} />
+                    </TableCell>
+                    <TableCell>{route.destinationIds.length}</TableCell>
+                    <TableCell className="whitespace-normal">
+                      <RouteMatchCheckBadges checks={route.checks} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h3 className="text-xs font-medium">{t("sources.rehearsal.rendersTitle")}</h3>
+        {result.renders.length === 0 ? (
+          <p className="text-muted-foreground text-xs">{t("sources.rehearsal.rendersEmpty")}</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {result.renders.map((render) => (
+              <div key={render.destinationId} className="border-border border">
+                <div className="border-border flex items-center justify-between gap-2 border-b px-3 py-2">
+                  <span className="truncate text-xs font-medium" title={render.destinationName}>
+                    {render.destinationName}
+                  </span>
+                  <Badge variant={render.enabled ? "secondary" : "outline"}>
+                    {render.enabled
+                      ? t("sources.rehearsal.targetEnabled")
+                      : t("sources.rehearsal.targetDisabled")}
+                  </Badge>
+                </div>
+                {render.ok ? (
+                  <div className="max-h-64 overflow-auto">
+                    <EventJsonBlock
+                      title={render.destinationName}
+                      value={JSON.parse(render.renderedPayload) as unknown}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-destructive p-3 text-xs break-words">{render.errorMessage}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function Fact({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex min-w-0 gap-2">
+      <dt className="text-muted-foreground shrink-0">{label}</dt>
+      <dd className={mono ? "truncate font-mono" : "truncate"} title={value}>
+        {value}
+      </dd>
+    </div>
+  );
+}
