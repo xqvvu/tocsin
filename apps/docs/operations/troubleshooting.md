@@ -8,7 +8,7 @@
 | --- | --- |
 | `/api/health` 成功，`/api/ready` 失败 | `/api/health` 只检查进程存活。检查 `/api/ready` 的 HTTP 状态与响应，再查看 `docker compose logs --tail=100 console`；重点看 SQLite 打开、migration、Worker 与数据卷权限错误。当前就绪检查以 HTTP `503` 和固定错误代码区分 `store_unavailable`、`migration_failed`、`migration_unknown`、`worker_unavailable`；升级期间按[版本升级与回滚](/operations/upgrade-rollback#readiness-判读)处置。 |
 | 容器 unhealthy，认证密钥报错 | 确认 production 环境设置了有效 `BETTER_AUTH_SECRET`，或正确挂载并设置 `BETTER_AUTH_SECRET_FILE`。内联值非空时文件回退不会生效；修改 secret 后重启容器。 |
-| dashboard 登录或回调异常 | 确认 `BETTER_AUTH_URL` 与实际外部 URL 一致；代理后使用 HTTPS，并按多 Host/Origin 场景设置允许列表。应用不自行推断代理后的外部地址。 |
+| dashboard 登录或回调异常 | 确认 `BETTER_AUTH_URL` 与实际外部 URL 一致；代理后使用 HTTPS，并按多 Host/Origin 场景设置允许列表。应用不自行推断代理后的外部地址；配置与验收顺序见[TLS 反向代理](/operations/reverse-proxy)。 |
 | 数据库无法写入 | 核对 `/data` 对容器进程可写、卷挂载到预期位置、磁盘空间充足。不要通过删除 SQLite 文件尝试“重置”生产实例。 |
 
 首个 owner 抢注、登录循环、session 撤销与认证密钥轮换见[认证与账号安全](/operations/authentication)。

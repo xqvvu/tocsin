@@ -30,7 +30,7 @@ Tocsin 的部署行为由进程环境决定。本页是公开站点的运行时�
 | `BETTER_AUTH_ALLOWED_HOSTS` | 无 | 可选 Host 白名单，值可用逗号或换行分隔并自动去重。Host 示例：`tocsin.example.com,ops.internal:3000`。 |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | 无 | 可选额外可信 Origin，值可用逗号或换行分隔并自动去重。Origin 示例：`https://tocsin.example.com,https://ops.internal:3000`。 |
 
-生产部署通常把 `BETTER_AUTH_URL` 与 `SERVER_URL` 设为同一个最终外部 HTTPS URL。当前 Compose 已给两者 `http://localhost:3000` 默认值；如果只覆盖 `SERVER_URL` 而保留认证 URL 默认值，事件直链会指向公网地址，认证却仍按 localhost 生成 URL。反向代理、多个域名和临时 Host 的配置步骤见[Docker 生产部署](/operations/deploy-docker#反向代理与限制)。
+生产部署通常把 `BETTER_AUTH_URL` 与 `SERVER_URL` 设为同一个最终外部 HTTPS URL。当前 Compose 已给两者 `http://localhost:3000` 默认值；如果只覆盖 `SERVER_URL` 而保留认证 URL 默认值，事件直链会指向公网地址，认证却仍按 localhost 生成 URL。反向代理、多个域名和临时 Host 的配置步骤见[TLS 反向代理](/operations/reverse-proxy)。
 
 `BETTER_AUTH_SECRET_FILE` 是当前唯一支持 `_FILE` 间接读取的应用变量。`TOCSIN_SOURCE_*`、`TOCSIN_DEST_*`、`TOCSIN_FEISHU_APP_*` 等可移植配置引用只读取 `process.env`。
 

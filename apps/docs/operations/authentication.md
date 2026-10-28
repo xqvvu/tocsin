@@ -31,7 +31,7 @@ export SERVER_URL="https://tocsin.example.com"
 - 通过多个 Host 或 Origin 访问时，配置 `BETTER_AUTH_ALLOWED_HOSTS` 与 `BETTER_AUTH_TRUSTED_ORIGINS`。仓库默认 Compose 未透传这两个变量，需要使用自己的 override。
 - 在完成首次 owner 创建前，不要把实例暴露给公网。登录端点由 Better Auth 提供基础限流，但反向代理仍应承担全局限流和访问控制。
 
-生产环境缺少有效认证密钥时，应用会拒绝提供服务，`/api/ready` 也会失败。完整变量、默认值与代理约束见[环境变量与运行时配置](/operations/configuration)和 [Docker 生产部署](/operations/deploy-docker)。
+生产环境缺少有效认证密钥时，应用会拒绝提供服务，`/api/ready` 也会失败。完整变量与默认值见[环境变量与运行时配置](/operations/configuration)，Host、TLS 和客户端 IP 配置见[TLS 反向代理](/operations/reverse-proxy)。
 
 ::: warning 不要复用示例密钥
 仓库历史中公开过的值会被生产运行时拒绝。也不要在每次重启时重新生成密钥，否则所有 dashboard session 都会失效。

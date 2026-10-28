@@ -31,6 +31,7 @@ docker compose ps
 ## 反向代理与限制
 
 - 代理终止 TLS，并将 HTTP 请求转发到容器端口。应用没有内置 TLS 终止。
+- nginx/Caddy 的完整配置、Host/客户端 IP 边界、请求体校验与上线检查见 [TLS 反向代理](/operations/reverse-proxy)。
 - 明确设置 `BETTER_AUTH_URL` 与 `SERVER_URL` 为外部访问地址。通过其他 Host 或 Origin 访问时，按需配置 `BETTER_AUTH_ALLOWED_HOSTS` 与 `BETTER_AUTH_TRUSTED_ORIGINS`；当前 Compose 未透传这两个变量，可用自有 override 补充。
 - 代理的请求体上限不可低于 `TOCSIN_MAX_WEBHOOK_BYTES`（默认 1 MiB，最大 10 MiB），否则 payload 可能在到达应用前被拒绝。
 - 单机本地卷是默认数据面；不支持多实例写入同一 SQLite 文件，不建议使用 NFS 等网络文件系统承载数据库。

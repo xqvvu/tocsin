@@ -179,4 +179,4 @@ sink 会把敏感键（如 `authorization`、`token`、`password`、`secret`、`
 | Delivery 停在 `pending` | 设置页 Worker 状态与暂停开关 | `tocsin.worker.delivery` 批次摘要与最后错误 |
 | 电话没有拨出 | 加急 Worker 状态 | `tocsin.oncall` 的入队、退避与失败行 |
 
-相关页面：[故障排查](/operations/troubleshooting) · [投递生命周期与重试](/operations/deliveries) · [飞书应用与电话加急](/integrations/feishu-app) · [Docker 生产部署](/operations/deploy-docker) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [认证与账号安全](/operations/authentication)
+相关页面：[故障排查](/operations/troubleshooting) · [投递生命周期与重试](/operations/deliveries) · [飞书应用与电话加急](/integrations/feishu-app) · [Docker 生产部署](/operations/deploy-docker) · [TLS 反向代理](/operations/reverse-proxy) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [认证与账号安全](/operations/authentication)
