@@ -1,4 +1,4 @@
-import { SourceSummarySchema } from "@tocsin/core";
+import { SourceRehearsalResultSchema, SourceSummarySchema } from "@tocsin/core";
 import * as z from "zod";
 
 import { IdOutputSchema } from "./shared";
@@ -15,3 +15,7 @@ export const SourceTokenOutputSchema = z.object({
 });
 
 export const SourceDeleteOutputSchema = IdOutputSchema;
+
+// Read-only replay of a pasted webhook body: parse, route match, and rendered
+// previews. No Event, Delivery, or outbound request is produced.
+export const SourceRehearsalOutputSchema = SourceRehearsalResultSchema;

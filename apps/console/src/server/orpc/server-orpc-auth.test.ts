@@ -22,6 +22,9 @@ const fakeContainer = {
   createSourceService: async () => {
     throw new Error("sources procedures must not run without a dashboard session");
   },
+  createSourceRehearsalService: async () => {
+    throw new Error("sources procedures must not run without a dashboard session");
+  },
   createDestinationService: async () => {
     throw new Error("destination procedures must not run without a dashboard session");
   },
@@ -147,7 +150,7 @@ const expectedProcedures: Record<
   },
   sources: {
     public: [],
-    private: ["list", "create", "update", "rotateToken", "delete", "previewDelete"],
+    private: ["list", "create", "update", "rotateToken", "delete", "previewDelete", "rehearse"],
   },
 };
 
@@ -180,6 +183,7 @@ const procedureArgs: Record<string, unknown> = {
   delete: { id: "destination-missing" },
   previewDelete: { id: "destination-missing" },
   rotateToken: { id: "source-missing" },
+  rehearse: { sourceId: "source-missing", payload: {} },
   listFeishuApps: undefined,
   createFeishuApp: { name: "probe", appId: "cli_probe", appSecret: "probe-secret" },
   updateFeishuApp: { id: "feishu-app-missing" },

@@ -511,6 +511,9 @@ function createTestContainer(): ApplicationContainer {
     createSourceService: async () => {
       throw new Error("Configuration services are not used by webhook tests");
     },
+    createSourceRehearsalService: async () => {
+      throw new Error("Configuration services are not used by webhook tests");
+    },
     createDestinationService: async () => {
       throw new Error("Configuration services are not used by webhook tests");
     },

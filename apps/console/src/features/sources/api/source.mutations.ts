@@ -11,6 +11,8 @@ export function useSourceMutations() {
     createSource: orpc.sources.create.call,
     deleteSource: orpc.sources.delete.call,
     previewDeleteSource: orpc.sources.previewDelete.call,
+    // Read-only rehearsal; it writes nothing, so it does not invalidate queries.
+    rehearseSource: orpc.sources.rehearse.call,
     updateSource: orpc.sources.update.call,
     rotateSourceToken: orpc.sources.rotateToken.call,
     invalidateSources: () =>
