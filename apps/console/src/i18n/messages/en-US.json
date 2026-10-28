@@ -917,6 +917,7 @@
   "operations.filters.anySource": "Any source",
   "operations.filters.anyTime": "All time",
   "operations.filters.clearChip": "Clear {label}",
+  "operations.filters.clearChipValue": "Clear {label}: {value}",
   "operations.filters.anyOutcome": "Any delivery outcome",
   "operations.filters.anyReceipt": "Any receipt state",
   "operations.filters.deliveryOutcome": "Delivery outcome",

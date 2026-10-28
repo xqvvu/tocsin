@@ -98,7 +98,14 @@ describe("operation filters by page scope", () => {
       { destinationId: "destination-1", destinationOutcome: "failed" },
       "toolbar",
     );
-    expect(screen.getByTitle("Clear Destination delivery outcome")).toBeTruthy();
+    expect(
+      screen.getByTitle("Clear Destination delivery outcome: Destination delivery failed"),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: "Clear Destination delivery outcome: Destination delivery failed",
+      }),
+    ).toBeTruthy();
     expect(screen.getByText("Destination delivery failed")).toBeTruthy();
 
     cleanup();
@@ -107,7 +114,7 @@ describe("operation filters by page scope", () => {
       { destinationId: "destination-1", destinationOutcome: "failed" },
       "toolbar",
     );
-    expect(screen.queryByTitle("Clear Destination delivery outcome")).toBeNull();
+    expect(screen.queryByTitle(/^Clear Destination delivery outcome/)).toBeNull();
   });
 
   it("shows every filter on the deliveries page", () => {
@@ -130,30 +137,30 @@ describe("operation filters by page scope", () => {
 
   it("names the attempt-count chip and keeps it off the events page", () => {
     renderFilters("deliveries", { minAttempts: 2 }, "toolbar");
-    expect(screen.getByTitle("Clear Attempts")).toBeTruthy();
+    expect(screen.getByTitle("Clear Attempts: ≥ 2")).toBeTruthy();
 
     cleanup();
     renderFilters("events", { minAttempts: 2 }, "toolbar");
-    expect(screen.queryByTitle("Clear Attempts")).toBeNull();
+    expect(screen.queryByTitle(/^Clear Attempts/)).toBeNull();
   });
 
   it("names the delivery outcome chip and keeps it off the deliveries page", () => {
     renderFilters("events", { deliveryOutcome: "none" }, "toolbar");
-    expect(screen.getByTitle("Clear Delivery outcome")).toBeTruthy();
+    expect(screen.getByTitle("Clear Delivery outcome: No delivery")).toBeTruthy();
     expect(screen.getByText("No delivery")).toBeTruthy();
 
     cleanup();
     renderFilters("deliveries", { deliveryOutcome: "none" }, "toolbar");
-    expect(screen.queryByTitle("Clear Delivery outcome")).toBeNull();
+    expect(screen.queryByTitle(/^Clear Delivery outcome/)).toBeNull();
   });
 
   it("names the destination kind chip and keeps it off the events page", () => {
     renderFilters("deliveries", { destinationKind: "feishu" }, "toolbar");
-    expect(screen.getByTitle("Clear Destination kind")).toBeTruthy();
+    expect(screen.getByTitle("Clear Destination kind: Feishu")).toBeTruthy();
 
     cleanup();
     renderFilters("events", { destinationKind: "feishu" }, "toolbar");
-    expect(screen.queryByTitle("Clear Destination kind")).toBeNull();
+    expect(screen.queryByTitle(/^Clear Destination kind/)).toBeNull();
   });
 
   it("clears every delivery filter from the inline reset", () => {
@@ -213,7 +220,7 @@ describe("operation filters by page scope", () => {
     // which one, or readers cannot tell it apart from a live "last hour".
     renderFilters("events", { range: "1h", rangeAnchor: "2026-10-23T04:00:00.000Z" }, "toolbar");
 
-    expect(screen.getByTitle("Clear Time range")).toBeTruthy();
+    expect(screen.getByTitle("Clear Time range: Last hour · from 10/23, 04:00")).toBeTruthy();
     expect(screen.getByText("Last hour · from 10/23, 04:00")).toBeTruthy();
   });
 
@@ -223,7 +230,7 @@ describe("operation filters by page scope", () => {
     // a live list.
     renderFilters("events", { rangeUntil: "2026-10-23T04:00:00.000Z" }, "toolbar");
 
-    expect(screen.getByTitle("Clear Result set frozen")).toBeTruthy();
+    expect(screen.getByTitle("Clear Result set frozen: paging from 10/23, 04:00")).toBeTruthy();
     expect(screen.getByText("paging from 10/23, 04:00")).toBeTruthy();
   });
 
@@ -248,9 +255,9 @@ describe("operation filters by page scope", () => {
       "toolbar",
     );
 
-    expect(screen.getByTitle("Clear Destination")).toBeTruthy();
-    expect(screen.queryByTitle("Clear Route")).toBeNull();
-    expect(screen.queryByTitle("Clear Delivery state")).toBeNull();
+    expect(screen.getByTitle("Clear Destination: Ops webhook")).toBeTruthy();
+    expect(screen.queryByTitle(/^Clear Route/)).toBeNull();
+    expect(screen.queryByTitle(/^Clear Delivery state/)).toBeNull();
   });
 
   it("names the fingerprint chip on both pages", () => {
@@ -260,13 +267,13 @@ describe("operation filters by page scope", () => {
     // must show the chip the reader needs in order to clear it.
     renderFilters("events", { fingerprint: "checkout:unavailable" }, "toolbar");
 
-    expect(screen.getByTitle("Clear Fingerprint")).toBeTruthy();
+    expect(screen.getByTitle("Clear Fingerprint: checkout:unavailable")).toBeTruthy();
     expect(screen.getByText("checkout:unavailable")).toBeTruthy();
 
     cleanup();
     renderFilters("deliveries", { fingerprint: "checkout:unavailable" }, "toolbar");
 
-    expect(screen.getByTitle("Clear Fingerprint")).toBeTruthy();
+    expect(screen.getByTitle("Clear Fingerprint: checkout:unavailable")).toBeTruthy();
     expect(screen.getByText("checkout:unavailable")).toBeTruthy();
   });
 
@@ -277,14 +284,16 @@ describe("operation filters by page scope", () => {
       "toolbar",
     );
 
-    expect(screen.getByTitle("Clear Destination delivery")).toBeTruthy();
+    expect(
+      screen.getByTitle("Clear Destination delivery: No delivery to destination"),
+    ).toBeTruthy();
     expect(screen.getByText("No delivery to destination")).toBeTruthy();
   });
 
   it("names the route chip on the deliveries page", () => {
     renderFilters("deliveries", { routeId: "route-1" }, "toolbar");
 
-    expect(screen.getByTitle("Clear Route")).toBeTruthy();
+    expect(screen.getByTitle("Clear Route: Critical route")).toBeTruthy();
   });
 
   it("names the event chip on the deliveries page", () => {
@@ -292,23 +301,23 @@ describe("operation filters by page scope", () => {
     // narrowed to one event with no visible way to widen it again.
     renderFilters("deliveries", { eventId: "evt-1" }, "toolbar");
 
-    expect(screen.getByTitle("Clear Event")).toBeTruthy();
+    expect(screen.getByTitle("Clear Event: evt-1")).toBeTruthy();
     expect(screen.getByText("evt-1")).toBeTruthy();
 
     cleanup();
     renderFilters("events", { eventId: "evt-1" }, "toolbar");
-    expect(screen.queryByTitle("Clear Event")).toBeNull();
+    expect(screen.queryByTitle(/^Clear Event/)).toBeNull();
   });
 
   it("names the last-activity basis chip and keeps it off the events page", () => {
     renderFilters("deliveries", { timeField: "updated" }, "toolbar");
 
-    expect(screen.getByTitle("Clear Time basis")).toBeTruthy();
+    expect(screen.getByTitle("Clear Time basis: Updated")).toBeTruthy();
     expect(screen.getByText("Updated")).toBeTruthy();
 
     cleanup();
     renderFilters("events", { timeField: "updated" }, "toolbar");
-    expect(screen.queryByTitle("Clear Time basis")).toBeNull();
+    expect(screen.queryByTitle(/^Clear Time basis/)).toBeNull();
   });
 
   it("does not render a chip for the default time basis", () => {
@@ -316,26 +325,32 @@ describe("operation filters by page scope", () => {
     // list is filtered and send the operator looking for a filter that is off.
     renderFilters("deliveries", { timeField: "created" }, "toolbar");
 
-    expect(screen.queryByTitle("Clear Time basis")).toBeNull();
+    expect(screen.queryByTitle(/^Clear Time basis/)).toBeNull();
   });
 
-  it("tells screen readers that a chip removes its filter", () => {
-    renderFilters("deliveries", { timeField: "updated" }, "toolbar");
+  it("tells screen readers that a chip removes its filter and which value it clears", () => {
+    renderFilters("events", { severity: "critical" }, "toolbar");
 
-    // The visible text is "Time basis Updated"; the accessible name must name
-    // the action, not just repeat the value.
-    expect(screen.getByRole("button", { name: "Clear Time basis" })).toBeTruthy();
+    // The visible text is "Severity Critical"; the accessible name has to name
+    // the action and the value, or every severity chip sounds the same.
+    expect(screen.getByRole("button", { name: "Clear Severity: Critical" })).toBeTruthy();
+    expect(screen.getByText("Severity")).toBeTruthy();
+    expect(screen.getByText("Critical")).toBeTruthy();
+
+    cleanup();
+    renderFilters("deliveries", { timeField: "updated" }, "toolbar");
+    expect(screen.getByRole("button", { name: "Clear Time basis: Updated" })).toBeTruthy();
   });
 
   it("names the receipt chip on the deliveries page", () => {
     renderFilters("deliveries", { receipt: "missing" }, "toolbar");
 
-    expect(screen.getByTitle("Clear Receipt")).toBeTruthy();
+    expect(screen.getByTitle("Clear Receipt: No receipt")).toBeTruthy();
     expect(screen.getByText("No receipt")).toBeTruthy();
 
     cleanup();
     renderFilters("events", { receipt: "missing" }, "toolbar");
-    expect(screen.queryByTitle("Clear Receipt")).toBeNull();
+    expect(screen.queryByTitle(/^Clear Receipt/)).toBeNull();
   });
 
   it("advertises the extra delivery search fields on the deliveries page", () => {
@@ -410,7 +425,7 @@ describe("operation search input", () => {
 
     // Still inside the debounce window: the URL does not know about "now" yet.
     fireEvent.change(input, { target: { value: "checkout now" } });
-    fireEvent.click(screen.getByTitle("Clear Search"));
+    fireEvent.click(screen.getByTitle("Clear Search: checkout"));
 
     expect(input.value).toBe("");
     await new Promise((resolve) => setTimeout(resolve, 350));

@@ -193,8 +193,17 @@ export function OperationFilters({
                 "border-border bg-muted/50 text-foreground hover:bg-muted inline-flex h-6 max-w-full items-center gap-1 border px-1.5 text-[11px]",
                 pending ? "pointer-events-none opacity-60" : null,
               )}
-              aria-label={t("operations.filters.clearChip", { label: chip.label })}
-              title={t("operations.filters.clearChip", { label: chip.label })}
+              // The visible text carries the value, so the accessible name has
+              // to as well: a screen reader hearing only "Clear Severity" for
+              // every severity chip cannot tell the filters apart (WCAG 2.5.3).
+              aria-label={t("operations.filters.clearChipValue", {
+                label: chip.label,
+                value: chip.valueLabel,
+              })}
+              title={t("operations.filters.clearChipValue", {
+                label: chip.label,
+                value: chip.valueLabel,
+              })}
             >
               <span className="text-muted-foreground shrink-0">{chip.label}</span>
               <span className="min-w-0 truncate font-medium">{chip.valueLabel}</span>

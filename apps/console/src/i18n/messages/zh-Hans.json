@@ -917,6 +917,7 @@
   "operations.filters.anySource": "任意告警源",
   "operations.filters.anyTime": "全部时间",
   "operations.filters.clearChip": "清除{label}",
+  "operations.filters.clearChipValue": "清除{label}：{value}",
   "operations.filters.anyOutcome": "任意投递结果",
   "operations.filters.anyReceipt": "任意回执状态",
   "operations.filters.deliveryOutcome": "投递结果",
