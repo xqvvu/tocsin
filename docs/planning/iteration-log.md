@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 163 轮）
+
+- 时间：2026-10-29 04:33 CST 起。
+- 基线：`origin/main` @ `72b85cb2`；启动时无 open PR，main CI 与 E2E 双绿。
+- 类型：**需求切片 + 发布**（非 full-audit）。最近全量审计为第 160 轮 **2026-10-29 02:05 CST**（距今 < 6 小时）；
+  backlog 有 ≥27 分候选（REQ-325 28、REQ-327 27），按第 1.5 步继续交付，不重跑全量审计。
+- 车道（并发 ≤3）：`requirements`、`ui-triage`、`security-exposure`（轮转位）。
+  下一非必跑车道建议 **`docs-drift`**（轮转 security-exposure → docs-drift）。
+- `last_ui_review_at` = **2026-10-29 03:50 CST**（未更新，本轮 `ui-triage` 判 `defer`）。
+
+### ui-triage 决策与理由
+
+- 决策：**`defer`**。三条强信号均不成立：距上次评审 44 分钟（< 48h）；自 03:50 起触及 UI 路径的合并 **0 个**
+  （仅 `66b8561a` docs(planning) 与 `72b85cb2` docs(site)）；61 条 UI 存量属饱和队列，新增 UI-107/108/109
+  正是上轮评审自身产出。44 分钟内重跑同一份代码边际价值极低。
+- 下次触发条件：自 03:50 起 UI 路径合并累计 ≥ 3，或满 48h；建议优先看 Sources 预演结果区（本轮新增判定徽标与暂停条）。
+
+### 专家发现
+
+**requirements（4 条新候选，已写入 backlog）**
+
+- REQ-328（29）投递重试统一确认并披露将触发的自动加急呼叫人数。
+- REQ-329（28）重新启用通知目标前披露排队中的加急呼叫。
+- REQ-330（27）接入预演显示真实告警会触发的电话呼叫人数（REQ-325 之后顺延）。
+- REQ-331（18）路由主目标终态失败后转投备用目标（EXPERT_PANEL，本轮不实施）。
+
+**security-exposure（3 条新候选，已写入 backlog）**
+
+- SEC-A1（22）JSON 脱敏/转换递归无深度上限，深嵌套载荷 500 且不留审计事件；EXPERT_PANEL（须「超限拒绝」）。
+- SEC-A2（21）自由文本脱敏在 `;` 处截断 Cookie 值；EXPERT_PANEL（扩覆盖方向）。
+- SEC-A3（24）读取边界集成测试未覆盖 PEM / `tls.key` / `dbPass`；AUTO_FIX。
+- 已核实无问题：四条脱敏路径全部接线、一次性 token/token hash 不进 DTO、会话字段白名单投影、
+  配置导出 `includeSecrets` 锁死、import protection 标记齐全、无已提交凭据、`github.com/xqvvu/vane` 引用为 0。
+
+### 本轮交付
+
+- PR `#676` `feat(console): disclose the real delivery verdict in source rehearsal`（REQ-325）
+  - `SourceRehearsalRender` 增 `verdict`（deliver/suppressed/queued_paused/destination_disabled）与
+    `suppression`（id/name/kind/reason/逐条件 checks）；结果顶层增 `delivery: {paused, pausedAt}`。
+  - 判定复用 `selectSuppressionForDelivery` 与当前 settings，按 `receivedAt` 计算，匹配用未脱敏事件；
+    静默 checks 复用新抽出的 `redactRouteMatchChecks`（与路由判定同一投影）。
+  - UI：判定徽标、全局暂停提示条、静默规则块；简中 `routeChecks.fields.fingerprint` 改为「指纹」。
+  - 验证：`vp check` 0 error；`vp run -r test`（console 227 文件 / 1313 测试）；`vp run -r build`；
+    隔离实例 `localhost:6191`（`/tmp` 新库，已关停删除）浏览器实测三种判定，截图
+    `/tmp/tocsin-rehearsal-{deliver,paused,suppressed}.png`（未入库）。
+
+### 发布
+
+- 三位专家一致 **GO**：release-manager 认定 1 个用户可见变更、建议 beta.131；release-blocker 5 项 PASS
+  （候选 head CI 当时 PENDING，合并后已复核 `origin/main` CI 为 success）；release-ops 确认无迁移 /
+  无配置格式 / 无 env / 无依赖变化，回滚只需换镜像。
+- PR `#677` `chore(release): v0.1.0-beta.131`；tag `v0.1.0-beta.131`（annotated）指向 `7deff092`，
+  该 commit 的 CI 为 success 后才打 tag。
+- GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.131`（linux/amd64 + linux/arm64，
+  index digest `sha256:a34512e91eb532c099390181c6851dceeecb667672e727a0c2687ad3bb50645b`）；
+  回滚 `0.1.0-beta.130`，**无需数据库操作**。
+
+### 工作树清理
+
+- 回收第 162 轮会话工作树 `gifted-kapitsa-a57b24`（干净；其残留 dev server `:6199` 已停止）。
+- `.claude/worktrees` 现只剩 `agent-iteration`、`docs-site-20261029-050333`（docs 站 routine 在用）
+  与本轮会话工作树；本轮结束删除 `agent-iteration` 与 `$LOCK`。
+
+### 下一轮优先项
+
+1. REQ-328（29）重试确认 + 自动加急披露。
+2. REQ-329（28）重新启用目标前排队 ping 披露。
+3. SEC-A3（24）读取边界脱敏测试补三条断言（AUTO_FIX）。
+4. SEC-A1 / SEC-A2 交 EXPERT_PANEL。
+5. REQ-327（27）飞书应用投递健康列；UI-107 / UI-108 / UI-109。
+6. 下一非必跑车道：`docs-drift`。
+
 ## 2026-10-29（第 162 轮）
 
 - 时间：2026-10-29 03:28 CST 起。
