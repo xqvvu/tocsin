@@ -822,12 +822,15 @@ function eventTermPredicate(term: string) {
  * Delivery search covers the event fields above (including the idempotency key,
  * labels, and upstream provider metadata), both identifiers (the delivery id
  * itself and the id of the event it belongs to), and the facts the deliveries
- * table and detail page display: the latest error, the destination name, the
- * route name, and the external message reference returned by the destination
- * provider. Destination and route are matched through correlated `EXISTS`
- * subqueries so the count query keeps its existing joins and cannot count
- * duplicated rows. Like the event predicate, list and count queries share it,
- * and whitespace-separated terms are ANDed across the same field groups.
+ * table and detail page display: the latest error, the error of any earlier
+ * attempt, the destination name, the route name, and the external message
+ * reference returned by the destination provider. `deliveries.last_error` is
+ * cleared once an attempt succeeds, so the attempt errors keep the transient
+ * failure on-call saw in the retry history searchable; attempts are matched
+ * through a correlated `EXISTS` exactly like destination and route, so the
+ * count query keeps its existing joins and cannot count duplicated rows. Like
+ * the event predicate, list and count queries share it, and
+ * whitespace-separated terms are ANDed across the same field groups.
  */
 function deliverySearchPredicate(query: string) {
   const terms = splitOperationSearchTerms(query).terms;
@@ -853,6 +856,11 @@ function deliveryTermPredicate(term: string) {
     OR events.provider_metadata_json LIKE ${pattern} ESCAPE '\\'
     OR deliveries.last_error LIKE ${pattern} ESCAPE '\\'
     OR deliveries.provider_ref_value LIKE ${pattern} ESCAPE '\\'
+    OR EXISTS (
+      SELECT 1 FROM delivery_attempts AS searched_attempts
+      WHERE searched_attempts.delivery_id = deliveries.id
+        AND searched_attempts.error LIKE ${pattern} ESCAPE '\\'
+    )
     OR EXISTS (
       SELECT 1 FROM destinations AS searched_destinations
       WHERE searched_destinations.id = deliveries.destination_id
