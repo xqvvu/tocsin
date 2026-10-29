@@ -32,10 +32,36 @@
     （console 1374）；`vp run -r build` 2/2。新增仓储/服务/UI 测试共 8 例。
   - 自审：`code-review`（low）0 findings。
 
+### 发布
+
+- 三位专家一致 APPROVE：
+  - 发布经理：自 beta.140 起 1 个用户可见变更（#725 接入预演去重判定），建议
+    `0.1.0-beta.141`。
+  - 阻断审计：`dcbd62bb` 的 CI 与 E2E 双绿、零 open PR、无迁移/依赖/env/compose
+    差异、3 条 `blocked-autonomous` 均为历史非阻断项。
+  - 运维/回滚：零迁移、零配置差异；回滚只需换镜像；预演查询只读，不改变去重键。
+- 版本 `0.1.0-beta.141`（PR #726，rebase 合并 `fc1543dc`）。
+- Tag `v0.1.0-beta.141` @ `fc1543dc`（annotated）；GitHub Release 已创建
+  （prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.141`
+  （linux/amd64 + linux/arm64），index digest
+  `sha256:fb69db888fa9423d0747a8e457287cbd240abe676efaea40f7c97890bd9b70ba`；
+  回滚镜像 `0.1.0-beta.140`，无需数据库操作。
+
 ### 未验证
 
 - 未做真实浏览器验证（本机无运行中的 console dev 实例）；UI 由组件测试覆盖，
   「去重判定」行沿用目标卡片既有的边框、字号与密度体系。
+
+### 收尾清理
+
+- 回收注册工作树 `gallant-maxwell-ef4dfa`（第 173 轮，工作区干净、PR #721 已合并）。
+- `youthful-murdock-b65fc6` 仍有真实未提交改动，跳过保留；两个 `docs-site-*` 属并行
+  文档站车道，未介入。
+- `.claude/worktrees` **2.8G → 2.7G**；`agent-iteration` 专用工作树与锁在收尾时删除，
+  会话工作树的 `node_modules`、`.output`、`.vite` 同步删除。
+- 删除 PR 状态为 MERGED 的本地 `agent/*` 分支（`rehearsal-dedupe-window`、
+  `release-beta-141`、`iteration-log-174`）。
 
 ### 下一轮优先项
 
