@@ -27,7 +27,9 @@ description: 按接收、解析、路由与投递顺序诊断 Tocsin 的 Webhook
 3. Token 可放在 `Authorization: Bearer ...` 或 `X-Tocsin-Source-Token`；也可用该 Source 已配置的共享密钥，通过 `X-Tocsin-Provider-Secret` 认证。当前实现接受任一有效凭据；凭据丢失或轮换影响见[告警源接入与生命周期](/guide/sources)。
 4. 检查告警源选择的 Provider 是否与上游 payload 格式一致。可在「告警源」页使用[接入预演](/guide/sources#接入预演)回放这段请求体，查看解析结果、路由判定与投递判定；投递判定能直接区分会被静默、目标已停用和全局暂停排队。它不写 Event、不创建 Delivery，也不校验 Token 与网络可达性。目标页的“测试”只验证出站通知，同样不会创建 Event。
 
-要验证入站解析，请从上游使用测试发送能力，或按[Provider 接入验收配方](/integrations/provider-verification)向一个专用的非生产告警源发送唯一标题的代表性 Webhook。确认响应为 `202` 并记录 `eventId`，再打开对应 Event 核对 Provider 规范化字段。测试告警源可以不配置已启用的路由，这样只会留下 Event 与匹配证据，不会触发生产通知；需要验证完整链路时，再使用独立测试目标与路由。响应为 `400` 时，同样用响应中的 `eventId` 打开解析失败 Event，而不是仅凭状态码猜测字段问题。
+要验证入站解析，请从上游使用测试发送能力，或按[Provider 接入验收配方](/integrations/provider-verification)向一个专用的非生产告警源发送唯一标题的代表性 Webhook。确认响应为 `202` 并记录 `eventId`，再打开对应 Event 核对 Provider 规范化字段。测试告警源可以不配置已启用的路由，这样只会留下 Event 与匹配证据，不会触发生产通知；需要验证完整链路时，再使用独立测试目标与路由。响应为带 `eventId` 的 `400` 时，打开对应的解析失败 Event，而不是仅凭状态码猜测字段问题。
+
+解析失败 Event 仍会保留接收时间、Provider 与脱敏后的解析诊断，但原始载荷受实例级「原始载荷保留天数」控制，可能在后续 Webhook 接入触发清理后不再可见。若详情显示原始数据已按保留策略清理，这不表示请求没有到达；延长保留期也不能恢复已清理的载荷。需要保留现场时，尽早导出脱敏证据包，并按[数据保留与 SQLite 容量](/operations/data-retention#清理何时发生)确认清理时机与策略。
 
 入站请求会在 Event detail 中以规范化字段和脱敏调试信息展示。避免把 Token、共享密钥或未经脱敏的请求体复制进公开工单和日志。
 
