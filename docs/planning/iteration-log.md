@@ -2,6 +2,106 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 171 轮）
+
+- 时间：2026-10-29 15:37 CST 起。
+- 基线：`origin/main` @ `7330b257`；启动时 0 个 `agent/*` open PR，main CI 双绿；另一个
+  docs-site 车道的 open PR #705（文档站，未介入，延续第 170 轮口径不视为阻断）。
+- 类型：**full-audit + 需求切片 + UI 评审**。最近全量审计是第 167 轮 08:37 CST，距本轮
+  6h60m ≥ 6 小时，第 1.5 步闸门放行展开；backlog 另有 3 条 ≥27 分 candidate。
+- **全量审计时间戳：2026-10-29 15:37 CST**。
+- 车道：`requirements`（必跑）+ `ui-triage`（必跑，判 `review_now`）+ `security-exposure`
+  （轮转，第 170 轮约定的下一个非必跑车道）+ `ui-review`（由 triage 触发）。
+  并发峰值 3。**下一个非必跑车道：`docs-drift`**。
+- 环境：会话工作树 `node_modules` 处于半删残留态（根目录 3 项、`@remixicon/react` 等
+  workspace 依赖缺失），按既有结论 `rm -rf` 全部 workspace `node_modules` 后
+  `vp install --frozen-lockfile` 恢复（`.pnpm` 热缓存，2.5s 完成）。
+
+### 专家发现
+
+**ui-triage**
+
+- 决策 **`review_now`**：`last_ui_review_at` 5h35m（未达 48h），但自 10:05 起触及 UI 路径的
+  合并 **3 条**（#703 `cd6cb8c3`、#707 `0bad4d1a`、#708 `aa7a3f08`）且全部零浏览器实测，
+  强信号成立；UI-* 未解决 66 条但 ≥27 分为 0，瓶颈是交付不是发现。
+- 建议范围：只验 #703 / #707 / #708，不做新发现扫描。
+
+**ui-review（浏览器实测，隔离临时实例 6193 + 临时 SQLite）**
+
+- #703 启用确认框：**通过（部分）**——确认框含标题/描述，0 条排队时不显示加急披露，取消后
+  目标仍为停用。
+- #708 预演 live region：**通过**——`role="status"` + `aria-live="polite"` +
+  `aria-atomic="true"`，无结果时为空。
+- #708 重试风险槽：**通过（静态）**——`delivery-retry-risk-status.tsx:33` 具备 `role="status"
+  aria-atomic="true"`（`role=status` 隐式 polite）。
+- #707 深链：**未验证**（15 分钟内未造出事件/投递数据），仅静态核实
+  `event-route-delivery-outcome-cell.tsx:69-78` 构造了 `Link`。
+- 未验证：排队/加急计数 > 0 时的披露与弹层高度跳变；重试风险弹层浏览器实测。
+- 缺陷（按影响×成本）：① 390px 下目标列表右侧列被裁切且无横向滚动提示；② #707 落点未实测；
+  ③ `destination-scheduled-urgent-notice.tsx:35` 用手写 `border-destructive/40` 而非 shadcn
+  `Alert`（`destination-source-impact-notice.tsx:31` 为同家族正确写法）；④ 重试风险槽未显式
+  `aria-live`（与预演写法不一致，行为等价）。
+- `last_ui_review_at` 更新为 **2026-10-29 15:55 CST**。
+
+**security-exposure（0 HIGH / 0 MEDIUM / 1 LOW）**
+
+- 已核实通过：`isSensitiveKey` 的历史缺口（`appSecret`/`clientSecret`/`apiSecret`/`privateKey`/
+  `X-Auth-Token`）全部闭合；按 `DestinationKindSchema.options` 参数化的脱敏回归在
+  `configuration.integration.test.ts:256-263,985-1033,1223-1240,1771-1807` 齐备；DTO 暴露面、
+  import protection（17 个 server-only + 9 个 client-only，无漏标）、`.server`/`.client` 配对、
+  `xqvvu/vane` 失效引用（除 ACR 坐标外为 0）、日志脱敏均有测试。
+- **LOW（AUTO_FIX）**：`isSensitiveKey` 不覆盖复数/复合键 `secrets`/`privateKeys`/`apiKeys`/
+  `passwords`（`packages/core/src/redaction.ts:13-67,87-88,292-299`），集合内已有 `tokens`/
+  `credentials` 先例。当前无仓库字段使用这些名字，仅第三方上游载荷可能携带 → 防御纵深缺口。
+
+**requirements（4 条新候选，均写入 backlog）**
+
+- REQ-354（29）重新启用路由前披露集中补发积压：启用分支是无确认的裸按钮
+  （`routes-section.tsx:339-354`），停用分支已有 `QueuedDeliveriesNotice`（`:287-333`）；
+  路由恢复后 worker 立即批量领取（`delivery.repository.ts:252`）。
+- REQ-355（27）通知模板补充「本次投递」直链：`tocsin` 命名空间只有 `eventUrl`
+  （`packages/destinations/src/template.ts:141,200,399-403`）。
+- REQ-356（26）事件列表按告警解析器（provider）筛选：`EventListItem` 无 provider
+  （`packages/core/src/operations.ts:167-185`），来源列只显示名称。
+- REQ-357（26）投递摘要标注「事件接入早于入队」：耗时全部从 `job.createdAt` 起算
+  （`features/deliveries/model/delivery-diagnostics.ts:9-40`），补投的旧告警看起来像新发生。
+
+**REQ-350 范围修正（重要）**
+
+第 170 轮把 REQ-350 描述为「事件列表没有解析失败标记」。本轮核实：列表项的
+`parseFailed` 投影与「解析失败」徽标**早已存在**
+（`history.repository.ts:180`、`event-title-cell.tsx:36-43`、`event-list-parse-failure.test.ts`），
+真正缺口只有两处——**结构化的 `parseFailed` 筛选维度**与**顶栏常驻指示器**。本轮按修正后的
+范围交付（见下）。
+
+### 本轮交付
+
+- **PR #712** `feat(console): surface parser-rejected webhooks in the header`（REQ-350，28 分，
+  rebase 合并 `438c0995`）
+  - 契约新增 events-only `parseFailed` 布尔维度；仓储列表与 `total` 共用
+    `json_valid` + `json_extract` 谓词，`COALESCE` 让损坏元数据在 `false` 半边不被漏掉。
+  - URL 用 `"true"`/`"false"` 承载，`normalizeOperationFilters` 保留 `false`（真值判断会丢它）。
+  - 事件筛选面板新增「解析结果」下拉与 chip；顶栏新增 `ParseFailureIndicator`
+    （24h 计数 > 0 时显示，落到 `/events?parseFailed=true&range=24h`）。
+  - PRD `docs/prd/parse-failure-indicator.md`。
+  - 验证：`vp check` 0 error（35 warning 与 main 一致）；`vp run -r test` 4/4 包通过；
+    `vp run -r build` 2/2 通过；PR CI 双绿（160s）。
+- 工作树：实现全程在会话工作树 `compassionate-engelbart-ae8c6e`；`agent-iteration` 只放锁。
+
+### EXPERT_PANEL 决策
+
+- 本轮无 EXPERT_PANEL 事项：security-exposure 唯一发现是 LOW 防御纵深缺口，属 AUTO_FIX，
+  已写入 backlog（SEC-45）。无 schema/迁移、无投递/路由/auth 语义变更。
+
+### 下一轮优先项
+
+1. REQ-354（29，重新启用路由前的集中补发披露）——当前最高分，且与 #703 已交付的目标侧对称。
+2. REQ-355（27，通知模板 `tocsin.deliveryUrl`）/ REQ-333 / REQ-24 / REQ-351 择一。
+3. SEC-45：`isSensitiveKey` 补复数凭据键（1 个常量 + 2 处测试列表，AUTO_FIX）。
+4. docs-drift（下一个轮转车道），优先复核第 170 轮遗留的 DOC-114…DOC-121。
+5. UI：补验 #707 深链落点与 #703 加急披露（需造排队/加急数据）；390px 目标表裁切可作下轮
+   UI 小修。
+
 ## 2026-10-29（第 170 轮）
 
 - 时间：2026-10-29 14:23 CST 起。
