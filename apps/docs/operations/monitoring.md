@@ -159,7 +159,7 @@ dashboard 每个页面的页头右侧都可能出现状态徽标。它们只在�
 - [ ] 记录每条告警的所有者、runbook、静默上限和升级路径；无人负责的告警等同未配置。
 
 ::: info 当前能力边界
-Tocsin 不提供长期 metrics、队列深度 API、浏览器错误上报、自动备份、证书管理或 synthetic monitor。设置页 Worker 状态是进程内快照，容器重启后会清空；投递健康只覆盖通知目标列表展示，不是 Prometheus exporter。需要这些能力时，应在外部监控系统实现，不要把 dashboard 当作唯一数据源。
+Tocsin 不提供长期 metrics、队列深度 API、浏览器错误上报、自动备份、证书管理或 synthetic monitor。设置页 Worker 状态是进程内快照，容器重启后会清空；投递健康只覆盖[通知目标列表展示](/integrations/destinations#在列表中核对投递健康)，不是 Prometheus exporter。需要这些能力时，应在外部监控系统实现，不要把 dashboard 当作唯一数据源。
 :::
 
 相关页面：[单实例架构与故障边界](/operations/architecture) · [日志与可观测性](/operations/observability) · [故障排查](/operations/troubleshooting) · [投递生命周期与重试](/operations/deliveries) · [Docker 生产部署](/operations/deploy-docker) · [TLS 反向代理](/operations/reverse-proxy) · [数据保留与 SQLite 容量](/operations/data-retention) · [备份与恢复](/operations/backup-restore) · [版本升级与回滚](/operations/upgrade-rollback) · [告警源接入与生命周期](/guide/sources) · [飞书应用与电话加急](/integrations/feishu-app)

@@ -108,6 +108,7 @@ docker compose logs --no-log-prefix --since=30m console \
 | `GET /api/ready` | 数据库、迁移、Worker 是否就绪 | 目标是否可达、投递是否成功 |
 | 设置页「后台工作进程」 | 本进程内投递与加急 Worker 最近是否运行、上一批结果、最后错误 | 跨重启历史、队列总量、目标健康 |
 | 投递列表与详情 | 单条投递的状态、尝试与证据 | Worker 为什么没启动 |
+| 通知目标列表[「投递健康」](/integrations/destinations#在列表中核对投递健康) | 每个目标最近的成功/失败终态、当前排队量与近 24h 失败数 | 具体某条投递的错误、Worker 是否运行、长期趋势 |
 | 运行日志 | 具体请求、投递与加急的结果和错误 | 长期趋势与容量规划 |
 
 `/api/health` 只返回 `{"status":"ok"}`，用于判断进程能否响应；它不检查 SQLite、迁移或 Worker。启动阶段 SQLite 打开或迁移失败时，除 `/api/ready` 外的请求都会失败，`/api/health` 也不会返回 ok。
