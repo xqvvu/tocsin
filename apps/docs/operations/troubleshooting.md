@@ -29,6 +29,8 @@ description: 按接收、解析、路由与投递顺序诊断 Tocsin 的 Webhook
 
 要验证入站解析，请从上游使用测试发送能力，或按[Provider 接入验收配方](/integrations/provider-verification)向一个专用的非生产告警源发送唯一标题的代表性 Webhook。确认响应为 `202` 并记录 `eventId`，再打开对应 Event 核对 Provider 规范化字段。测试告警源可以不配置已启用的路由，这样只会留下 Event 与匹配证据，不会触发生产通知；需要验证完整链路时，再使用独立测试目标与路由。响应为 `400` 时，同样用响应中的 `eventId` 打开解析失败 Event，而不是仅凭状态码猜测字段问题。
 
+如果 dashboard 页头出现「解析失败：N 条」，先点击它进入最近 24 小时的解析失败 Event 筛选（`parseFailed=true`）。这类记录是接入审计证据：Provider 拒绝了载荷，Event 不会进入路由匹配，也不会创建 Delivery；详情中的失败原因、错误类型、脱敏错误信息和载荷哈希用于判断是上游结构变化、Provider 选错还是告警源配置错误。修复后发送一条新的代表性载荷，确认响应回到 `202`，不要把解析失败徽标当成投递失败去重试 Delivery。
+
 入站请求会在 Event detail 中以规范化字段和脱敏调试信息展示。避免把 Token、共享密钥或未经脱敏的请求体复制进公开工单和日志。
 
 ## Event 没有预期投递
