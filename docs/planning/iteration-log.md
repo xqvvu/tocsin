@@ -80,7 +80,15 @@
 
 ### 发布
 
-（见下方发布评估）
+- 三位专家一致通过：发布经理（自 beta.134 起唯一用户可见变更是 #697）、
+  阻断审计（`75b889ae` 的 CI 与 E2E 双绿、0 个非本轮 open PR、无迁移、无锁文件、无 env 变化、
+  FIX-18 未确认不构成阻塞）、运维回滚（无 schema/依赖/配置变化，回滚只换镜像）。
+- 版本 `0.1.0-beta.135`（PR #699 `chore(release): v0.1.0-beta.135`，rebase 合并 `75b889ae`）。
+- Tag `v0.1.0-beta.135`（annotated，指向 `75b889ae`，该 commit 的 CI 与 E2E 均 success）。
+- GitHub Release：已创建（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.135`（linux/amd64 + linux/arm64），
+  index digest `sha256:648bbd627a2b335693a637ae7ba2942768c9442331c562cff6dc7345604e461a`；
+  回滚镜像 `0.1.0-beta.134`，**无需数据库操作**。
 
 ### 下一轮优先项
 
