@@ -69,6 +69,24 @@ export const DeletionImpactSchema = z.strictObject({
 
 export type DeletionImpact = z.infer<typeof DeletionImpactSchema>;
 
+/**
+ * What starts moving the moment a destination is re-enabled.
+ *
+ * A disabled destination stops the delivery worker and the urgent-call worker
+ * from claiming its work, so re-enabling releases both backlogs at once. The
+ * console shows these counts before the switch flips: automated phone calls
+ * cannot be taken back once they ring.
+ *
+ * Delivery counts come from the existing pending-delivery projection; this
+ * DTO only carries the urgent-call side, which has no other read path.
+ */
+export const DestinationEnablePreviewSchema = z.strictObject({
+  /** Scheduled urgent-call pings with attempts left, waiting for the target. */
+  scheduledUrgentCallCount: z.number().int().nonnegative(),
+});
+
+export type DestinationEnablePreview = z.infer<typeof DestinationEnablePreviewSchema>;
+
 /** Template-only alias kept for older call sites; prefer DestinationEditorDraftResult. */
 export const DestinationTemplateDraftResultSchema = DestinationEditorDraftResultSchema;
 export type DestinationTemplateDraftResult = DestinationEditorDraftResult;

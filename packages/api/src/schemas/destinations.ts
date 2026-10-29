@@ -2,6 +2,7 @@ import {
   AdapterCatalogBaseSchema,
   DestinationDeleteResultSchema,
   DestinationEditorDraftResultSchema,
+  DestinationEnablePreviewSchema,
   DestinationKindSchema,
   DestinationListItemSchema,
   DestinationPreviewResultSchema,
@@ -14,6 +15,8 @@ export const DestinationListOutputSchema = z.array(DestinationListItemSchema);
 export const DestinationOutputSchema = DestinationListItemSchema;
 
 export const DestinationDeleteOutputSchema = DestinationDeleteResultSchema;
+
+export const DestinationEnablePreviewOutputSchema = DestinationEnablePreviewSchema;
 
 export const DestinationTemplateDraftOutputSchema = DestinationEditorDraftResultSchema;
 

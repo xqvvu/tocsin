@@ -5,6 +5,7 @@ import {
   GetDestinationTemplateDraftCommandSchema,
   PreviewDestinationCommandSchema,
   PreviewDestinationDraftCommandSchema,
+  PreviewDestinationEnableCommandSchema,
   PreviewDestinationUpdateCommandSchema,
   TestDestinationCommandSchema,
   UpdateDestinationCommandSchema,
@@ -16,6 +17,7 @@ import { DeletionImpactOutputSchema } from "../schemas/deletion-impact";
 import {
   DestinationCatalogOutputSchema,
   DestinationDeleteOutputSchema,
+  DestinationEnablePreviewOutputSchema,
   DestinationListOutputSchema,
   DestinationOutputSchema,
   DestinationPreviewOutputSchema,
@@ -73,6 +75,15 @@ export const destinations = {
     .errors(dashboardErrors)
     .errors(resource)
     .output(DestinationDeleteOutputSchema),
+
+  // Read-only disclosure for the enable confirmation: how many scheduled
+  // urgent calls are waiting for this target. Enabling releases them at once,
+  // and a placed phone call cannot be taken back.
+  previewEnable: oc
+    .input(PreviewDestinationEnableCommandSchema)
+    .errors(dashboardErrors)
+    .errors(resource)
+    .output(DestinationEnablePreviewOutputSchema),
 
   test: oc
     .input(TestDestinationCommandSchema)

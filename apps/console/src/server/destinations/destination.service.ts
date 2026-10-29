@@ -8,6 +8,7 @@ import {
   JsonObjectSchema,
   PreviewDestinationDraftCommandSchema,
   PreviewDestinationCommandSchema,
+  PreviewDestinationEnableCommandSchema,
   PreviewDestinationUpdateCommandSchema,
   TestDestinationCommandSchema,
   UpdateDestinationCommandSchema,
@@ -16,6 +17,7 @@ import {
   type DeletionImpact,
   type GetDestinationTemplateDraftCommand,
   type DestinationDeleteResult,
+  type DestinationEnablePreview,
   type DestinationListItem,
   type DestinationPreviewResult,
   type DestinationPreviewSample,
@@ -24,6 +26,7 @@ import {
   type JsonObject,
   type PreviewDestinationDraftCommand,
   type PreviewDestinationCommand,
+  type PreviewDestinationEnableCommand,
   type PreviewDestinationUpdateCommand,
   type SourceSummary,
   type TestDestinationCommand,
@@ -146,6 +149,28 @@ export class DestinationService {
     }
 
     return this.store.history.countDeletionImpact({ destinationId: input.id });
+  }
+
+  /**
+   * What starts moving the moment this destination is re-enabled.
+   *
+   * While a destination is disabled the urgent-call worker skips its scheduled
+   * pings, so they pile up. Enabling releases them at once, and a placed phone
+   * call cannot be recalled, so the confirmation discloses the backlog first.
+   */
+  async previewEnableDestination(
+    command: PreviewDestinationEnableCommand,
+  ): Promise<DestinationEnablePreview> {
+    const input = PreviewDestinationEnableCommandSchema.parse(command);
+    const destination = await this.store.destinations.get(input.id);
+
+    if (!destination) {
+      throw new RecordNotFoundError("Destination", input.id);
+    }
+
+    return {
+      scheduledUrgentCallCount: await this.store.oncall.countScheduledForDestination(input.id),
+    };
   }
 
   async deleteDestination(command: DeleteDestinationCommand): Promise<DestinationDeleteResult> {

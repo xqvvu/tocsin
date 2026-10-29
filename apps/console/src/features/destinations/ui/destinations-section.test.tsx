@@ -27,10 +27,15 @@ const noDeletionImpact = async () => ({
 // names production ships instead of a test-only mapping.
 const defaultDestinationCatalog = createDefaultDestinationRegistry().toCatalog();
 
-// The queued-delivery count owns its own query-state test; this suite covers
-// the table and the confirmation copy without a query client.
+// The queued-delivery and scheduled-urgent counts own their own query-state
+// tests; this suite covers the table and the confirmation copy without a query
+// client.
 vi.mock("#/features/operations/ui/queued-deliveries-notice", () => ({
   QueuedDeliveriesNotice: () => null,
+}));
+
+vi.mock("#/features/destinations/ui/destination-scheduled-urgent-notice", () => ({
+  DestinationScheduledUrgentNotice: () => null,
 }));
 
 describe("destinations section table", () => {
@@ -251,6 +256,42 @@ describe("destinations section table", () => {
     const disableDialog = screen.getByRole("alertdialog");
     expect(within(disableDialog).getByText(/No enabled routes currently reference/)).toBeTruthy();
     fireEvent.click(within(disableDialog).getByRole("button", { name: "Disable destination" }));
+    expect(onToggle).toHaveBeenCalledWith(destination);
+  });
+
+  it("confirms before re-enabling a disabled destination", () => {
+    const onToggle = vi.fn<DestinationActionHandler>();
+    // Index 1 is disabled, so the power action opens the enable confirmation.
+    const destination = destinationFixture(1);
+
+    render(
+      <AppIntlProvider locale="en-US">
+        <DestinationsSection
+          destinations={[destination]}
+          destinationCatalog={defaultDestinationCatalog}
+          sources={[]}
+          routes={[]}
+          pending={false}
+          requestDeleteImpact={noDeletionImpact}
+          onTest={vi.fn<DestinationActionHandler>()}
+          onPreview={vi.fn<DestinationActionHandler>()}
+          onEdit={vi.fn<DestinationEditHandler>()}
+          onToggle={onToggle}
+          onDelete={vi.fn<DestinationActionHandler>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Enable destination" }));
+
+    const enableDialog = screen.getByRole("alertdialog");
+    expect(within(enableDialog).getByText("Enable destination?")).toBeTruthy();
+    expect(within(enableDialog).getByText(/resumes delivery for its enabled routes/)).toBeTruthy();
+
+    // Nothing is switched until the operator confirms.
+    expect(onToggle).not.toHaveBeenCalled();
+
+    fireEvent.click(within(enableDialog).getByRole("button", { name: "Enable destination" }));
     expect(onToggle).toHaveBeenCalledWith(destination);
   });
 

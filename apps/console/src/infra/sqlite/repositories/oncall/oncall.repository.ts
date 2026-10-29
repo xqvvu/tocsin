@@ -320,6 +320,18 @@ export class SqliteOncallRepository implements OncallRepository {
     return rows.map((row) => oncallPingFromRow(row));
   }
 
+  async countScheduledForDestination(destinationId: string): Promise<number> {
+    const row = await this.context.db
+      .selectFrom("oncall_pings")
+      .select((eb) => eb.fn.countAll<number>().as("count"))
+      .where("destination_id", "=", destinationId)
+      .where("state", "=", "scheduled")
+      .whereRef("attempt_count", "<", "max_attempts")
+      .executeTakeFirst();
+
+    return row?.count ?? 0;
+  }
+
   async get(id: string): Promise<OncallPing | null> {
     const row = await this.context.db
       .selectFrom("oncall_pings")

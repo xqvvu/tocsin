@@ -61,6 +61,14 @@ export interface OncallRepository {
    */
   markDispatchStarted(input: MarkOncallPingDispatchStartedInput): Promise<OncallPing | null>;
   listForDelivery(deliveryId: string): Promise<OncallPing[]>;
+  /**
+   * Scheduled pings with attempts left that are waiting for this destination.
+   *
+   * `claimNext` only claims pings whose destination is enabled, so a disabled
+   * target accumulates them. The count backs the enable confirmation: once the
+   * switch flips, these calls are placed at once and cannot be recalled.
+   */
+  countScheduledForDestination(destinationId: string): Promise<number>;
   get(id: string): Promise<OncallPing | null>;
 }
 

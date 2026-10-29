@@ -109,6 +109,16 @@ export const DeleteDestinationCommandSchema = z.object({
   id: z.string().min(1),
 });
 
+/**
+ * Read-only disclosure shown before re-enabling a destination.
+ *
+ * The enable itself is a normal update; this command only asks what is waiting
+ * for the target so the confirmation can say so.
+ */
+export const PreviewDestinationEnableCommandSchema = z.object({
+  id: z.string().min(1),
+});
+
 export const ExportConfigurationCommandSchema = z
   .object({
     // Still only `false`, and still deliberately not a boolean: `true` must be
@@ -217,6 +227,7 @@ export type PreviewDestinationCommand = z.input<typeof PreviewDestinationCommand
 export type PreviewDestinationDraftCommand = z.input<typeof PreviewDestinationDraftCommandSchema>;
 export type PreviewDestinationUpdateCommand = z.input<typeof PreviewDestinationUpdateCommandSchema>;
 export type DeleteDestinationCommand = z.input<typeof DeleteDestinationCommandSchema>;
+export type PreviewDestinationEnableCommand = z.input<typeof PreviewDestinationEnableCommandSchema>;
 export type ExportConfigurationCommand = z.input<typeof ExportConfigurationCommandSchema>;
 export type ImportConfigurationCommand = z.input<typeof ImportConfigurationCommandSchema>;
 export type ImportConfigurationJsonCommand = z.input<typeof ImportConfigurationJsonCommandSchema>;
