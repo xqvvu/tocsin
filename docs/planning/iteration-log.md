@@ -2,6 +2,71 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 166 轮）
+
+- 时间：2026-10-29 07:48 CST 起。
+- 基线：`origin/main` @ `81d8b20a`；启动时 1 个遗留 open PR（#685，docs-site 车道），main CI 仍在跑。
+- 类型：**需求切片 + 发布**（非 full-audit）。最近全量审计为第 160 轮 **2026-10-29 02:05 CST**
+  （距本轮启动 5h43m < 6 小时）；backlog 有 ≥27 分候选（REQ-337 28、REQ-338 28、REQ-329 28、REQ-333 27），
+  且存在遗留 open PR，按第 1.5 步继续交付，不重跑全量审计。
+- 车道：**本轮未 spawn `requirements` 与 `ui-triage`**。第 165 轮 07:00 结束，距本轮启动仅 48 分钟，
+  仓库代码除 #684 外零变化；第 165 轮新增的 5 条 requirements 候选尚未消费；`last_ui_review_at`
+  = 2026-10-29 07:00（48 分钟前），远小于 48 小时阈值，`ui-triage` 必然判 `defer`。
+  按第 129 轮以来的经验（相邻两轮间隔很近时不重复跑车道）直接沿用既有基线选题。
+  下一非必跑车道仍为 **`docs-drift`**（第 165、166 轮均未跑，已连续积压两轮）。
+- 发布评估由 3 个窄 brief 子代理（发布经理 / 阻断审计 / 运维回滚）在约 30 秒内返回。
+
+### 专家发现
+
+**docs-drift（窄 brief，12 分钟时间盒，只报已核实项）**
+
+- `apps/docs/operations/deliveries.md:174` 断言「预览读取失败时确认框不显示加急提示」——
+  本轮 #689 已改变该行为（新增 `previewPending` / `previewUnavailable` 两态文案），
+  文档由本条改动自身变旧。**本轮已修正**。
+- `docs/prd/source-intake-rehearsal.md:41` 仍把「不做抑制预测」列为非目标，而该项已由
+  `docs/prd/source-rehearsal-delivery-verdict.md`（REQ-325，第 163 轮）交付：
+  预演返回 `verdict` / `suppression` / `delivery.paused`（`packages/core/src/source/source-rehearsal.ts:76,91,127-129,144`、
+  `server/sources/source-rehearsal.service.ts:215-227`）。**本轮已修正**（非目标标注为已被扩展，输出清单补该字段）。
+- 已核实无问题 12 项，含：E2E 已接入 CI 且 spec 仍缺历史过滤与失败重试、migration plan 仍为 0001–0005、
+  provider 侧无 fixtures 与 contributor guide、`xqvvu/vane` 仅剩 ACR 镜像坐标与历史日志、
+  重试 PRD 与 `DeliveryRetryConfirmContent`/`previewDeliveryRetry` 一致。
+
+### 本轮交付
+
+- **#685（docs-site 遗留 PR）**：按第 1 步「有遗留 open PR 优先推进到合并或关闭」处理。
+  CI/E2E 已绿、mergeable CLEAN、纯 `apps/docs` 改动，`gh pr merge --rebase --delete-branch` 合入（`e03f843b`）。
+- **PR #689** `fix(console): say when the retry call preview is loading or unavailable`（UI-111 + UI-112 部分）
+  - 问题：重试确认框只在加急预览成功返回后渲染提示，pending 与失败都渲染空 —— 与「不会有人接到电话」
+    视觉完全一致（`features/deliveries/ui/delivery-retry-confirm.tsx`），而这条确认框正位于不可撤销外呼之前。
+  - 改动：新增 `RetryPreviewStatus`（pending / 失败两态弱化文案），重试行为不变；
+    中英文案 `deliveries.retry.confirm.previewPending` / `previewUnavailable`。
+  - 回归：新增 `delivery-retry-confirm.test.tsx` 4 例（pending 占位、失败文案且确认仍可点、
+    解析出人数时提示替换占位、解析为 0 人时保持安静）。
+  - 验证：`vp check` 0 error（35 既有 warning）；`vp run -r test` 4/4 包通过（console 228 文件 / 1324 测试）；
+    `vp run -r build` 通过；PR CI 与 E2E 双绿后 rebase 合并（`3a1add2b`、`9c1523ed`→`0bd80396`）。
+  - 未做浏览器实测：本轮把时间预算放在发布上；该改动只影响弹层内一行弱化文案，
+    且有 4 条状态级组件测试覆盖，浏览器复核留待下一轮 UI 评审一并做（已记入 backlog UI-112 备注）。
+
+### 发布
+
+- 版本 `0.1.0-beta.133`（PR #690 `chore(release): v0.1.0-beta.133`，rebase 合并 `a0302e9a`）。
+- Tag：`v0.1.0-beta.133`（annotated，指向 `a0302e9a`，该 commit 的 CI 与 E2E 均 success）。
+- GitHub Release：已创建（prerelease，body 非空，含镜像、平台、主要变化、升级与回滚步骤、已知空白）。
+- 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.133`（`linux/amd64` + `linux/arm64`）；
+  回滚镜像 `0.1.0-beta.132`。
+- 发布依据：三位专家一致 —— 发布经理（自 beta.132 起 3 项用户可见：#684、#689、#685 文档）、
+  阻断审计（无 open PR、无 migration、无依赖变更、main CI 绿）、运维回滚（低风险、schema 未变、回滚只换镜像）。
+- 无 migration、无依赖升级、无环境变量或配置格式变化。
+
+### 下一轮优先项
+
+1. **REQ-337（28）** 重试确认补充「当前静默规则会再次压住这次投递」预检（与 UI-111 同组件，衔接自然）。
+2. **REQ-338（28）** 通知目标停用/删除前披露受影响告警源。
+3. **REQ-329（28）** 重新启用通知目标前披露排队中的加急呼叫。
+4. **UI-113（24）** 预演渲染失败时仍显示「会送达」；**UI-114（20）** 390px 路由判定表格裁切。
+5. **ARCH-78/80/81** 三条 AUTO_FIX 可合并成一个小 PR。
+6. 下一非必跑车道：**`docs-drift`**（连续两轮未跑）。
+
 ## 2026-10-29（第 165 轮）
 
 - 时间：2026-10-29 06:42 CST 起。

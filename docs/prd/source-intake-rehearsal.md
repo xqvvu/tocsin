@@ -29,7 +29,9 @@
   （不经过 `WebhookIntakeService`，避免写库与解析失败落库）→ 读取当前路由并调用
   `evaluateRouteMatch` → 对命中路由的目标做纯渲染预览。
 - 输出包含：规范化事件与 provider metadata、全部路由的 `checks`（含 expected/actual）、
-  每个命中目标的渲染载荷（脱敏后的 JSON 文本）。
+  每个命中目标的渲染载荷（脱敏后的 JSON 文本）；后续追加的真实投递判定 `verdict`、
+  命中的静默规则 `suppression`（含逐条件检查）与顶层 `delivery`（全局暂停状态）见
+  `docs/prd/source-rehearsal-delivery-verdict.md`。
 - Sources 页工具栏新增「接入预演」对话框：选择告警源、粘贴 JSON 请求体、运行预演；
   解析失败、无路由、无命中目标都有独立空态；停用的告警源显示「真实 Webhook 会被拒绝」。
 - 请求体上限 256 KiB（`SOURCE_REHEARSAL_PAYLOAD_MAX_CHARS`）。
@@ -38,7 +40,9 @@
 
 - 不发送真实通知，不调用适配器 transport。
 - 不写入 `events` / `deliveries` / `attempts`，不产生 job，不触发 worker。
-- 不做抑制、去重窗口、投递缺口的预测或解释。
+- ~~不做抑制、去重窗口、投递缺口的预测或解释。~~ 抑制部分已由
+  `docs/prd/source-rehearsal-delivery-verdict.md` 扩展（预演现在返回每个目标的投递判定与命中的
+  静默规则）；去重窗口与投递缺口仍不预测。
 - 不保存预演历史，不提供样例载荷库，不按历史事件重放。
 - 无 schema 变更、无迁移。
 
