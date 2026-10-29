@@ -786,6 +786,7 @@
   "events.detail.routeGapsRoute": "路由",
   "events.detail.routeGapsSummary": "{count} 个命中但未投递",
   "events.detail.routeGapsTitle": "未投递的原因",
+  "events.detail.routeDeliveryOutcome.filterDeliveries": "按该路由筛选投递",
   "events.detail.routeDeliveryOutcome.none": "无投递",
   "events.detail.routeDeliveryOutcome.notMatched": "未命中",
   "events.detail.routeHeaders.checks": "检查",
