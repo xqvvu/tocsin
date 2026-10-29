@@ -88,6 +88,26 @@
     `vp run -r build` 2/2 通过；PR CI 双绿（160s）。
 - 工作树：实现全程在会话工作树 `compassionate-engelbart-ae8c6e`；`agent-iteration` 只放锁。
 
+### 发布
+
+- 三位专家一致 **APPROVE**：发布经理（自 beta.137 起 1 笔用户可见变更 `438c0995`）、阻断审计
+  （`6ddef46c` 的 CI 与 E2E 双绿、无阻断 open PR、迁移/依赖/环境/Compose 差异全空、3 条
+  `blocked-autonomous` 均为历史非阻断项）、运维回滚（零配置差异，回滚只换镜像）。
+- 版本 `0.1.0-beta.138`（PR #714 `chore(release): v0.1.0-beta.138`，rebase 合并 `6ddef46c`）。
+- Tag `v0.1.0-beta.138`（annotated，指向 `6ddef46c`）。
+- GitHub Release：已创建（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.138`（linux/amd64 + linux/arm64），
+  index digest `sha256:06e0ad59f3dc26bbdf8d4ccd8e01aea1885f42116fd0773cdbf6d05caac31830`；
+  回滚镜像 `0.1.0-beta.137`，无数据库操作。
+
+### 收尾清理
+
+- 回收注册工作树 `pensive-vaughan-8f2724`（干净、#707 已合并）；`youthful-murdock-b65fc6`
+  仍有真实未提交改动（destinations/oncall），跳过并保留。
+- `.claude/worktrees` 2.1G → 2.1G：回收项体积小，主要占用来自本会话与 docs-site 车道的
+  `node_modules`；本会话工作树的 `node_modules` 与构建产物在收尾时删除。
+- `agent-iteration` 锁目录与专用工作树在工作树回收后删除。
+
 ### EXPERT_PANEL 决策
 
 - 本轮无 EXPERT_PANEL 事项：security-exposure 唯一发现是 LOW 防御纵深缺口，属 AUTO_FIX，
