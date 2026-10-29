@@ -527,7 +527,12 @@ describe("operations service event fingerprint filter", () => {
 
   it("previews the urgent calls a successful retry could place", async () => {
     const store = await createStore();
-    const service = new OperationsService({ store, oncall: new OncallService({ store }) });
+    const service = new OperationsService({
+      store,
+      oncall: new OncallService({ store }),
+      // Pin the clock: the suppression half of the preview is time-sensitive.
+      now: () => new Date(now),
+    });
 
     await store.sources.create({
       id: "source-1",
@@ -591,6 +596,13 @@ describe("operations service event fingerprint filter", () => {
     // would place once the resend succeeds.
     await expect(service.previewDeliveryRetry(delivery.id)).resolves.toEqual({
       deliveryId: delivery.id,
+      suppression: {
+        status: "none",
+        suppressionId: null,
+        suppressionName: null,
+        suppressionKind: null,
+        endsAt: null,
+      },
       urgentPaging: {
         destinations: [
           {
@@ -609,6 +621,36 @@ describe("operations service event fingerprint filter", () => {
     await store.destinations.setEnabled("destination-1", false);
     await expect(service.previewDeliveryRetry(delivery.id)).resolves.toMatchObject({
       urgentPaging: { destinations: [], deliveryCount: 0, receiverCount: 0 },
+    });
+
+    // A rule in force swallows the retry before any send, so the projection
+    // must name the rule and stop advertising calls.
+    await store.destinations.setEnabled("destination-1", true);
+    const suppression = await store.suppressions.create({
+      name: "Checkout maintenance",
+      kind: "maintenance_window",
+      startsAt: "2026-06-09T07:00:00.000Z",
+      endsAt: "2026-06-09T09:00:00.000Z",
+      matcher: { fingerprints: ["checkout:unavailable"] },
+    });
+
+    await expect(service.previewDeliveryRetry(delivery.id)).resolves.toEqual({
+      deliveryId: delivery.id,
+      suppression: {
+        status: "matched",
+        suppressionId: suppression.id,
+        suppressionName: "Checkout maintenance",
+        suppressionKind: "maintenance_window",
+        endsAt: "2026-06-09T09:00:00.000Z",
+      },
+      urgentPaging: { destinations: [], deliveryCount: 0, receiverCount: 0 },
+    });
+
+    // Removing the rule restores the ordinary resend projection.
+    await store.suppressions.delete(suppression.id);
+    await expect(service.previewDeliveryRetry(delivery.id)).resolves.toMatchObject({
+      suppression: { status: "none" },
+      urgentPaging: { receiverCount: 2 },
     });
 
     // A deleted delivery is an explicit null, like the replay previews.

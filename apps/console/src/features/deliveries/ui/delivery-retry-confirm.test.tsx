@@ -5,7 +5,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import type { DeliveryRetryPreview, UrgentPagingImpact } from "@tocsin/core";
+import type {
+  DeliveryRetryPreview,
+  DeliveryRetrySuppression,
+  UrgentPagingImpact,
+} from "@tocsin/core";
 
 import { DeliveryRetryConfirmContent } from "#/features/deliveries/ui/delivery-retry-confirm";
 import { AppIntlProvider } from "#/i18n/provider";
@@ -55,8 +59,19 @@ const impact: UrgentPagingImpact = {
   ],
 };
 
-function previewWith(value: UrgentPagingImpact): DeliveryRetryPreview {
-  return { deliveryId: "delivery-1", urgentPaging: value };
+const noSuppression: DeliveryRetrySuppression = {
+  status: "none",
+  suppressionId: null,
+  suppressionName: null,
+  suppressionKind: null,
+  endsAt: null,
+};
+
+function previewWith(
+  value: UrgentPagingImpact,
+  suppression: DeliveryRetrySuppression = noSuppression,
+): DeliveryRetryPreview {
+  return { deliveryId: "delivery-1", urgentPaging: value, suppression };
 }
 
 function renderConfirm() {
@@ -119,17 +134,69 @@ describe("delivery retry confirmation", () => {
 
     expect(note.textContent).toContain("A successful retry may call 2 receivers");
     expect(note.textContent).toContain("Primary on-call ×2");
-    expect(screen.queryByRole("status")).toBeNull();
+    // One live region holds every state, so the resolved warning replaces the
+    // loading line instead of being added next to it.
+    expect(screen.getByRole("status").textContent).not.toContain("Checking whether");
   });
 
-  it("stays quiet when the preview resolves with no calls", async () => {
+  it("says there are no calls once the preview resolves without any", async () => {
     testState.preview = async () =>
       previewWith({ deliveryCount: 1, receiverCount: 0, destinations: [] });
     renderConfirm();
 
-    // The resolved query must replace the loading line rather than add to it.
-    await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
+    // Rendering nothing here read exactly like "never checked": the loading
+    // line vanished and left the dialog silent.
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toContain(
+        "This retry will not place urgent calls",
+      ),
+    );
 
     expect(screen.queryByRole("note")).toBeNull();
+  });
+
+  it("names the silence rule that will swallow the retry instead of its calls", async () => {
+    testState.preview = async () =>
+      previewWith(
+        // The server empties the call projection when a rule matches; the
+        // dialog must not fall back to "no calls" for a different reason.
+        { deliveryCount: 0, receiverCount: 0, destinations: [] },
+        {
+          status: "matched",
+          suppressionId: "suppression-1",
+          suppressionName: "Checkout maintenance",
+          suppressionKind: "maintenance_window",
+          endsAt: "2026-10-29T04:00:00.000Z",
+        },
+      );
+    renderConfirm();
+
+    const note = await screen.findByRole("note");
+
+    expect(note.textContent).toContain("suppressed by rule “Checkout maintenance”");
+    expect(note.textContent).toContain("Maintenance window until");
+    expect(note.textContent).toContain("may place urgent calls");
+    expect(screen.getByRole("status").textContent).not.toContain(
+      "This retry will not place urgent calls",
+    );
+  });
+
+  it("admits it could not check suppression when the event record is gone", async () => {
+    testState.preview = async () =>
+      previewWith(
+        { deliveryCount: 0, receiverCount: 0, destinations: [] },
+        {
+          status: "unavailable",
+          suppressionId: null,
+          suppressionName: null,
+          suppressionKind: null,
+          endsAt: null,
+        },
+      );
+    renderConfirm();
+
+    await waitFor(() =>
+      expect(screen.getByRole("status").textContent).toContain("suppression cannot be checked"),
+    );
   });
 });

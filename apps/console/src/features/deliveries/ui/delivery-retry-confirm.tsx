@@ -8,8 +8,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "#/components/ui/alert-dialog";
+import { DeliveryRetryRiskStatus } from "#/features/deliveries/ui/delivery-retry-risk-status";
 import { deliveryRetryPreviewQueryOptions } from "#/features/operations/api/operations.queries";
-import { UrgentPagingNotice } from "#/features/operations/ui/urgent-paging-notice";
 import { useTranslations } from "#/i18n/use-i18n";
 
 /**
@@ -22,9 +22,9 @@ import { useTranslations } from "#/i18n/use-i18n";
  * the operator commits to a resend that has no undo.
  *
  * Like the queued-deliveries count, the preview is advisory: it never blocks
- * the retry. It is not silent though — a pending or failed read renders a
- * muted line rather than nothing, because an empty dialog read exactly like
- * "nobody will be called" on the one confirmation that precedes a phone page.
+ * the retry. It is not silent though — every state renders in one slot, because
+ * an empty one read exactly like "nobody will be called" on the one
+ * confirmation that precedes a phone page.
  */
 export function DeliveryRetryConfirmContent({
   deliveryId,
@@ -55,13 +55,11 @@ export function DeliveryRetryConfirmContent({
             max: maxAttempts,
           })}
         </AlertDialogDescription>
-        {preview.isPending ? (
-          <RetryPreviewStatus text={t("deliveries.retry.confirm.previewPending")} />
-        ) : preview.isError ? (
-          <RetryPreviewStatus text={t("deliveries.retry.confirm.previewUnavailable")} />
-        ) : preview.data ? (
-          <UrgentPagingNotice impact={preview.data.urgentPaging} action="retry" />
-        ) : null}
+        <DeliveryRetryRiskStatus
+          isPending={preview.isPending}
+          isError={preview.isError}
+          preview={preview.data}
+        />
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel disabled={pending}>{t("common.actions.cancel")}</AlertDialogCancel>
@@ -70,20 +68,5 @@ export function DeliveryRetryConfirmContent({
         </AlertDialogAction>
       </AlertDialogFooter>
     </>
-  );
-}
-
-/**
- * The preview is still loading, or it failed.
- *
- * Both states used to render nothing at all, which read exactly like the
- * resolved "no urgent calls" answer. The copy stays deliberately weaker than
- * the real warning: a placeholder must never look like a call-free verdict.
- */
-function RetryPreviewStatus({ text }: { text: string }) {
-  return (
-    <p role="status" className="text-muted-foreground text-[11px] leading-5">
-      {text}
-    </p>
   );
 }

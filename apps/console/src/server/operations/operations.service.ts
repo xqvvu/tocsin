@@ -4,12 +4,17 @@ import type {
   DeliveryJob,
   DeliveryPingsResult,
   DeliveryRetryPreview,
+  DeliveryRetrySuppression,
+  DeliveryRetrySuppressionStatus,
   EventFingerprintContext,
+  EventRecord,
   OperationTimeRange,
   UrgentPagingImpact,
 } from "@tocsin/core";
+import { selectSuppressionForDelivery } from "@tocsin/core";
 import { feishuUrgentPagingReceivers } from "@tocsin/destinations/feishu";
 
+import type { DestinationRuntimeConfig } from "#/infra/sqlite/repositories/destination/destination.interface";
 import type {
   ListOperationsInput,
   OperationsList,
@@ -117,15 +122,17 @@ export class OperationsService {
   }
 
   /**
-   * Who the automatic paging gate would ring if this failed delivery is
-   * retried.
+   * What the worker would do with this failed delivery if it were retried.
    *
-   * A retry only re-queues the job; the phone call happens later, when the
-   * worker sends it successfully. The answer is therefore an upper bound, and
-   * it mirrors the claim predicate: a delivery whose destination or route is
-   * disabled is never picked up, so it cannot page. Suppressions are resolved
-   * at claim time and are not part of this projection, which errs toward
-   * warning the operator rather than staying silent.
+   * A retry only re-queues the job. Everything that decides the outcome — the
+   * claim's enabled checks, the suppression re-evaluation, the paging gate —
+   * happens after the operator confirms, so the preview answers both halves of
+   * the question: "will this be swallowed?" and "who could be called?".
+   *
+   * The two halves are not independent. A matched suppression is applied at
+   * claim time, before any send, so the retry ends terminal and no phone rings;
+   * advertising calls there would be as wrong as hiding them everywhere else.
+   * Both halves stay advisory and never block the retry.
    */
   async previewDeliveryRetry(deliveryId: string): Promise<DeliveryRetryPreview | null> {
     const job = await this.store.deliveries.getJob(deliveryId);
@@ -134,45 +141,76 @@ export class OperationsService {
       return null;
     }
 
-    return {
-      deliveryId: job.id,
-      urgentPaging: await this.retryUrgentPaging(job),
-    };
-  }
-
-  private async retryUrgentPaging(job: DeliveryJob): Promise<UrgentPagingImpact> {
+    const now = this.now().toISOString();
     const [event, destination, route] = await Promise.all([
       this.store.intake.get(job.eventId),
       this.store.destinations.get(job.destinationId),
       job.routeId ? this.store.routes.get(job.routeId) : Promise.resolve(null),
     ]);
 
+    const suppression = await this.retrySuppression(job, event, now);
+
     // `claimNext` skips a disabled destination and a disabled route, so a
     // retry that can never be claimed must not advertise a phone call.
-    if (!event || !destination || !destination.enabled || (job.routeId && !route?.enabled)) {
-      return emptyUrgentPaging();
+    const claimable =
+      event !== null &&
+      destination !== null &&
+      destination.enabled &&
+      (!job.routeId || route?.enabled === true);
+
+    return {
+      deliveryId: job.id,
+      suppression,
+      urgentPaging:
+        claimable && suppression.status !== "matched"
+          ? retryUrgentPaging(event, destination)
+          : emptyUrgentPaging(),
+    };
+  }
+
+  /**
+   * The suppression the claim step would apply to this retry.
+   *
+   * Uses the same selection as `claimNext` so the dialog and the worker cannot
+   * disagree about which rule wins. Only rules active at `now` count; the claim
+   * re-reads the clock, so this projects "what happens if it is picked up now"
+   * rather than promising the future.
+   */
+  private async retrySuppression(
+    job: DeliveryJob,
+    event: EventRecord | null,
+    now: string,
+  ): Promise<DeliveryRetrySuppression> {
+    if (!event) {
+      return emptySuppression("unavailable");
     }
 
-    const receivers = feishuUrgentPagingReceivers({
-      config: destination.config,
-      status: event.normalized.status,
-      severity: event.normalized.severity,
-    });
+    const suppressions = await this.store.suppressions.list();
+    const match = selectSuppressionForDelivery(
+      suppressions,
+      {
+        sourceId: event.sourceId,
+        destinationId: job.destinationId,
+        event: event.normalized,
+      },
+      now,
+    );
+    // The selection returns the winning rule by id; the row is kept so the
+    // dialog can say when the window closes, which the match result omits.
+    const rule = match
+      ? suppressions.find((candidate) => candidate.id === match.suppressionId)
+      : null;
 
-    if (receivers.length === 0) {
-      return emptyUrgentPaging();
+    if (!match || !rule) {
+      return emptySuppression("none");
     }
 
     return {
-      destinations: [
-        {
-          destinationId: destination.id,
-          destinationName: destination.name,
-          receiverCount: receivers.length,
-        },
-      ],
-      deliveryCount: 1,
-      receiverCount: receivers.length,
+      status: "matched",
+      suppressionId: rule.id,
+      suppressionName: rule.name,
+      suppressionKind: rule.kind,
+      endsAt: rule.endsAt,
     };
   }
 
@@ -241,6 +279,51 @@ function resolveRangeAnchor(anchorInput: string | undefined, now: Date): Date {
   const anchor = new Date(parsed);
 
   return anchor.getTime() > now.getTime() ? now : anchor;
+}
+
+/**
+ * Who the paging gate would ring if this one delivery were sent successfully.
+ *
+ * Pure projection over already-loaded rows: the caller has established that
+ * the delivery is claimable, so this only asks whether the destination's urgent
+ * config and the alert's severity clear the automatic paging gate.
+ */
+function retryUrgentPaging(
+  event: EventRecord,
+  destination: DestinationRuntimeConfig,
+): UrgentPagingImpact {
+  const receivers = feishuUrgentPagingReceivers({
+    config: destination.config,
+    status: event.normalized.status,
+    severity: event.normalized.severity,
+  });
+
+  if (receivers.length === 0) {
+    return emptyUrgentPaging();
+  }
+
+  return {
+    destinations: [
+      {
+        destinationId: destination.id,
+        destinationName: destination.name,
+        receiverCount: receivers.length,
+      },
+    ],
+    deliveryCount: 1,
+    receiverCount: receivers.length,
+  };
+}
+
+/** A fresh "no rule decided" projection; never shared between reads. */
+function emptySuppression(status: DeliveryRetrySuppressionStatus): DeliveryRetrySuppression {
+  return {
+    status,
+    suppressionId: null,
+    suppressionName: null,
+    suppressionKind: null,
+    endsAt: null,
+  };
 }
 
 /** A fresh "nobody would be called" projection; never shared between reads. */

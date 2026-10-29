@@ -28,6 +28,7 @@ import {
   RouteMatchGapSchema,
   RouteMatchResultSchema,
   SourceSummarySchema,
+  SuppressionKindSchema,
 } from "@tocsin/core";
 import * as z from "zod";
 
@@ -214,9 +215,18 @@ export const UrgentPagingImpactSchema = z.object({
   receiverCount: z.number().int().min(0),
 });
 
+export const DeliveryRetrySuppressionSchema = z.object({
+  status: z.enum(["matched", "none", "unavailable"]),
+  suppressionId: z.string().min(1).nullable(),
+  suppressionName: z.string().min(1).nullable(),
+  suppressionKind: SuppressionKindSchema.nullable(),
+  endsAt: IsoDateTimeSchema.nullable(),
+});
+
 export const DeliveryRetryPreviewSchema = z.object({
   deliveryId: z.string().min(1),
   urgentPaging: UrgentPagingImpactSchema,
+  suppression: DeliveryRetrySuppressionSchema,
 });
 
 export const EventReplayPreviewSchema = z.object({
