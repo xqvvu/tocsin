@@ -2,6 +2,48 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 174 轮）
+
+- 时间：2026-10-29 18:26 CST 起。
+- 基线：`origin/main` @ `b122f0f6`；启动时 0 个 open PR，main CI 双绿。
+- 类型：**需求切片**（非 full-audit）。第 171 轮 15:37 CST 的全量审计距今 2h49m < 6 小时，
+  按第 1.5 步闸门不重跑专家车道，直接续做 backlog 最高分未交付项 REQ-352。
+- **全量审计时间戳保持 2026-10-29 15:37 CST**（本轮未做全量审计）。
+- 车道轮转位置：不前进，下一个非必跑车道仍为 **docs-drift**。
+- `ui-triage`：本轮未运行（紧邻上一轮全量审计，UI 路径无新合并）。
+- `last_ui_review_at`：保持 **2026-10-29 15:55 CST**。
+- 环境：会话工作树 `node_modules` 半删残留（根目录仅 3 项），删除全部 workspace
+  `node_modules` 后 `vp install --frozen-lockfile` 恢复。
+
+### 本轮交付
+
+- **PR #725** `feat(sources): predict the dedupe window in intake rehearsal`（REQ-352，27 分）
+  - `@tocsin/core`：`SourceRehearsalRender.dedupe`（`not_applicable` / `would_deliver` /
+    `would_dedupe` / `partially_deduped`，含窗口长度与起点、命中对数、首发事件与路由）；
+    `SourceRehearsalVerdict` 增加 `deduped`，排在判定顺序最前以对齐入队顺序。
+  - 投递仓储新增只读 `findDedupeKeys`，复用入队窗口谓词（`created_at >= windowStartsAt`），
+    不占用/刷新键、不清理。
+  - 预演服务按 5 分钟默认窗口（可注入）查询一次并按目标投影；无幂等键时不查询。
+  - UI 每个目标增加「去重判定」行，命中窗口时展示命中数/总数、窗口分钟数、最早命中路由与
+    「首次由事件」链接。
+  - 文档：新增 `docs/prd/source-rehearsal-dedupe-window.md`，更新父 PRD、判定 PRD 与
+    `apps/docs/guide/sources.md`（判定优先级、边界与常见用法）。
+  - 验证：`vp check` 0 error（35 warning 与 main 一致）；`vp run -r test` 4/4
+    （console 1374）；`vp run -r build` 2/2。新增仓储/服务/UI 测试共 8 例。
+  - 自审：`code-review`（low）0 findings。
+
+### 未验证
+
+- 未做真实浏览器验证（本机无运行中的 console dev 实例）；UI 由组件测试覆盖，
+  「去重判定」行沿用目标卡片既有的边框、字号与密度体系。
+
+### 下一轮优先项
+
+1. REQ-351（27，通用 Webhook 成功判定）/ REQ-339 / REQ-340 择一。
+2. docs-drift（下一个轮转车道），优先复核 DOC-114…DOC-121。
+3. UI-122：390px 下目标列表右侧列被裁切（需浏览器复验）。
+4. REL-16 / REL-23：main CI required checks 交 EXPERT_PANEL。
+
 ## 2026-10-29（第 173 轮）
 
 - 时间：2026-10-29 17:26 CST 起。
