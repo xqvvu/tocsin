@@ -2,6 +2,93 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 168 轮）
+
+- 时间：2026-10-29 09:26 CST 起。
+- 基线：`origin/main` @ `449e1019`；启动时 0 个 open PR，main CI 双绿。
+- 类型：**需求切片 + UI 评审（浏览器实测）**（非 full-audit）。最近全量审计是第 167 轮
+  2026-10-29 08:37 CST，距本轮 49 分钟；但 backlog 有 20+ 条 ≥27 分 candidate，按第 1.5 步继续。
+- 车道：`requirements`（必跑）+ `ui-triage`（必跑，判 `review_now`）+ `security-exposure`（轮转），
+  并发 3；triage 判定后追加 `ui-review`（浏览器）。下一个非必跑车道：`docs-drift`。
+- 环境：会话工作树 `node_modules` 处于已知半删残留态（根目录 659M、无 workspace 链接），
+  按既有结论删除全部 `node_modules` 后 `vp install --frozen-lockfile` 恢复
+  （`.pnpm` 846 包 / `apps/console/node_modules` 42 项）。
+- **`last_ui_review_at` = 2026-10-29 10:05 CST（浏览器实测成功：1280 与 390×844 两档）**。
+
+### 专家发现
+
+**requirements**
+
+- 本轮未在预算内返回（连续运行 40+ 分钟无结果），下轮重跑该车道；不阻塞本轮交付。
+
+**ui-triage**
+
+- 决策 **`review_now`**，范围收窄为「验证已知项 + 新弹层」，不做新一轮发现扫描。理由：
+  上一次评审（第 167 轮 08:47）明确是「代码审计；浏览器验证失败」，`:87` 写明「下次必须真的用浏览器」；
+  #689/#693 两次 UI 合并都没有浏览器实测；backlog 有 66 条 UI-* candidate（瓶颈是交付不是发现）。
+
+**ui-review（浏览器实测，`http://localhost:6190` 隔离临时库，390×844 设备模拟）**
+
+- 重试确认框五态：pending 164px → 无电话 171px → 加急 261px → 静默 289px；旧 164→301 不再复现，
+  但静默态仍有约 125px 重排（UI-122）。390px 无横向溢出。单 `[role=status]`，但
+  `aria-atomic="false"` 且静默态 1→3 段 `<p>`，可能逐段播报（UI-121，
+  `delivery-retry-risk-status.tsx:36`、`delivery-retry-suppression-notice.tsx:42-49`）。
+- 静默与加急互斥、层级清晰，390px 可读（PASS）。
+- 预演对话框：390px 下结果顶部 y=343 仍在视口内，**UI-119 的「落在折叠线以下」被证伪**；
+  成立的是弹窗内无任何 live region，完成状态完全不播报 → 新增 UI-120
+  （`source-rehearsal-dialog.tsx:127-169`）。
+- 预演结果 390px：普通名称完整显示，仅超长名称退化为 `title`，UI-117 影响下调
+  （`source-rehearsal-result.tsx:145,172,232`）。
+- 空态：通知目标是四页中唯一缺「右侧保留表单」引导且 padding/边框不同的页面，UI-118 确认
+  （`destinations-empty-state.tsx:16`）。
+- 截图：`/tmp/tocsin-ui-shots-20261029/`（未入库）；dev server 已停止，临时库已删除。
+- 高影响异常 → 新增 **FIX-18**：隔离实例里用 UI 出示的源 Token POST webhook 持续 401，
+  而 `sha256(token)` 与库中 `token_hash` 逐位相同（`intake.service.ts:76`）。同一流程由
+  `apps/console/e2e/alert-flow.spec.ts:135-141` 覆盖且 CI 双绿，可能是评审实例取 token 方式有误；
+  下轮先用集成测试复核，**不得按未确认的误报改鉴权**。
+
+**security-exposure**
+
+- `SEC-1` 已修复（shipped #107）：`appSecret/clientSecret/apiSecret/privateKey/X-Auth-Token` 全部命中，
+  逐键测试存在（`packages/core/src/redaction.ts:13-88,292-297`、`redaction.test.ts:93-152`）。
+- 新增 **SEC-44**（LOW）：值形态脱敏不覆盖高置信前缀凭据 `ghp_` / `sk-` / `AKIA` / 裸 JWT，
+  `redactText` 唯一前缀规则是 Slack `xox`（`redaction.ts:181-217`，`:196`）；会入库、进事件详情，
+  并经 `redactNormalizedEvent` 进入出站模板。修法需保持 `disk-space-low`、`AKIAEXAMPLE`、
+  `Basic authentication` 不变 → 交 EXPERT_PANEL。
+- 复核仍成立：SEC-33/40（`api_secret_key` 等实测 false，`redaction.ts:87-88,292-297`）、
+  SEC-38/41（`X-Functions-Key`/`X-Auth-Key`，`:310-314`）、SEC-9（`request-context.ts:94` 保留原始
+  header，但 `verifyWebhookAuthentication` 需要原值）、SEC-36（fingerprint 原样，
+  `history.repository.ts:350`）、SEC-37/43（草稿 URL 原样，`destination.helpers.ts:123,136`）、
+  SEC-26（列表投影仍含 webhook 路径凭据，`destination.helpers.ts:66-70,289-303`）。
+- 无新 DTO 泄漏；import protection 无生产代码漏标；参数化脱敏测试已闭环；旧仓库名零残留。
+
+### 本轮交付
+
+- **PR #697** `feat(console): disclose affected alert sources before disabling a destination`
+  （REQ-338，rebase 合并 `20169e9d`）
+  - 问题：停用/删除确认框只给路由数，而路由聚合告警源且 `sourceIds=[]` 表示全部来源，
+    操作者无法换算成「哪些告警源会失去这条通知路径」。
+  - 改动：纯函数 `destinationSourceImpact`（只算已启用路由 + 已启用来源，catch-all 置
+    `coversAllSources`）+ 停用/删除共用 `DestinationSourceImpactNotice`（0 个不渲染，>5 个折叠）+
+    Destinations 页面与 loader 载入 `sourcesQueryOptions()`；中英各 5 条文案；PRD
+    `docs/prd/destination-source-impact.md`。
+  - 无 schema、无迁移、无新依赖、无 oRPC 契约变更。
+  - 验证：`vp check` 0 error（35 既有 warning）；`vp run -r test` 4/4 包通过
+    （console 230 文件 / 1337 测试）；`vp run -r build` 通过；PR CI 双绿
+    （check · test · build / playwright · chromium）。
+- 工作树：实现全在会话工作树 `suspicious-chandrasekhar-9ec5af`；`agent-iteration` 只放锁与记忆读取。
+
+### 发布
+
+（见下方发布评估）
+
+### 下一轮优先项
+
+1. FIX-18：先用集成测试复核源 Token webhook 401，确认后再修。
+2. SEC-44 交 EXPERT_PANEL（值形态前缀凭据 + 保持现有 oracle）。
+3. UI-120 + UI-121 可打包成一个 `fix(a11y)` 小切片（都要配组件测试）。
+4. REQ-329（28）/ REQ-324（28）/ REQ-333（27）续做；requirements 车道重跑。
+
 ## 2026-10-29（第 167 轮）
 
 - 时间：2026-10-29 08:37 CST 起。
