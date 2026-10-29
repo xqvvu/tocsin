@@ -2,6 +2,77 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 167 轮）
+
+- 时间：2026-10-29 08:37 CST 起。
+- 基线：`origin/main` @ `082b60d2`；启动时 1 个遗留 open PR（#691，docs-site 车道），已 rebase 合并（`444ea4af`）。
+- 类型：**full-audit**（上次全量审计第 160 轮 02:05 CST，距本轮 6h32m ≥ 6 小时）。
+- 车道：`requirements`（必跑）+ `ui-triage`（必跑，判 `review_now`）+ `docs-drift`（连续积压两轮）。
+  并发 3，符合上限。下一个非必跑车道：`security-exposure`。
+- `ui-triage` 决策：**`review_now`**。理由：`last_ui_review_at` 在启动时仅 1h37m（时间信号不触发），
+  但 backlog 有 64 条 `UI-*` candidate（≥2 条即强信号），且 #684（07:12）、#689（07:54）两次 UI 合并
+  都发生在最近一次评审之后，#689 明确写着「未做浏览器实测」。
+- **`last_ui_review_at` = 2026-10-29 08:47 CST（代码审计；浏览器验证失败，见下）。**
+- 环境事故：本会话工作树 `node_modules` 处于已知半删残留态（仅 3 个包，`@rolldown/plugin-babel` 缺失），
+  `vp install` 误报成功。按既有结论「先删全部 workspace node_modules 再装」修复：`rm -rf` +
+  `vp install --frozen-lockfile` → `.pnpm` 846 包、`apps/console/node_modules` 42 项，
+  `vp check` / `vp run -r test` / `vp run -r build` 全部恢复。UI 子代理在修复前尝试起隔离实例，
+  因此**本轮 UI 评审没有浏览器截图**，全部发现标注为代码核实。
+
+### 专家发现
+
+**requirements（4 条新候选，最高 26 分，未达 27 门槛，已写入 backlog）**
+
+- REQ-342 通知补全路由身份与 Runbook 链接（26）：模板上下文只有 `source.*`/`destination.*`
+  （`packages/destinations/src/template.ts:100-141`、`:200`），`ClaimedDelivery.route` 已存在
+  （`delivery.interface.ts:142-149`）但发送输入没传（`delivery-execution.ts:109-124`）；含迁移。
+- REQ-343 告警源自定义脱敏键（24）：固定脱敏只认内置启发式（`intake.service.ts:79-81`、
+  `redaction.ts:292`），`X-Company-Key` 这类自建上游凭据会明文进 Raw 页签（`event-raw-tab.tsx:26-38`）；含迁移。
+- REQ-344 实体停用原因（24）：三张表只有 `enabled`（`schema.ts:40-108`），交接班看不出为什么关；含迁移。
+- REQ-345 接入拒绝诊断（24）：401/403/404/413/400 在落 Event 前就被拒，只有日志
+  （`routes/api/sources/$sourceId/webhook.ts:33-52,90-100`、`intake.service.ts:342-352`），
+  控制台看不到「上游说发了但没收到」。
+
+**docs-drift（15 分钟窄 brief）**
+
+- 新增 DOC-113：`docs/prd/post-mvp-planning.md:145` 引用 `search.test.ts:472`，实际 raw payload
+  排除测试在 `search.test.ts:484`（结论本身正确）。
+- 复核仍存在的 6 条漂移并留在 backlog：DOC-107（`apps/docs/integrations/destinations.md:37`
+  称端点 URL 只在服务端，实际 `destination.ts:27-28,91` + `destination-operational-config-cell.tsx:36-37`
+  在目标表展示）、DOC-109、DOC-111、DOC-108、DOC-110、DOC-112。
+- DOC-106 已核实被文档化（`apps/docs/guide/sources.md` 已写四种 verdict 与 262144 之上限），标记 shipped。
+- 旧仓库名 `xqvvu/vane` 只剩 ACR 镜像坐标与历史 planning 文件，不是漂移。
+
+**ui-review（代码核实，无浏览器）**
+
+- 新增 UI-115（0 电话时整段消失，`urgent-paging-notice.tsx:27-29`）、UI-116（结论不播报读屏）、
+  UI-117（预演结果在触屏上把全名藏在 `title`）、UI-118（列表空态不一致）、UI-119（预演结果落在折叠线以下）。
+- UI-115/UI-116 已并入本轮 PR；UI-117/118/119 进 backlog。
+- 复核 UI-112/113/114/107/108/109 仍在；UI-112 由本轮稳定槽位收窄。
+- 文案检查：`previewPending` / `previewUnavailable` 与 `urgentPaging.*` 中文符合 SRE 语感，无 i18n 问题。
+
+### 本轮交付
+
+- **#691（docs-site 遗留 PR）**：CI/E2E 双绿、mergeable CLEAN、纯 `apps/docs`，rebase 合并（`444ea4af`）。
+- **PR #693** `feat(console): disclose retry-time suppression before a resend`（REQ-337 + UI-115 + UI-116）
+  - 问题：重试只重新入队，`claimNext` 领取时才重判静默并落 `suppressed` 终态
+    （`delivery.repository.ts:265-307`），确认框完全不提；预览解析出 0 个电话时整段消失，与「没检查」同形。
+  - 改动：`DeliveryRetryPreview.suppression`（`matched`/`none`/`unavailable` + 规则 id/name/kind/endsAt）；
+    服务复用 `selectSuppressionForDelivery`（`packages/core/src/suppression/suppression.ts:278-297`），
+    命中时 `urgentPaging` 置空（静默在发送之前生效）；确认框风险区收进一个 live region，五态齐备。
+    中英各 7 条文案；PRD `docs/prd/delivery-retry-suppression-preview.md`。
+  - 无 schema、无迁移、无新依赖。
+  - 验证：`vp check` 0 error（35 既有 warning）；`vp run -r test` 4/4 包通过
+    （console 228 文件 / 1326 测试）；`vp run -r build` 通过。
+- 工作树：实现全在会话工作树 `brave-heisenberg-0fc566`；`agent-iteration` 只放锁与记忆读取。
+
+### 下一轮优先项
+
+1. 续做评分最高的未实现候选：REQ-338（28，目标停用/删除前披露受影响告警源）、REQ-329（28）、REQ-333（27）。
+2. 三条含迁移的新候选（REQ-342/343/344）需先走 EXPERT_PANEL 再实现。
+3. DOC-107/108/109/110/111/112 + DOC-113 可打包成一个 `docs:` PR。
+4. 下次 UI 评审必须真的用浏览器（node_modules 已修复；隔离实例流程见 memory）。
+
 ## 2026-10-29（第 166 轮）
 
 - 时间：2026-10-29 07:48 CST 起。
