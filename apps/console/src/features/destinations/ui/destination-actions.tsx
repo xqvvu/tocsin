@@ -31,6 +31,7 @@ import {
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import type { DestinationSourceImpact } from "#/features/destinations/model/destination-source-impact";
+import { DestinationScheduledUrgentNotice } from "#/features/destinations/ui/destination-scheduled-urgent-notice";
 import { DestinationSourceImpactNotice } from "#/features/destinations/ui/destination-source-impact-notice";
 import type { DestinationListItem } from "#/features/destinations/ui/destination-ui-types";
 import { QueuedDeliveriesNotice } from "#/features/operations/ui/queued-deliveries-notice";
@@ -65,6 +66,7 @@ export function DestinationActions({
 }) {
   const t = useTranslations();
   const [disableDialogOpen, setDisableDialogOpen] = React.useState(false);
+  const [enableDialogOpen, setEnableDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const historyImpact = useDeletionImpact(requestDeleteImpact);
   const testLabel = t("destinations.table.actions.testTitle", { name: destination.name });
@@ -190,19 +192,59 @@ export function DestinationActions({
           </AlertDialogContent>
         </AlertDialog>
       ) : (
-        <IconTooltip label={toggleLabel}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            disabled={pending}
-            aria-label={toggleLabel}
-            className={powerActionButtonClassName(destination.enabled)}
-            onClick={() => onToggle(destination)}
-          >
-            <RiShutDownLine data-icon="inline-start" aria-hidden />
-          </Button>
-        </IconTooltip>
+        <AlertDialog
+          open={enableDialogOpen}
+          onOpenChange={(open) => {
+            if (!pending) {
+              setEnableDialogOpen(open);
+            }
+          }}
+        >
+          <IconTooltip label={toggleLabel}>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={pending}
+                  aria-label={toggleLabel}
+                  className={powerActionButtonClassName(destination.enabled)}
+                />
+              }
+            >
+              <RiShutDownLine data-icon="inline-start" aria-hidden />
+            </AlertDialogTrigger>
+          </IconTooltip>
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("destinations.enable.confirmTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("destinations.enable.confirmDescription", {
+                  destinationName: destination.name,
+                })}
+              </AlertDialogDescription>
+              {/* Re-enabling releases both backlogs at once: queued deliveries
+                  resume and scheduled urgent calls start dialing. */}
+              <QueuedDeliveriesNotice scope={{ destinationId: destination.id }} />
+              <DestinationScheduledUrgentNotice destinationId={destination.id} />
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>
+                {t("destinations.enable.cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                disabled={pending}
+                onClick={() => {
+                  setEnableDialogOpen(false);
+                  onToggle(destination);
+                }}
+              >
+                {t("destinations.enable.confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
       <AlertDialog
         open={deleteDialogOpen}

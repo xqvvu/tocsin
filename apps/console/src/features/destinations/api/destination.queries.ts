@@ -24,6 +24,17 @@ export function destinationTemplateDraftQueryOptions(id: string) {
   });
 }
 
+export function destinationEnablePreviewQueryOptions(id: string) {
+  return orpc.destinations.previewEnable.queryOptions({
+    input: { id },
+    queryKey: [...destinationQueryKeys.all, "detail", id, "enable-preview"] as const,
+    // The count answers "what starts ringing if I flip this switch now". A
+    // cached answer from the last time the dialog opened would be stale by
+    // definition, so drop it as soon as the confirmation closes.
+    gcTime: 0,
+  });
+}
+
 export const destinationCatalogQueryKeys = {
   all: ["destination-catalog"] as const,
   list: () => [...destinationCatalogQueryKeys.all, "list"] as const,

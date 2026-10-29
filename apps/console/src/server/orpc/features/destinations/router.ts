@@ -38,6 +38,10 @@ export const destinationsRouter = os.destinations.router({
     .use(withDestinationService)
     .handler(({ context, input }) => context.service.previewDeleteDestination(input)),
 
+  previewEnable: os.destinations.previewEnable
+    .use(withDestinationService)
+    .handler(({ context, input }) => context.service.previewEnableDestination(input)),
+
   delete: os.destinations.delete
     .use(withDestinationService)
     .handler(({ context, input }) => context.service.deleteDestination(input)),
