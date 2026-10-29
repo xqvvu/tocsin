@@ -328,6 +328,15 @@ export const ListOperationsInputSchema = z
      * delivery list, which has the exact `deliveryState` dimension instead.
      */
     deliveryOutcome: EventDeliveryOutcomeSchema.optional(),
+    /**
+     * Events-only: whether intake's provider parser rejected the webhook
+     * payload. A rejected payload is still recorded as an event so the raw body
+     * can be inspected, but it never produced a route match or a delivery, so
+     * the list could not tell it apart from "no route matched". `false` also
+     * covers rows whose provider metadata cannot be read, matching the
+     * projection's tolerant `parseFailed` flag. Ignored by the delivery list.
+     */
+    parseFailed: z.boolean().optional(),
     /** Restricts the delivery list to one destination adapter kind. */
     destinationKind: DestinationKindSchema.optional(),
     /** Restricts the delivery list to one route; manual deliveries have none. */

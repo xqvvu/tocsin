@@ -90,4 +90,26 @@ describe("event list parse-failure projection", () => {
     expect(page.total).toBe(3);
     expect(page.items.find((item) => item.id === "evt-corrupt")?.parseFailed).toBe(false);
   });
+
+  it("filters to parser-rejected events and counts the same rows", async () => {
+    const repository = await repositoryWithEventMetadata();
+
+    const page = await repository.listEvents({ parseFailed: true });
+
+    // The total has to describe the filtered set: the list and the count share
+    // the predicate, so a pager cannot walk into rows the filter excluded.
+    expect(page.items.map((item) => item.id)).toEqual(["evt-parse-failure"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("filters to accepted payloads without dropping unreadable metadata", async () => {
+    const repository = await repositoryWithEventMetadata();
+
+    const page = await repository.listEvents({ parseFailed: false });
+
+    // `evt-corrupt` projects as `parseFailed: false`, so the opposite half of
+    // the filter must keep it instead of turning NULL into a silent exclusion.
+    expect(page.items.map((item) => item.id).sort()).toEqual(["evt-corrupt", "evt-normal"]);
+    expect(page.total).toBe(2);
+  });
 });

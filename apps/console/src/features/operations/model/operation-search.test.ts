@@ -540,6 +540,7 @@ describe("clearing the operation search", () => {
       "eventId",
       "fingerprint",
       "minAttempts",
+      "parseFailed",
       "q",
       "range",
       "rangeAnchor",
@@ -631,5 +632,49 @@ describe("exact fingerprint filter in the operation search", () => {
     // missing here would survive "Reset filters" exactly like `minAttempts`
     // once did on the deliveries page.
     expect(clearedOperationSearch.fingerprint).toBe("");
+  });
+});
+
+describe("parse result filter in the operation search", () => {
+  it("turns the URL string into the boolean the contract takes", () => {
+    const failed = operationFiltersFromSearch(
+      DashboardOperationSearchSchema.parse({ parseFailed: "true" }),
+    );
+    const parsed = operationFiltersFromSearch(
+      DashboardOperationSearchSchema.parse({ parseFailed: "false" }),
+    );
+
+    expect(failed.parseFailed).toBe(true);
+    expect(parsed.parseFailed).toBe(false);
+  });
+
+  it("falls back to any parse result on an unknown value", () => {
+    const search = DashboardOperationSearchSchema.parse({ parseFailed: "maybe" });
+
+    expect(search.parseFailed).toBe("");
+    expect(operationFiltersFromSearch(search).parseFailed).toBeUndefined();
+    expect(hasOperationFilters(search)).toBe(false);
+  });
+
+  it("keeps the filter in the URL and resets both lists to the first page", () => {
+    const merged = mergeOperationSearch(
+      { parseFailed: "", eventPage: 3, deliveryPage: 2 },
+      { parseFailed: "true" },
+    );
+
+    expect(merged.parseFailed).toBe("true");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+
+  it("counts either half of the filter as narrowing the list", () => {
+    // `false` excludes rejected payloads, so it is a filter even though the
+    // value is falsy.
+    expect(hasOperationFilters({ parseFailed: "false" })).toBe(true);
+    expect(hasOperationFilters({ parseFailed: "true" })).toBe(true);
+  });
+
+  it("clears with the shared reset object", () => {
+    expect(clearedOperationSearch.parseFailed).toBe("");
   });
 });

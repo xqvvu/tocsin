@@ -52,6 +52,10 @@ export class OperationsService {
         // Events-only: answers "did this alert reach anyone". The delivery
         // list keeps its exact `deliveryState` dimension instead.
         deliveryOutcome: input.deliveryOutcome,
+        // Events-only: a rejected payload is stored as an event with no
+        // deliveries, so without this dimension it reads exactly like an alert
+        // that matched no route.
+        parseFailed: input.parseFailed,
         // Events share the destination dimension with the delivery list now;
         // `missing` is what makes "which alerts never reached this target"
         // answerable without opening each event.
