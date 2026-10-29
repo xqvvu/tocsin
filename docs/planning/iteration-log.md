@@ -67,12 +67,32 @@
   - 验证：`vp check` 0 error（35 条既有 warning）；`vp run -r test` 4/4 包通过
     （console 232 文件 / 1345 测试）；`vp run -r build` 通过。
 - 工作树：实现全会话工作树 `sleepy-wescoff-d522b5`；`agent-iteration` 只放锁与记忆读取。
+- 收尾清理：回收 3 个已合并且干净的注册工作树（`angry-bouman-4767fb`、
+  `suspicious-chandrasekhar-9ec5af`、`zealous-germain-cb36b2`），`.claude/worktrees`
+  4.1G → 2.8G。**保留 `youthful-murdock-b65fc6`**：其工作树有未提交的 REQ-329 半成品
+  （同名需求、未推送），不删除。非注册孤儿目录（约 80 个，占剩余 2.8G）本轮未动，
+  下轮用「先确认无未提交改动再删」的谨慎流程处理。
+
+### 发布
+
+- 三位专家评估：发布经理 **APPROVE**（自 beta.135 起唯一用户可见变更是 #703）；
+  阻断审计 **APPROVE**（main CI/E2E 绿、无其他 open PR、无迁移、无锁文件、tag 未占用）；
+  回滚专家首轮 **REJECT**（理由：版本号仍为 beta.135、目标 commit CI 未完成），两项前提在
+  版本 bump PR #704 合并且 CI 绿后满足，实质通过——回滚只需换回 `0.1.0-beta.135` 镜像，
+  无数据库/配置操作。
+- 版本 `0.1.0-beta.136`（PR #704 `chore(release): v0.1.0-beta.136`，rebase 合并 `3168770b`）。
+- Tag `v0.1.0-beta.136`（annotated，指向 `3168770b`，该 commit 的 CI 与 E2E 均 success）。
+- GitHub Release：已创建（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.136`（linux/amd64 + linux/arm64），
+  index digest `sha256:2ff33a3274781a836758513abb8f7b15d468f8b148b497594c2670db6e92182a`
+  （amd64 `sha256:2b933d3e…`、arm64 `sha256:9f8913aa…`）。
+- 回滚镜像 `0.1.0-beta.135`；无 schema/依赖/env/配置变化。
 
 ### 下一轮优先项
 
 1. `docs-drift` 重跑（连续两轮未产出）。
 2. UI-120 + UI-121 打包 `fix(a11y)`（预演弹窗 live region + 重试风险槽 `aria-atomic`）。
-3. REQ-324（28）/ REQ-333（27）/ REQ-329 若未合并则续做。
+3. REQ-324（28）/ REQ-333（27）续做。
 4. SEC-44 交 EXPERT_PANEL（值形态前缀凭据 + 保持现有 oracle）。
 
 ## 2026-10-29（第 168 轮）
