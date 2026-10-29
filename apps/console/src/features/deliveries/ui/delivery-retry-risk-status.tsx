@@ -9,6 +9,9 @@ import { useTranslations } from "#/i18n/use-i18n";
  *
  * Every state renders inside one live region so the answer is announced once
  * when it arrives, and so an empty slot never has to stand in for an answer.
+ * The region is atomic because a matched rule swaps one line for three; with
+ * `aria-atomic="false"` a reader may announce those paragraphs one by one and
+ * lose the verdict that ties them together.
  * The resolved "no urgent calls" case used to render nothing at all, which made
  * it indistinguishable from a preview that was never checked — on the one
  * confirmation that precedes an irreversible phone page. The states are
@@ -27,7 +30,7 @@ export function DeliveryRetryRiskStatus({
   const t = useTranslations();
 
   return (
-    <div role="status" aria-atomic="false">
+    <div role="status" aria-atomic="true">
       {isPending ? (
         <MutedRiskLine text={t("deliveries.retry.confirm.previewPending")} />
       ) : isError || !preview ? (
