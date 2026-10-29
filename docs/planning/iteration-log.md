@@ -28,9 +28,22 @@
   使用 shadcn `Alert` 不一致；且 enable 弹窗同时挂两个独立异步 preview
   （`destination-actions.tsx:229-230`），存在高度跳变风险。
 
-**requirements**
+**requirements（4 条新候选，均写入 backlog）**
 
-- 本轮未在 75 分钟预算内返回，下轮重跑该车道；不阻塞本轮交付。
+- REQ-350（28）顶栏解析失败指示器：解析失败先写审计事件再抛 400、不建任何投递
+  （`server/intake/intake.service.ts:192-240,295-318`），而唯一失败指示器只看
+  `deliveryState=failed`（`delivery-failure-indicator.tsx:19-29`），上游改载荷格式时告警在接入阶段
+  静默丢失、顶栏全绿；`ListOperationsInputSchema` 也没有 parseFailed 维度
+  （`packages/api/src/schemas/operations.ts:304-396`）。
+- REQ-351（27）通用 Webhook 成功判定：它是唯一只看 `response.ok` 的适配器
+  （`generic-webhook/adapter.ts:76-91`），自建接收端用 200 + `{"success":false}` 表达失败时会被
+  记为 succeeded（飞书 `feishu/adapter.ts:126-155`、Slack `slack/adapter.ts:73-91` 均按响应体判定）。
+- REQ-352（27）预演预测去重窗口：真实接入 5 分钟内按 (source, idempotencyKey, route, destination)
+  去重（`intake.service.ts:49-56,108-140`、`delivery.helpers.ts:103-142`），预演明确不预测
+  （`source-rehearsal.ts:133-147`），复制刚发过的载荷预演会显示「会送达」而实际 0 投递。
+- REQ-353（24）模板标签变量可发现与拼写校验：任意 `event.labels.<key>` 都通过校验，缺失键渲染成
+  空串（`template.ts:23,732-736,753-757`），面板只给 `<name>` 模式
+  （`template-variable-panel.tsx:96-105,190-192`）。
 
 **docs-drift（本轮恢复产出，8 条）**
 
@@ -82,9 +95,9 @@
 
 ### 下一轮优先项
 
-1. `requirements` 车道重跑（连续两轮未产出）。
+1. REQ-350（28，顶栏解析失败指示器）—— 本轮 requirements 的最高分且是真实静默丢失面。
 2. REQ-333（27，投递列表披露目标/路由停用造成的领取阻断）/ REQ-24（28，抑制窗口影响面复盘）/
-   REQ-159（28，通用 Webhook 字段映射）择一交付。
+   REQ-159（28，通用 Webhook 字段映射）/ REQ-351（27，通用 Webhook 成功判定）择一交付。
 3. docs-drift 本轮 8 条里挑 P1 两项（`route-authoring-current-state.md` 的状态过期）打包更正。
 4. SEC-44 仍待 EXPERT_PANEL（值形态前缀凭据 + 保持现有 oracle）。
 5. 若下轮 UI 触发条件成立（≥48h 或出现新页面），做一次完整浏览器评审并补验 #703/#708。
