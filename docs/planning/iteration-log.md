@@ -79,6 +79,7 @@
   - 验证：`vp check` 0 warning 增量（35 条与 main 一致）；`vp run -r test` 233 文件 / 1348 测试；
     `vp run -r build` 通过；PR CI 双绿。
 - 工作树：实现全会话工作树 `pensive-vaughan-8f2724`；`agent-iteration` 只放锁与记忆读取。
+- 收尾清理：回收 2 个干净的注册工作树（`sleepy-wescoff-d522b5`（#703 已合并）、`docs-site-20261029-125903`），`.claude/worktrees` 1.5G → 733M；保留 `youthful-murdock-b65fc6`（仍有未提交改动，且其 REQ-329 已由 #703 交付，下轮可再判定）；删除 `agent-iteration` 锁目录；本地删除已合并分支 `agent/rehearsal-retry-live-regions`、`agent/release-beta-137`。工作树已清理。
 
 ### 发布
 
