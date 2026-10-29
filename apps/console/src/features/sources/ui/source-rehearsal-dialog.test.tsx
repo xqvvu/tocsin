@@ -142,6 +142,27 @@ describe("source rehearsal dialog", () => {
     expect(screen.getByLabelText("Webhook body").className).toContain("max-h-48");
   });
 
+  it("announces the rehearsal outcome through a live region", async () => {
+    const onRehearse = vi.fn<() => Promise<SourceRehearsalResult>>(async () => result);
+    renderDialog(onRehearse);
+    openDialog();
+
+    // The region exists before the run. Creating it together with its content
+    // lets a screen reader treat the insertion as a new region and stay silent.
+    const status = screen.getByRole("status");
+
+    expect(status.textContent).toBe("");
+
+    fireEvent.change(screen.getByLabelText("Webhook body"), {
+      target: { value: '{"title":"Checkout unavailable"}' },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Run rehearsal" }));
+
+    expect(await screen.findByText("Checkout unavailable")).toBeTruthy();
+    expect(status.getAttribute("aria-live")).toBe("polite");
+    expect(status.contains(screen.getByText("Route evaluation (1/1 matched)"))).toBe(true);
+  });
+
   it("rejects malformed JSON before calling the server", () => {
     const onRehearse = vi.fn(async () => result);
     renderDialog(onRehearse);

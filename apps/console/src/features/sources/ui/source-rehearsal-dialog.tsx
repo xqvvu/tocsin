@@ -187,7 +187,16 @@ export function SourceRehearsalDialog({
             </Alert>
           ) : null}
 
-          {result ? <SourceRehearsalResultView result={result} /> : null}
+          {/*
+            The result block appearing above the footer is the only signal that
+            the run finished, and it is purely visual. The live region stays
+            mounted while empty so the insertion is observed as a change to an
+            existing region rather than a new one, which screen readers are
+            free to ignore.
+          */}
+          <div role="status" aria-live="polite" aria-atomic="true">
+            {result ? <SourceRehearsalResultView result={result} /> : null}
+          </div>
         </div>
 
         <DialogFooter>
