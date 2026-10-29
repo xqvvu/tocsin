@@ -27,6 +27,7 @@ import { DestinationsSection } from "#/features/destinations/ui/destinations-sec
 import { feishuAppsQueryOptions } from "#/features/integrations/api/feishu-app.queries";
 import { recentEventsQueryOptions } from "#/features/operations/api/operations.queries";
 import { routesQueryOptions } from "#/features/routes/api/route.queries";
+import { sourcesQueryOptions } from "#/features/sources/api/source.queries";
 import { useTranslations } from "#/i18n/use-i18n";
 import { DashboardContentLayout } from "#/shell/dashboard-layout";
 
@@ -45,12 +46,16 @@ export function DestinationsPage() {
   const [
     { data: destinations },
     { data: routes },
+    { data: sources },
     { data: destinationCatalog },
     { data: feishuApps },
   ] = useSuspenseQueries({
     queries: [
       destinationsQueryOptions(),
       routesQueryOptions(),
+      // The disable/delete confirmations name the alert sources that lose this
+      // delivery path, so the page needs the source list next to the routes.
+      sourcesQueryOptions(),
       destinationCatalogQueryOptions(),
       feishuAppsQueryOptions(),
     ],
@@ -251,6 +256,7 @@ export function DestinationsPage() {
             destinations={destinations}
             destinationCatalog={destinationCatalog}
             routes={routes}
+            sources={sources}
             pending={pending}
             requestDeleteImpact={requestDeleteImpact}
             onTest={(destination) => {

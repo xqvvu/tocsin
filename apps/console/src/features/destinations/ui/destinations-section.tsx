@@ -1,13 +1,14 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 
-import type { RouteDefinition } from "@tocsin/core";
+import type { RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
 import { OperationsTable } from "#/components/common/operations-table";
 import type { ConsoleTableFeatures } from "#/components/common/table-features";
 import type { DeletionImpactLoader } from "#/components/common/use-deletion-impact";
 import { destinationRouteCoverage } from "#/features/destinations/model/destination-route-coverage";
+import { destinationSourceImpact } from "#/features/destinations/model/destination-source-impact";
 import type {
   DestinationCatalog,
   DestinationListItem,
@@ -31,6 +32,11 @@ export interface DestinationsSectionProps {
    */
   destinationCatalog: DestinationCatalog;
   routes: RouteDefinition[];
+  /**
+   * Enabled state drives the disable/delete confirmations: a source that is
+   * already switched off does not produce alerts, so it is not "affected".
+   */
+  sources: SourceSummary[];
   pending: boolean;
   requestDeleteImpact: DeletionImpactLoader;
   onTest: (destination: DestinationListItem) => void;
@@ -44,6 +50,7 @@ export function DestinationsSection({
   destinations,
   destinationCatalog,
   routes,
+  sources,
   pending,
   requestDeleteImpact,
   onTest,
@@ -106,6 +113,7 @@ export function DestinationsSection({
               (route) => route.destinationIds,
               row.original.id,
             )}
+            sourceImpact={destinationSourceImpact(row.original.id, routes, sources)}
             pending={pending}
             requestDeleteImpact={requestDeleteImpact}
             onTest={onTest}
@@ -127,6 +135,7 @@ export function DestinationsSection({
       pending,
       requestDeleteImpact,
       routes,
+      sources,
       t,
     ],
   );

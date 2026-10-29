@@ -46,6 +46,7 @@ describe("destinations section table", () => {
         <DestinationsSection
           destinations={destinations}
           destinationCatalog={defaultDestinationCatalog}
+          sources={[]}
           routes={[]}
           pending={false}
           requestDeleteImpact={noDeletionImpact}
@@ -84,6 +85,7 @@ describe("destinations section table", () => {
         <DestinationsSection
           destinations={[destinationFixture(1)]}
           destinationCatalog={defaultDestinationCatalog}
+          sources={[]}
           routes={[
             routeFixture("only-route", "Only route", ["destination-1"], true),
             routeFixture("shared-route", "Shared route", ["destination-1", "destination-2"], true),
@@ -119,6 +121,7 @@ describe("destinations section table", () => {
         <DestinationsSection
           destinations={[]}
           destinationCatalog={defaultDestinationCatalog}
+          sources={[]}
           routes={[]}
           pending={false}
           requestDeleteImpact={noDeletionImpact}
@@ -143,6 +146,7 @@ describe("destinations section table", () => {
         <DestinationsSection
           destinations={[destinationFixture(1), destinationFixture(2)]}
           destinationCatalog={defaultDestinationCatalog}
+          sources={[]}
           routes={[
             routeFixture("route-1", "Primary paging", ["destination-1"], true),
             routeFixture("route-2", "Disabled paging", ["destination-1"], false),
@@ -175,6 +179,7 @@ describe("destinations section table", () => {
             destinationFixture(4, "email"),
           ]}
           destinationCatalog={defaultDestinationCatalog}
+          sources={[]}
           routes={[]}
           pending={false}
           requestDeleteImpact={noDeletionImpact}
@@ -211,6 +216,7 @@ describe("destinations section table", () => {
         <DestinationsSection
           destinations={[destination]}
           destinationCatalog={defaultDestinationCatalog}
+          sources={[]}
           routes={[]}
           pending={false}
           requestDeleteImpact={noDeletionImpact}
@@ -259,6 +265,7 @@ describe("destinations section table", () => {
         <DestinationsSection
           destinations={[destination]}
           destinationCatalog={defaultDestinationCatalog}
+          sources={[]}
           routes={[]}
           pending={false}
           requestDeleteImpact={noDeletionImpact}
@@ -289,6 +296,7 @@ describe("destinations section table", () => {
         <DestinationsSection
           destinations={[destination]}
           destinationCatalog={defaultDestinationCatalog}
+          sources={[]}
           routes={[]}
           pending={false}
           requestDeleteImpact={noDeletionImpact}
@@ -305,6 +313,74 @@ describe("destinations section table", () => {
 
     const disableDialog = screen.getByRole("alertdialog");
     expect(within(disableDialog).queryByText("Automatic urgent paging will stop too")).toBeNull();
+  });
+
+  it("names the alert sources that lose delivery before disabling", () => {
+    render(
+      <AppIntlProvider locale="en-US">
+        <DestinationsSection
+          destinations={[destinationFixture(2)]}
+          destinationCatalog={defaultDestinationCatalog}
+          sources={[
+            sourceFixture("source-1", "Grafana production"),
+            sourceFixture("source-2", "SigNoz staging"),
+            sourceFixture("source-3", "Uptime Kuma"),
+          ]}
+          routes={[
+            routeFixture("route-a", "Grafana route", ["destination-2"], true, [
+              "source-1",
+              "source-2",
+            ]),
+            routeFixture("route-b", "Other target", ["destination-1"], true, ["source-3"]),
+          ]}
+          pending={false}
+          requestDeleteImpact={noDeletionImpact}
+          onTest={vi.fn<DestinationActionHandler>()}
+          onPreview={vi.fn<DestinationActionHandler>()}
+          onEdit={vi.fn<DestinationEditHandler>()}
+          onToggle={vi.fn<DestinationActionHandler>()}
+          onDelete={vi.fn<DestinationActionHandler>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Disable destination" }));
+
+    const disableDialog = screen.getByRole("alertdialog");
+    expect(within(disableDialog).getByText("2 alert sources affected")).toBeTruthy();
+    expect(
+      within(disableDialog).getByText(
+        "Alerts from these sources will stop reaching this destination: Grafana production, SigNoz staging",
+      ),
+    ).toBeTruthy();
+    // The route only reaches destination-2, so its source stays out of the list.
+    expect(within(disableDialog).queryByText(/Uptime Kuma/)).toBeNull();
+  });
+
+  it("discloses every alert source before deleting when a route matches all sources", () => {
+    render(
+      <AppIntlProvider locale="en-US">
+        <DestinationsSection
+          destinations={[destinationFixture(2)]}
+          destinationCatalog={defaultDestinationCatalog}
+          sources={[sourceFixture("source-1", "Grafana production")]}
+          routes={[routeFixture("catch-all", "Catch all", ["destination-2"], true)]}
+          pending={false}
+          requestDeleteImpact={noDeletionImpact}
+          onTest={vi.fn<DestinationActionHandler>()}
+          onPreview={vi.fn<DestinationActionHandler>()}
+          onEdit={vi.fn<DestinationEditHandler>()}
+          onToggle={vi.fn<DestinationActionHandler>()}
+          onDelete={vi.fn<DestinationActionHandler>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Destination 2" }));
+
+    const deleteDialog = screen.getByRole("alertdialog");
+    expect(within(deleteDialog).getByText("1 alert source affected")).toBeTruthy();
+    expect(within(deleteDialog).getByText(/all sources, including ones added later/)).toBeTruthy();
   });
 });
 
@@ -342,13 +418,28 @@ function destinationFixture(
   };
 }
 
-function routeFixture(id: string, name: string, destinationIds: string[], enabled: boolean) {
+function sourceFixture(id: string, name: string, enabled = true) {
+  return {
+    id,
+    name,
+    provider: "generic" as const,
+    enabled,
+  };
+}
+
+function routeFixture(
+  id: string,
+  name: string,
+  destinationIds: string[],
+  enabled: boolean,
+  sourceIds: string[] = [],
+) {
   return {
     id,
     name,
     enabled,
     rule: {
-      sourceIds: [],
+      sourceIds,
       severities: [],
       statuses: [],
       labels: [],
