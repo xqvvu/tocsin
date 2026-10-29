@@ -688,7 +688,7 @@
   "destinations.table.pagination.range": "共 {total} 个通知目标",
   "destinations.table.routes.blocked": "告警源全停用",
   "destinations.table.routes.blockedTitle": "{count} 条已启用的路由规则会投递到这个通知目标，但匹配的告警源全部停用或不存在，当前不会有告警到达：{names}",
-  "destinations.table.routes.conditionalSuffix": " · {count} 条带条件",
+  "destinations.table.routes.conditionalCount": "{count} 条带条件",
   "destinations.table.routes.conditionalTitle": "其中 {count} 条还需事件满足级别、状态、标签或文本条件才会投递：{names}",
   "destinations.table.routes.disabledOnlyTitle": "{count} 条停用路由规则引用这个通知目标，但当前没有已启用路由会投递到它",
   "destinations.table.routes.none": "无生效路由",

@@ -2,6 +2,64 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 177 轮）
+
+- 时间：2026-10-29 21:27 CST 起。
+- 基线：`origin/main` @ `47d1d281`；启动时 0 个 open PR，main CI 双绿。
+- 类型：**UI 评审 + 1 个 UI 修复切片**（非 full-audit）。第 171 轮 15:37 CST 的全量审计距今
+  5h50m < 6 小时，按第 1.5 步闸门不重跑专家车道；backlog 仍有 28 分候选（REQ-108 / REQ-159 /
+  REQ-24 / NEW-R / NEW-AL），因此没有空转。
+- **全量审计时间戳保持 2026-10-29 15:37 CST**（本轮未做全量审计）。
+- 车道轮转位置：不前进，下一个非必跑车道仍为 **docs-drift**。
+- `ui-triage`：**review_now**。理由：自上次 UI 评审（15:55 CST）以来有 6 个触及 UI 路径的合并
+  （`438c0995`、`8e94ea38`、`9f9b9ef5`、`86104bf2`、`3ff3ab5d`、`543ae5e4`）≥ 3；backlog 有
+  69 条未解决 `UI-*`；且第 174–176 轮均记录「未做真实浏览器验证」，本机当时没有 dev 实例。
+- `last_ui_review_at`：更新为 **2026-10-29 21:30 CST**（本轮做了真实浏览器评审）。
+- 环境：会话工作树 `node_modules` 半删残留（`@rolldown/plugin-babel` 解析失败），删除全部
+  workspace `node_modules` 后 `vp install --frozen-lockfile` 2.6s 恢复。
+
+### 浏览器评审（真实 dev 实例）
+
+隔离实例：`TOCSIN_DATABASE_PATH=/tmp/tocsin-ui-review.sqlite`，`BETTER_AUTH_URL=http://localhost:6180`，
+`vp -C apps/console dev --port 6180 --host localhost`；Playwright 走 `/setup` 创建 owner，再由 UI
+创建告警源 / 通用 Webhook 目标 / 路由并 POST 一条告警。截图在 `/tmp/ui-review/shots/`。
+
+**已核实为正常（此前零浏览器验证的合并）**
+
+- #732 告警源解析器变更确认：编辑弹层内切换 `Generic Webhook → Grafana` 后提交，`alertdialog`
+  「Change the provider parser?」正常出现，焦点落在「Keep current parser」，底层 `dialog` 被置为
+  `aria-hidden`/不可交互（`role=dialog` 节点 `hidden=true`），未出现双层焦点陷阱。
+- 顶栏投递失败指示器、投递列表 sticky 操作列在 390px 下均可用（`deliveries-390.png`）。
+
+**本轮发现**
+
+- HIGH：通知目标「投递路由」列的覆盖徽标在 1280 被裁切。`#729` 把条件数拼进同一徽标
+  （`destination-route-coverage-cell.tsx:44-58`），浏览器实测徽标文本 `1 reachable · 1 conditional`
+  宽 147px，而列宽只有 118px，渲染成 `able · 1 cond`——可达数与条件数都读不全（`destinations-1280.png`）。
+  该列是 #729 的全部价值所在，属于主列表页的可见回归。
+- MEDIUM：390px 下目标表右侧列在首屏外，容器虽有 `overflow-auto`，但操作列不像投递表那样
+  sticky（`destinationsColumnClassName` 无 `stickyActionsColumnClassName`）：编辑/测试/删除
+  必须靠发现横向滚动才可达。记为 UI-122 的复验结论与修法建议。
+- LOW：backlog 里 `UI-122` 重号（390px 裁切 与 静默态重试框重排 两条不相干发现），已把后者
+  改号 `UI-126`。
+
+### 本轮交付
+
+- **PR #734** `fix(destinations): wrap the conditional route count below the coverage badge`
+  - 徽标只显示可达数（`1 条可达` / `X/Y 条可达` / `告警源全停用` / `无生效路由`），条件数另起一行
+    小字（新键 `destinations.table.routes.conditionalCount`，中英文同步）；悬浮标题仍同时说明两者。
+  - 文档 `apps/docs/integrations/destinations.md:39` 同步新排版口径。
+  - 验证：浏览器 1280 实测徽标 94px / scrollWidth 92（修复前 147px 被裁到 94px），条件行 61px；
+    `vp check` 0 error（35 warning 与 main 一致）；`vp run -r test` 4/4（console 1387）；
+    `vp run -r build` 2/2。
+
+### 下一轮优先项
+
+1. UI-122：390px 目标表补 sticky 操作列（照投递表做法），需浏览器复验。
+2. REQ-108（28，多值属性筛选）/ REQ-159（28，通用源字段映射）择一。
+3. docs-drift（轮转车道），优先复核 DOC-114…DOC-121。
+4. REL-16 / REL-23：main CI required checks 交 EXPERT_PANEL。
+
 ## 2026-10-29（第 176 轮）
 
 - 时间：2026-10-29 20:26 CST 起。

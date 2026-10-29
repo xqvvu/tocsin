@@ -15,11 +15,25 @@ export function DestinationRouteCoverageCell({ coverage }: { coverage: Destinati
         : "outline";
 
   return (
-    <div className="flex min-w-0 justify-center">
+    <div className="flex min-w-0 flex-col items-center gap-1">
       <Badge variant={variant} className="max-w-full font-mono text-[11px]" title={title}>
         <RiRouteLine data-icon="inline-start" aria-hidden />
         {coverageLabel(coverage, t)}
       </Badge>
+      {coverage.conditionalRouteCount > 0 ? (
+        // A route that also requires a severity, status, label, or text
+        // condition reaches this destination only for matching traffic, and
+        // the bare count reads as "everything routed here is delivered". The
+        // count used to be appended to the badge, but the combined label
+        // ("2 reachable · 1 conditional") is wider than the Routing column at
+        // 1280 and was clipped mid-word, hiding both numbers; a second line
+        // keeps each fact readable inside the same column.
+        <span className="text-muted-foreground text-[10px] leading-tight">
+          {t("destinations.table.routes.conditionalCount", {
+            count: coverage.conditionalRouteCount,
+          })}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -28,32 +42,20 @@ function coverageLabel(
   coverage: DestinationRouteCoverage,
   t: ReturnType<typeof useTranslations>,
 ): string {
-  const base =
-    coverage.reachableRouteCount > 0
-      ? coverage.blockedRouteCount > 0
-        ? // Partial coverage used to look identical to full coverage unless
-          // the operator hovered the badge; keep the blocked routes visible.
-          t("destinations.table.routes.partialReachable", {
-            reachable: coverage.reachableRouteCount,
-            total: coverage.enabledRouteCount,
-          })
-        : t("destinations.table.routes.reachable", {
-            count: coverage.reachableRouteCount,
-          })
-      : coverage.enabledRouteCount > 0
-        ? t("destinations.table.routes.blocked")
-        : t("destinations.table.routes.none");
-
-  if (coverage.conditionalRouteCount === 0) {
-    return base;
-  }
-
-  // A route that also requires a severity, status, label, or text condition
-  // reaches this destination only for matching traffic. The bare count read as
-  // "everything routed here is delivered", so state the condition next to it.
-  return `${base}${t("destinations.table.routes.conditionalSuffix", {
-    count: coverage.conditionalRouteCount,
-  })}`;
+  return coverage.reachableRouteCount > 0
+    ? coverage.blockedRouteCount > 0
+      ? // Partial coverage used to look identical to full coverage unless
+        // the operator hovered the badge; keep the blocked routes visible.
+        t("destinations.table.routes.partialReachable", {
+          reachable: coverage.reachableRouteCount,
+          total: coverage.enabledRouteCount,
+        })
+      : t("destinations.table.routes.reachable", {
+          count: coverage.reachableRouteCount,
+        })
+    : coverage.enabledRouteCount > 0
+      ? t("destinations.table.routes.blocked")
+      : t("destinations.table.routes.none");
 }
 
 function routeCoverageTitle(
