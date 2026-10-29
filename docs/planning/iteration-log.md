@@ -66,6 +66,15 @@
   `sha256:7b9dac05ade545909dfddacf60788dfcdecf4479ec288375e23cb27402793dc0`；
   回滚镜像 `0.1.0-beta.143`，无需数据库操作。
 
+### 收尾清理
+
+- 回收 2 个已注册且工作区干净的会话工作树（`serene-lalande-89ffe5`、`busy-wu-d01c90`），
+  跳过 1 个有真实未提交改动的（`youthful-murdock-b65fc6`）。
+- `.claude/worktrees` **2.8G → 2.1G**；删除已合并分支 `agent/destination-coverage-badge-wrap`、
+  `agent/iteration-log-176`、`agent/release-beta-144`。
+- 本会话工作树的 `node_modules`、`.output`、`.vite` 在收尾时删除；`agent-iteration` 锁与专用
+  工作树一并删除。
+
 ### 下一轮优先项
 
 1. UI-122：390px 目标表补 sticky 操作列（照投递表做法），需浏览器复验。
