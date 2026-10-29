@@ -2,6 +2,65 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 172 轮）
+
+- 时间：2026-10-29 16:30 CST 起。
+- 基线：`origin/main` @ `8a3ff507`；启动时 0 个 `agent/*` open PR，main CI 双绿。另一个
+  docs-site 车道的 open PR #705 在本轮期间合并（`8ecfbd59`）。
+- 类型：**需求切片 + 发布**（非 full-audit）。第 171 轮 15:37 CST 的全量审计结束仅 53 分钟，
+  且自那以后仓库代码零变化；按既有结论（相邻轮次不重跑车道）本轮不 spawn `requirements` /
+  `ui-triage` / 轮转车道，直接续做 backlog 最高分项。
+- **全量审计时间戳保持 2026-10-29 15:37 CST**（本轮未做全量审计，第 1.5 步闸门仍以此时点为准）。
+- 车道轮转位置：不前进，下一个非必跑车道仍为 **docs-drift**。
+- `ui-triage`：本轮未运行（紧邻上一轮，UI 路径自 15:55 起无新合并）。
+- `last_ui_review_at`：保持 **2026-10-29 15:55 CST**。
+- 环境：会话工作树 `node_modules` 半删残留（根目录仅 3 项，`vp check` 报 4830 个类型错误）；
+  按既有结论删除全部 workspace `node_modules` 后 `vp install --frozen-lockfile` 恢复
+  （844 包，1.9s）。
+
+### 本轮交付
+
+- **PR #716** `feat(console): confirm before re-enabling a route and disclose its backlog`
+  （REQ-354，29 分，rebase 合并 `8e94ea38`）
+  - 启用分支由裸按钮改为 `AlertDialog`：标题、描述（路由名 + 目标数）、
+    `QueuedDeliveriesNotice`（`{ routeId }` scope，0 条也显示）与约束说明
+    （目标启用状态 / 告警静默 / 全局投递暂停）。
+  - 新增 `routing.enable.*` 中英文案；文档站 `apps/docs/guide/routes.md` 补充启用确认口径；
+    PRD `docs/prd/route-enable-queued-disclosure.md`。
+  - 验证：`vp check` 0 error（35 条 warning 与 main 一致）；`vp run -r test` 234 文件 /
+    1362 测试；`vp run -r build` 2/2；PR CI 双绿（test/build + playwright）。
+- 浏览器验证：本轮未做（本机无运行中的 dev server）；确认框的打开、取消、确认与文案由
+  jsdom 测试覆盖。
+- 工作树：实现全程在会话工作树 `cool-nash-07df5e`；`agent-iteration` 只放并发锁。
+
+### 发布
+
+- 三位专家一致 **APPROVE**：发布经理（自 beta.138 起 1 笔用户可见变更 `8e94ea38`）、
+  阻断审计（`988e7e21` 的 CI 与 E2E 双绿、无 open PR、迁移/依赖/env/compose 差异全空、
+  3 条 `blocked-autonomous` 均为历史非阻断项）、运维回滚（零配置差异，回滚只换镜像）。
+- 版本 `0.1.0-beta.139`（PR #717 `chore(release): v0.1.0-beta.139`，rebase 合并 `988e7e21`）。
+- Tag `v0.1.0-beta.139`（annotated，指向 `988e7e21`）。
+- GitHub Release：已创建（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.139`
+  （linux/amd64 + linux/arm64），index digest
+  `sha256:4cc7c9dce0de11c4e6222fb3310c5fbeda01468db00c092f949f93a19a729a21`；
+  回滚镜像 `0.1.0-beta.138`，无需数据库操作。
+- 阻断审计员保留意见（不阻断）：main CI 仍是建议性门禁，REL-16 / REL-23（required checks）
+  建议后续交 EXPERT_PANEL。
+
+### Obsidian 同步
+
+- `obsidian-vault` skill 在本会话不可用；按 AGENTS.md 记录「Obsidian 同步已跳过」。
+  既有 `Vane Iteration Log.md` 停留在第 160 轮，与仓库日志已有 12 轮差距，未做单轮手工同步。
+
+### 下一轮优先项
+
+1. REQ-355（27，通知模板 `tocsin.deliveryUrl`）或 REQ-352（27，预演预测去重窗口）择一。
+2. SEC-45：`isSensitiveKey` 补复数凭据键（1 个常量 + 测试，AUTO_FIX）。
+3. docs-drift（下一个轮转车道），优先复核 DOC-114…DOC-121。
+4. UI-122：390px 下目标列表右侧列被裁切（需浏览器复验）。
+5. REL-16 / REL-23：把 main 的 CI required checks 交 EXPERT_PANEL 裁决。
+
 ## 2026-10-29（第 171 轮）
 
 - 时间：2026-10-29 15:37 CST 起。
