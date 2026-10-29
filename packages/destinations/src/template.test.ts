@@ -66,6 +66,25 @@ describe("destination templates", () => {
     expect(DestinationTemplateEngine.createRenderContext(input).tocsin.eventUrl).toBe("");
   });
 
+  it("renders the delivery URL carried by the send input", () => {
+    const context = DestinationTemplateEngine.createRenderContext({
+      ...input,
+      deliveryUrl: "https://tocsin.example.test/deliveries/delivery-9",
+    });
+
+    expect(
+      DestinationTemplateEngine.renderText(context, "delivery={{tocsin.deliveryUrl}}"),
+    ).toEqual({
+      ok: true,
+      value: "delivery=https://tocsin.example.test/deliveries/delivery-9",
+      diagnostics: [],
+    });
+  });
+
+  it("keeps the delivery URL empty for previews and test sends with no persisted delivery", () => {
+    expect(DestinationTemplateEngine.createRenderContext(input).tocsin.deliveryUrl).toBe("");
+  });
+
   it("rejects unknown variables with path-level diagnostics", () => {
     expect(
       DestinationTemplateEngine.diagnoseTemplateValue(

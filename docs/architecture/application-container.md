@@ -36,7 +36,7 @@ Tocsin 的 MVP 约束不变：单进程、SQLite-first、server-only 后端运�
 
 加急切片的接线要点：`createDeliveryWorker()` 在成功分支注入窄接口 `triggerPings`（由 `OncallService.triggerPingsForDelivery` 提供）；该依赖缺省时投递行为与加急之前完全一致，触发内部抛错也只记日志，不会把已成功的投递改判失败。`DestinationConfigResolver`（`server/integrations/destination-config-resolver.ts`）在投递发送、目标测试、加急执行三条路径上按 `app.appRef` 解析应用凭证后再交给 adapter，secret 不落库、不进 DTO。
 
-公开地址接线：容器解析 `publicBaseUrl`（`env.SERVER_URL`，缺失时回落到 `env.BETTER_AUTH_URL`）并注入 `createDestinationService()` 与 `createDeliveryWorker()`，用于渲染告警模板里的 `tocsin.eventUrl`。两个地址都没有时该变量为空；内置预览样例与没有样例的测试发送使用合成事件 id，也不生成链接。
+公开地址接线：容器解析 `publicBaseUrl`（`env.SERVER_URL`，缺失时回落到 `env.BETTER_AUTH_URL`）并注入 `createDestinationService()` 与 `createDeliveryWorker()`，用于渲染告警模板里的 `tocsin.eventUrl` 与 `tocsin.deliveryUrl`。两个地址都没有时这两个变量为空；内置预览样例与没有样例的测试发送使用合成事件 id，也不生成事件链接，且没有真实投递记录，投递链接同样为空。
 
 当前目录形状：
 

@@ -18,6 +18,7 @@ export const commonTemplateVariablePaths: readonly string[] = [
   "event.statusDisplay",
   "source.name",
   "tocsin.eventUrl",
+  "tocsin.deliveryUrl",
 ];
 
 /** Fixed group order, so the panel does not reshuffle between releases. */

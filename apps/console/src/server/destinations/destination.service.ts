@@ -44,7 +44,7 @@ import {
   destinationOperationalConfigFromRuntime,
   destinationSummaryFromRuntime,
 } from "#/infra/sqlite/repositories/destination/destination.helpers";
-import { eventDetailUrl } from "#/lib/event-url";
+import { eventDetailUrl } from "#/lib/dashboard-url";
 import {
   createTestNormalizedEvent,
   mergeJsonObjects,
