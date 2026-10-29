@@ -2,6 +2,67 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 175 轮）
+
+- 时间：2026-10-29 19:26 CST 起。
+- 基线：`origin/main` @ `bc1ceb55`；启动时 0 个 open PR，main CI 双绿。
+- 类型：**需求切片 + 发布**（非 full-audit）。第 171 轮 15:37 CST 的全量审计距今 3h49m
+  < 6 小时，按第 1.5 步闸门不重跑专家车道，直接续做 backlog 最高分未交付项。
+- **全量审计时间戳保持 2026-10-29 15:37 CST**（本轮未做全量审计）。
+- 车道轮转位置：不前进，下一个非必跑车道仍为 **docs-drift**。
+- `ui-triage`：本轮未运行（紧邻上一轮全量审计，UI 路径自 15:55 起无评审触发的合并）。
+- `last_ui_review_at`：保持 **2026-10-29 15:55 CST**。
+- 环境：会话工作树 `node_modules` 缺少 `@rolldown/plugin-babel` 等链接，
+  `vp install --frozen-lockfile --force` 4.5s 恢复。
+
+### 本轮交付
+
+- **PR #729** `feat(destinations): count only source-reachable routes in coverage`
+  （REQ-138，28 分，rebase 合并 `3ff3ab5d`）
+  - `destinationRouteCoverage(destinationId, routes, sources)` 派生
+    `reachableRouteCount` / `blockedRouteCount` / `blockedRouteNames`：指定告警源的路由需至少
+    一个被引用源已启用；兜底路由需至少存在一个已启用源；已删除的源视为不可用；停用路由不计数。
+  - 「带条件」改为只在可达路由内统计，避免把不可达路由说成条件覆盖。
+  - 徽标改为 `N 条可达` / `X/Y 条可达` / `告警源全停用`（destructive）/ `无生效路由`；
+    悬浮说明区分三态并列出阻断路由名；目标停用/删除确认仍按启用路由数。
+  - 文档：新增 `docs/prd/destination-route-coverage-source-availability.md`，更新
+    `apps/docs/integrations/destinations.md` 计数口径，旧覆盖 PRD 加后续变更注记。
+  - 验证：`vp check` 0 error（35 warning 与 main 一致）；`vp run -r test` 4/4
+    （console 1382）；`vp run -r build` 2/2；PR CI 与 E2E 双绿。新增模型 8 例 + 组件 5 例测试。
+  - 自审：`code-review`（low）0 findings。
+  - 未做真实浏览器验证（本机无运行中的 console dev 实例），四种徽标状态由组件测试覆盖。
+
+### 发布
+
+- 三位专家一致 APPROVE：
+  - 发布经理：自 beta.141 起 1 个用户可见变更（`3ff3ab5d` 通知目标可达覆盖），建议
+    `0.1.0-beta.142`。
+  - 阻断审计：`575ecaee` 的 CI 与 E2E 双绿、零 open PR、无迁移、3 条
+    `blocked-autonomous` 均为历史非阻断项。
+  - 运维/回滚：零迁移、零配置差异；回滚只需换镜像。
+- 版本 `0.1.0-beta.142`（PR #730，rebase 合并 `575ecaee`）。
+- Tag `v0.1.0-beta.142` @ `575ecaee`（annotated）；GitHub Release 已创建
+  （prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.142`
+  （linux/amd64 + linux/arm64），index digest
+  `sha256:c6cb575968a15cb625faffdcfd100adf34fb9ac59da748673ad14f54c7081cb2`；
+  回滚镜像 `0.1.0-beta.141`，无需数据库操作。
+
+### 收尾清理
+
+- 回收干净且 PR 已合并的注册工作树 `optimistic-keller-04f3ae`、
+  `relaxed-brattain-3ffdaa`；`youthful-murdock-b65fc6` 仍有真实未提交改动，跳过保留；
+  `docs-site-*` 属并行文档站车道，未介入。
+- `.claude/worktrees` **2.8G → 2.1G**；`agent-iteration` 锁与专用工作树收尾时删除，
+  会话工作树的 `node_modules`、`.output`、`.vite` 同步删除。
+
+### 下一轮优先项
+
+1. REQ-137（28，解析器变更确认）/ REQ-108（28，多值属性筛选）/ REQ-159（28，通用源字段映射）择一。
+2. docs-drift（下一个轮转车道），优先复核 DOC-114…DOC-121。
+3. UI-122：390px 下目标列表右侧列被裁切（需浏览器复验）。
+4. REL-16 / REL-23：main CI required checks 交 EXPERT_PANEL。
+
 ## 2026-10-29（第 174 轮）
 
 - 时间：2026-10-29 18:26 CST 起。
