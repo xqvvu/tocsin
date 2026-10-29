@@ -60,6 +60,14 @@ export interface DeliveryDedupeKeyRow {
 
 export interface DeliveryRepository {
   enqueueForEvent(input: EnqueueDeliveriesInput): Promise<EnqueueDeliveriesResult>;
+  /**
+   * In-window dedupe keys for one `(source, idempotency key)`, read-only.
+   *
+   * The read-only intake rehearsal uses the same predicate `enqueueForEvent`
+   * applies, so a rehearsal can say which targets production would skip without
+   * reserving a key or writing any row.
+   */
+  findDedupeKeys(input: FindDedupeKeysInput): Promise<DedupeKeyHit[]>;
   reclaimStaleRunning(
     input: ReclaimStaleRunningDeliveriesInput,
   ): Promise<ReclaimStaleRunningDeliveriesResult>;
@@ -96,6 +104,17 @@ export interface EnqueueDeliveriesResult {
   created: DeliveryJob[];
   deduped: DedupedDelivery[];
   skippedExisting: ExistingDeliveryTarget[];
+}
+
+export interface FindDedupeKeysInput {
+  sourceId: string;
+  idempotencyKey: string;
+  windowStartsAt: IsoDateTimeString;
+}
+
+export interface DedupeKeyHit extends DedupedDelivery {
+  /** When the window opened; the earliest hit explains the dedupe. */
+  createdAt: IsoDateTimeString;
 }
 
 export interface DedupedDelivery {

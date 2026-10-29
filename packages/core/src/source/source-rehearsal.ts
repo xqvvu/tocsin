@@ -68,18 +68,64 @@ export type SourceRehearsalParse = z.infer<typeof SourceRehearsalParseSchema>;
  * Whether the rehearsed delivery would actually reach its target.
  *
  * A rehearsal renders a matched target even when production would never send
- * the alert, so the result has to say which gate the real chain would hit.
- * `suppressed` is terminal at enqueue; `destination_disabled` is never claimed;
- * `queued_paused` is enqueued but waits out a global pause; `deliver` passes
+ * the alert, so the result has to say which gate the real chain would hit, in
+ * the order enqueue applies them: `deduped` skips the row entirely, `suppressed`
+ * is terminal at enqueue, `destination_disabled` is never claimed,
+ * `queued_paused` is enqueued but waits out a global pause, and `deliver` passes
  * every gate.
  */
 export const SourceRehearsalVerdictSchema = z.enum([
   "deliver",
+  "deduped",
   "suppressed",
   "queued_paused",
   "destination_disabled",
 ]);
 export type SourceRehearsalVerdict = z.infer<typeof SourceRehearsalVerdictSchema>;
+
+/**
+ * Whether the intake dedupe window would absorb the rehearsed delivery.
+ *
+ * The real enqueue path skips a `(route, destination)` pair without creating a
+ * row when the same `(source, idempotency key, route, destination)` was already
+ * enqueued inside the window, so a rehearsal that only rendered the target
+ * would promise a delivery production never creates. `not_applicable` means the
+ * parser produced no idempotency key, in which case the real intake never
+ * dedupes either.
+ */
+export const SourceRehearsalDedupeStateSchema = z.enum([
+  "not_applicable",
+  "would_deliver",
+  "would_dedupe",
+  "partially_deduped",
+]);
+export type SourceRehearsalDedupeState = z.infer<typeof SourceRehearsalDedupeStateSchema>;
+
+/**
+ * The dedupe window the rehearsal checked, for one matched target.
+ *
+ * A target can be reached by several routes and the key includes the route, so
+ * the result reports how many of this destination's pairs still sit inside the
+ * window. `firstEventId` is the earliest event that opened the window; it is
+ * null unless at least one pair hits.
+ */
+export const SourceRehearsalDedupeSchema = z.object({
+  state: SourceRehearsalDedupeStateSchema,
+  /** Length of the dedupe window the intake applies, in milliseconds. */
+  windowMs: z.number().int().positive(),
+  /** Server clock minus the configured dedupe window. */
+  windowStartsAt: z.string(),
+  /** Matched `(route, target)` pairs for this destination. */
+  matchedPairCount: z.number().int().nonnegative(),
+  /** How many of those pairs already have an in-window key. */
+  dedupedPairCount: z.number().int().nonnegative(),
+  /** Route whose key hit first; null when no pair hits. */
+  routeId: z.string().min(1).nullable(),
+  routeName: z.string().nullable(),
+  /** Event that opened the window; the rehearsal links to it. */
+  firstEventId: z.string().min(1).nullable(),
+});
+export type SourceRehearsalDedupe = z.infer<typeof SourceRehearsalDedupeSchema>;
 
 /**
  * The suppression rule that would silence the rehearsed delivery.
@@ -127,6 +173,8 @@ export const SourceRehearsalRenderSchema = z.object({
   verdict: SourceRehearsalVerdictSchema,
   /** The rule that would silence this delivery; null when none matches. */
   suppression: SourceRehearsalSuppressionSchema.nullable(),
+  /** Whether the dedupe window would skip this target at enqueue. */
+  dedupe: SourceRehearsalDedupeSchema,
 });
 export type SourceRehearsalRender = z.infer<typeof SourceRehearsalRenderSchema>;
 

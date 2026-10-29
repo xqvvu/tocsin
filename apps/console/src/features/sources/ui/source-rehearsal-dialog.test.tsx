@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import type { SourceRehearsalResult } from "@tocsin/core";
@@ -11,6 +12,14 @@ import { AppIntlProvider } from "#/i18n/provider";
 // The JSON block owns its own code-block/copy test; here it only has to render.
 vi.mock("#/features/events/ui/event-json-block", () => ({
   EventJsonBlock: ({ value }: { value: unknown }) => <pre>{JSON.stringify(value)}</pre>,
+}));
+
+// The dedupe row only needs Link's destination, so the test renders a plain
+// anchor instead of standing up a router.
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, params }: { children: ReactNode; params?: { eventId: string } }) => (
+    <a href={`/events/${params?.eventId ?? ""}`}>{children}</a>
+  ),
 }));
 
 const source = {
@@ -59,6 +68,36 @@ const result: SourceRehearsalResult = {
       errorMessage: null,
       verdict: "deliver",
       suppression: null,
+      dedupe: {
+        state: "would_deliver",
+        windowMs: 300_000,
+        windowStartsAt: "2026-10-28T11:55:00.000Z",
+        matchedPairCount: 1,
+        dedupedPairCount: 0,
+        routeId: null,
+        routeName: null,
+        firstEventId: null,
+      },
+    },
+  ],
+};
+
+const dedupedResult: SourceRehearsalResult = {
+  ...result,
+  renders: [
+    {
+      ...result.renders[0]!,
+      verdict: "deduped",
+      dedupe: {
+        state: "would_dedupe",
+        windowMs: 300_000,
+        windowStartsAt: "2026-10-28T11:55:00.000Z",
+        matchedPairCount: 1,
+        dedupedPairCount: 1,
+        routeId: "route-1",
+        routeName: "Critical checkout",
+        firstEventId: "evt_original",
+      },
     },
   ],
 };
@@ -217,6 +256,30 @@ describe("source rehearsal dialog", () => {
     expect(screen.getByText("Maintenance window")).toBeTruthy();
     expect(screen.getByText("Delivery is paused globally")).toBeTruthy();
     expect(screen.getByText(/Paused since 2026-10-28T11:00:00.000Z/)).toBeTruthy();
+  });
+
+  it("discloses the dedupe window so a rendered target is not read as a delivery", async () => {
+    const onRehearse = vi.fn<() => Promise<SourceRehearsalResult>>(async () => dedupedResult);
+    renderDialog(onRehearse);
+    openDialog();
+
+    fireEvent.change(screen.getByLabelText("Webhook body"), {
+      target: { value: '{"title":"Checkout unavailable"}' },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Run rehearsal" }));
+
+    // The enqueue path skips a deduped pair before writing any row, so the
+    // preview below is never sent; say which window absorbed it and which event
+    // opened the window.
+    expect(await screen.findByText("Would be deduped")).toBeTruthy();
+    expect(screen.getByText("Dedupe check")).toBeTruthy();
+    expect(screen.getByText("Hit")).toBeTruthy();
+    expect(
+      screen.getByText(/1\/1 route targets already delivered inside the 5-minute dedupe window/),
+    ).toBeTruthy();
+    const link = screen.getByRole("link", { name: "evt_original" });
+    expect(link.getAttribute("href")).toBe("/events/evt_original");
+    expect(link.parentElement?.textContent).toContain("First triggered by event");
   });
 
   it("states a disabled target once instead of stacking two badges", async () => {

@@ -12,6 +12,7 @@ import {
   type NormalizedEvent,
   type RehearseSourceCommand,
   type RouteMatchResult,
+  type SourceRehearsalDedupe,
   type SourceRehearsalDelivery,
   type SourceRehearsalRender,
   type SourceRehearsalResult,
@@ -24,6 +25,7 @@ import type { DestinationPresentation } from "@tocsin/destinations";
 import type { ProviderParseResult } from "@tocsin/providers";
 
 import { RecordNotFoundError } from "#/infra/sqlite/errors";
+import type { DedupeKeyHit } from "#/infra/sqlite/repositories/delivery/delivery.interface";
 import type { SourceRuntimeConfig } from "#/infra/sqlite/repositories/source/source.interface";
 import type { SqliteStore } from "#/infra/sqlite/store";
 import { parseDestinationConfig } from "#/server/configuration/configuration-support";
@@ -44,12 +46,14 @@ export class SourceRehearsalService {
   private readonly providers: SourceRehearsalServiceOptions["providers"];
   private readonly destinations: SourceRehearsalServiceOptions["destinations"];
   private readonly now: () => string;
+  private readonly dedupeWindowMs: number;
 
   constructor(options: SourceRehearsalServiceOptions) {
     this.store = options.store;
     this.providers = options.providers;
     this.destinations = options.destinations;
     this.now = options.now ?? (() => new Date().toISOString());
+    this.dedupeWindowMs = options.dedupeWindowMs ?? 5 * 60 * 1000;
   }
 
   async rehearseSource(command: RehearseSourceCommand): Promise<SourceRehearsalResult> {
@@ -102,6 +106,18 @@ export class SourceRehearsalService {
     const matches = routes.map((route) =>
       evaluateRouteMatch(route, { sourceId: source.id, event: parsed.normalized }),
     );
+    // A provider that produced no idempotency key is never deduped by the real
+    // intake either, so the lookup only runs when one exists.
+    const dedupeWindowStartsAt = new Date(
+      new Date(receivedAt).valueOf() - this.dedupeWindowMs,
+    ).toISOString();
+    const dedupeKeyHits = parsed.idempotencyKey
+      ? await this.store.deliveries.findDedupeKeys({
+          sourceId: source.id,
+          idempotencyKey: parsed.idempotencyKey,
+          windowStartsAt: dedupeWindowStartsAt,
+        })
+      : [];
     const renders = await this.renderMatchedDestinations({
       matches,
       source: summary,
@@ -113,6 +129,12 @@ export class SourceRehearsalService {
       receivedAt,
       presentation: { locale: settings.locale, timeZone: settings.timeZone },
       delivery,
+      dedupe: {
+        applicable: Boolean(parsed.idempotencyKey),
+        windowMs: this.dedupeWindowMs,
+        windowStartsAt: dedupeWindowStartsAt,
+        hits: dedupeKeyHits,
+      },
     });
 
     return {
@@ -169,6 +191,12 @@ export class SourceRehearsalService {
     receivedAt: string;
     presentation: DestinationPresentation;
     delivery: SourceRehearsalDelivery;
+    dedupe: {
+      applicable: boolean;
+      windowMs: number;
+      windowStartsAt: string;
+      hits: DedupeKeyHit[];
+    };
   }): Promise<SourceRehearsalRender[]> {
     const destinationIds = [
       ...new Set(
@@ -193,6 +221,15 @@ export class SourceRehearsalService {
 
     for (const destinationId of destinationIds) {
       const destination = await this.store.destinations.get(destinationId);
+      const dedupe = rehearsalDedupe({
+        applicable: input.dedupe.applicable,
+        windowMs: input.dedupe.windowMs,
+        windowStartsAt: input.dedupe.windowStartsAt,
+        matchedRoutes: input.matches.filter(
+          (match) => match.matched && match.destinationIds.includes(destinationId),
+        ),
+        hits: input.dedupe.hits.filter((hit) => hit.destinationId === destinationId),
+      });
 
       if (!destination) {
         renders.push({
@@ -204,6 +241,7 @@ export class SourceRehearsalService {
           errorMessage: `Destination not found: ${destinationId}`,
           verdict: "destination_disabled",
           suppression: null,
+          dedupe,
         });
         continue;
       }
@@ -216,6 +254,7 @@ export class SourceRehearsalService {
         receivedAt: input.receivedAt,
       });
       const verdict = rehearsalVerdict({
+        dedupe,
         suppression,
         destinationEnabled: destination.enabled,
         paused: input.delivery.paused,
@@ -251,6 +290,7 @@ export class SourceRehearsalService {
           errorMessage: null,
           verdict,
           suppression,
+          dedupe,
         });
       } catch (error) {
         renders.push({
@@ -262,6 +302,7 @@ export class SourceRehearsalService {
           errorMessage: redactText(error instanceof Error ? error.message : String(error)),
           verdict,
           suppression,
+          dedupe,
         });
       }
     }
@@ -313,15 +354,80 @@ export class SourceRehearsalService {
 }
 
 /**
+ * Which dedupe state the enqueue path would reach for one target.
+ *
+ * A pair counts as deduped only when its exact `(route, destination)` key sits
+ * inside the window: the key includes the route, so a route that never saw the
+ * earlier event starts its own window and still gets a delivery.
+ */
+function rehearsalDedupe(input: {
+  applicable: boolean;
+  windowMs: number;
+  windowStartsAt: string;
+  /** Matched routes that target this destination; one pair per route. */
+  matchedRoutes: RouteMatchResult[];
+  /** In-window hits for this destination, oldest first. */
+  hits: DedupeKeyHit[];
+}): SourceRehearsalDedupe {
+  const matchedRouteIds = new Set(input.matchedRoutes.map((route) => route.routeId));
+  const matchedPairCount = matchedRouteIds.size;
+
+  if (!input.applicable) {
+    return {
+      state: "not_applicable",
+      windowMs: input.windowMs,
+      windowStartsAt: input.windowStartsAt,
+      matchedPairCount,
+      dedupedPairCount: 0,
+      routeId: null,
+      routeName: null,
+      firstEventId: null,
+    };
+  }
+
+  const relevantHits = input.hits.filter((hit) => matchedRouteIds.has(hit.routeId));
+  const earliestHit = relevantHits.at(0) ?? null;
+  const dedupedPairCount = new Set(relevantHits.map((hit) => hit.routeId)).size;
+
+  return {
+    state:
+      dedupedPairCount === 0
+        ? "would_deliver"
+        : dedupedPairCount === matchedPairCount
+          ? "would_dedupe"
+          : "partially_deduped",
+    windowMs: input.windowMs,
+    windowStartsAt: input.windowStartsAt,
+    matchedPairCount,
+    dedupedPairCount,
+    routeId: earliestHit ? earliestHit.routeId : null,
+    routeName: earliestHit
+      ? (input.matchedRoutes.find((route) => route.routeId === earliestHit.routeId)?.routeName ??
+        null)
+      : null,
+    firstEventId: earliestHit ? earliestHit.firstEventId : null,
+  };
+}
+
+/**
  * Which gate the real delivery chain would hit, in the order it applies them:
- * suppression makes the row terminal at enqueue, a disabled target is never
- * claimed, and a global pause leaves the row pending.
+ * the dedupe window skips the row before anything else, suppression makes the
+ * row terminal at enqueue, a disabled target is never claimed, and a global
+ * pause leaves the row pending.
+ *
+ * A partially deduped target still creates a row for its remaining pairs, so
+ * only a full hit skips the enqueue.
  */
 function rehearsalVerdict(input: {
+  dedupe: SourceRehearsalDedupe;
   suppression: SourceRehearsalSuppression | null;
   destinationEnabled: boolean;
   paused: boolean;
 }): SourceRehearsalVerdict {
+  if (input.dedupe.state === "would_dedupe") {
+    return "deduped";
+  }
+
   if (input.suppression) {
     return "suppressed";
   }

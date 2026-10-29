@@ -263,6 +263,56 @@ describe("delivery idempotency dedupe", () => {
     await db.destroy();
   });
 
+  it("reads in-window keys for the exact source and key without reserving one", async () => {
+    const { db, repositories } = await openTestStore();
+    await seedSourceRouteAndDestination(repositories);
+
+    const { event } = await enqueueDelivery(repositories, {
+      idempotencyKey: "request-1",
+      now: "2026-10-12T07:30:00.000Z",
+    });
+
+    const hits = await repositories.deliveries.findDedupeKeys({
+      sourceId: "source-1",
+      idempotencyKey: "request-1",
+      windowStartsAt: WINDOW_START,
+    });
+
+    expect(hits).toEqual([
+      {
+        sourceId: "source-1",
+        idempotencyKey: "request-1",
+        routeId: "route-1",
+        destinationId: "destination-1",
+        firstEventId: event.id,
+        createdAt: "2026-10-12T07:30:00.000Z",
+      },
+    ]);
+
+    // The read is a pure query: an outside-window or mismatched read still finds
+    // nothing and must not take over the existing key.
+    expect(
+      await repositories.deliveries.findDedupeKeys({
+        sourceId: "source-1",
+        idempotencyKey: "request-1",
+        windowStartsAt: "2026-10-12T07:30:00.001Z",
+      }),
+    ).toEqual([]);
+    expect(
+      await repositories.deliveries.findDedupeKeys({
+        sourceId: "source-1",
+        idempotencyKey: "request-other",
+        windowStartsAt: WINDOW_START,
+      }),
+    ).toEqual([]);
+
+    const keys = await db.selectFrom("delivery_dedupe_keys").selectAll().execute();
+    expect(keys).toHaveLength(1);
+    expect(keys[0]?.created_at).toBe("2026-10-12T07:30:00.000Z");
+
+    await db.destroy();
+  });
+
   it("skips dedupe entirely for replayed events", async () => {
     const { db, repositories } = await openTestStore();
     await seedSourceRouteAndDestination(repositories);

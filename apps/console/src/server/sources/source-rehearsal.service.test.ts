@@ -281,6 +281,16 @@ describe("source rehearsal service", () => {
         errorMessage: "Destination not found: destination-missing",
         verdict: "destination_disabled",
         suppression: null,
+        dedupe: {
+          state: "would_deliver",
+          windowMs: 300_000,
+          windowStartsAt: "2026-10-28T11:55:00.000Z",
+          matchedPairCount: 1,
+          dedupedPairCount: 0,
+          routeId: null,
+          routeName: null,
+          firstEventId: null,
+        },
       },
     ]);
   });
@@ -375,6 +385,163 @@ describe("source rehearsal service", () => {
     expect(titleCheck?.actual).toContain("[REDACTED]");
     expect(titleCheck?.actual).not.toContain("super-secret-value");
     expect(checks.find((check) => check.field === "label")?.actual).toBe("[REDACTED]");
+  });
+
+  it("discloses the dedupe window that would skip the delivery", async () => {
+    const { service, store } = await createHarness();
+    const previous = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: "evt-123",
+      normalized: {
+        title: "Checkout unavailable",
+        message: "checkout returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout",
+        labels: { service: "checkout" },
+        occurredAt: "2026-10-28T11:59:00.000Z",
+      },
+      rawPayload: {},
+    });
+    await store.deliveries.enqueueForEvent({
+      event: previous,
+      matches: [{ routeId: "route-1", destinationIds: ["destination-1"] }],
+      dedupeWindowStartsAt: "2026-10-28T11:55:00.000Z",
+      now: "2026-10-28T11:59:00.000Z",
+    });
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    // The enqueue path skips the row before suppression, so a rendered preview
+    // must not promise a delivery the window absorbs.
+    expect(result.renders[0]).toMatchObject({
+      verdict: "deduped",
+      dedupe: {
+        state: "would_dedupe",
+        windowMs: 300_000,
+        windowStartsAt: "2026-10-28T11:55:00.000Z",
+        matchedPairCount: 1,
+        dedupedPairCount: 1,
+        routeId: "route-1",
+        routeName: "Critical checkout",
+        firstEventId: previous.id,
+      },
+    });
+  });
+
+  it("does not dedupe a key outside the window", async () => {
+    const { service, store } = await createHarness();
+    const previous = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: "evt-123",
+      normalized: {
+        title: "Checkout unavailable",
+        message: "checkout returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout",
+        labels: { service: "checkout" },
+        occurredAt: "2026-10-28T11:50:00.000Z",
+      },
+      rawPayload: {},
+    });
+    await store.deliveries.enqueueForEvent({
+      event: previous,
+      matches: [{ routeId: "route-1", destinationIds: ["destination-1"] }],
+      dedupeWindowStartsAt: "2026-10-28T11:50:00.000Z",
+      now: "2026-10-28T11:54:59.000Z",
+    });
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    expect(result.renders[0]).toMatchObject({
+      verdict: "deliver",
+      dedupe: {
+        state: "would_deliver",
+        dedupedPairCount: 0,
+        firstEventId: null,
+      },
+    });
+  });
+
+  it("reports a partial window hit only when some routes still deliver", async () => {
+    const { service, store } = await createHarness();
+    await store.routes.create({
+      id: "route-2",
+      name: "Secondary checkout",
+      enabled: true,
+      rule: {
+        severities: ["critical"],
+        labels: [{ key: "service", operator: "equals", value: "checkout" }],
+        titleContains: [],
+      },
+      destinationIds: ["destination-1"],
+    });
+    const previous = await store.intake.recordEvent({
+      sourceId: "source-1",
+      idempotencyKey: "evt-123",
+      normalized: {
+        title: "Checkout unavailable",
+        message: "checkout returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout",
+        labels: { service: "checkout" },
+        occurredAt: "2026-10-28T11:59:00.000Z",
+      },
+      rawPayload: {},
+    });
+    // Only the first route saw the earlier event, so its pair is deduped while
+    // the newly added route still creates a delivery.
+    await store.deliveries.enqueueForEvent({
+      event: previous,
+      matches: [{ routeId: "route-1", destinationIds: ["destination-1"] }],
+      dedupeWindowStartsAt: "2026-10-28T11:55:00.000Z",
+      now: "2026-10-28T11:59:00.000Z",
+    });
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    expect(result.renders[0]).toMatchObject({
+      verdict: "deliver",
+      dedupe: {
+        state: "partially_deduped",
+        matchedPairCount: 2,
+        dedupedPairCount: 1,
+        routeId: "route-1",
+        firstEventId: previous.id,
+      },
+    });
+  });
+
+  it("marks dedupe as not applicable when the parser returns no idempotency key", async () => {
+    const parse = vi.fn<ProviderRegistry["parse"]>(() => ({
+      ok: true,
+      idempotencyKey: "",
+      normalized: {
+        title: "Checkout unavailable",
+        message: "checkout returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout",
+        labels: { service: "checkout" },
+        occurredAt: "2026-10-28T11:59:00.000Z",
+      },
+      providerMetadata: {},
+    }));
+    const { service, store } = await createHarness({
+      providers: { parse } as unknown as ProviderRegistry,
+    });
+    const findDedupeKeys = vi.spyOn(store.deliveries, "findDedupeKeys");
+
+    const result = await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    expect(result.renders[0]?.dedupe).toMatchObject({
+      state: "not_applicable",
+      dedupedPairCount: 0,
+      firstEventId: null,
+    });
+    expect(findDedupeKeys).not.toHaveBeenCalled();
   });
 
   it("reports a global delivery pause as queued instead of delivered", async () => {

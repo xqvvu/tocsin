@@ -1,4 +1,6 @@
-import type { SourceRehearsalResult } from "@tocsin/core";
+import { Link } from "@tanstack/react-router";
+
+import type { SourceRehearsalDedupe, SourceRehearsalResult } from "@tocsin/core";
 
 import { Alert, AlertDescription, AlertTitle } from "#/components/ui/alert";
 import { Badge } from "#/components/ui/badge";
@@ -206,6 +208,7 @@ export function SourceRehearsalResultView({ result }: { result: SourceRehearsalR
                     <RouteMatchCheckBadges checks={render.suppression.checks} />
                   </div>
                 ) : null}
+                <RehearsalDedupeRow dedupe={render.dedupe} />
                 {render.ok ? (
                   <div className="max-h-64 overflow-auto">
                     <EventJsonBlock
@@ -221,6 +224,54 @@ export function SourceRehearsalResultView({ result }: { result: SourceRehearsalR
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+/**
+ * Whether the dedupe window would absorb this target at enqueue.
+ *
+ * Only a hit needs an explanation: the muted state line already says the check
+ * ran and found nothing, while a hit names how many matched pairs the window
+ * absorbs and links the event that opened it.
+ */
+function RehearsalDedupeRow({ dedupe }: { dedupe: SourceRehearsalDedupe }) {
+  const t = useTranslations();
+  const deduped = dedupe.state === "would_dedupe" || dedupe.state === "partially_deduped";
+
+  return (
+    <div className="border-border flex flex-col gap-1 border-b px-3 py-2">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        <span className="text-muted-foreground">{t("sources.rehearsal.dedupeLabel")}</span>
+        <span className="font-medium">{t(`sources.rehearsal.dedupeState.${dedupe.state}`)}</span>
+      </div>
+      {deduped ? (
+        <>
+          <p className="text-muted-foreground text-[11px] break-words">
+            {t("sources.rehearsal.dedupeHitDetail", {
+              deduped: dedupe.dedupedPairCount,
+              matched: dedupe.matchedPairCount,
+              minutes: Math.max(1, Math.round(dedupe.windowMs / 60_000)),
+            })}
+            {dedupe.routeName ? ` · ${dedupe.routeName}` : null}
+          </p>
+          {dedupe.firstEventId ? (
+            <p className="text-[11px]">
+              <span className="text-muted-foreground">
+                {t("sources.rehearsal.dedupeFirstEvent")}{" "}
+              </span>
+              <Link
+                to="/events/$eventId"
+                params={{ eventId: dedupe.firstEventId }}
+                className="underline-offset-4 hover:underline"
+                title={dedupe.firstEventId}
+              >
+                {dedupe.firstEventId}
+              </Link>
+            </p>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }

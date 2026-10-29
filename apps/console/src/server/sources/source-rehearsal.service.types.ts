@@ -9,4 +9,10 @@ export interface SourceRehearsalServiceOptions {
   destinations: DestinationRegistry;
   /** Injectable clock so tests can pin the rehearsal timestamp. */
   now?: () => string;
+  /**
+   * Idempotency dedupe window to check, in milliseconds. Defaults to five
+   * minutes, matching `WebhookIntakeService`; the two must describe the same
+   * window or the rehearsal would promise a delivery production skips.
+   */
+  dedupeWindowMs?: number;
 }

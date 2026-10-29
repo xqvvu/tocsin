@@ -39,7 +39,9 @@ import type {
   EnqueueDeliveriesInput,
   EnqueueDeliveriesResult,
   DedupedDelivery,
+  DedupeKeyHit,
   ExistingDeliveryTarget,
+  FindDedupeKeysInput,
   MarkDeliveryFailedInput,
   MarkDeliverySucceededInput,
   ReclaimStaleRunningDeliveriesInput,
@@ -187,6 +189,31 @@ export class SqliteDeliveryRepository implements DeliveryRepository {
 
       return { created, deduped, skippedExisting };
     });
+  }
+
+  async findDedupeKeys(input: FindDedupeKeysInput): Promise<DedupeKeyHit[]> {
+    // Same window predicate `reserveDedupeKey` applies inside the enqueue
+    // transaction, minus the write: a rehearsed payload must not reserve a key
+    // or prune anything.
+    const rows = await this.context.db
+      .selectFrom("delivery_dedupe_keys")
+      .selectAll()
+      .where("source_id", "=", input.sourceId)
+      .where("idempotency_key", "=", input.idempotencyKey)
+      .where("created_at", ">=", input.windowStartsAt)
+      .orderBy("created_at", "asc")
+      .orderBy("route_id", "asc")
+      .orderBy("destination_id", "asc")
+      .execute();
+
+    return rows.map((row) => ({
+      sourceId: row.source_id,
+      idempotencyKey: row.idempotency_key,
+      routeId: row.route_id,
+      destinationId: row.destination_id,
+      firstEventId: row.first_event_id,
+      createdAt: row.created_at,
+    }));
   }
 
   reclaimStaleRunning(
