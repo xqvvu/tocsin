@@ -19,7 +19,13 @@ const SENSITIVE_EXACT_KEYS = new Set([
   "tokens",
   "tokenhash",
   "secret",
+  // Plurals sit beside their singular entries as defense in depth: upstream
+  // payloads sometimes carry a credential collection under one key, and the
+  // suffix rule deliberately does not cover plural nouns so `maxTokens` stays
+  // readable.
+  "secrets",
   "password",
+  "passwords",
   "passwd",
   "passphrase",
   "passwordhash",
@@ -27,9 +33,11 @@ const SENSITIVE_EXACT_KEYS = new Set([
   "credential",
   "credentials",
   "apikey",
+  "apikeys",
   "accesskey",
   "secretkey",
   "privatekey",
+  "privatekeys",
   // A PEM-encoded key names its encoding, so the noun no longer ends the key
   // and the suffix rule misses it.
   "privatekeypem",
