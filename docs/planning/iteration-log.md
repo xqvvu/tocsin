@@ -2,6 +2,82 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 173 轮）
+
+- 时间：2026-10-29 17:26 CST 起。
+- 基线：`origin/main` @ `fc9cd3d6`；启动时 0 个 `agent/*` open PR，main CI 双绿。
+- 类型：**需求切片 + 小修复 + 发布**（非 full-audit）。第 171 轮 15:37 CST 的全量审计距今
+  1h49m < 6 小时，且第 172 轮 16:30 刚交付一个需求切片；按第 1.5 步闸门不重跑专家车道，
+  直接续做 backlog 最高分项。
+- **全量审计时间戳保持 2026-10-29 15:37 CST**（本轮未做全量审计）。
+- 车道轮转位置：不前进，下一个非必跑车道仍为 **docs-drift**。
+- `ui-triage`：本轮未运行（紧邻上一轮全量审计，UI 路径自 15:55 起无新合并）。
+- `last_ui_review_at`：保持 **2026-10-29 15:55 CST**。
+- 环境：会话工作树 `node_modules` 半删残留（根目录仅 3 项）；删除全部 workspace
+  `node_modules` 后 `vp install --frozen-lockfile` 恢复（1.2s）。
+
+### 本轮交付
+
+- **PR #721** `feat(destinations): add a per-delivery dashboard link template variable`
+  （REQ-355，27 分，rebase 合并 `9f9b9ef5`）
+  - 新增模板变量 `tocsin.deliveryUrl`；`DestinationRenderInput` 增可选 `deliveryUrl`；
+    core 模板上下文 schema 增带默认空串的 `deliveryUrl`；worker 用 `publicBaseUrl`
+    生成投递直链，预演与测试发送保持空串。
+  - `apps/console/src/lib/event-url.ts` 重命名为 `dashboard-url.ts`，新增 `deliveryDetailUrl`
+    并与 `eventDetailUrl` 共用 base URL 归一化与 id 编码；变量面板把两个 `tocsin` 链接
+    都钉在常用区。
+  - 文档站变量表/文本模板示例、`docs/architecture/application-container.md`、
+    `docs/release/mvp-rc-checklist.md` 同步；PRD `docs/prd/delivery-url-template-variable.md`。
+  - 验证：`vp check` 0 error（35 warning 与 main 一致）；`vp run -r test` 4/4 包
+    （console 1368、destinations 200）；`vp run -r build` 2/2；PR CI 双绿。
+- **PR #722** `fix(core): redact plural credential keys`（SEC-45，22 分，rebase 合并 `bb9a59fb`）
+  - `SENSITIVE_EXACT_KEYS` 补 `secrets`/`passwords`/`apikeys`/`privatekeys`；参数化测试补 5 个正例，
+    `maxTokens`/`privateKeyId` 可见性断言保持不变。
+  - 验证：core `redaction.test.ts` 119 通过；`vp check` 0 error；`vp run -r test` 4/4；
+    `vp run -r build` 2/2；PR CI 双绿。
+
+### 代码自查
+
+- `code-review`（PR #721，max）：1 条 CONFIRMED —— `docs/release/mvp-rc-checklist.md:37`
+  仍指向重命名前的 `event-url.ts`；已修复并随 PR 合并（`f92e1f19`）。
+
+### 发布
+
+- 三位专家一致 APPROVE：
+  - 发布经理：自 beta.139 起 2 笔用户可见变更（#721 新模板变量、#722 脱敏收窄）。
+  - 阻断审计：`bb9a59fb` 的 CI 与 E2E 双绿、零 open PR、无迁移/依赖/env/compose 差异、
+    3 条 `blocked-autonomous` 均为历史非阻断项。
+  - 运维/回滚：零迁移、零配置差异；回滚只需换镜像。保留意见已写入 release notes：
+    SEC-45 会让引用 `payload.secrets` 等键的既有模板渲染 `[REDACTED]`；回滚前需移除
+    `{{tocsin.deliveryUrl}}`，否则 beta.139 判为未知变量。
+- 版本 `0.1.0-beta.140`（PR #723，rebase 合并 `cd40c65c`）。
+- Tag `v0.1.0-beta.140` @ `cd40c65c`（annotated）；GitHub Release 已创建（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.140`
+  （linux/amd64 + linux/arm64），index digest
+  `sha256:1b019dc654151dfbc374a10b41fc143a84f82156e3b1af9342feaee89d816543`；
+  回滚镜像 `0.1.0-beta.139`，无需数据库操作。
+
+### Obsidian 同步
+
+- `obsidian-vault` skill 在本会话不可用；按 AGENTS.md 记录「Obsidian 同步已跳过」。
+
+### 收尾清理
+
+- 回收注册工作树 `cool-nash-07df5e`（第 172 轮，工作区干净、PR #716 已合并）。
+- `youthful-murdock-b65fc6` 仍有真实未提交改动（destinations/oncall），跳过保留；
+  `docs-site-20261029-175622` 属并行文档站车道，未介入。
+- `.claude/worktrees` **1.5G → 1.4G**；本会话工作树的 `node_modules`、`.output`、`.vite`
+  在收尾时删除，`agent-iteration` 锁目录与专用工作树随后删除。
+- 删除 PR 状态为 MERGED 的本地 `agent/*` 分支（本轮三个）。
+
+### 下一轮优先项
+
+1. REQ-352（27，预演预测幂等去重窗口）——backlog 当前最高分未交付项。
+2. REQ-351（27，通用 Webhook 成功判定）/ REQ-339 / REQ-340 择一。
+3. docs-drift（下一个轮转车道），优先复核 DOC-114…DOC-121。
+4. UI-122：390px 下目标列表右侧列被裁切（需浏览器复验）。
+5. REL-16 / REL-23：main CI required checks 交 EXPERT_PANEL。
+
 ## 2026-10-29（第 172 轮）
 
 - 时间：2026-10-29 16:30 CST 起。
