@@ -1,11 +1,35 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import type * as React from "react";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { EventDetailRouteMatchesTable } from "#/features/events/ui/event-detail-route-matches-table";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
 import { AppIntlProvider } from "#/i18n/provider";
+
+// The table renders inside the event detail route, whose real Link needs the
+// app router. Rendering the anchor directly keeps the test on the table's own
+// behavior: which outcome badge opens which filtered delivery list.
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({
+    to,
+    search,
+    children,
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+    to: string;
+    search?: Record<string, string>;
+  }) => {
+    const query = search ? `?${new URLSearchParams(search).toString()}` : "";
+
+    return (
+      <a href={`${to}${query}`} {...props}>
+        {children}
+      </a>
+    );
+  },
+}));
 
 type RouteMatches = EventDetailData["routeMatches"];
 type Provenance = EventDetailData["routeMatchesProvenance"];
@@ -118,6 +142,52 @@ describe("event detail route matches table", () => {
     expect(screen.getByText("Pending 1")).toBeTruthy();
   });
 
+  it("opens this event's deliveries for one route and outcome", () => {
+    renderTable(
+      [
+        match({ routeId: "route-1", routeName: "Critical checkout" }),
+        match({ routeId: "route-2", routeName: "Warning digest" }),
+      ],
+      "intake_snapshot",
+      [
+        delivery({ id: "delivery-1", routeId: "route-1", state: "failed" }),
+        delivery({ id: "delivery-2", routeId: "route-2", state: "pending" }),
+      ],
+      "evt-42",
+    );
+
+    // The badge is the drill-down from "this route had 1 failure" to the exact
+    // row; all three dimensions have to survive the link, and the same state on
+    // another route must not collapse into the same URL.
+    expect(screen.getByText("Failed 1").closest("a")?.getAttribute("href")).toBe(
+      "/deliveries?eventId=evt-42&routeId=route-1&deliveryState=failed",
+    );
+    expect(screen.getByText("Pending 1").closest("a")?.getAttribute("href")).toBe(
+      "/deliveries?eventId=evt-42&routeId=route-2&deliveryState=pending",
+    );
+  });
+
+  it("names the route and the drill-down in the accessible label", () => {
+    renderTable(
+      [match({ routeId: "route-1", routeName: "Critical checkout" })],
+      "intake_snapshot",
+      [delivery({ routeId: "route-1", state: "failed" })],
+    );
+
+    // Several rows repeat the same state badge, so the label alone has to say
+    // which route the link narrows to.
+    expect(screen.getByText("Failed 1").closest("a")?.getAttribute("aria-label")).toBe(
+      "Failed: 1 · Critical checkout · Filter deliveries to this route",
+    );
+  });
+
+  it("does not link an outcome that has no rows behind it", () => {
+    const { container } = renderTable([match({ routeId: "route-1" })], "intake_snapshot", []);
+
+    expect(screen.getByText("No deliveries")).toBeTruthy();
+    expect(container.querySelector("a")).toBeNull();
+  });
+
   it("explains a matched route that produced no delivery", () => {
     renderTable([match({ routeId: "route-1" })], "intake_snapshot", []);
 
@@ -163,10 +233,12 @@ function renderTable(
   matches: RouteMatches,
   provenance: Provenance = "intake_snapshot",
   deliveries: Deliveries = [],
+  eventId = "event-1",
 ) {
   return render(
     <AppIntlProvider locale="en-US">
       <EventDetailRouteMatchesTable
+        eventId={eventId}
         matches={matches}
         matchedRouteCount={matches.filter((entry) => entry.matched).length}
         provenance={provenance}

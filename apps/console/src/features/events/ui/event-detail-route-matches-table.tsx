@@ -15,11 +15,13 @@ import { RouteMatchResultBadge } from "#/features/routes/ui/route-match-result-b
 import { useTranslations } from "#/i18n/use-i18n";
 
 export function EventDetailRouteMatchesTable({
+  eventId,
   matches,
   matchedRouteCount,
   provenance,
   deliveries,
 }: {
+  eventId: string;
   matches: EventDetailData["routeMatches"];
   matchedRouteCount: number;
   provenance: EventDetailData["routeMatchesProvenance"];
@@ -79,6 +81,9 @@ export function EventDetailRouteMatchesTable({
                   <TableCell>{match.destinationIds.length}</TableCell>
                   <TableCell className="whitespace-normal">
                     <RouteDeliveryOutcomeCell
+                      eventId={eventId}
+                      routeId={match.routeId}
+                      routeName={match.routeName}
                       matched={match.matched}
                       outcomes={outcomes.get(match.routeId)}
                     />

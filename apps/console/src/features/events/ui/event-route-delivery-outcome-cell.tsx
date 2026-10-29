@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+
 import type { DeliveryState } from "@tocsin/core";
 
 import { Badge } from "#/components/ui/badge";
@@ -12,9 +14,15 @@ import { useTranslations } from "#/i18n/use-i18n";
 const OUTCOME_ORDER: DeliveryState[] = ["succeeded", "failed", "running", "pending", "suppressed"];
 
 export function RouteDeliveryOutcomeCell({
+  eventId,
+  routeId,
+  routeName,
   matched,
   outcomes,
 }: {
+  eventId: string;
+  routeId: string;
+  routeName: string;
   matched: boolean;
   outcomes: RouteDeliveryOutcomes | undefined;
 }) {
@@ -37,19 +45,40 @@ export function RouteDeliveryOutcomeCell({
 
   return (
     <div className="flex flex-wrap gap-1">
-      {entries.map(({ state, count }) => (
-        <Badge
-          key={state}
-          variant={
-            state === "failed" ? "destructive" : state === "succeeded" ? "default" : "secondary"
-          }
-          className={
-            state === "suppressed" ? "border-muted-foreground/40 text-muted-foreground" : undefined
-          }
-        >
-          {t(`common.deliveryState.${state}`)} {count}
-        </Badge>
-      ))}
+      {entries.map(({ state, count }) => {
+        const stateLabel = t(`common.deliveryState.${state}`);
+        // The count alone answers "how many"; the badge is the entry point to
+        // "which rows". The route name belongs in the label because the same
+        // state badge repeats once per route in this table, and a reader must be
+        // able to tell the rows apart before following one.
+        const linkTitle = `${stateLabel}: ${count} · ${routeName} · ${t(
+          "events.detail.routeDeliveryOutcome.filterDeliveries",
+        )}`;
+
+        return (
+          <Badge
+            key={state}
+            variant={
+              state === "failed" ? "destructive" : state === "succeeded" ? "default" : "secondary"
+            }
+            className={
+              state === "suppressed"
+                ? "border-muted-foreground/40 text-muted-foreground"
+                : undefined
+            }
+            render={
+              <Link
+                to="/deliveries"
+                search={{ eventId, routeId, deliveryState: state }}
+                aria-label={linkTitle}
+              />
+            }
+            title={linkTitle}
+          >
+            {stateLabel} {count}
+          </Badge>
+        );
+      })}
     </div>
   );
 }

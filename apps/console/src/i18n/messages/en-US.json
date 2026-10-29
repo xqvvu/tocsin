@@ -786,6 +786,7 @@
   "events.detail.routeGapsRoute": "Route",
   "events.detail.routeGapsSummary": "{count} matched but undelivered",
   "events.detail.routeGapsTitle": "Why nothing was sent",
+  "events.detail.routeDeliveryOutcome.filterDeliveries": "Filter deliveries to this route",
   "events.detail.routeDeliveryOutcome.none": "No deliveries",
   "events.detail.routeDeliveryOutcome.notMatched": "Not matched",
   "events.detail.routeHeaders.checks": "Checks",

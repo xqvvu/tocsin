@@ -68,6 +68,7 @@ export function EventDetailView({ detail }: { detail: EventDetailData }) {
           */}
           <div className="flex h-full min-h-0 flex-col gap-4 overflow-auto">
             <EventDetailRouteMatchesTable
+              eventId={detail.event.id}
               matches={detail.routeMatches}
               matchedRouteCount={matchedRouteCount}
               provenance={detail.routeMatchesProvenance}
