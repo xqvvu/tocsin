@@ -27,7 +27,9 @@
 ## 范围
 
 - `@tocsin/core` 的 `SourceRehearsalRender` 增加只读判定：
-  - `verdict`：`deliver` / `suppressed` / `queued_paused` / `destination_disabled`；
+  - `verdict`：`deliver` / `deduped` / `suppressed` / `queued_paused` /
+    `destination_disabled`（`deduped` 由 `docs/prd/source-rehearsal-dedupe-window.md`
+    追加，并排在判定顺序最前）；
   - `suppression`：命中时给出规则 `id`、`name`、`kind`、`reason` 与逐条件 `checks`
     （`checks` 与路由判定复用同一 schema，服务端投影前脱敏）。
 - `SourceRehearsalResult` 增加 `delivery: { paused, pausedAt }`，让结果本身就能解释
@@ -37,13 +39,14 @@
   与当前 settings，按预演时刻 `receivedAt` 计算，不复制匹配逻辑。
 - 预演结果 UI 增加全局暂停提示条、每个目标的判定徽标与静默规则说明。
 
-判定优先级与真实链路一致：静默是终态，先于其他原因；其次目标停用（永不被领取）；
-再次全局暂停（入队但不领取）；最后才是可送达。
+判定优先级与真实链路一致：去重窗口先于一切（入队直接跳过、不创建行）；其次静默是
+终态；再次目标停用（永不被领取）；再次全局暂停（入队但不领取）；最后才是可送达。
 
 ## 非目标
 
 - 不改变入队、领取、暂停或静默的任何语义，不新增投递状态。
-- 不做去重窗口、幂等键、Token 校验的预演；不写事件表、不写投递表、不调用目标发送。
+- 不做 Token 校验的预演；不写事件表、不写投递表、不调用目标发送。去重窗口的预演由
+  `docs/prd/source-rehearsal-dedupe-window.md` 单独扩展。
 - 不新增 schema 或迁移。
 - 不展示历史的静默命中记录，也不预测未来窗口（只在预演时刻判定）。
 

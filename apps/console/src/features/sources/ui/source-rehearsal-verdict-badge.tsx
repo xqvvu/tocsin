@@ -6,9 +6,9 @@ import { useTranslations } from "#/i18n/use-i18n";
 /**
  * What the real delivery chain would do with the rehearsed event.
  *
- * `suppressed` is an intentional "we chose not to send", so it must never read
- * as a failure: like the delivery state badge, it stays outlined and muted
- * instead of red.
+ * `suppressed` and `deduped` are intentional "we chose not to send" outcomes, so
+ * they must never read as failures: like the delivery state badge, they stay
+ * outlined and muted instead of red.
  */
 export function SourceRehearsalVerdictBadge({ verdict }: { verdict: SourceRehearsalVerdict }) {
   const t = useTranslations();
@@ -29,7 +29,7 @@ function verdictBadgeVariant(verdict: SourceRehearsalVerdict): "default" | "seco
 }
 
 function verdictBadgeClassName(verdict: SourceRehearsalVerdict): string | undefined {
-  return verdict === "suppressed" || verdict === "destination_disabled"
+  return verdict === "suppressed" || verdict === "deduped" || verdict === "destination_disabled"
     ? "border-muted-foreground/40 text-muted-foreground"
     : undefined;
 }
