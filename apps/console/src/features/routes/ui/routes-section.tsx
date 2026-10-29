@@ -248,6 +248,7 @@ function RouteActions({
 }) {
   const t = useTranslations();
   const [disableDialogOpen, setDisableDialogOpen] = React.useState(false);
+  const [enableDialogOpen, setEnableDialogOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const historyImpact = useDeletionImpact(requestDeleteImpact);
   const editLabel = t("routing.table.actions.edit");
@@ -338,19 +339,61 @@ function RouteActions({
           </AlertDialogContent>
         </AlertDialog>
       ) : (
-        <IconTooltip label={toggleLabel}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            disabled={pending}
-            aria-label={toggleLabel}
-            className={powerActionButtonClassName(route.enabled)}
-            onClick={() => onToggle(route)}
-          >
-            <RiShutDownLine data-icon="inline-start" aria-hidden />
-          </Button>
-        </IconTooltip>
+        <AlertDialog
+          open={enableDialogOpen}
+          onOpenChange={(open) => {
+            if (!pending) {
+              setEnableDialogOpen(open);
+            }
+          }}
+        >
+          <IconTooltip label={toggleLabel}>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={pending}
+                  aria-label={toggleLabel}
+                  className={powerActionButtonClassName(route.enabled)}
+                />
+              }
+            >
+              <RiShutDownLine data-icon="inline-start" aria-hidden />
+            </AlertDialogTrigger>
+          </IconTooltip>
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("routing.enable.confirmTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("routing.enable.confirmDescription", {
+                  routeName: route.name,
+                  destinationCount: route.destinationIds.length,
+                })}
+              </AlertDialogDescription>
+              {/* Re-enabling releases the backlog the route held while it was
+                  disabled. The count stays visible at zero because "nothing is
+                  waiting" is an answer the operator opened this dialog for. */}
+              <QueuedDeliveriesNotice
+                scope={{ routeId: route.id }}
+                description={t("routing.enable.queuedNote")}
+              />
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>{t("routing.enable.cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={pending}
+                onClick={() => {
+                  setEnableDialogOpen(false);
+                  onToggle(route);
+                }}
+              >
+                {t("routing.enable.confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
       <AlertDialog
         open={deleteDialogOpen}
