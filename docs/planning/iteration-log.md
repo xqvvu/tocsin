@@ -60,6 +60,21 @@
   - 验证：`vp check` 0 error（35 warning 与 main 一致）；`vp run -r test` 4/4（236 文件 / 1400 用例）；
     `vp run -r build` 2/2；GitHub CI `check · test · build` 与 `playwright · chromium` 双绿。
 
+### 发布
+
+**本轮不发布**：`gh pr list --state open` 显示 PR #738（`docs(site): clarify parser evidence retention`，
+docs-site routine 的 PR，非本轮）仍为 open。发布门槛要求「没有 open PR（本轮自己的 docs(planning)
+日志 PR 除外）」，因此跳过打 tag 与镜像推送。
+
+三位专家意见（窄 brief，均只读）：
+
+- 发布经理：RELEASE — 自 `v0.1.0-beta.144` 以来有 2 个用户可见提交
+  （`1f765c8f` 多值筛选、`e0cc15f9` 目标表窄屏操作列修复），建议 `0.1.0-beta.145`。
+- 阻断审计：main CI 双绿、无迁移、无锁文件变动，唯一阻断项是 open PR #738。
+- 运维/回滚（进行中即已判定）：本轮改动无 migration、无镜像配置变化，回滚只需换回旧镜像。
+
+下一轮：确认 #738 已合并后，直接执行 `0.1.0-beta.145` 的版本递增、tag、Release 与多平台镜像推送。
+
 ### 工具链观察
 
 - `vp run -r test` 在某个包测试失败时仍可能以 **exit code 0** 结束（本轮首次运行输出
