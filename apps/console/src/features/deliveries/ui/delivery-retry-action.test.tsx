@@ -28,7 +28,19 @@ const testState = vi.hoisted(() => ({
 vi.mock("#/features/operations/api/operations.queries", () => ({
   deliveryRetryPreviewQueryOptions: (deliveryId: string) => ({
     queryKey: ["test", "retry-preview", deliveryId],
-    queryFn: async () => ({ deliveryId, urgentPaging: testState.urgentPaging }),
+    // No suppression rule is in force for these fixtures; the dialog's
+    // suppression branch is covered in delivery-retry-confirm.test.tsx.
+    queryFn: async () => ({
+      deliveryId,
+      urgentPaging: testState.urgentPaging,
+      suppression: {
+        status: "none",
+        suppressionId: null,
+        suppressionName: null,
+        suppressionKind: null,
+        endsAt: null,
+      },
+    }),
     staleTime: Infinity,
   }),
 }));

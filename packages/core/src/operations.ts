@@ -14,6 +14,7 @@ import type {
   RouteMatchResult,
 } from "#core/route/route";
 import type { SourceSummary } from "#core/source/source";
+import type { SuppressionKind } from "#core/suppression/suppression";
 
 export type IsoDateTimeString = string;
 
@@ -477,17 +478,47 @@ export interface UrgentPagingImpact {
 }
 
 /**
+ * Whether an active suppression would swallow the retry.
+ *
+ * A retry only re-queues the job; the suppression decision is made again when
+ * the worker claims it (`delivery.repository.ts` `claimNext`). An active rule
+ * therefore turns the retry terminal — no attempt, no send, no phone call —
+ * which the operator cannot see from the dialog otherwise.
+ *
+ * `unavailable` means the delivery's event row is gone, so the rule set cannot
+ * be evaluated at all. Like the preview's other states it never blocks the
+ * retry; it only refuses to answer "no rule matches" when that was not checked.
+ */
+export type DeliveryRetrySuppressionStatus = "matched" | "none" | "unavailable";
+
+export interface DeliveryRetrySuppression {
+  status: DeliveryRetrySuppressionStatus;
+  /** The rule that would silence the retry, when `status` is `matched`. */
+  suppressionId: string | null;
+  suppressionName: string | null;
+  suppressionKind: SuppressionKind | null;
+  /**
+   * When the matching window closes. The claim re-evaluates the clock, so a
+   * retry confirmed after this instant is delivered normally.
+   */
+  endsAt: IsoDateTimeString | null;
+}
+
+/**
  * Who a successful retry of one failed delivery could phone.
  *
  * A retry re-queues the job and the worker's paging trigger fires on success,
  * so a deliberate resend carries the same irreversible side effect a replay
  * does. The preview keeps the replay's upper-bound semantics: the destination
  * and route must still be enabled, and the send still has to succeed before
- * anyone is called.
+ * anyone is called. A matched suppression empties the projection instead: the
+ * claim marks the delivery suppressed before any send happens, so advertising
+ * calls there would be as wrong as hiding them everywhere else.
  */
 export interface DeliveryRetryPreview {
   deliveryId: string;
   urgentPaging: UrgentPagingImpact;
+  suppression: DeliveryRetrySuppression;
 }
 
 export interface EventReplayResult extends EventReplayPreview {
