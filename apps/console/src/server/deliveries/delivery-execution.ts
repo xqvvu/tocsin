@@ -21,7 +21,7 @@ import type {
   ClaimedDelivery,
   DeliveryRepository,
 } from "#/infra/sqlite/repositories/delivery/delivery.interface";
-import { eventDetailUrl } from "#/lib/event-url";
+import { deliveryDetailUrl, eventDetailUrl } from "#/lib/dashboard-url";
 import type { DestinationConfigResolver } from "#/server/integrations/destination-config-resolver";
 import type { OncallPingTrigger } from "#/server/oncall/oncall.service.types";
 import { DomainValidationError } from "#/server/runtime/domain-errors";
@@ -111,6 +111,7 @@ export class DeliveryExecution {
         {
           eventId: delivery.event.id,
           eventUrl: eventDetailUrl(this.publicBaseUrl, delivery.event.id),
+          deliveryUrl: deliveryDetailUrl(this.publicBaseUrl, delivery.job.id),
           source: delivery.source,
           destination: delivery.destination,
           // Routing and suppression already decided against the raw event; the

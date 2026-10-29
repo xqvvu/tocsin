@@ -138,7 +138,8 @@ export type TemplateStaticPath =
   | "presentation.labels.probeRecovered"
   | "presentation.labels.probeFailed"
   | "presentation.labels.probeUnknown"
-  | "tocsin.eventUrl";
+  | "tocsin.eventUrl"
+  | "tocsin.deliveryUrl";
 
 type TemplateStaticPathResolver = (context: TemplateContext) => string;
 
@@ -198,6 +199,7 @@ const TemplateStaticPathResolvers = {
   "presentation.labels.probeFailed": (context) => context.presentation.labels.probeFailed,
   "presentation.labels.probeUnknown": (context) => context.presentation.labels.probeUnknown,
   "tocsin.eventUrl": (context) => context.tocsin.eventUrl,
+  "tocsin.deliveryUrl": (context) => context.tocsin.deliveryUrl,
 } satisfies Record<TemplateStaticPath, TemplateStaticPathResolver>;
 
 const AllowedTemplatePaths: ReadonlySet<TemplateStaticPath> = new Set(
@@ -370,7 +372,7 @@ export class TemplateValidationError extends Error {
 export class DestinationTemplateEngine {
   static createRenderContext(
     input: DestinationSendInput<unknown>,
-    options: { eventUrl?: string; bindings?: TemplateBindings } = {},
+    options: { eventUrl?: string; deliveryUrl?: string; bindings?: TemplateBindings } = {},
   ): TemplateContext {
     const presentation = resolveDestinationPresentation(input.presentation);
     const context: TemplateContext = {
@@ -401,6 +403,9 @@ export class DestinationTemplateEngine {
         // base); otherwise the send input carries the URL resolved from the
         // deployment's public address.
         eventUrl: options.eventUrl ?? input.eventUrl ?? "",
+        // Previews and test sends have no persisted delivery, so this stays
+        // empty there rather than pointing at a delivery that does not exist.
+        deliveryUrl: options.deliveryUrl ?? input.deliveryUrl ?? "",
       },
       payload: redactJsonText(input.payload ?? {}),
       bindings: {},

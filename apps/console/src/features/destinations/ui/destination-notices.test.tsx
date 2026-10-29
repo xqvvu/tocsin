@@ -288,6 +288,7 @@ function createPreviewNotice(
       },
       tocsin: {
         eventUrl: "",
+        deliveryUrl: "",
       },
       payload: {},
       bindings: {},

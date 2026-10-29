@@ -376,6 +376,7 @@ function previewNotice(diagnostics: TemplateDiagnostic[]): DestinationPreviewRes
       },
       tocsin: {
         eventUrl: "",
+        deliveryUrl: "",
       },
       payload: {},
       bindings: {},
@@ -448,13 +449,14 @@ describe("template variable panel layout", () => {
 
     expect(layout.common).toContain("event.title");
     expect(layout.common).toContain("tocsin.eventUrl");
+    expect(layout.common).toContain("tocsin.deliveryUrl");
 
     // No empty group is rendered.
     expect(
       layout.groups.every((group) => group.paths.length > 0 || group.labelKeys.length > 0),
     ).toBe(true);
 
-    // `tocsin` only ever held `tocsin.eventUrl`, which is now pinned as common.
+    // Both `tocsin` links are pinned as common, so the group itself stays empty.
     expect(layout.groups.map((group) => group.id)).not.toContain("tocsin");
 
     // The engine's 26 presentation paths collapse to two entries plus the label

@@ -38,6 +38,13 @@ export interface DestinationRenderInput<Config> {
    * absent, which is also the behavior for samples with no stored Event.
    */
   eventUrl?: string;
+  /**
+   * Absolute dashboard link for the delivery being sent, filled by the worker
+   * from the deployment's public URL. Absent for previews and test sends,
+   * because neither has a persisted delivery to link to; the template renders
+   * an empty string in that case.
+   */
+  deliveryUrl?: string;
   source: SourceSummary;
   destination: DestinationSummary;
   normalizedEvent: NormalizedEvent;

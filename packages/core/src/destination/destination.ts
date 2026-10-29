@@ -146,6 +146,11 @@ export const DestinationTemplateContextSchema = z.object({
   }),
   tocsin: z.object({
     eventUrl: z.string(),
+    /**
+     * Defaulted so a context serialized before this variable existed still
+     * parses; older preview results simply render the link as empty.
+     */
+    deliveryUrl: z.string().default(""),
   }),
   payload: JsonValueSchema,
   bindings: z.record(z.string(), z.string()),
