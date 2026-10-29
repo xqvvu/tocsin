@@ -151,7 +151,7 @@ describe("destinations section table", () => {
         <DestinationsSection
           destinations={[destinationFixture(1), destinationFixture(2)]}
           destinationCatalog={defaultDestinationCatalog}
-          sources={[]}
+          sources={[sourceFixture("source-1", "Grafana production")]}
           routes={[
             routeFixture("route-1", "Primary paging", ["destination-1"], true),
             routeFixture("route-2", "Disabled paging", ["destination-1"], false),
@@ -168,7 +168,7 @@ describe("destinations section table", () => {
       </AppIntlProvider>,
     );
 
-    expect(screen.getAllByText("1 active")).toHaveLength(2);
+    expect(screen.getAllByText("1 reachable")).toHaveLength(2);
     expect(screen.queryByText("Kind")).toBeNull();
     expect(screen.queryByText("State")).toBeNull();
   });

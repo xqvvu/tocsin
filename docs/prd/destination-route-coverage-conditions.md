@@ -1,5 +1,9 @@
 # 通知目标覆盖列区分条件路由
 
+> 后续变更：本 PRD 中的「N 条生效」徽标已在 REQ-138（第 175 轮）改为
+> 「N 条可达」，计数同时要求匹配的告警源启用。见
+> `docs/prd/destination-route-coverage-source-availability.md`。
+
 ## 问题
 
 通知目标（Destinations）列表的「路由覆盖」列只显示「N 条生效」，无法区分

@@ -87,7 +87,7 @@ export function DestinationsSection({
         header: t("destinations.table.headers.routing"),
         cell: ({ row }) => (
           <DestinationRouteCoverageCell
-            coverage={destinationRouteCoverage(row.original.id, routes)}
+            coverage={destinationRouteCoverage(row.original.id, routes, sources)}
           />
         ),
       },
@@ -107,7 +107,9 @@ export function DestinationsSection({
         cell: ({ row }) => (
           <DestinationActions
             destination={row.original}
-            enabledRouteCount={destinationRouteCoverage(row.original.id, routes).enabledRouteCount}
+            enabledRouteCount={
+              destinationRouteCoverage(row.original.id, routes, sources).enabledRouteCount
+            }
             deleteImpact={routeReferenceImpact(
               routes,
               (route) => route.destinationIds,
