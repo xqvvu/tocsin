@@ -8,10 +8,21 @@ import type { DestinationSummary, RouteDefinition } from "@tocsin/core";
 import { RoutesSection } from "#/features/routes/ui/routes-section";
 import { AppIntlProvider } from "#/i18n/provider";
 
-// The queued-delivery count owns its own query-state test; this suite covers
-// the table and the confirmation copy without a query client.
+// The queued-delivery count owns its own query-state test; this suite checks
+// how the confirmations scope it to one row, without a query client.
 vi.mock("#/features/operations/ui/queued-deliveries-notice", () => ({
-  QueuedDeliveriesNotice: () => null,
+  QueuedDeliveriesNotice: ({
+    scope,
+    description,
+  }: {
+    scope: { routeId?: string };
+    description?: string;
+  }) => (
+    <div>
+      <span data-testid="queued-scope">{scope.routeId}</span>
+      {description ? <span data-testid="queued-description">{description}</span> : null}
+    </div>
+  ),
 }));
 
 const noop = () => {};
@@ -184,8 +195,31 @@ describe("routes section table layout", () => {
 
     const disableDialog = screen.getByRole("alertdialog");
     expect(within(disableDialog).getByText(/targets 1 destinations/)).toBeTruthy();
+    expect(within(disableDialog).getByTestId("queued-scope").textContent).toBe("route-1");
     fireEvent.click(within(disableDialog).getByRole("button", { name: "Disable route matching" }));
 
     expect(onToggle).toHaveBeenCalledWith(route);
+  });
+
+  it("confirms before re-enabling a paused route and discloses its queued backlog", () => {
+    const onToggle = vi.fn<() => void>();
+    const disabledRoute: RouteDefinition = { ...route, enabled: false };
+    renderSection([enabledDestination], onToggle, [disabledRoute]);
+
+    // Re-enabling releases every delivery the route held while it was paused,
+    // so the row action confirms first instead of toggling on click.
+    fireEvent.click(screen.getByRole("button", { name: "Enable route matching" }));
+    expect(onToggle).not.toHaveBeenCalled();
+
+    const enableDialog = screen.getByRole("alertdialog");
+    expect(within(enableDialog).getByText("Enable route?")).toBeTruthy();
+    expect(within(enableDialog).getByText(/lets new events match it again/)).toBeTruthy();
+    expect(within(enableDialog).getByTestId("queued-description").textContent).toMatch(
+      /released right away/,
+    );
+    expect(within(enableDialog).getByTestId("queued-scope").textContent).toBe("route-1");
+
+    fireEvent.click(within(enableDialog).getByRole("button", { name: "Enable route matching" }));
+    expect(onToggle).toHaveBeenCalledWith(disabledRoute);
   });
 });
