@@ -36,6 +36,7 @@ import {
   eventDetailDeliveryFromRow,
   type EventDetailDeliveryRow,
   type EventDetailLatestAttempt,
+  filterValues,
   fingerprintChangesFrom,
   fingerprintOccurrence,
   isParseFailureRow,
@@ -119,12 +120,16 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("events.source_id", "=", query.sourceId);
     }
 
-    if (query.severity) {
-      builder = builder.where("events.severity", "=", query.severity);
+    const severities = filterValues(query.severity);
+
+    if (severities) {
+      builder = builder.where("events.severity", "in", severities);
     }
 
-    if (query.status) {
-      builder = builder.where("events.status", "=", query.status);
+    const statuses = filterValues(query.status);
+
+    if (statuses) {
+      builder = builder.where("events.status", "in", statuses);
     }
 
     if (query.deliveryOutcome) {
@@ -401,12 +406,16 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("events.source_id", "=", query.sourceId);
     }
 
-    if (query.severity) {
-      builder = builder.where("events.severity", "=", query.severity);
+    const severities = filterValues(query.severity);
+
+    if (severities) {
+      builder = builder.where("events.severity", "in", severities);
     }
 
-    if (query.status) {
-      builder = builder.where("events.status", "=", query.status);
+    const statuses = filterValues(query.status);
+
+    if (statuses) {
+      builder = builder.where("events.status", "in", statuses);
     }
 
     if (query.destinationId) {
@@ -440,8 +449,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where(deliveryReceiptPredicate(query.receipt));
     }
 
-    if (query.state) {
-      builder = builder.where("deliveries.state", "=", query.state);
+    const states = filterValues(query.state);
+
+    if (states) {
+      builder = builder.where("deliveries.state", "in", states);
     }
 
     if (query.minAttempts) {
@@ -631,12 +642,16 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("events.source_id", "=", query.sourceId);
     }
 
-    if (query.severity) {
-      builder = builder.where("events.severity", "=", query.severity);
+    const severities = filterValues(query.severity);
+
+    if (severities) {
+      builder = builder.where("events.severity", "in", severities);
     }
 
-    if (query.status) {
-      builder = builder.where("events.status", "=", query.status);
+    const statuses = filterValues(query.status);
+
+    if (statuses) {
+      builder = builder.where("events.status", "in", statuses);
     }
 
     if (query.deliveryOutcome) {
@@ -705,12 +720,16 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("events.source_id", "=", query.sourceId);
     }
 
-    if (query.severity) {
-      builder = builder.where("events.severity", "=", query.severity);
+    const severities = filterValues(query.severity);
+
+    if (severities) {
+      builder = builder.where("events.severity", "in", severities);
     }
 
-    if (query.status) {
-      builder = builder.where("events.status", "=", query.status);
+    const statuses = filterValues(query.status);
+
+    if (statuses) {
+      builder = builder.where("events.status", "in", statuses);
     }
 
     if (query.destinationId) {
@@ -743,8 +762,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where(deliveryReceiptPredicate(query.receipt));
     }
 
-    if (query.state) {
-      builder = builder.where("deliveries.state", "=", query.state);
+    const states = filterValues(query.state);
+
+    if (states) {
+      builder = builder.where("deliveries.state", "in", states);
     }
 
     if (query.minAttempts) {

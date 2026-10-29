@@ -30,6 +30,24 @@ export interface EventDetailDeliveryRow extends DeliveryRow {
 }
 
 /**
+ * Normalizes a list filter that takes one value or several.
+ *
+ * The console's multi-select sends an array, while links written before it
+ * existed still carry a single value. Both become the same `IN` predicate, so
+ * one selection cannot take a different code path from two. An empty array is
+ * "no filter" rather than "match nothing": that is what the URL produces when
+ * the operator clears every checkbox.
+ */
+export function filterValues<T>(value: T | T[] | undefined): T[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const values = Array.isArray(value) ? value : [value];
+  return values.length > 0 ? values : undefined;
+}
+
+/**
  * The most recent completed attempt per delivery, projected into the event
  * detail delivery. Passed in rather than queried per row so the detail page
  * keeps a fixed query count.

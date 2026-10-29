@@ -305,8 +305,13 @@ export const ListOperationsInputSchema = z
   .object({
     limit: z.number().int().min(1).max(100).default(20),
     sourceId: z.string().min(1).optional(),
-    severity: AlertSeveritySchema.optional(),
-    status: AlertStatusSchema.optional(),
+    /**
+     * One severity or several. The console's filter offers a multi-select; a
+     * single value stays valid so links written before it, and API callers
+     * that pass one value, keep working unchanged.
+     */
+    severity: z.union([AlertSeveritySchema, z.array(AlertSeveritySchema).min(1).max(4)]).optional(),
+    status: z.union([AlertStatusSchema, z.array(AlertStatusSchema).min(1).max(3)]).optional(),
     destinationId: z.string().min(1).optional(),
     /**
      * Events-only: whether the alert reached the selected `destinationId`
@@ -352,7 +357,13 @@ export const ListOperationsInputSchema = z
      * message reference.
      */
     receipt: DeliveryReceiptFilterSchema.optional(),
-    deliveryState: DeliveryStateSchema.optional(),
+    /**
+     * Delivery-only: one state or several. "pending or failed" is one list,
+     * not two passes over the same rows.
+     */
+    deliveryState: z
+      .union([DeliveryStateSchema, z.array(DeliveryStateSchema).min(1).max(5)])
+      .optional(),
     /**
      * Delivery-only lower bound on `attempt_count`. Lets an operator isolate
      * jobs that were retried instead of reading the attempt column row by row.
