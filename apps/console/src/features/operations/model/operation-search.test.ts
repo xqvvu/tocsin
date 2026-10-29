@@ -571,7 +571,9 @@ describe("event filter in the operation search", () => {
     expect(hasOperationFilters(search)).toBe(true);
     expect(operationFiltersFromSearch(search)).toMatchObject({
       eventId: "evt-1",
-      deliveryState: "failed",
+      // The URL keeps one value; the contract input is always a list so one
+      // selection and several take the same predicate.
+      deliveryState: ["failed"],
     });
   });
 
@@ -676,5 +678,54 @@ describe("parse result filter in the operation search", () => {
 
   it("clears with the shared reset object", () => {
     expect(clearedOperationSearch.parseFailed).toBe("");
+  });
+});
+
+describe("multi-value filters in the operation search", () => {
+  it("keeps the list in the URL and sends it as values", () => {
+    const search = DashboardOperationSearchSchema.parse({ severity: "critical,warning" });
+
+    // The URL stays one readable string; only the contract input is an array.
+    expect(search.severity).toBe("critical,warning");
+    expect(operationFiltersFromSearch(search).severity).toEqual(["critical", "warning"]);
+  });
+
+  it("drops unknown values and duplicates instead of rejecting the link", () => {
+    // The URL is user-editable, and an older link may name a value this build
+    // no longer knows. Failing to parse would break the whole page.
+    const search = DashboardOperationSearchSchema.parse({ severity: "critical,nope,critical" });
+
+    expect(search.severity).toBe("critical");
+  });
+
+  it("still accepts a single value and sends one value", () => {
+    const search = DashboardOperationSearchSchema.parse({ severity: "critical" });
+
+    expect(operationFiltersFromSearch(search).severity).toEqual(["critical"]);
+  });
+
+  it("treats an unknown-only value as no filter", () => {
+    const search = DashboardOperationSearchSchema.parse({ severity: "nope" });
+
+    expect(search.severity).toBe("");
+    expect(operationFiltersFromSearch(search).severity).toBeUndefined();
+    expect(hasOperationFilters(search)).toBe(false);
+  });
+
+  it("keeps the delivery state list in the URL", () => {
+    const search = DashboardOperationSearchSchema.parse({ deliveryState: "failed,pending" });
+
+    expect(pruneSearch(search).deliveryState).toBe("failed,pending");
+    expect(operationFiltersFromSearch(search).deliveryState).toEqual(["failed", "pending"]);
+  });
+
+  it("counts a multi-value selection as narrowing the list", () => {
+    expect(hasOperationFilters({ status: "firing,resolved" })).toBe(true);
+  });
+
+  it("clears every list with the shared reset object", () => {
+    expect(clearedOperationSearch.severity).toBe("");
+    expect(clearedOperationSearch.status).toBe("");
+    expect(clearedOperationSearch.deliveryState).toBe("");
   });
 });

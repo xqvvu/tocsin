@@ -71,8 +71,13 @@ export interface DestinationDeliveryHealthRow {
 
 export interface EventListQuery {
   sourceId?: string;
-  severity?: NormalizedEvent["severity"];
-  status?: NormalizedEvent["status"];
+  /**
+   * One severity or several. The console's filter offers a multi-select, and a
+   * one-value selection has to produce the same predicate as a link that
+   * carried a single value before the control changed.
+   */
+  severity?: NormalizedEvent["severity"] | NormalizedEvent["severity"][];
+  status?: NormalizedEvent["status"] | NormalizedEvent["status"][];
   /**
    * Only the events whose fan-out produced no delivery (`none`) or at least
    * one delivery in that state. The deliveries themselves still define the
@@ -124,8 +129,9 @@ export interface EventListQuery {
 
 export interface DeliveryListQuery {
   sourceId?: string;
-  severity?: NormalizedEvent["severity"];
-  status?: NormalizedEvent["status"];
+  /** One severity or several, matching the events list's multi-select. */
+  severity?: NormalizedEvent["severity"] | NormalizedEvent["severity"][];
+  status?: NormalizedEvent["status"] | NormalizedEvent["status"][];
   destinationId?: string;
   /** Only deliveries routed to destinations of one adapter kind. */
   destinationKind?: DestinationKind;
@@ -151,7 +157,8 @@ export interface DeliveryListQuery {
    * every delivery without a complete reference (`missing`).
    */
   receipt?: DeliveryReceiptFilter;
-  state?: DeliveryState;
+  /** One delivery state or several; several lets "pending or failed" stay one query. */
+  state?: DeliveryState | DeliveryState[];
   /** Inclusive lower bound on `deliveries.attempt_count`; 0 is "any". */
   minAttempts?: number;
   /**

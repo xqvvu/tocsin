@@ -37,8 +37,10 @@ import { useOperationDateFormatter } from "#/features/operations/model/operation
 import {
   clearedOperationSearch,
   type DashboardOperationSearch,
+  splitFilterList,
   wholeSecondInstant,
 } from "#/features/operations/model/operation-search";
+import { OperationMultiSelect } from "#/features/operations/ui/operation-multi-select";
 import { useTranslations } from "#/i18n/use-i18n";
 import { cn } from "#/lib/utils";
 
@@ -351,65 +353,34 @@ function OperationFiltersPanel({
       </UiField>
       <UiField>
         <FieldLabel htmlFor="operation-severity">{t("operations.filters.severity")}</FieldLabel>
-        <Select
+        <OperationMultiSelect
           id="operation-severity"
-          items={[
-            { value: null, label: t("common.severity.any") },
+          values={splitFilterList(search.severity) ?? []}
+          options={[
             { value: "critical", label: t("common.severity.critical") },
             { value: "warning", label: t("common.severity.warning") },
             { value: "info", label: t("common.severity.info") },
             { value: "unknown", label: t("common.severity.unknown") },
           ]}
-          value={search.severity || null}
+          placeholder={t("common.severity.any")}
           disabled={pending}
-          onValueChange={(value) =>
-            onChange({
-              severity: (value ?? "") as DashboardOperationSearch["severity"],
-            })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={t("common.severity.any")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={null}>{t("common.severity.any")}</SelectItem>
-              <SelectItem value="critical">{t("common.severity.critical")}</SelectItem>
-              <SelectItem value="warning">{t("common.severity.warning")}</SelectItem>
-              <SelectItem value="info">{t("common.severity.info")}</SelectItem>
-              <SelectItem value="unknown">{t("common.severity.unknown")}</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+          onChange={(values) => onChange({ severity: values.join(",") })}
+        />
       </UiField>
       <UiField>
         <FieldLabel htmlFor="operation-status">{t("operations.filters.status")}</FieldLabel>
-        <Select
+        <OperationMultiSelect
           id="operation-status"
-          items={[
-            { value: null, label: t("common.alertStatus.any") },
+          values={splitFilterList(search.status) ?? []}
+          options={[
             { value: "firing", label: t("common.alertStatus.firing") },
             { value: "resolved", label: t("common.alertStatus.resolved") },
             { value: "unknown", label: t("common.alertStatus.unknown") },
           ]}
-          value={search.status || null}
+          placeholder={t("common.alertStatus.any")}
           disabled={pending}
-          onValueChange={(value) =>
-            onChange({ status: (value ?? "") as DashboardOperationSearch["status"] })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder={t("common.alertStatus.any")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={null}>{t("common.alertStatus.any")}</SelectItem>
-              <SelectItem value="firing">{t("common.alertStatus.firing")}</SelectItem>
-              <SelectItem value="resolved">{t("common.alertStatus.resolved")}</SelectItem>
-              <SelectItem value="unknown">{t("common.alertStatus.unknown")}</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+          onChange={(values) => onChange({ status: values.join(",") })}
+        />
       </UiField>
       {scope === "events" ? (
         <UiField>
@@ -748,38 +719,20 @@ function OperationFiltersPanel({
           <FieldLabel htmlFor="operation-delivery-state">
             {t("operations.filters.deliveryState")}
           </FieldLabel>
-          <Select
+          <OperationMultiSelect
             id="operation-delivery-state"
-            items={[
-              { value: null, label: t("common.deliveryState.any") },
+            values={splitFilterList(search.deliveryState) ?? []}
+            options={[
               { value: "pending", label: t("common.deliveryState.pending") },
               { value: "running", label: t("common.deliveryState.running") },
               { value: "succeeded", label: t("common.deliveryState.succeeded") },
               { value: "failed", label: t("common.deliveryState.failed") },
               { value: "suppressed", label: t("common.deliveryState.suppressed") },
             ]}
-            value={search.deliveryState || null}
+            placeholder={t("common.deliveryState.any")}
             disabled={pending}
-            onValueChange={(value) =>
-              onChange({
-                deliveryState: (value ?? "") as DashboardOperationSearch["deliveryState"],
-              })
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={t("common.deliveryState.any")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value={null}>{t("common.deliveryState.any")}</SelectItem>
-                <SelectItem value="pending">{t("common.deliveryState.pending")}</SelectItem>
-                <SelectItem value="running">{t("common.deliveryState.running")}</SelectItem>
-                <SelectItem value="succeeded">{t("common.deliveryState.succeeded")}</SelectItem>
-                <SelectItem value="failed">{t("common.deliveryState.failed")}</SelectItem>
-                <SelectItem value="suppressed">{t("common.deliveryState.suppressed")}</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+            onChange={(values) => onChange({ deliveryState: values.join(",") })}
+          />
         </UiField>
       ) : null}
     </FieldGroup>
@@ -791,6 +744,19 @@ interface ActiveFilterChip {
   label: string;
   valueLabel: string;
   clear: Partial<DashboardOperationSearch>;
+}
+
+/**
+ * Renders a comma-separated URL filter as its value labels.
+ *
+ * Showing the raw string would put URL syntax in the chip and stop matching
+ * the labels the control itself renders, so "critical,warning" has to read as
+ * two names.
+ */
+function filterListLabel(t: TranslationFn, namespace: string, value: string): string {
+  const values = splitFilterList(value) ?? [];
+
+  return values.map((item) => t(`${namespace}.${item}`)).join(", ");
 }
 
 function activeFilterChips(
@@ -825,7 +791,7 @@ function activeFilterChips(
     chips.push({
       key: "severity",
       label: t("operations.filters.severity"),
-      valueLabel: t(`common.severity.${search.severity}`),
+      valueLabel: filterListLabel(t, "common.severity", search.severity),
       clear: { severity: "" },
     });
   }
@@ -834,7 +800,7 @@ function activeFilterChips(
     chips.push({
       key: "status",
       label: t("operations.filters.status"),
-      valueLabel: t(`common.alertStatus.${search.status}`),
+      valueLabel: filterListLabel(t, "common.alertStatus", search.status),
       clear: { status: "" },
     });
   }
@@ -946,7 +912,7 @@ function activeFilterChips(
     chips.push({
       key: "deliveryState",
       label: t("operations.filters.deliveryState"),
-      valueLabel: t(`common.deliveryState.${search.deliveryState}`),
+      valueLabel: filterListLabel(t, "common.deliveryState", search.deliveryState),
       clear: { deliveryState: "" },
     });
   }

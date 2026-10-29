@@ -28,16 +28,43 @@ import {
   EVENT_FINGERPRINT_FILTER_MAX_LENGTH,
 } from "@tocsin/core";
 
+/**
+ * A filter the operator can select several values from.
+ *
+ * The URL keeps one comma-separated string instead of repeated keys: links,
+ * the active-filter chips, and `pruneSearch` then agree on one representation,
+ * and a hand-written `severity=critical,warning` is readable. Entries the
+ * schema does not know and duplicates are dropped rather than rejected — the
+ * URL is user-editable, and an old link must not break the page.
+ */
+function filterListSchema<T extends string>(value: z.ZodType<T>, max: number) {
+  return z
+    .string()
+    .catch("")
+    .transform((raw) => raw.split(","))
+    .transform((parts) =>
+      Array.from(
+        new Set(parts.map((part) => part.trim()).filter((part) => value.safeParse(part).success)),
+      )
+        .slice(0, max)
+        .join(","),
+    );
+}
+
+/** Splits a URL filter list back into the values the contract takes. */
+export function splitFilterList(value: string | undefined): string[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const values = value.split(",").filter(Boolean);
+  return values.length > 0 ? values : undefined;
+}
+
 export const DashboardOperationSearchSchema = z.object({
   sourceId: z.string().catch("").optional(),
-  severity: z
-    .union([AlertSeveritySchema, z.literal("")])
-    .catch("")
-    .optional(),
-  status: z
-    .union([AlertStatusSchema, z.literal("")])
-    .catch("")
-    .optional(),
+  severity: filterListSchema(AlertSeveritySchema, 4).optional(),
+  status: filterListSchema(AlertStatusSchema, 3).optional(),
   // Events-only fan-out outcome: `none` is "produced no delivery at all",
   // every other value is "has at least one delivery in that state".
   deliveryOutcome: z
@@ -81,10 +108,7 @@ export const DashboardOperationSearchSchema = z.object({
     .union([DeliveryReceiptFilterSchema, z.literal("")])
     .catch("")
     .optional(),
-  deliveryState: z
-    .union([DeliveryStateSchema, z.literal("")])
-    .catch("")
-    .optional(),
+  deliveryState: filterListSchema(DeliveryStateSchema, 5).optional(),
   // Delivery-only lower bound on how many times the job has been attempted.
   // 0 means "any"; the UI offers 1/2/3 presets, but the URL is user-editable,
   // so anything outside the range falls back to "any" instead of throwing.
@@ -127,8 +151,9 @@ export const DashboardOperationSearchSchema = z.object({
 
 export interface DashboardOperationSearch {
   sourceId?: string;
-  severity?: AlertSeverity | "";
-  status?: AlertStatus | "";
+  /** Comma-separated in the URL; `splitFilterList` gives the values back. */
+  severity?: string;
+  status?: string;
   deliveryOutcome?: EventDeliveryOutcome | "";
   parseFailed?: "true" | "false" | "";
   destinationId?: string;
@@ -138,7 +163,8 @@ export interface DashboardOperationSearch {
   routeId?: string;
   eventId?: string;
   receipt?: DeliveryReceiptFilter | "";
-  deliveryState?: DeliveryState | "";
+  /** Comma-separated in the URL, like severity and status. */
+  deliveryState?: string;
   minAttempts?: number;
   range?: OperationTimeRange | "";
   timeField?: DeliveryTimeField | "";
@@ -152,8 +178,9 @@ export interface DashboardOperationSearch {
 
 export type OperationFilterData = {
   sourceId?: string;
-  severity?: AlertSeverity;
-  status?: AlertStatus;
+  /** The contract takes one value or several; several is the multi-select. */
+  severity?: AlertSeverity | AlertSeverity[];
+  status?: AlertStatus | AlertStatus[];
   deliveryOutcome?: EventDeliveryOutcome;
   parseFailed?: boolean;
   destinationId?: string;
@@ -163,7 +190,7 @@ export type OperationFilterData = {
   routeId?: string;
   eventId?: string;
   receipt?: DeliveryReceiptFilter;
-  deliveryState?: DeliveryState;
+  deliveryState?: DeliveryState | DeliveryState[];
   minAttempts?: number;
   range?: OperationTimeRange;
   timeField?: DeliveryTimeField;
@@ -239,17 +266,24 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
 export function operationFiltersFromSearch(search: DashboardOperationSearch): OperationFilterData {
   // `parseFailed` leaves the URL as text and reaches the contract as a boolean;
   // keeping the string form in `rest` would send a value the schema rejects.
-  const { q, parseFailed, ...rest } = pruneSearch(search);
+  // The list filters travel the other way: the URL joins them with commas so
+  // links stay readable, and the contract takes them back as an array.
+  const { q, parseFailed, severity, status, deliveryState, ...rest } = pruneSearch(search);
   // The URL keeps the operator's in-progress spacing so typing "Disk usage"
   // does not lose the space; only the server filter sees a trimmed query.
   const trimmed = q?.trim();
-  const filters = trimmed ? { ...rest, q: trimmed } : rest;
+  const severities = splitFilterList(severity);
+  const statuses = splitFilterList(status);
+  const deliveryStates = splitFilterList(deliveryState);
 
-  if (parseFailed === undefined) {
-    return filters as OperationFilterData;
-  }
-
-  return { ...filters, parseFailed: parseFailed === "true" } as OperationFilterData;
+  return {
+    ...rest,
+    ...(trimmed ? { q: trimmed } : {}),
+    ...(severities ? { severity: severities as AlertSeverity[] } : {}),
+    ...(statuses ? { status: statuses as AlertStatus[] } : {}),
+    ...(deliveryStates ? { deliveryState: deliveryStates as DeliveryState[] } : {}),
+    ...(parseFailed === undefined ? {} : { parseFailed: parseFailed === "true" }),
+  } as OperationFilterData;
 }
 
 export function pruneSearch(search: DashboardOperationSearch): DashboardOperationSearch {

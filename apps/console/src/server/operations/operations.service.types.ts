@@ -34,8 +34,9 @@ export interface OperationsServiceOptions {
 export interface ListOperationsInput {
   limit?: number;
   sourceId?: string;
-  severity?: NormalizedEvent["severity"];
-  status?: NormalizedEvent["status"];
+  /** One severity or several, as the console's multi-select writes them. */
+  severity?: NormalizedEvent["severity"] | NormalizedEvent["severity"][];
+  status?: NormalizedEvent["status"] | NormalizedEvent["status"][];
   /** Events-only: no delivery, or at least one delivery in that state. */
   deliveryOutcome?: EventDeliveryOutcome;
   /** Events-only: whether a provider parser rejected the webhook payload. */
@@ -55,7 +56,8 @@ export interface ListOperationsInput {
   eventId?: string;
   /** Delivery-only: target message reference present or missing. */
   receipt?: DeliveryReceiptFilter;
-  deliveryState?: DeliveryState;
+  /** One delivery state or several, matching the multi-select. */
+  deliveryState?: DeliveryState | DeliveryState[];
   /** Delivery-only: keep jobs attempted at least this many times. */
   minAttempts?: number;
   range?: OperationTimeRange;
