@@ -2,6 +2,93 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 170 轮）
+
+- 时间：2026-10-29 14:23 CST 起。
+- 基线：`origin/main` @ `f11f5c2e`；启动时 0 个 `agent/*` open PR，main CI 双绿；另一个
+  docs-site 车道的 open PR #705（文档站，未介入）。
+- 类型：**需求切片 + 三车道审计**（非 full-audit）。最近全量审计是第 167 轮 08:37 CST，
+  距本轮 5h46m < 6 小时；但 backlog 有大量 ≥27 分 candidate，按第 1.5 步继续。
+- 车道：`requirements`（必跑）+ `ui-triage`（必跑，判 `defer`）+ `docs-drift`（轮转，第 168、169
+  两轮连续未产出，本轮先补）。并发 3。下一个非必跑车道：`security-exposure`。
+- 环境：会话工作树 `node_modules` 再次半删残留（根目录 3 项、`@vitejs/plugin-react` /
+  `@rolldown/plugin-babel` 缺失，vite 配置直接加载失败）。按既有结论 `rm -rf` 全部 workspace
+  `node_modules` 后 `vp install --frozen-lockfile` 恢复（`.pnpm` 846 / `apps/console` 42）。
+- `last_ui_review_at` 保持 2026-10-29 10:05 CST（本轮未评审）。
+
+### 专家发现
+
+**ui-triage**
+
+- 决策 **`defer`**：距上次浏览器实测 4h20m（阈值 48h）；自 10:05 起 main 触及 UI 路径的合并只有
+  1 条（#703 目标重新启用披露）；UI-* 未解决 candidate 68 条但 ≥27 分为 0 条，瓶颈是交付不是发现。
+  建议把 UI-120 + UI-121 打包成本轮的小修复，而不是再开一轮评审。
+- 附带候选（未实现）：`destination-scheduled-urgent-notice.tsx:35` 手写
+  `border-destructive/40 … border p-2`，与同弹层家族的 `destination-source-impact-notice.tsx:31`
+  使用 shadcn `Alert` 不一致；且 enable 弹窗同时挂两个独立异步 preview
+  （`destination-actions.tsx:229-230`），存在高度跳变风险。
+
+**requirements**
+
+- 本轮未在 75 分钟预算内返回，下轮重跑该车道；不阻塞本轮交付。
+
+**docs-drift（本轮恢复产出，8 条）**
+
+- P1 `docs/research/route-authoring-current-state.md:18,101-104,198` 仍称路由判定证据英文硬编码、
+  不含实际值，且称 UI 不区分接入快照与现状重算；两项均已被代码推翻
+  （`features/routes/ui/route-match-check-badges.tsx:45-98`、`event-detail-route-matches-table.tsx:45-48`）。
+- P2 `apps/docs/integrations/destinations.md:89,98,373` 未记录第 169 轮新增的启用确认框与排队加急披露
+  （`destination-actions.tsx:196-244`）。
+- P2 `README.md:244` 仍把 per-fingerprint mute 列为未来方向，实际 Suppression 已支持
+  （`packages/core/src/suppression/suppression.ts:29`）。
+- P2 `docs/prd/self-hosted-alert-hub-mvp.md:148,213` 仍称 suppression 不在 MVP；
+  `AGENTS.md:163` 的 features 清单漏 Suppressions。
+- P2 行号漂移与 backlog 重号（DOC-113 两条，另有 ARCH/Q/REL/SEC 多组重号）已写入 backlog
+  DOC-114…DOC-121。
+- 已核实无漂移：ADR 0001–0010 无 `xqvvu/vane` 残留（ACR 镜像坐标属正确用法）、RC checklist 未勾
+  gate 属实、`_FILE` 仅支持 `BETTER_AUTH_SECRET`、时间范围与补投扫描参数与代码一致。
+
+### 本轮交付
+
+- **PR #707** `feat(console): drill down from route delivery outcomes to deliveries`（REQ-324，28 分，
+  rebase 合并 `0bad4d1a`）
+  - 事件详情「路由匹配」表的非零投递结果徽标改为 `Link`，指向
+    `/deliveries?eventId=…&routeId=…&deliveryState=…`；可访问名称含状态、数量与路由名，
+    空态（无投递 / 未命中）保持纯文本。
+  - 纯前端切片：无 oRPC 契约、service、repository、schema、迁移与依赖改动；PRD
+    `docs/prd/event-route-delivery-drilldown.md`。
+  - 验证：`vp check` 0 error（35 条既有 warning）；`vp run -r test` 4/4 包通过
+    （console 232 文件 / 1348 测试）；`vp run -r build` 通过；PR CI 双绿。
+- **PR #708** `fix(a11y): announce rehearsal results and retry risk as one answer`（UI-120 + UI-121，
+  rebase 合并 `aa7a3f08`）
+  - 预演结果放进常驻 `role="status" aria-live="polite" aria-atomic="true"` 区域；重试风险槽改
+    `aria-atomic="true"`。新增 `delivery-retry-risk-status.test.tsx`，预演弹窗测试补两条断言。
+  - 验证：`vp check` 0 warning 增量（35 条与 main 一致）；`vp run -r test` 233 文件 / 1348 测试；
+    `vp run -r build` 通过；PR CI 双绿。
+- 工作树：实现全会话工作树 `pensive-vaughan-8f2724`；`agent-iteration` 只放锁与记忆读取。
+
+### 发布
+
+- 三位专家一致 **APPROVE**：发布经理（自 beta.136 起 2 笔用户可见变更 #707/#708，另 1 笔 docs）、
+  阻断审计（目标 `aa7a3f08` 的 CI 与 E2E 双绿、无 `agent/*` open PR、无迁移、无锁文件、无
+  env/compose 变化、3 条 `blocked-autonomous` 均非本轮引入）、运维回滚（无 schema/依赖/配置变化，
+  回滚只换镜像；三个新 URL 参数在 beta.136 已存在）。
+- 版本 `0.1.0-beta.137`（PR #709 `chore(release): v0.1.0-beta.137`，rebase 合并 `34ea5c98`）。
+- Tag `v0.1.0-beta.137`（annotated，指向 `34ea5c98`，该 commit 的 CI 与 E2E 均 success）。
+- GitHub Release：已创建（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.137`（linux/amd64 + linux/arm64），
+  index digest `sha256:fa45e30ad1769ff99fdf91ad0546675d06f1ca99e13d73328d5265e66599518d`；
+  回滚镜像 `0.1.0-beta.136`，无数据库操作。
+
+### 下一轮优先项
+
+1. `requirements` 车道重跑（连续两轮未产出）。
+2. REQ-333（27，投递列表披露目标/路由停用造成的领取阻断）/ REQ-24（28，抑制窗口影响面复盘）/
+   REQ-159（28，通用 Webhook 字段映射）择一交付。
+3. docs-drift 本轮 8 条里挑 P1 两项（`route-authoring-current-state.md` 的状态过期）打包更正。
+4. SEC-44 仍待 EXPERT_PANEL（值形态前缀凭据 + 保持现有 oracle）。
+5. 若下轮 UI 触发条件成立（≥48h 或出现新页面），做一次完整浏览器评审并补验 #703/#708。
+
 ## 2026-10-29（第 169 轮）
 
 - 时间：2026-10-29 12:27 CST 起。
