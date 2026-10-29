@@ -23,6 +23,10 @@ vi.mock("#/features/deliveries/ui/delivery-failure-indicator", () => ({
   DeliveryFailureIndicator: () => <span data-testid="delivery-failure-indicator" />,
 }));
 
+vi.mock("#/features/events/ui/parse-failure-indicator", () => ({
+  ParseFailureIndicator: () => <span data-testid="parse-failure-indicator" />,
+}));
+
 describe("dashboard header", () => {
   afterEach(cleanup);
 
@@ -38,6 +42,7 @@ describe("dashboard header", () => {
     expect(screen.getByRole("button", { name: "Toggle sidebar" })).toBeTruthy();
     expect(screen.getByTestId("delivery-pause-indicator")).toBeTruthy();
     expect(screen.getByTestId("delivery-failure-indicator")).toBeTruthy();
+    expect(screen.getByTestId("parse-failure-indicator")).toBeTruthy();
     expect(screen.getByTestId("active-suppression-indicator")).toBeTruthy();
 
     // The current section is marked by the sidebar and by the page's own

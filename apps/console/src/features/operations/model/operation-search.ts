@@ -44,6 +44,13 @@ export const DashboardOperationSearchSchema = z.object({
     .union([EventDeliveryOutcomeSchema, z.literal("")])
     .catch("")
     .optional(),
+  // Events-only: whether the provider parser rejected the payload. Search
+  // params are text, so the URL keeps "true"/"false" and
+  // `operationFiltersFromSearch` converts it to the boolean the contract takes.
+  parseFailed: z
+    .union([z.literal("true"), z.literal("false"), z.literal("")])
+    .catch("")
+    .optional(),
   destinationId: z.string().catch("").optional(),
   // Events-only: whether the alert reached the selected destination. Empty
   // means the server default (`delivered`); the URL only carries `missing`,
@@ -123,6 +130,7 @@ export interface DashboardOperationSearch {
   severity?: AlertSeverity | "";
   status?: AlertStatus | "";
   deliveryOutcome?: EventDeliveryOutcome | "";
+  parseFailed?: "true" | "false" | "";
   destinationId?: string;
   destinationMatch?: EventDestinationMatch | "";
   destinationOutcome?: EventDestinationOutcome | "";
@@ -147,6 +155,7 @@ export type OperationFilterData = {
   severity?: AlertSeverity;
   status?: AlertStatus;
   deliveryOutcome?: EventDeliveryOutcome;
+  parseFailed?: boolean;
   destinationId?: string;
   destinationMatch?: EventDestinationMatch;
   destinationOutcome?: EventDestinationOutcome;
@@ -179,6 +188,7 @@ export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
   severity: "",
   status: "",
   deliveryOutcome: "",
+  parseFailed: "",
   destinationId: "",
   destinationMatch: "",
   destinationOutcome: "",
@@ -207,6 +217,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.severity ||
     search.status ||
     search.deliveryOutcome ||
+    search.parseFailed ||
     search.destinationId ||
     search.destinationOutcome ||
     search.destinationKind ||
@@ -226,12 +237,19 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
 }
 
 export function operationFiltersFromSearch(search: DashboardOperationSearch): OperationFilterData {
-  const { q, ...rest } = pruneSearch(search);
+  // `parseFailed` leaves the URL as text and reaches the contract as a boolean;
+  // keeping the string form in `rest` would send a value the schema rejects.
+  const { q, parseFailed, ...rest } = pruneSearch(search);
   // The URL keeps the operator's in-progress spacing so typing "Disk usage"
   // does not lose the space; only the server filter sees a trimmed query.
   const trimmed = q?.trim();
+  const filters = trimmed ? { ...rest, q: trimmed } : rest;
 
-  return (trimmed ? { ...rest, q: trimmed } : rest) as OperationFilterData;
+  if (parseFailed === undefined) {
+    return filters as OperationFilterData;
+  }
+
+  return { ...filters, parseFailed: parseFailed === "true" } as OperationFilterData;
 }
 
 export function pruneSearch(search: DashboardOperationSearch): DashboardOperationSearch {
@@ -250,6 +268,12 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
       // A match only means something next to the destination it describes, and
       // `delivered` is the server default. Keeping either would make the URL
       // claim a filter that changes nothing.
+      // Empty means "any parse result"; only a definite one is a filter, so a
+      // hand-edited value the schema could not parse falls back to "any".
+      parseFailed:
+        search.parseFailed === "true" || search.parseFailed === "false"
+          ? search.parseFailed
+          : undefined,
       destinationMatch:
         search.destinationId && search.destinationMatch === "missing"
           ? search.destinationMatch
@@ -300,6 +324,7 @@ export function mergeOperationSearch(
     "severity",
     "status",
     "deliveryOutcome",
+    "parseFailed",
     "destinationId",
     "destinationMatch",
     "destinationOutcome",

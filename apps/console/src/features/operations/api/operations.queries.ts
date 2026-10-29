@@ -181,6 +181,24 @@ export function failedDeliveriesQueryOptions() {
 }
 
 /**
+ * Always-visible evidence that a provider parser rejected a webhook payload.
+ *
+ * A rejected payload is stored as an event but produces no route match and no
+ * delivery, so the delivery failure indicator stays silent for exactly the
+ * failure an upstream format change causes: the webhook returns 400 and the
+ * alert quietly stops arriving. The window matches the delivery indicator so
+ * the two header badges describe the same 24 hours.
+ */
+export function recentParseFailuresQueryOptions() {
+  return orpc.operations.list.queryOptions({
+    input: { limit: 1, parseFailed: true, range: "24h" },
+    queryKey: [...operationsQueryKeys.all, "parse-failures"] as const,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+/**
  * What the worker would claim next, used by the paused banner.
  *
  * Callers enable it only while delivery is paused; a short stale time keeps a
@@ -200,6 +218,10 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.severity ? { severity: filters.severity } : {}),
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.deliveryOutcome ? { deliveryOutcome: filters.deliveryOutcome } : {}),
+    // `false` is a real filter here (it excludes rejected payloads), so the
+    // truthiness guard every other dimension uses would drop it from the
+    // request while the chip still claimed the list was narrowed.
+    ...(filters.parseFailed === undefined ? {} : { parseFailed: filters.parseFailed }),
     ...(filters.destinationId ? { destinationId: filters.destinationId } : {}),
     // The match only applies next to a destination; the server treats its
     // absence as the `delivered` default.

@@ -38,6 +38,8 @@ export interface ListOperationsInput {
   status?: NormalizedEvent["status"];
   /** Events-only: no delivery, or at least one delivery in that state. */
   deliveryOutcome?: EventDeliveryOutcome;
+  /** Events-only: whether a provider parser rejected the webhook payload. */
+  parseFailed?: boolean;
   destinationId?: string;
   /** Events-only: did the alert reach that destination, or never get there. */
   destinationMatch?: EventDestinationMatch;

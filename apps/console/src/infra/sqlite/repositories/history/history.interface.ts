@@ -80,6 +80,12 @@ export interface EventListQuery {
    */
   deliveryOutcome?: EventDeliveryOutcome;
   /**
+   * Only events whose provider parser rejected the payload (`true`), or with
+   * `false` every event the projection would not flag — including rows whose
+   * provider metadata cannot be parsed, which stay readable but unfilterable.
+   */
+  parseFailed?: boolean;
+  /**
    * Only events that did (`delivered`, the default) or did not (`missing`)
    * produce a delivery to this destination. `missing` also covers alerts that
    * reached nobody at all, which no delivery-level filter can find.

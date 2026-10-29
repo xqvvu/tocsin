@@ -293,6 +293,14 @@ function OperationFiltersPanel({
       label: t(`operations.filters.deliveryOutcomeOptions.${state}`),
     })),
   ];
+  // The URL carries the string form of the boolean, and `null` is "any" so the
+  // select shows the placeholder rather than an empty option. `false` is a real
+  // filter: it excludes the payloads a parser rejected.
+  const parseFailedItems = [
+    { value: null, label: t("operations.filters.anyParseFailed") },
+    { value: "true", label: t("operations.filters.parseFailedOptions.failed") },
+    { value: "false", label: t("operations.filters.parseFailedOptions.succeeded") },
+  ];
   // Receipts belong to the delivery list: the event list cannot answer "did
   // the target return a message id" without opening each job.
   const receiptItems = [
@@ -425,6 +433,37 @@ function OperationFiltersPanel({
             <SelectContent>
               <SelectGroup>
                 {deliveryOutcomeItems.map((item) => (
+                  <SelectItem key={item.value ?? "any"} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </UiField>
+      ) : null}
+      {scope === "events" ? (
+        <UiField>
+          <FieldLabel htmlFor="operation-parse-failed">
+            {t("operations.filters.parseFailed")}
+          </FieldLabel>
+          <Select
+            id="operation-parse-failed"
+            items={parseFailedItems}
+            value={search.parseFailed || null}
+            disabled={pending}
+            onValueChange={(value) =>
+              onChange({
+                parseFailed: (value ?? "") as DashboardOperationSearch["parseFailed"],
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("operations.filters.anyParseFailed")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {parseFailedItems.map((item) => (
                   <SelectItem key={item.value ?? "any"} value={item.value}>
                     {item.label}
                   </SelectItem>
@@ -820,6 +859,19 @@ function activeFilterChips(
       label: t("operations.filters.deliveryOutcome"),
       valueLabel: t(`operations.filters.deliveryOutcomeOptions.${search.deliveryOutcome}`),
       clear: { deliveryOutcome: "" },
+    });
+  }
+
+  if (scope === "events" && search.parseFailed) {
+    chips.push({
+      key: "parseFailed",
+      label: t("operations.filters.parseFailed"),
+      valueLabel: t(
+        `operations.filters.parseFailedOptions.${
+          search.parseFailed === "true" ? "failed" : "succeeded"
+        }`,
+      ),
+      clear: { parseFailed: "" },
     });
   }
 

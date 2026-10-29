@@ -197,6 +197,7 @@ describe("operation filters by page scope", () => {
       severity: "",
       status: "",
       deliveryOutcome: "",
+      parseFailed: "",
       destinationId: "",
       destinationKind: "",
       destinationMatch: "",

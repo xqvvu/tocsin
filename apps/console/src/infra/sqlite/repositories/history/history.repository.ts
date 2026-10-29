@@ -131,6 +131,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where(eventDeliveryOutcomePredicate(query.deliveryOutcome));
     }
 
+    if (query.parseFailed !== undefined) {
+      builder = builder.where(eventParseFailedPredicate(query.parseFailed));
+    }
+
     if (query.destinationId) {
       builder = builder.where(
         eventDestinationPredicate(
@@ -639,6 +643,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where(eventDeliveryOutcomePredicate(query.deliveryOutcome));
     }
 
+    if (query.parseFailed !== undefined) {
+      builder = builder.where(eventParseFailedPredicate(query.parseFailed));
+    }
+
     if (query.destinationId) {
       builder = builder.where(
         eventDestinationPredicate(
@@ -835,6 +843,27 @@ function countMatchedRoutes(routeMatchesJson: string | null): number {
  * without the operator knowing which field holds which word. Terms are ANDed;
  * a single term keeps the historical substring behavior.
  */
+/**
+ * SQL mirror of `parseFailureMetadataFrom`: the marker only counts when the
+ * metadata is valid JSON and `parseFailed` is exactly `true`.
+ *
+ * `NULL` and malformed rows fall back to "not a parse failure", matching the
+ * projection that reads them tolerantly; without the `COALESCE` a `NOT (…)`
+ * over `NULL` would drop those rows from both halves of the filter instead of
+ * keeping them in `false`.
+ */
+function eventParseFailedPredicate(parseFailed: boolean) {
+  const isParseFailure = sql<boolean>`COALESCE(
+    CASE
+      WHEN json_valid(events.provider_metadata_json)
+        THEN json_extract(events.provider_metadata_json, '$.parseFailed')
+      END,
+    0
+  ) = 1`;
+
+  return parseFailed ? isParseFailure : sql<boolean>`NOT (${isParseFailure})`;
+}
+
 function eventSearchPredicate(query: string) {
   const terms = splitOperationSearchTerms(query).terms;
 
