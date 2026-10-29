@@ -53,6 +53,19 @@
     `vp check` 0 error（35 warning 与 main 一致）；`vp run -r test` 4/4（console 1387）；
     `vp run -r build` 2/2。
 
+### 发布
+
+- 三位专家：发布经理「当前 main 无用户可见变更（NO_RELEASE），若 #735 合并则 RELEASE，建议
+  `0.1.0-beta.144`」；阻断审计（本轮自核）：合并后 0 open PR、`v0.1.0-beta.143..origin/main`
+  无迁移/无锁文件变化、`bcd4992e` 上 main CI 双绿；运维/回滚专家 GO（零迁移、零配置差异，
+  回滚只需换镜像）。
+- 版本 `0.1.0-beta.144`（PR #736，rebase 合并 `bcd4992e`）。
+- Tag `v0.1.0-beta.144` @ `bcd4992e`（annotated）；GitHub Release 已创建（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.144`
+  （linux/amd64 + linux/arm64），index digest
+  `sha256:7b9dac05ade545909dfddacf60788dfcdecf4479ec288375e23cb27402793dc0`；
+  回滚镜像 `0.1.0-beta.143`，无需数据库操作。
+
 ### 下一轮优先项
 
 1. UI-122：390px 目标表补 sticky 操作列（照投递表做法），需浏览器复验。
