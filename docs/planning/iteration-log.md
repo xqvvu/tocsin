@@ -66,6 +66,19 @@
     （console 228 文件 / 1326 测试）；`vp run -r build` 通过。
 - 工作树：实现全在会话工作树 `brave-heisenberg-0fc566`；`agent-iteration` 只放锁与记忆读取。
 
+### 发布
+
+- 三位发布专家一致通过：发布经理（自 beta.133 起有用户可见变更 #693 + 文档站 #691）、
+  阻断审计（main CI 双绿、0 open PR、无迁移、无锁文件变更、无阻塞性 `blocked-autonomous`）、
+  运维回滚（无镜像/环境变量/配置格式变化，回滚只换镜像到 `0.1.0-beta.133`）。
+- 版本 `0.1.0-beta.134`（PR #694 `chore(release): v0.1.0-beta.134`，rebase 合并 `0efc1d36`）。
+- Tag `v0.1.0-beta.134`（annotated，指向 `0efc1d36`，该 commit 的 CI 与 E2E 均 success）。
+- GitHub Release：已创建（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.134`（linux/amd64 + linux/arm64），
+  index digest `sha256:1418ef635d602d72bbe81787c004d1196e9d8f4b664b2a843eba1c5bd792a464`；
+  回滚镜像 `0.1.0-beta.133`，**无需数据库操作**。
+- 发布后补做文档站更正：PR #696 修正 `apps/docs/operations/deliveries.md` 的「不评估静默」等旧断言。
+
 ### 下一轮优先项
 
 1. 续做评分最高的未实现候选：REQ-338（28，目标停用/删除前披露受影响告警源）、REQ-329（28）、REQ-333（27）。
