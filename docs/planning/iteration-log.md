@@ -2,6 +2,67 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 178 轮）
+
+- 时间：2026-10-29 22:27 CST 起。
+- 基线：`origin/main` @ `8b6bd90f`；启动时 0 个 `agent/` open PR，main CI 双绿
+  （`40889153249` / `40889153197` 均 success）。
+- 类型：**full-audit 尝试 + 1 个 UI 修复切片**。距上次全量审计（第 171 轮 15:37 CST）
+  已 6h50m ≥ 6 小时，按第 1.5 步闸门展开审计。
+- **全量审计时间戳保持 2026-10-29 15:37 CST（本轮不刷新）**：`requirements` 与
+  `docs-drift` 两条车道在 75 分钟预算内均未返回（运行超过 50 分钟后仍在跑），
+  审计没有真正完成，不能记为一次有效全量审计。下一轮仍应视为「≥ 6 小时」重跑。
+- 车道轮转位置：不前进，下一个非必跑车道仍为 **docs-drift**（本轮派发但未产出）。
+- `ui-triage`：**defer**。理由：
+  1. `last_ui_review_at` = 2026-10-29 21:30 CST，距本轮仅 57 分钟，远低于 48 小时阈值；
+  2. 自上次评审以来触及 `features/*/ui`、`routes`、`shell`、`components` 的合并只有 1 个
+     （`a97af117` #735），低于 ≥ 3；
+  3. backlog 有 69 条未解决 `UI-*`，但这是多轮不变的饱和存量（第 177 轮同为 69 条），
+     不携带增量信息，应视为存量债清单而非本轮触发条件；
+  4. 抽查未发现新增不一致，唯一确认差异就是已登记的 UI-122。
+- `last_ui_review_at` 保持 **2026-10-29 21:30 CST**（本轮未做新的全量 UI 评审）。
+- 环境：会话工作树 `node_modules` 再次出现半删残留
+  （`Cannot find package '@rolldown/plugin-babel'`），`vp install --frozen-lockfile --force`
+  4.8s 修复，未删目录。
+
+### 本轮交付
+
+- **PR #739** `fix(destinations): pin the actions column on narrow viewports`（UI-122）
+  - 根因：`destinationsColumnClassName` 的 `actions` 列只有 `w-[20%]`，没有像
+    Events/Deliveries/Suppressions 那样套 `stickyActionsColumnClassName`
+    （`apps/console/src/components/common/operations-table-layout.ts:1`）。
+  - 改法：`stickyActionsColumnClassName` + `w-[20%] min-w-24`；新增回归测试断言操作列表头
+    与每个数据行操作单元格带 `sticky` / `right-0` / `min-w-24`。
+  - 真实浏览器验证（隔离实例 `/tmp/tocsin-ui-122.sqlite`，390x844，DPR 2，移动端模拟）：
+    表宽 980px / 滚动容器 348px；操作列右缘 369px 与容器右缘一致，横向滚到最大偏移 632px
+    后右缘仍是 369px（首个表头从 21px → -611px），六个行操作（测试/预览/编辑/静默/停用/删除）
+    全部可见可达。截图 `/tmp/ui-122/destinations-390-after.png`（未入库）。
+  - 验证：`vp check` 0 error / 35 warning（与 main 基线一致）；`vp run -r test` 4/4
+    （console 1388）；`vp run -r build` 2/2；PR CI `check · test · build` +
+    `playwright · chromium` 双绿后 rebase 合并。
+
+### 未完成（下一轮补）
+
+- `requirements` 车道没有交付候选复核/新需求。下一轮必须重跑，并优先在
+  **REQ-108（28，多值属性筛选）** 与 **REQ-159（28，通用 Webhook 字段映射）** 之间择一实现。
+- `docs-drift` 车道没有产出 DOC-114…DOC-121 的复核结论，下一轮重跑。
+
+### 发布
+
+- **本轮不发布**。第 10 节门槛未满足：存在另一条 routine 的 open PR **#738**
+  （`xqvvu/docs-site-20261029-221206`，`docs(site): clarify parser evidence retention`，CLEAN），
+  按门槛「其余 agent PR 都算阻断」需先由它的 owner 合并或关闭。且本轮时间预算不足以完成
+  版本 PR + 多平台镜像构建。`v0.1.0-beta.144` 仍是最新 tag，无待补建的 release。
+
+### 下一轮优先项
+
+1. 重跑 `requirements`（必须返回）：REQ-108 / REQ-159 择一实现。
+2. 重跑 `docs-drift`：优先 DOC-114…DOC-121 与 `xqvvu/vane` 残留引用。
+3. 发布评估：等 #738 落地后，若 main CI 绿且无其它 open PR，按 #739 为用户可见变更
+   发 `0.1.0-beta.145`。
+4. UI-122 已交付，下一轮 ui-triage 可考虑 defer，把名额给 `security-exposure` 车道
+   （SEC-22 / SEC-24 / SEC-13 仍在 backlog）。
+
 ## 2026-10-29（第 177 轮）
 
 - 时间：2026-10-29 21:27 CST 起。
