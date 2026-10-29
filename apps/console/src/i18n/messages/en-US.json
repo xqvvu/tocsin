@@ -688,7 +688,7 @@
   "destinations.table.pagination.range": "{total, plural, one {# destination} other {# destinations}}",
   "destinations.table.routes.blocked": "All sources off",
   "destinations.table.routes.blockedTitle": "{count} enabled routes send to this destination, but every matching source is disabled or missing so no alert can arrive: {names}",
-  "destinations.table.routes.conditionalSuffix": " · {count} conditional",
+  "destinations.table.routes.conditionalCount": "{count} conditional",
   "destinations.table.routes.conditionalTitle": "{count} of them also need the event to match a severity, status, label, or text condition: {names}",
   "destinations.table.routes.disabledOnlyTitle": "{count} disabled routes reference this destination, but no enabled route currently sends to it",
   "destinations.table.routes.none": "No active route",

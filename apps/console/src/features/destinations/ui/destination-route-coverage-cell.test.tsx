@@ -57,8 +57,13 @@ describe("destination route coverage cell", () => {
       </AppIntlProvider>,
     );
 
-    // "2 条可达" alone read as "everything routed here is delivered".
-    const badge = screen.getByText("2 条可达 · 1 条带条件");
+    // "2 条可达" alone read as "everything routed here is delivered", so the
+    // conditional count stays visible — but on its own line: the combined
+    // label is wider than the Routing column at 1280 and used to be clipped
+    // mid-word.
+    const badge = screen.getByText("2 条可达");
+    expect(badge.textContent).not.toContain("条带条件");
+    expect(screen.getByText("1 条带条件")).toBeTruthy();
     expect(badge.getAttribute("title")).toContain(
       "其中 1 条还需事件满足级别、状态、标签或文本条件",
     );
