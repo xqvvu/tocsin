@@ -30,6 +30,8 @@ import {
   AlertDialogTrigger,
 } from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
+import type { DestinationSourceImpact } from "#/features/destinations/model/destination-source-impact";
+import { DestinationSourceImpactNotice } from "#/features/destinations/ui/destination-source-impact-notice";
 import type { DestinationListItem } from "#/features/destinations/ui/destination-ui-types";
 import { QueuedDeliveriesNotice } from "#/features/operations/ui/queued-deliveries-notice";
 import type { RouteReferenceImpact } from "#/features/routes/model/route-reference-impact";
@@ -40,6 +42,7 @@ export function DestinationActions({
   destination,
   enabledRouteCount,
   deleteImpact,
+  sourceImpact,
   pending,
   requestDeleteImpact,
   onTest,
@@ -51,6 +54,7 @@ export function DestinationActions({
   destination: DestinationListItem;
   enabledRouteCount: number;
   deleteImpact: RouteReferenceImpact;
+  sourceImpact: DestinationSourceImpact;
   pending: boolean;
   requestDeleteImpact: DeletionImpactLoader;
   onTest: (destination: DestinationListItem) => void;
@@ -152,6 +156,7 @@ export function DestinationActions({
                       destinationName: destination.name,
                     })}
               </AlertDialogDescription>
+              <DestinationSourceImpactNotice impact={sourceImpact} />
               <QueuedDeliveriesNotice scope={{ destinationId: destination.id }} />
               {urgentAutoEnabled ? (
                 <Alert variant="destructive">
@@ -263,6 +268,7 @@ export function DestinationActions({
                 </AlertDescription>
               </Alert>
             ) : null}
+            <DestinationSourceImpactNotice impact={sourceImpact} />
             <DeletionImpactNotice
               impact={historyImpact.impact}
               state={historyImpact.state}
