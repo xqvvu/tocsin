@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 179 轮）
+
+- 时间：2026-10-30 01:35 CST 起（定时触发于 23:34）。
+- 基线：`origin/main` @ `7ce48e61`；启动时 0 个 open `agent/` PR，main CI 双绿。
+- 类型：**full-audit（3 车道）+ 需求切片**。上次全量审计为第 171 轮 15:37 CST，距今约 10 小时
+  > 6 小时，按第 1.5 步展开；backlog 同时有 28 分候选，因此没有空转。
+- **全量审计时间戳：2026-10-30 01:40 CST。**
+- 车道轮转位置：本轮跑了 `docs-drift`；下一个非必跑车道为 **quality**。
+- `ui-triage`：**defer**。`last_ui_review_at` = 2026-10-29 21:30 CST，距本轮 2h05m；
+  自那以后的 origin/main UI 合并只有 2 个（`a97af117` 正是该轮自己的交付、`e0cc15f9` 带真实
+  390×844 浏览器验证与回归测试），低于 ≥3 强信号；70 条未解决 `UI-*` 是多轮不变的饱和存量。
+- `last_ui_review_at`：保持 2026-10-29 21:30 CST（本轮未做 UI 评审）。
+
+### 专家发现
+
+**requirements（3 条新候选，均带 `file:line`）**
+
+- **REQ-358（26）运行日志外部导出 sink**：日志只落 stdout（`server/runtime/logging.ts:43-45`
+  仅 `consoleSink`），自托管环境无法把日志送进既有 Loki/SIEM；RC checklist:113-116 亦承认未设计。
+- **REQ-359（25）删除前归档**：删除是硬删除（`source.repository.ts:120`、`route.repository.ts:169`、
+  `destination.repository.ts:104`），误删后无法证明「这条告警当时被路由到哪里」；需 forward-only 迁移。
+- **REQ-360（23）provider fixture 目录**：`packages/providers` 无 fixture 基础设施，destination 侧
+  已有 test-kit/scaffold，两侧不对称；checklist:122-123 确认。
+
+**docs-drift（8 条已核实漂移）**
+
+- `docs/prd/self-hosted-alert-hub-mvp.md:148,213` 仍把 suppression / per-fingerprint mute 列为
+  future／non-MVP，实际全栈已交付（`packages/core/src/suppression/suppression.ts:24-40`、
+  `features/suppressions/`、`apps/docs/operations/suppressions.md`）。
+- `README.md:244` 仍把 per-fingerprint mute 列为未来方向；`suppression.ts:29` 已精确匹配 fingerprint。
+- `docs/research/route-authoring-current-state.md:18,101-104,198`：声称证据英文硬编码且 UI 不区分
+  快照/重算，实际 `route-match-check-badges.tsx:15,26,45-98` 已中文化并输出实际值、
+  `event-detail-route-matches-table.tsx:27,47-48` 已按 `data-provenance` 区分。
+- 同文件 `:95` 的 `routeMatchCount` / `countMatchedRoutes` 行号已漂移（现为
+  `packages/core/src/operations.ts:176`、`history.repository.ts:811`）。
+- `apps/docs/integrations/destinations.md:89,373` 称只有停用与删除会确认，实际启用分支同样有
+  `AlertDialog`（`destination-actions.tsx:196-244`，含排队投递与加急提示）。
+- `docs/prd/delivery-list-receipt.md:12`、`delivery-fingerprint-filter.md:14`、`delivery-event-filter.md:19`
+  三份 PRD 的前提句（没有 `providerReference` / 没有 fingerprint / 没有 eventId 维度）均已过时：
+  `packages/core/src/operations.ts:322`、`history.interface.ts:139,146`。
+- backlog 自身重号：`DOC-113`、`ARCH-40/41/42`、`Q-14/15/16/52`、`REL-33/42/43/47/72/81`、
+  `SEC-20/26/30/33` 各出现两次；且候选里引用的行号已漂移。
+- 已复核**不构成漂移**：checklist:122（provider 无贡献指南）、:100,105（无 release 自动化）、
+  :207（跨事件聚合排行），均仍成立。
+
+### 本轮交付
+
+- **PR #741** `feat(operations): filter events and deliveries by several values`（rebase 合并 `1f765c8f`）
+  - `severity` / `status` / `deliveryState` 改为多值：URL 逗号分隔（`?severity=critical,warning`），
+    契约接受单值或数组，仓储统一 `IN` 谓词，列表与 `total` 同谓词。
+  - 新增复选框弹层控件 `features/operations/ui/operation-multi-select.tsx`；已选值按选项顺序规范化，
+    同一集合永远产生同一 URL；chip 展示每个取值的名称。
+  - 未知取值/重复项解析时丢弃而不是报错；清空全部勾选等于「不限」；单值链接与 API 调用行为不变。
+  - 新增 `docs/prd/operations-multi-value-filters.md` 与
+    `repositories/history/multi-value-filters.test.ts`（6 个用例）。
+  - 验证：`vp check` 0 error（35 warning 与 main 一致）；`vp run -r test` 4/4（236 文件 / 1400 用例）；
+    `vp run -r build` 2/2；GitHub CI `check · test · build` 与 `playwright · chromium` 双绿。
+
+### 工具链观察
+
+- `vp run -r test` 在某个包测试失败时仍可能以 **exit code 0** 结束（本轮首次运行输出
+  `3/4 successful` 但退出码为 0）。**判断测试是否通过必须看输出里的 `Test Files ... failed`
+  与 `vp run: N/M successful`，不能只看退出码。**
+- 系统 load average 一度 29，全量测试耗时约 20 分钟（正常约 11 秒）；未出现 `forks runner` 超时。
+
+### 下一轮优先项
+
+1. DOC-122：把上面 8 条已核实的文档漂移一次性修正（纯 docs AUTO_FIX）。
+2. REQ-358（26，日志导出 sink）与 REQ-359（25，删除前归档）交 EXPERT_PANEL 评估：
+   前者改配置面，后者需 forward-only 迁移。
+3. `quality` 车道（轮转）；重点补 history repository 查询覆盖（`Q-5`）。
+4. REL-16 / REL-23：main CI required checks 仍缺 ruleset，交 EXPERT_PANEL。
+
 ## 2026-10-29（第 178 轮）
 
 - 时间：2026-10-29 22:27 CST 起。
