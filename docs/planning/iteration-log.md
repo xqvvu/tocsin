@@ -77,6 +77,8 @@
     （console 230 文件 / 1337 测试）；`vp run -r build` 通过；PR CI 双绿
     （check · test · build / playwright · chromium）。
 - 工作树：实现全在会话工作树 `suspicious-chandrasekhar-9ec5af`；`agent-iteration` 只放锁与记忆读取。
+- 收尾清理：回收已合并会话工作树 1 个（`brave-heisenberg-0fc566`，PR #693 已合并），
+  `.claude/worktrees` 790M → 23M；删除 4 个已合并 `agent/*` 本地分支；`agent-iteration` 锁目录已删除。
 
 ### 发布
 
