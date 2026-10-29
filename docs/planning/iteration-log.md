@@ -53,6 +53,14 @@
 - `obsidian-vault` skill 在本会话不可用；按 AGENTS.md 记录「Obsidian 同步已跳过」。
   既有 `Vane Iteration Log.md` 停留在第 160 轮，与仓库日志已有 12 轮差距，未做单轮手工同步。
 
+### 收尾清理
+
+- 回收注册工作树 `compassionate-engelbart-ae8c6e`（第 171 轮，工作区干净）；`youthful-murdock-b65fc6`
+  仍有真实未提交改动，跳过保留；`docs-site-20261029-165624` 属并行文档站车道，未介入。
+- `.claude/worktrees` **2.1G → 1.4G**：本会话工作树的 `node_modules`、`.output`、`.vite` 已删除，
+  `agent-iteration` 锁目录一并删除。
+- 删除 PR 状态为 MERGED 的本地 `agent/*` 分支（含本轮三个）；无 PR 的分支保留。
+
 ### 下一轮优先项
 
 1. REQ-355（27，通知模板 `tocsin.deliveryUrl`）或 REQ-352（27，预演预测去重窗口）择一。
