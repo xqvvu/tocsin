@@ -1,6 +1,16 @@
 import { useForm } from "@tanstack/react-form";
 import * as React from "react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "#/components/ui/alert-dialog";
 import { Button } from "#/components/ui/button";
 import {
   Field as UiField,
@@ -54,6 +64,16 @@ export function SourceForm({
   const isDialogLayout = layout === "dialog";
 
   const pendingConfig = React.useRef<SourceFormSubmitInput["config"]>(undefined);
+  // The provider decides how every later payload is parsed, and switching it on
+  // an existing source leaves stored events with the parse result they already
+  // have. The save asks first; a non-null value is the switch awaiting an answer.
+  const [pendingProviderChange, setPendingProviderChange] = React.useState<
+    SourceFormValues["provider"] | null
+  >(null);
+  // Set once the operator confirmed a switch, so the re-run of the submit does
+  // not ask again. It is compared by value: picking yet another provider asks
+  // again, and a failed save can be retried without a second confirmation.
+  const confirmedProviderChange = React.useRef<SourceFormValues["provider"] | null>(null);
   const providerItems = React.useMemo(
     () => [
       { value: "generic", label: t("sources.providers.genericWebhook") },
@@ -68,6 +88,18 @@ export function SourceForm({
   const form = useForm({
     defaultValues,
     onSubmit: async ({ value }) => {
+      // Edit mode (`onCancel`) starts from a stored provider. A different one
+      // changes how every later webhook is read, so the operator answers the
+      // dialog below before anything is written.
+      if (
+        onCancel &&
+        value.provider !== defaultValues.provider &&
+        confirmedProviderChange.current !== value.provider
+      ) {
+        setPendingProviderChange(value.provider);
+        return;
+      }
+
       const config = pendingConfig.current;
       const result = await onSubmit({
         name: value.name.trim(),
@@ -193,53 +225,94 @@ export function SourceForm({
   );
 
   return (
-    <form
-      className={cn(
-        "flex flex-col",
-        isDialogLayout ? "min-h-0 flex-1 overflow-hidden" : layout === "rail" ? "gap-5" : "gap-2",
-      )}
-      onSubmit={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const data = new FormData(event.currentTarget);
-        pendingConfig.current = onCancel
-          ? sourceConfigPatchFromForm(data)
-          : sourceConfigFromForm(data);
-        void form.handleSubmit();
-      }}
-    >
-      {isDialogLayout ? (
-        <div className="-mx-4 min-h-0 flex-1 overflow-y-auto">
-          <div className="flex min-w-0 flex-col gap-3 px-4 pb-1">{fields}</div>
-        </div>
-      ) : (
-        fields
-      )}
-      <div
-        className={
-          isDialogLayout
-            ? "border-border bg-popover flex shrink-0 flex-col gap-2 border-t pt-3 sm:flex-row sm:justify-end"
-            : onCancel
-              ? "grid grid-cols-2 gap-2"
-              : undefined
-        }
+    <>
+      <form
+        className={cn(
+          "flex flex-col",
+          isDialogLayout ? "min-h-0 flex-1 overflow-hidden" : layout === "rail" ? "gap-5" : "gap-2",
+        )}
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const data = new FormData(event.currentTarget);
+          pendingConfig.current = onCancel
+            ? sourceConfigPatchFromForm(data)
+            : sourceConfigFromForm(data);
+          void form.handleSubmit();
+        }}
       >
-        {onCancel ? (
-          <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onCancel}>
-            {t("sources.form.cancel")}
-          </Button>
-        ) : null}
-        <Button
-          type="submit"
-          size={layout === "rail" ? "lg" : "sm"}
-          disabled={pending}
-          className={isDialogLayout ? "w-full sm:w-fit" : onCancel ? "" : "w-full font-bold"}
+        {isDialogLayout ? (
+          <div className="-mx-4 min-h-0 flex-1 overflow-y-auto">
+            <div className="flex min-w-0 flex-col gap-3 px-4 pb-1">{fields}</div>
+          </div>
+        ) : (
+          fields
+        )}
+        <div
+          className={
+            isDialogLayout
+              ? "border-border bg-popover flex shrink-0 flex-col gap-2 border-t pt-3 sm:flex-row sm:justify-end"
+              : onCancel
+                ? "grid grid-cols-2 gap-2"
+                : undefined
+          }
         >
-          {submitIcon}
-          {submitLabel}
-        </Button>
-      </div>
-    </form>
+          {onCancel ? (
+            <Button type="button" variant="outline" size="sm" disabled={pending} onClick={onCancel}>
+              {t("sources.form.cancel")}
+            </Button>
+          ) : null}
+          <Button
+            type="submit"
+            size={layout === "rail" ? "lg" : "sm"}
+            disabled={pending}
+            className={isDialogLayout ? "w-full sm:w-fit" : onCancel ? "" : "w-full font-bold"}
+          >
+            {submitIcon}
+            {submitLabel}
+          </Button>
+        </div>
+      </form>
+      <AlertDialog
+        open={pendingProviderChange !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingProviderChange(null);
+          }
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("sources.form.providerChange.title")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("sources.form.providerChange.description", {
+                previousProvider: t(`sources.providers.${defaultValues.provider}`),
+                nextProvider: t(
+                  `sources.providers.${pendingProviderChange ?? defaultValues.provider}`,
+                ),
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>
+              {t("sources.form.providerChange.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={pending}
+              onClick={() => {
+                confirmedProviderChange.current = pendingProviderChange;
+                setPendingProviderChange(null);
+                // Re-run the submit with the answer recorded. The values and
+                // the pending config are still the ones the operator submitted.
+                void form.handleSubmit();
+              }}
+            >
+              {t("sources.form.providerChange.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
