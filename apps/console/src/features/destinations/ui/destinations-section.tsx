@@ -5,6 +5,7 @@ import type { RouteDefinition, SourceSummary } from "@tocsin/core";
 
 import { EnabledStateBadge } from "#/components/common/enabled-state-badge";
 import { OperationsTable } from "#/components/common/operations-table";
+import { stickyActionsColumnClassName } from "#/components/common/operations-table-layout";
 import type { ConsoleTableFeatures } from "#/components/common/table-features";
 import type { DeletionImpactLoader } from "#/components/common/use-deletion-impact";
 import { destinationRouteCoverage } from "#/features/destinations/model/destination-route-coverage";
@@ -174,7 +175,11 @@ function destinationsColumnClassName(columnId: string): string | null {
     case "deliveryHealth":
       return "w-[14%]";
     case "actions":
-      return "w-[20%]";
+      // The table keeps a 980px floor, so on a phone every right-hand column
+      // starts off-screen. Pinning actions to the right edge keeps
+      // edit/test/preview/delete reachable without hunting for a horizontal
+      // scroll; the columns it overlaps stay with the scrolled content.
+      return `${stickyActionsColumnClassName} w-[20%] min-w-24`;
     default:
       return null;
   }
