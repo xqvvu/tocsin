@@ -2,6 +2,79 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 169 轮）
+
+- 时间：2026-10-29 12:27 CST 起。
+- 基线：`origin/main` @ `490a676f`；启动时 0 个 `agent/*` open PR，main CI 双绿；另一个
+  docs-site 车道的 open PR #700（文档站，未介入）。
+- 类型：**需求切片 + 三车道审计**（非 full-audit）。最近全量审计是第 167 轮 08:37 CST，
+  距本轮 3h50m < 6 小时；但 backlog 有大量 ≥27 分 candidate，按第 1.5 步继续。
+- 车道：`requirements`（必跑）+ `ui-triage`（必跑，判 `defer`）+ `docs-drift`（轮转），并发 3。
+  下一个非必跑车道：`security-exposure`。
+- 环境：会话工作树 `node_modules` 再次处于半删残留态（根目录仅 3 个包、无 workspace 链接、
+  `@rolldown/plugin-babel` 缺失），按既有结论 `rm -rf` 全部 workspace `node_modules` 后
+  `vp install --frozen-lockfile` 恢复（`.pnpm` 846 包 / `apps/console/node_modules` 42 项）。
+- `last_ui_review_at` 保持 2026-10-29 10:05 CST（本轮未评审）。
+
+### 专家发现
+
+**ui-triage**
+
+- 决策 **`defer`**：距上次浏览器实测 2h23m；自 10:05 起 main 触及 UI 路径的合并 0 条；
+  UI-* 未解决 candidate 68 条但 ≥27 分 0 条（最新 UI-120/121 各 24 分）；第 168 轮刚实测
+  完五态与预演弹窗，代码零变化。剩余发现是待交付的 a11y 小修，不是待发现。建议下轮直接
+  交付 UI-120 + UI-121 打包的 `fix(a11y)`，并在下次评审补验 #697 的影响提示。
+
+**requirements（4 条新候选，最高 26 分，均未达 27 门槛，已写入 backlog）**
+
+- REQ-346 企业微信群机器人通知目标（含加签，26）：目标只有 4 种
+  （`packages/core/src/destination/destination.ts:7`），唯一签名实现是飞书专用
+  （`packages/destinations/src/feishu/sign.ts:1-12`）；通用 Webhook 只有静态 headers
+  （`generic-webhook/schema.ts:14-19`）。
+- REQ-347 阿里云云监控告警源 Provider（25）：Provider 六种
+  （`packages/core/src/source/source.ts:3-10`、`providers/src/registry.ts:183-197`），
+  generic 对非对象 JSON 只能生成默认字段（`apps/docs/integrations/providers.md:90`）。
+- REQ-348 Slack Bot Token 发送模式（25）：Slack 只有 `webhookUrl`
+  （`slack/schema.ts:12-17`、`slack/adapter.ts:66-83`），无 provider reference 回执。
+- REQ-349 单条配置导出 TOML + secret 环境变量清单（26）：导出只能整份快照
+  （`packages/core/src/config.ts:184-232`），`secret_refs` 存在（`:36-40,201-222`）但无清单。
+
+**docs-drift**
+
+- 未在 30 分钟预算内返回（与本轮 75 分钟总预算冲突），下轮重跑该车道；本轮不计发现。
+
+**FIX-18 复核（第 168 轮遗留，最高优先）**
+
+- **未复现**。`apps/console/src/routes/api/sources/$sourceId/-webhook.test.ts` 与
+  `server/intake/intake.service.test.ts` 共 30 项在真实 store + 真实 `token_hash` 下通过，
+  覆盖 `Authorization: Bearer` 与 `x-tocsin-source-token` 两条路径；e2e
+  `apps/console/e2e/alert-flow.spec.ts:135-141` 的「UI 出示 token → POST」链路 CI 绿；
+  token 面板渲染完整 token（`features/sources/ui/source-token-notice-panel.tsx:63`）。
+  判定为评审请求构造问题，未改鉴权；backlog 已补复核结论与「再现时需附原始 curl」。
+
+### 本轮交付
+
+- **PR #703** `feat(console): disclose queued urgent calls before re-enabling a destination`
+  （REQ-329，28 分）
+  - 问题：停用期间 `claimNext` 不领取目标停用的 scheduled 加急呼叫（`oncall.repository.ts`
+    `innerJoin destinations ... enabled = 1`），启用后集中拨出且不可撤回；启用分支此前无确认。
+  - 改动：`countScheduledForDestination`（只读，状态 + 尝试次数与领取条件对齐）→
+    `DestinationService.previewEnableDestination` → 只读 `destinations.previewEnable`；
+    启用改为确认框，复用 `QueuedDeliveriesNotice`，新增 `DestinationScheduledUrgentNotice`
+    （0/失败不渲染、不阻塞）；中英文案各 6 条；PRD
+    `docs/prd/destination-enable-urgent-disclosure.md`。
+  - 无 schema、无迁移、无新依赖、无投递/路由/auth 语义变化。
+  - 验证：`vp check` 0 error（35 条既有 warning）；`vp run -r test` 4/4 包通过
+    （console 232 文件 / 1345 测试）；`vp run -r build` 通过。
+- 工作树：实现全会话工作树 `sleepy-wescoff-d522b5`；`agent-iteration` 只放锁与记忆读取。
+
+### 下一轮优先项
+
+1. `docs-drift` 重跑（连续两轮未产出）。
+2. UI-120 + UI-121 打包 `fix(a11y)`（预演弹窗 live region + 重试风险槽 `aria-atomic`）。
+3. REQ-324（28）/ REQ-333（27）/ REQ-329 若未合并则续做。
+4. SEC-44 交 EXPERT_PANEL（值形态前缀凭据 + 保持现有 oracle）。
+
 ## 2026-10-29（第 168 轮）
 
 - 时间：2026-10-29 09:26 CST 起。
