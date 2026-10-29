@@ -34,7 +34,8 @@ delivery history retention 已决定不自动清理，理由见
 - Webhook intake：payload size limit、raw payload 保存、敏感字段脱敏、provider parse failure
   记录、idempotency dedupe、快速 accepted response。
 - Event：保存不可变入站事件，展示规范化字段、脱敏 raw debug data、route matches、关联
-  deliveries 与同指纹历史页签；模板变量 `tocsin.eventUrl` 提供事件直链（`apps/console/src/lib/event-url.ts`）。
+  deliveries 与同指纹历史页签；模板变量 `tocsin.eventUrl` / `tocsin.deliveryUrl` 提供事件与本次投递
+  直链（`apps/console/src/lib/dashboard-url.ts`）。
 - Route：支持 source、severity、status、label、title/message contains 规则匹配，并可路由到多个
   destinations。
 - Destination：支持 generic webhook、Feishu、Slack、Email；具备 secret-safe preview/test、
