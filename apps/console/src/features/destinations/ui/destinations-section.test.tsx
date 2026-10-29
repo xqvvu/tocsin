@@ -259,6 +259,43 @@ describe("destinations section table", () => {
     expect(onToggle).toHaveBeenCalledWith(destination);
   });
 
+  it("pins the actions column so it stays reachable on a narrow viewport", () => {
+    render(
+      <AppIntlProvider locale="en-US">
+        <DestinationsSection
+          destinations={[destinationFixture(2), destinationFixture(3)]}
+          destinationCatalog={defaultDestinationCatalog}
+          sources={[]}
+          routes={[]}
+          pending={false}
+          requestDeleteImpact={noDeletionImpact}
+          onTest={vi.fn<DestinationActionHandler>()}
+          onPreview={vi.fn<DestinationActionHandler>()}
+          onEdit={vi.fn<DestinationEditHandler>()}
+          onToggle={vi.fn<DestinationActionHandler>()}
+          onDelete={vi.fn<DestinationActionHandler>()}
+        />
+      </AppIntlProvider>,
+    );
+
+    // The table keeps a 980px floor, so on a 390px viewport the actions would
+    // otherwise sit outside the first screen with no affordance. Pinning the
+    // column mirrors the events, deliveries, and suppressions tables.
+    const actionsHeader = screen.getByRole("columnheader", { name: "Actions" });
+    expect(actionsHeader.className).toContain("sticky");
+    expect(actionsHeader.className).toContain("right-0");
+    expect(actionsHeader.className).toContain("min-w-24");
+
+    const bodyRows = screen.getAllByRole("row").slice(1);
+    expect(bodyRows).toHaveLength(2);
+    for (const row of bodyRows) {
+      const cells = within(row).getAllByRole("cell");
+      const actionCell = cells.at(-1);
+      expect(actionCell?.className).toContain("sticky");
+      expect(actionCell?.className).toContain("right-0");
+    }
+  });
+
   it("confirms before re-enabling a disabled destination", () => {
     const onToggle = vi.fn<DestinationActionHandler>();
     // Index 1 is disabled, so the power action opens the enable confirmation.
