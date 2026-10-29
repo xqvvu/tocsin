@@ -210,7 +210,7 @@ curl -i -X POST 'https://tocsin.example.com/api/sources/<source-id>/webhook' \
   --data '{"id":"deploy-check-001","title":"Deploy check","severity":"critical","status":"firing"}'
 ```
 
-响应体应为 `accepted: true`，且 `deliveriesCreated` 至少为 `1`。`202` 只表示已接收，不代表已经送达；`deliveriesCreated` 为 `0` 通常说明路由未命中、路由或目标已停用，或同一幂等键仍在去重窗口内。
+响应体应为 `accepted: true`，且 `deliveriesCreated` 至少为 `1`。`202` 只表示已接收，不代表已经送达；`deliveriesCreated` 为 `0` 通常说明没有启用的路由命中，或同一幂等键仍在去重窗口内。目标停用不会阻止命中路由创建 Delivery；这类记录会保持 `pending`，直到目标重新启用。
 
 7. 在「事件」页确认 Event 已入库、规范化字段正确，并显示路由匹配证据；在「投递」页确认对应 Delivery 最终为 `succeeded`。失败时先读尝试记录，不要直接重发。判读方法见[投递检索、生命周期与重试](/operations/deliveries)与[故障排查](/operations/troubleshooting)。
 8. 重启容器，确认数据实际落在持久卷上：

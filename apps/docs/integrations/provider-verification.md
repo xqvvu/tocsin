@@ -27,7 +27,7 @@ description: 使用可复制的最小载荷验证 Grafana、Alertmanager、SigNo
 | `202` | 接入事务提交 | 是 | Provider 已接受；Route 未命中、目标未启用或发送失败仍可能发生 |
 | `413` | 请求体大小校验 | 否 | 检查 `TOCSIN_MAX_WEBHOOK_BYTES` 与反向代理上限 |
 
-`202` 中的 `deliveriesCreated: 0` 并不表示接入失败。它可能表示 Route 未命中、目标停用或重复请求命中了投递去重窗口。
+`202` 中的 `deliveriesCreated: 0` 并不表示接入失败。它通常表示没有启用的 Route 命中，或相同幂等键命中了投递去重窗口。目标停用不会阻止 Delivery 创建；如果路由命中，仍会创建 `pending` Delivery，Worker 会等目标重新启用后再领取。
 
 ## 通用验证命令
 
@@ -280,7 +280,7 @@ FastGPT 使用严格的事件契约，不支持用普通告警字段替代。代
 2. Event 标题、severity、status、fingerprint 与本文预期一致。
 3. Event 的 Provider metadata 与告警源所选 Provider 一致。
 4. Raw payload 中没有 Token、Authorization、密码或生产敏感数据。
-5. 暂不启用 Route 时，`deliveriesCreated` 为 `0`；启用隔离测试 Route 后，能看到匹配证据与测试 Delivery。
+5. 暂不启用 Route 时，`deliveriesCreated` 为 `0`；启用隔离测试 Route 后，能看到匹配证据与测试 Delivery。若测试目标处于停用状态，Delivery 应显示为 `pending`，而不是被当成未创建。
 6. 从真实上游发送一条脱敏 canary，确认网络、凭据与上游实际 payload 也通过，而不只是在 `curl` 中通过。
 
 完成上游 canary 后，再逐步启用生产 Route 与 Destination。接入链路和通知链路分开验收，可以把 Provider、路由和目标故障分别定位。投递后续状态见[投递检索、生命周期与重试](/operations/deliveries)，失败路径见[故障排查](/operations/troubleshooting)。
