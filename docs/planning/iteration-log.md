@@ -45,7 +45,7 @@
 
 ### 本轮交付
 
-- **PR #734** `fix(destinations): wrap the conditional route count below the coverage badge`
+- **PR #735** `fix(destinations): wrap the conditional route count below the coverage badge`
   - 徽标只显示可达数（`1 条可达` / `X/Y 条可达` / `告警源全停用` / `无生效路由`），条件数另起一行
     小字（新键 `destinations.table.routes.conditionalCount`，中英文同步）；悬浮标题仍同时说明两者。
   - 文档 `apps/docs/integrations/destinations.md:39` 同步新排版口径。
