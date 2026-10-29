@@ -2,6 +2,66 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-29（第 176 轮）
+
+- 时间：2026-10-29 20:26 CST 起。
+- 基线：`origin/main` @ `bcbf3bf3`；启动时 0 个 open PR，main CI 双绿。
+- 类型：**需求切片 + 发布**（非 full-audit）。第 171 轮 15:37 CST 的全量审计距今 4h49m
+  < 6 小时，按第 1.5 步闸门不重跑专家车道，直接续做 backlog 中 28 分的未交付项。
+- **全量审计时间戳保持 2026-10-29 15:37 CST**（本轮未做全量审计）。
+- 车道轮转位置：不前进，下一个非必跑车道仍为 **docs-drift**。
+- `ui-triage`：本轮未运行（紧邻上一轮全量审计，UI 路径无新合并）。
+- `last_ui_review_at`：保持 **2026-10-29 15:55 CST**。
+- 环境：会话工作树 `node_modules` 半删残留，删除全部 workspace `node_modules` 后
+  `vp install --frozen-lockfile` 3.8s 恢复。
+
+### 选题
+
+- 三个 28 分候选（REQ-137 / REQ-108 / REQ-159）中选 **REQ-137 告警源解析器变更确认**：
+  纯前端、无迁移、可在一个切片内配齐行为测试。REQ-108（多值筛选）需要把三个筛选控件改成多选，
+  REQ-159（通用源字段映射）触及 provider 配置与 TOML 可移植性，单轮风险都更高。
+
+### 本轮交付
+
+- **PR #732** `feat(sources): confirm a provider switch before saving`（REQ-137，28 分，
+  rebase 合并 `543ae5e4`）
+  - `SourceForm` 编辑分支提交时比较当前解析器与初始值，变化则拦截并弹出 `AlertDialog`：
+    「切换告警解析器？」+「旧 → 新」+「历史事件保留原解析结果、不会重新解析，之后不匹配的载荷
+    会在接入时被拒绝并记为解析失败」；确认后记录答案并复用原提交路径重新提交，取消不写入。
+  - 新建告警源没有旧解析器，流程不变。
+  - 新增 `sources.form.providerChange.*` 中英文案；文档站 `apps/docs/guide/sources.md` 补口径；
+    新增 PRD `docs/prd/source-provider-change-confirmation.md`。
+  - 验证：`vp check` 0 error（35 warning 与 main 一致）；`vp run -r test` 4/4（console 1387，
+    新增 5 例）；`vp run -r build` 2/2；PR CI 与 E2E 双绿。
+  - 自审：`code-review`（low）0 findings。
+  - 未做真实浏览器验证（本机无运行中的 console dev 实例）。确认框是在编辑弹层内再开一层
+    `AlertDialog`，交互由组件测试覆盖，嵌套弹层的焦点行为本轮未在浏览器复验。
+
+### 发布
+
+- 三位专家：发布经理 GO（自 beta.142 起 1 个用户可见变更 #732，建议 `0.1.0-beta.143`）；
+  阻断审计初判 BLOCK，唯一理由是 `543ae5e4` 的 main CI 当时仍在运行，随后 `543ae5e4` 与
+  `fb4051b5` 均双绿，阻断条件消除；运维/回滚 GO（零迁移、零配置差异，回滚只需换镜像）。
+- 版本 `0.1.0-beta.143`（PR #733，rebase 合并 `fb4051b5`）。
+- Tag `v0.1.0-beta.143` @ `fb4051b5`（annotated）；GitHub Release 已创建（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.143`
+  （linux/amd64 + linux/arm64），index digest
+  `sha256:d085c7ccca258771f8d492dfdd47081b3f0628924cc1736acbf8095db315fb53`；
+  回滚镜像 `0.1.0-beta.142`，无需数据库操作。
+
+### 收尾清理
+
+- 回收 3 个已注册且工作区干净的会话工作树，跳过 1 个（有真实未提交改动）。
+- `.claude/worktrees` **2.1G → 1.4G**；`agent-iteration` 锁与专用工作树在收尾时删除，
+  会话工作树的 `node_modules`、`.output`、`.vite` 同步删除。
+
+### 下一轮优先项
+
+1. REQ-108（28，多值属性筛选）/ REQ-159（28，通用源字段映射）择一；REQ-137 已交付。
+2. docs-drift（下一个轮转车道），优先复核 DOC-114…DOC-121。
+3. UI-122：390px 下目标列表右侧列被裁切（需浏览器复验）。
+4. REL-16 / REL-23：main CI required checks 交 EXPERT_PANEL。
+
 ## 2026-10-29（第 175 轮）
 
 - 时间：2026-10-29 19:26 CST 起。
