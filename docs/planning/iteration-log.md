@@ -2,6 +2,75 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 182 轮）
+
+- 时间：2026-10-30 10:43 CST 起（定时触发；并发锁获取于 10:43）。
+- 基线：`origin/main` @ `70d8ae08`；启动时 0 个 open `agent/` PR，但 docs-site routine 的 #751 仍 open。
+- 类型：**实施轮（不展开全量审计）+ 1 个需求切片 + 发布 `0.1.0-beta.146`**。
+- **全量审计时间戳保持 2026-10-30 10:12 CST（第 181 轮）**：本轮距上次全量审计仅 31 分钟，
+  按第 1.5 步配额闸门不重复展开专家审计，直接续做第 181 轮已排定的下一轮优先项
+  （发布 → Q-54/REQ-362 → security-exposure）。
+- 车道轮转位置：本轮未跑新审计车道；下一个非必跑车道仍为 **security-exposure**。
+- `ui-triage`：**defer**（内联判定，未 spawn）。`last_ui_review_at` = 2026-10-29 21:30 CST
+  （13h13m，未达 48h）；自上次评审以来无新增未评审 UI 主题（#753 是本轮切片，带组件与 URL 用例，
+  且只复用既有筛选面板形态）；backlog `UI-*` 存量按第 179/181 轮口径视为饱和存量。
+- `last_ui_review_at`：保持 **2026-10-29 21:30 CST**。
+
+### 专家发现
+
+本轮未跑审计车道；以下是实施与发布过程中直接核实的事实：
+
+- **REQ-362 可交付性**：`delivery_attempts.response_status` 已落库（`migrate/schema.ts:147`），
+  事件详情已按「每个投递最新已完成尝试」批读取（`history.repository.ts` 的
+  `latestAttemptsByDelivery`），投递列表缺同一维度；`state != 'running'` 中
+  `attempt_number` 最大者与详情口径一致。
+- **发布阻断**：#751 为 docs-only（2 文件，+24/-4）、CI 双绿、`MERGEABLE/CLEAN`，合并后
+  `gh pr list --state open` 为空，第 181 轮记录的发布阻断解除。
+- **发布门槛**（三位只读专家一致）：main `00bbccc6` CI + E2E 均 success、无 open PR、无迁移 diff、
+  无 P1 未修复回归；Dockerfile/compose/migrate/依赖/`TOCSIN_*` 均零 diff。
+
+### 本轮交付
+
+- **PR #753** `feat(operations): filter deliveries by latest attempt status class`（REQ-362）
+  - `@tocsin/core` 新增 `DeliveryAttemptStatusClassSchema`（`4xx` / `5xx`）；契约
+    `ListOperationsInputSchema.lastAttemptStatusClass`；`DeliveryListQuery` + 仓储谓词
+    `deliveryLastAttemptStatusClassPredicate`，列表与 `countDeliveries` 共用。
+  - 语义：只匹配「最近一次已完成尝试」——重试成功移出列表、运行中尝试不遮盖上一条已完成结果、
+    超时/DNS/TLS 等无响应尝试两个类别都不匹配。
+  - 控制台：URL `lastAttemptStatusClass`、筛选面板下拉、活动 chip、清空/重置、中英文案；
+    中文 mini-PRD `docs/prd/delivery-status-class-filter.md`。
+  - 验证：`vp check` 0 error（35 warning，与 main 基线一致）；`vp run -r test` 4/4
+    （237 文件 / 1415 用例）；`vp run -r build` 2/2；PR CI 双绿后 rebase 合并 `c0d61655`。
+- **合并 #751**（docs-site routine）：`docs(site): document multi-value operation filters`，
+  docs-only，用于解除发布阻断；rebase 合并 `00bbccc6`。
+- **PR #754** `chore(release): v0.1.0-beta.146`（rebase 合并 `f1096f6f`）：只改根 `package.json`。
+
+### 发布
+
+- tag `v0.1.0-beta.146` @ `f1096f6f`（main CI 双绿后打 tag）；GitHub Release
+  （prerelease，body 非空）：https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.146
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.146`，linux/amd64 + linux/arm64，
+  index digest `sha256:39208572b08299b3f726dea040b4011ae909b72e0036870642e37c6df44387d4`。
+- 回滚：换回 `0.1.0-beta.145`，无需数据库操作（无迁移、无依赖/环境变量/启动参数变化）。
+- 发布依据：3 项用户可见变更（#753 / #750 / #748）；三位专家（发布经理、阻断审计、运维回滚）
+  一致建议发版。
+
+### 工作树清理
+
+- 删除并发锁与 `agent-iteration` 专用工作树；删除本会话工作树的 `node_modules`、
+  `apps/console/node_modules` 与 `.output` 等构建产物（见下一条记录的实际结果）。
+- 已合并的本地分支 `agent/delivery-status-class-filter`、`chore/release-0.1.0-beta.146` 删除。
+
+### 下一轮优先项
+
+1. **Q-54**：history 仓储组合谓词（`since`+`until`、`timeField:"updated"`+`until`）、越界 page 钳制、
+   deliveries severity 数组测试；`suppressionId` 死分支处理。
+2. **security-exposure 车道**（轮转）：脱敏回归测试按 `DestinationKindSchema.options` 参数化，
+   清理旧仓库名 `xqvvu/vane` 残留引用。
+3. **REQ-360**：provider fixture 目录 + provider 贡献指南（第 181 轮已复核缺口属实）。
+4. **REQ-233 / REQ-235 / REQ-257（27）**：跨页同条件切换、暂停原因、`Retry-After` 冷却建议。
+5. 发布评估：若无新的用户可见变更则跳过；有则按本流程递增 `0.1.0-beta.147`。
+
 ## 2026-10-30（第 181 轮）
 
 - 时间：2026-10-30 10:12 CST 起（定时触发；并发锁获取于 10:12）。
