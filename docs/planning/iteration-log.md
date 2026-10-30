@@ -2,6 +2,107 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 190 轮）
+
+- 时间：2026-10-30 18:26 CST 起（定时触发；并发锁获取于 18:26）。
+- 基线：`origin/main` @ `639c8cc8`；启动时 main CI 绿；有 1 个 open PR（#780，docs-site routine）。
+- 类型：**需求切片（非 full-audit）**。距上次全量审计（2026-10-30 16:40 CST）1h46m < 6h，
+  按第 1.5 步配额闸门不展开全量审计；backlog 有多个 ≥27 分候选，直接续做第 189 轮
+  「下一轮优先项」第 1 条。
+- 车道轮转位置：本轮执行 `requirements` + `ui-triage` + `docs-drift`；下一个非必跑车道为
+  **security-exposure**。
+- `ui-triage`：**defer**。信号实测：`last_ui_review_at` 17:45 CST（距今 42 min < 48h）；
+  自上次评审以来 UI 路径仅 1 个提交（`a2531cf8`，正是该次评审产出的修复）；backlog 无新增
+  UI 发现。附带发现：backlog 中 `UI-125` 出现两次（第 47 行与第 72 行，均为 shipped），
+  下一轮整理时去重。
+- `last_ui_review_at` 保持 **2026-10-30 17:45 CST**（本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 只用于并发锁与基线读取；实现、验证、发版均在本会话工作树
+  `gallant-jones-1fbdb1`。
+
+### 本轮交付
+
+- **PR #781** `feat(destinations): expose the upstream alert group size to templates`（REQ-369，27 分）
+  - 新增 `readProviderAlertCount()`（`packages/core/src/event/event.ts`）：只接受正的安全整数。
+  - `DestinationRenderInput.alertCount?` + 模板变量 `tocsin.alertCount`
+    （`packages/destinations/src/{types,template}.ts`）；未上报渲染空串，不谎报 `1`。
+  - 四处渲染入口统一取值：worker 投递、历史 Event 预览、历史 Event 测试发送、告警源预演。
+  - `DestinationTemplateContextSchema.tocsin.alertCount` 带 `.default("")`，旧序列化上下文仍可解析。
+  - 文档：`apps/docs/integrations/{destinations,providers}.md` + 中文 PRD
+    `docs/prd/template-alert-count.md`。
+  - 验证：`vp check` 0 error（35 warning 基线）；`vp run -r test` 4/4（console 245 文件 /
+    1481 用例）；`vp run -r build` 2/2。建议已按 code review 自查修正一处真实缺口
+    （测试发送路径此前漏传 `alertCount`，历史 Event 的测试发送会与真实投递不一致）。
+- **PR #780**（docs-site routine）在发布前合并以解除「有 open PR」阻断（沿用第 189 轮先例）；
+  文档站单文件改动，CI 双绿。
+
+### 专家发现
+
+**requirements（需求发现官）** —— 4 条新候选，已按 `REQ-371`–`REQ-374` 入 backlog：
+
+- REQ-371 事件列表显示上游告警组规模（29 分）：`providerMetadata.alertCount` 已入库且详情可见，
+  但 `EventListItem` 未投影（`packages/core/src/operations.ts:221-239`、
+  `packages/api/src/schemas/operations.ts:48-63`）；列表把一个含 20 条告警的组显示成单条事件。
+  与本轮 `tocsin.alertCount` 互补：模板已能提示组规模，列表还不能。
+- REQ-372 事件详情补齐 Grafana 面板/静默深链（28 分）：Grafana 的 `dashboardURL/panelURL/silenceURL`
+  被解析器丢弃（`packages/providers/src/grafana/parse.ts:59-71`），Alertmanager 首条 alert 的
+  `silenceURL` 同样（`packages/providers/src/shared/alertmanager-compatible.ts:59-76`）；
+  前端已有协议白名单与 userinfo 剥离可复用（`features/events/model/event-upstream-source.ts:100-133`）。
+- REQ-373 投递载荷页解释「没有渲染载荷」的真实原因（28 分）：
+  `delivery-payload-tab.tsx:43-46` 用 `renderedPayload ?? {}`，静默/未领取/发送中/渲染前失败
+  都被显示成 `{}`；失败分支本就不写载荷（`delivery-execution.ts:292-306`）。
+- REQ-374 URL 型事件标签可直接打开（27 分）：Uptime Kuma 把监控页写入 `labels.url`
+  （`packages/providers/src/uptime-kuma/parse.ts:104`），但标签只渲染纯文本
+  （`features/events/ui/event-label-list.tsx:29-36`）。
+
+**docs-drift（文档漂移审计员）** —— 8 处，已核实；本轮未实现（时间预算用于发版）：
+
+- 四份已交付 PRD 缺状态头且「问题」段仍用现在时（`docs/prd/source-rehearsal-dedupe-window.md:5-7`
+  等 4 份）。
+- `docs/prd/account-session-security.md:5` 声称交付了「最近登录记录」，代码明确不做
+  （`features/configuration/ui/settings-security-panel.tsx:32-43`），同文 `:47` 自相矛盾。
+- `docs/architecture/application-container.md:35,85,98` 与 `frontend-architecture.md:111,114`
+  漏列 `createOperationsService`（`container.ts:98-100,140`）；DOC-112 只覆盖了 rehearsal。
+- `docs/release/mvp-rc-checklist.md:193-194` 称上游 PR #85「无法核对」，实际存在且已合并
+  （2026-10-12）。
+- 三处已改名文件路径过期：`lib/event-url.ts`→`lib/dashboard-url.ts`、
+  `replay-urgent-paging-notice.tsx`→`urgent-paging-notice.tsx`。
+- `docs/prd/suppression-created-notice.md:5` 指向不存在的 `operations-filter-scope.md`（应为单数）。
+- `docs/architecture/orpc-api-layer.md:42` 把共享 error map 写成 `notFound`，实际是 `resourceErrors`。
+- `docs/prd/alert-suppression-decisions.md:71-72` 的 `AppSettings` 字段清单缺暂停相关四项。
+- 复核结论：`xqvvu/vane` 清理项不成立（321 行是 ACR 镜像地址，其余是历史叙述）；
+  RC checklist 的 suppressions 三条已不再过期。
+
+### EXPERT_PANEL
+
+本轮无 EXPERT_PANEL 事项（模板变量为纯加法，无 schema/投递/路由/auth/secret 语义变化）。
+
+### 发布
+
+- 三位只读评审（发布经理 / 阻断审计 / 运维回滚）：**发布**。
+  - 发布经理：自 beta.152 起 1 个用户可见变更（#781），无 schema/依赖变化。
+  - 阻断审计：初始因 main HEAD CI `in_progress` 反对；CI 转绿后其余 4 项（open PR、blocked-autonomous、
+    迁移、破坏性改动）全部通过。
+  - 运维回滚：零迁移、零 env/compose、零锁文件变化；回滚仅换镜像 tag，但**若已引用
+    `{{tocsin.alertCount}}`，回滚前需先移除模板变量**，否则旧构建报未知变量。
+- 版本 `0.1.0-beta.153`；PR #782（只改根 `package.json`，rebase 合并 `02766e4e`）。
+- tag `v0.1.0-beta.153` @ `02766e4e`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.153`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:aac1e10d717220613f6b0af8d815f16d827ae4e983994656edaa090d509ecb44`）；
+  回滚 `0.1.0-beta.152`，无需数据库操作。
+- 补建检查：最近 10 个 tag 均有对应 release。
+
+### 下一轮优先项
+
+1. **REQ-371（29）**：事件列表显示上游告警组规模——与本轮 `tocsin.alertCount` 同一数据源，
+   是它的列表侧补齐。
+2. **REQ-372（28）**：Grafana 面板/静默深链；**REQ-373（28）**：载荷页未渲染原因。
+3. **REQ-374（27）**、**REQ-365（27）** 多源筛选、**REQ-366（27）** 选择性补投。
+4. docs-drift 的 8 项（建议一个 `docs(planning)`/`docs(prd)` 小 PR 批量更正）。
+5. ARCH-82 / ARCH-83（AUTO_FIX，成本 S）。
+6. 车道轮转：下一个非必跑车道 **security-exposure**。
+7. 若触发时间 ≥ 22:40 CST（距上次全量审计 ≥ 6h），下一轮展开全量审计。
+
 ## 2026-10-30（第 189 轮）
 
 - 时间：2026-10-30 17:26 CST 起（定时触发；并发锁获取于 17:27）。
