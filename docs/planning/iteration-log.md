@@ -2,6 +2,74 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 184 轮）
+
+- 时间：2026-10-30 12:25 CST 起（定时触发；并发锁获取于 12:26）。
+- 基线：`origin/main` @ `d9014a80`；启动时 main CI 绿，实际 open PR 只有 docs-site routine 的 #756。
+- 类型：**实施轮（不展开全量审计）+ 1 个需求切片 + 发布 `0.1.0-beta.147`**。
+- **全量审计时间戳保持 2026-10-30 10:12 CST（第 181 轮）**：本轮距上次全量审计约 2h14m，
+  按第 1.5 步配额闸门不重复展开专家审计；backlog 无 `planned` / `in-progress` 项，
+  续做第 183 轮排定的最高优先项 **REQ-233**（27 分）。
+- 车道轮转位置：`security-exposure` 由编排者内联复核（见下）；下一个非必跑车道为 **release-infra**。
+- `ui-triage`：**defer**（内联判定，未 spawn）。`last_ui_review_at` = 2026-10-29 21:30 CST
+  （约 15h，未达 48h）；本轮虽改了两个工具栏，但属于小面积交互增量且已做真实浏览器验证，
+  不构成全量 UI 评审的触发条件。
+- `last_ui_review_at`：保持 **2026-10-29 21:30 CST**。
+
+### 代码核实（security-exposure 轮转）
+
+- 参数化脱敏回归测试仍覆盖全部 `DestinationKindSchema.options`：
+  `configuration.integration.test.ts:1226-1245` 对每个 kind 断言 rendered payload 既不含标记
+  也出现 `[REDACTED]`；`destination.helpers.test.ts:159,181` 另按 kind 覆盖投影。
+- `SEC-25`（test/preview 投影）与 `SEC-1`（isSensitiveKey 漏项）在 backlog 中均为 shipped，
+  复核未发现回退，本轮无 SEC 交付。
+- 第 183 轮已确认「清理旧仓库名 xqvvu/vane」不成立（docs 中均为镜像前缀）。
+
+### 本轮交付
+
+- **PR #759** `feat(operations): switch between events and deliveries with shared filters`（REQ-233，rebase 合并 `d0f5db73`）
+  - 新增纯函数 `crossListOperationSearch`：只携带 `sourceId/severity/status/q/fingerprint/range/rangeAnchor`，
+    丢弃单页独有条件、页码与 `rangeUntil`；`pruneSearch` 保证空窗口不带悬空锚点。
+  - 两页工具栏新增「查看同条件投递 / 查看同条件事件」，通过回调由页面 `navigate`；
+    没有有效共有条件时不渲染。
+  - 中英文案各 4 个键；新增 `docs/prd/operations-cross-list-switch.md`。
+  - 测试：新增 `events-page-toolbar.test.tsx`，扩展 `deliveries-page-toolbar.test.tsx` 与
+    `operation-search.test.ts`（console 239 文件 / 1436 用例）。
+  - 验证：`vp check` 0 error（35 warning，与基线一致）；`vp run -r test` 4/4；`vp run -r build` 2/2。
+  - 浏览器验证（隔离 SQLite，6181）：`/events?severity=critical&range=1h` → 按钮 →
+    `/deliveries?severity=critical&range=1h`；带锚点与 `eventPage=3` 时锚点保留、页码丢弃；
+    `/deliveries?deliveryState=failed` 不显示按钮。
+- **PR #760** `chore(release): v0.1.0-beta.147`（rebase 合并 `554cda74`）。
+
+### EXPERT_PANEL
+
+本轮无 EXPERT_PANEL 事项（无 schema/投递/路由/auth/secret 语义变化）。
+
+### 发布
+
+- 三份发布评审一致同意：发布经理（唯一用户可见变更为 #759）、阻断审计（`554cda74` 的 CI 与
+  E2E 均 success；无 open agent PR；无迁移）、运维/回滚（无数据库操作、无 env/镜像配置变化，
+  回滚只需换回 `0.1.0-beta.146`）。
+- 版本 `0.1.0-beta.147`；tag `v0.1.0-beta.147` @ `554cda74`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.147`（linux/amd64 + linux/arm64，
+  index digest `sha256:1d3cdb210ccdc73662662c439f838295256ce65e3619ca393b9f2e22d77d3d92`）；
+  回滚 `0.1.0-beta.146`。
+- 补建检查：最近 10 个 tag 均有对应 release。
+
+### 工作树清理
+
+- 回收 3 个已注册、工作区干净的会话工作树（`gifted-volhard-78ed8b`、`sad-chatterjee-dd5d00`、
+  `docs-site-20261030-115612`）；保留 `youthful-murdock-b65fc6`（真实未提交改动）与
+  `docs-site-20261030-105655`（docs-site routine 的 #756 仍在用）。
+- `.claude/worktrees` 占用从 **2.0G 降到 1.5G**。
+- 删除并发锁与 `agent-iteration` 专用目录。
+
+### 下一轮优先项
+
+1. **release-infra 车道**（轮转）：provider fixture 目录（REQ-360，23 分）+ provider 贡献指南。
+2. **REQ-235 / REQ-257**（27 分）：全局投递暂停原因、`Retry-After` 冷却建议；两者改变投递语义，先走 EXPERT_PANEL。
+3. 发布评估：本轮已有用户可见变更；若下一轮只有测试/文档改动则跳过发版。
+
 ## 2026-10-30（第 183 轮）
 
 - 时间：2026-10-30 11:25 CST 起（定时触发；并发锁获取于 11:25）。
