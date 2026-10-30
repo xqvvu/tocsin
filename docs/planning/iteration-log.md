@@ -2,6 +2,94 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 181 轮）
+
+- 时间：2026-10-30 10:12 CST 起（定时触发；并发锁获取于 10:12）。
+- 基线：`origin/main` @ `ba521769`；启动时 0 个 open `agent/` PR，main CI 双绿（`b42ae33f`）。
+- 类型：**full-audit（3 车道：requirements / ui-triage / release-infra）+ 1 个需求切片 + 1 个 P1 修复 + 1 个文档 AUTO_FIX**。
+- **全量审计时间戳：2026-10-30 10:12 CST**（上一次为第 179 轮 01:40，间隔 8h32m，达到 6 小时闸门）。
+- 车道轮转位置：本轮跑 `release-infra`；下一个非必跑车道为 **security-exposure**。
+- `ui-triage`：**defer**。`last_ui_review_at` = 2026-10-29 21:30 CST（12h43m，未达 48h）；自上次评审以来
+  净增未评审 UI 主题 = 0（`#743` 正是上次评审的产出）；backlog 存量 `UI-* candidate` 69 条按第 179 轮
+  口径视为饱和存量，不是新信号。
+- `last_ui_review_at`：保持 **2026-10-29 21:30 CST**（本轮未做 UI 评审）。
+
+### 专家发现
+
+**requirements（2 条，均 27 分）**
+
+- **REQ-361**：事件列表搜索不覆盖投递失败原因。`eventTermPredicate` 的投递 `EXISTS` 只匹配投递 id 与
+  `provider_ref_value`（`history.repository.ts:898-919`），而同文件 `deliveryTermPredicate` 已覆盖
+  `deliveries.last_error` 与任一次 `delivery_attempts.error`（`:944-962`）；搜 `401`/`timeout` 只能碰运气。
+  **本轮已交付**。
+- **REQ-362**：投递列表无法按最近一次已完成尝试的 HTTP 状态类别筛选。`delivery_attempts.response_status`
+  已落库（`migrate/schema.ts:147`）并按「每个投递最新已完成尝试」批读取（`history.repository.ts:800-824`），
+  但列表筛选止于 `deliveryState`/`minAttempts`（`packages/api/src/schemas/operations.ts:364-371`）。
+  留作下一轮候选。
+
+**release-infra（4 条）**
+
+- E2E workflow 真实存在且 main 上 success（`.github/workflows/e2e.yml:3-7,47-54`），RC checklist 的 `[x]`
+  与事实一致；但 spec 仍只有 1 个用例（`alert-flow.spec.ts:28`），无历史过滤断言、无失败 retry
+  （失败 retry 需 worker 30s 起、翻倍退避到 `failed`，`delivery-execution.ts:79,377`）→ 更新 REL-22。
+- provider fixture 目录与 provider 贡献指南仍缺失：`packages/providers` 只有 `assets/` 与 `src/*`，
+  payload 全 inline（`signoz/index.test.ts:17`）；`docs/contributing/` 只有 destination 指南 → 更新 REQ-360。
+- `docs/release/release-checklist.md:21` 写死 `0.1.0-beta.137`，已过期两轮；`mvp-rc-checklist.md:17`
+  的日期与其后 2026-10-22 E2E 事实不同期 → DOC-123，本轮已修。
+- main 无 required checks（`gh api repos/xqvvu/tocsin/rulesets` 为空、branch protection 404）；
+  仓库设置变更不属于代码 PR 范围，维持 REL-22 中的 EXPERT_PANEL 记录，不在本轮实施。
+
+### 本轮交付
+
+- **PR #748** `fix(operations): stop reporting delivered pairs as route gaps`（Q-53，P1）
+  - `routeMatchGaps` 先按目标算出缺投递集合：全部已投递 → 不输出缺口；部分缺投递 → 只对缺失目标逐条命名
+    （不再用「所有目标」否定已投递目标）；全部缺投递 → 仍输出 route 级一条。
+  - `packages/core/src/route/route.ts` 的 `RouteMatchGapSchema` 注释、`event-detail-route-gaps.tsx` 注释、
+    PRD `docs/prd/route-explain-delivery-gap.md` §3/§5 同步新语义；schema 形状未变。
+  - 新增 3 条回归测试（投递后停用 → `[]`；部分投递 → 只命名缺失目标；停用且未选中目标 → `[]`）。
+  - 验证：`vp check` 0 error（35 warning，与 main 基线一致）；`vp run -r test` 4/4（236 文件 / 1405 用例）；
+    `vp run -r build` 2/2；PR CI 双绿后 rebase 合并 `be874f4c`。
+- **PR #750** `feat(operations): search events by delivery error text`（REQ-361）
+  - 事件词项谓词增加 `deliveries.last_error` 与 `delivery_attempts.error` 相关 `EXISTS`；中英文搜索占位
+    文案同步；新增中文 mini-PRD `docs/prd/event-search-delivery-errors.md`。
+  - 新增 2 条事件列表用例（`last_error` 命中父事件；重试成功、`last_error` 已清空但历史尝试仍保留错误文本
+    时同样命中），均断言 `total`；同步更新按英文原文匹配输入框的 `operation-filters.test.tsx` 常量。
+  - 验证：`vp check` 0 error（35 warning）；`vp run -r test` 4/4（236 文件 / 1404 用例）；`vp run -r build`
+    2/2；PR CI 双绿后 rebase 合并 `319fddda`。
+- **PR #749** `docs(release): stop hard-coding the current version in release docs`（DOC-123）
+  - 版本号改为「以根 `package.json` 与 `git tag --list` 为准」，根治每轮漂移；`mvp-rc-checklist.md:17`
+    日期改为 2026-10-22。
+  - 验证：`vp fmt --check` 通过（文档-only）；rebase 合并 `6f9f6ea2`。
+
+### 发布
+
+- **本轮不发布。** 三位专家（窄 brief，均只读）：发布经理 RELEASE——用户可见提交 `319fddda`（事件按投递
+  错误搜索）与 `be874f4c`（缺口误报修复），建议 `0.1.0-beta.146`；阻断审计：main `6f9f6ea2` 的 CI 与 E2E
+  均 success、无迁移、无锁文件/依赖变动、无高优 `blocked-autonomous`，**但存在非豁免 open PR #751**
+  （docs-site routine，`docs(site): document multi-value operation filters`）→ FAIL；运维/回滚：Dockerfile、
+  compose、migrate、依赖、`TOCSIN_*` 环境变量均无 diff，回滚只需换回 `0.1.0-beta.145`，风险低。
+- 处置：按门禁跳过本轮发布（不 tag、不推镜像），下一轮先确认 #751 合并后重评。REL-95 记为 candidate。
+
+### 工作树清理
+
+- 删除并发锁与 `agent-iteration` 专用工作树；删除本会话工作树的 `node_modules`、`apps/console/node_modules`
+  与 `.output`。
+- 回收 1 个已注册且工作区干净的会话工作树（`exciting-payne-dd073f`）；跳过 `youthful-murdock-b65fc6`
+  （仍有 6 个文件的真实未提交改动）与 docs-site routine 的工作树（仍可能被其续用）。
+- `.claude/worktrees` 占用从 **1.5G 降到 734M**；剩 6 个注册工作树（主 checkout、2 个仓库外的 docs-site
+  工作树、1 个 docs-site 工作时树、本会话工作树、`youthful-murdock-b65fc6`）。
+- 已合并的本地分支 `agent/q53-route-gap-false-positive`、`agent/event-search-delivery-errors`、
+  `docs/release-drift-181` 已删除；`docs/planning-round-181` 在本 PR 合并后删除。
+
+### 下一轮优先项
+
+1. **发布 `0.1.0-beta.146`**：先确认 #751 已合并且 main CI 双绿，再走版本 PR → tag → GitHub Release →
+   多平台镜像（`--provenance=false --sbom=false`）。
+2. **Q-54**：history 仓储组合谓词、越界分页钳制与多值 severity 测试。
+3. **REQ-362**：投递列表按最近一次已完成尝试的 HTTP 状态类别（4xx/5xx）筛选。
+4. `security-exposure` 车道（轮转）。
+5. **REQ-360**：provider fixtures + provider 贡献指南（release-infra 已复核缺口属实）。
+
 ## 2026-10-30（第 180 轮）
 
 - 时间：2026-10-30 08:17 CST 起（定时触发；并发锁获取于 08:17）。
