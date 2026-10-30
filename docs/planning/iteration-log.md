@@ -65,6 +65,32 @@
 本轮无新 EXPERT_PANEL 事项（纯加法 DTO 字段 + 只读投影）。复核确认 `SEC-1`、`Q-1` 均已 shipped，
 routine 里并列的「最高优先面板事项」已清空。
 
+### 发布
+
+- 三位只读评审（发布经理 / 阻断审计 / 运维回滚）一致：**发布**。
+  - 发布经理：自 beta.153 起 1 个用户可见变更（#786），建议 `beta.N + 1`；最近 10 个 tag 均有 release。
+  - 阻断审计：`origin/main` @ `0d9bce75` CI 双绿；唯一 open PR 是本轮 planning PR（豁免）；
+    无迁移改动；blocked-autonomous 仅 REL-13/16/23 历史常驻项。
+  - 运维回滚：无 Dockerfile/compose/env/锁文件变化，无迁移；回滚只需换回镜像 tag。
+- 版本 `0.1.0-beta.154`；PR #788（只改根 `package.json`，rebase 合并 `32dba5b9`，main CI 绿）。
+- tag `v0.1.0-beta.154` @ `32dba5b9`；GitHub Release（prerelease，body 非空）：
+  https://github.com/xqvvu/tocsin/releases/tag/v0.1.0-beta.154
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.154`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:c0d200ed08ea23a20ad0577f085bce3c3b2e6b48f90d8b3d74df3e8c5e7d813b`）；
+  回滚 `0.1.0-beta.153`，无需数据库操作。
+- 补建检查：最近 10 个 tag（beta.144–beta.153）均有对应 release；本版已新建 release。
+
+### 清理
+
+- 本会话工作树移除 `node_modules` / `.output` / `.vite` / coverage：约 700M → 24M。
+- 回收已合并且干净的 `gallant-jones-1fbdb1`、`docs-site-20261030-185940`；
+  `youthful-murdock-b65fc6` 有真实未提交改动，跳过；`docs-site-20261030-215827` 为运行中的
+  文档站 routine，保留。
+- 删除 `agent-iteration` 专用工作树（含并发锁）；已合并的 `agent/event-list-alert-group`、
+  `agent/release-beta-154` 分支按 PR 状态清理。
+- `.claude/worktrees` 2.8G → 1.4G。
+
 ### 下一轮优先项
 
 1. **REQ-375（29）**：接入 202 回执分解命中路由数（本轮 requirements 最推荐，成本 S）。
