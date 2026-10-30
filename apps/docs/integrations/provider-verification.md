@@ -30,10 +30,10 @@ description: 使用可复制的最小载荷验证 Grafana、Alertmanager、SigNo
 `202` 中的 `deliveriesCreated: 0` 并不表示接入失败。先看同一响应里的 `routesMatched`：
 
 - `routesMatched: 0`：没有启用的 Route 命中。检查路由规则（severity、label、文本条件）、路由是否绑定该告警源，以及路由是否被停用。
-- `routesMatched > 0` 且 `deliveriesCreated` 与 `deliveriesDeduped` 都为 `0`：命中的 Route 没有选择通知目标，补齐目标后事件才会进入投递。
-- `deliveriesDeduped > 0`：相同幂等键仍在去重窗口内，属于预期行为。
+- `routesMatched > 0` 且 `deliveriesDeduped > 0`：相同幂等键仍在去重窗口内，重复送达已被拦截，属于预期行为。
+- `routesMatched > 0` 且 `deliveriesCreated > 0`：Delivery 已入队（包括立即被抑制的记录）。目标停用不会阻止创建：记录保持 `pending`，Worker 会等目标重新启用后再领取。
 
-目标停用不会阻止 Delivery 创建；如果路由命中，仍会创建 `pending` Delivery，Worker 会等目标重新启用后再领取。
+Route 始终至少保留一个通知目标：删除最后一个目标时该 Route 会被一并删除，因此「命中路由、却既没有创建 Delivery 也没有去重」不会出现在成功回执里。
 
 ## 通用验证命令
 

@@ -10,9 +10,10 @@ Webhook 接入成功后，`202` 回执只有 `accepted` / `eventId` / `deliverie
 运维拿到 `deliveriesCreated: 0` 时无法从响应判断原因：
 
 - 没有启用的路由命中（规则写错、路由绑错告警源、路由被停用）；
-- 命中路由没有选择通知目标；
 - 命中了去重窗口（`deliveriesDeduped > 0`）。
 
+两者在现有字段下可以反推（`deliveriesDeduped` 为 0 就说明没有命中），但回执缺少「匹配」
+这一步的正面证据：接入验收时无法确认「命中了 1 条路由」，部分去重时也看不出实际命中几条。
 接入验收文档只能让运维「通常说明没有启用的路由命中，或同一幂等键仍在去重窗口内」
 （`apps/docs/integrations/provider-verification.md`），实际排障还得打开事件详情逐条核对
 `routeMatches`。服务层其实已经算出了命中结果（`intake.service.ts:136-142,151`），
@@ -21,8 +22,8 @@ Webhook 接入成功后，`202` 回执只有 `accepted` / `eventId` / `deliverie
 ## 2. 用户故事
 
 作为正在接入上游监控系统的 SRE，我希望 `202` 回执直接告诉我这次事件命中了多少条启用路由，
-这样 `deliveriesCreated: 0` 时我能立刻分清「规则没命中」「路由没选目标」和「被去重」，
-不必先登录控制台翻事件详情。
+这样验收时我能确认路由绑定确实生效，`deliveriesCreated: 0` 时也不必先登录控制台翻事件详情
+才能确认「规则没命中」。
 
 ## 3. 范围
 
