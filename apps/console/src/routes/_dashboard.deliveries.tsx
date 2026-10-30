@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_dashboard/deliveries")({
     return { filters };
   },
   component: DeliveriesRoute,
-  pendingComponent: DashboardContentLayout.SkeletonWithRail,
+  pendingComponent: DashboardContentLayout.Skeleton,
   pendingMs: 120,
   pendingMinMs: 250,
 });

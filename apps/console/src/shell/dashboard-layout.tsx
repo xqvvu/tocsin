@@ -13,7 +13,6 @@ import {
 import { cn } from "#/lib/utils";
 import { DashboardHeader } from "#/shell/dashboard-header";
 import { DashboardNavigation, DashboardNavigationSkeleton } from "#/shell/dashboard-navigation";
-import { DashboardSidebar } from "#/shell/dashboard-sidebar";
 
 export interface DashboardLayoutProps {
   user: {
@@ -57,19 +56,12 @@ export const DashboardLayout = Object.assign(DashboardLayoutRoot, {
 
 export interface DashboardContentLayoutProps {
   main: ReactNode;
-  sidebar?: ReactNode;
 }
 
-function DashboardContentLayoutRoot({ main, sidebar }: DashboardContentLayoutProps) {
+function DashboardContentLayoutRoot({ main }: DashboardContentLayoutProps) {
   return (
-    <div
-      className={cn(
-        "mx-auto grid min-h-0 w-full max-w-7xl flex-1 gap-4 overflow-hidden px-5 py-5",
-        sidebar ? "xl:grid-cols-[minmax(0,1fr)_360px]" : "grid-cols-1",
-      )}
-    >
+    <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 grid-cols-1 gap-4 overflow-hidden px-5 py-5">
       <section className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto">{main}</section>
-      {sidebar}
     </div>
   );
 }
@@ -82,24 +74,6 @@ function DashboardContentLayoutSkeleton() {
           <DashboardToolbarSkeleton />
           <DashboardTableSkeleton />
         </>
-      }
-    />
-  );
-}
-
-function DashboardContentLayoutSkeletonWithRail() {
-  return (
-    <DashboardContentLayoutRoot
-      main={
-        <>
-          <DashboardToolbarSkeleton />
-          <DashboardTableSkeleton columnCount={6} />
-        </>
-      }
-      sidebar={
-        <DashboardSidebar variant="split">
-          <DashboardRailSkeleton />
-        </DashboardSidebar>
       }
     />
   );
@@ -208,32 +182,6 @@ function DashboardTableSkeleton({ columnCount = 5 }: { columnCount?: number }) {
   );
 }
 
-function DashboardRailSkeleton() {
-  return (
-    <>
-      <div className="border-border bg-background grid gap-2 border p-2">
-        {sidebarFieldSkeletons.map((field) => (
-          <div key={field} className="flex flex-col gap-2">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-8 w-full" />
-          </div>
-        ))}
-      </div>
-      <div className="grid gap-3">
-        {dashboardMetricSkeletons.map((metric) => (
-          <div key={metric} className="border-border bg-card border px-3 py-3">
-            <Skeleton className="h-3 w-32" />
-            <div className="mt-2 flex items-baseline gap-1">
-              <Skeleton className="h-8 w-8" />
-              <Skeleton className="h-3 w-10" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
 function DashboardPanelSkeleton({ metrics, rows }: { metrics?: boolean; rows: number }) {
   return (
     <section className="border-border bg-card border">
@@ -303,14 +251,12 @@ function DashboardToolbarSkeleton({ detail, tabs }: DashboardToolbarSkeletonProp
 }
 
 const dashboardRowSkeletons = ["row-1", "row-2", "row-3", "row-4", "row-5", "row-6"];
-const sidebarFieldSkeletons = ["field-1", "field-2", "field-3", "field-4", "field-5"];
 const dashboardMetricSkeletons = ["metric-1", "metric-2", "metric-3", "metric-4"];
 const dashboardCellSkeletonWidths = ["w-16", "w-20", "w-24", "w-12"];
 const dashboardDetailSkeletonWidths = ["w-3/4", "w-2/3", "w-5/6", "w-1/2"];
 
 export const DashboardContentLayout = Object.assign(DashboardContentLayoutRoot, {
   Skeleton: DashboardContentLayoutSkeleton,
-  SkeletonWithRail: DashboardContentLayoutSkeletonWithRail,
   DetailSkeleton: DashboardDetailLayoutSkeleton,
   SettingsSkeleton: DashboardSettingsLayoutSkeleton,
 });
