@@ -5,9 +5,9 @@ import type { JsonObject, JsonValue } from "@tocsin/core";
  *
  * Alertmanager-compatible payloads carry `externalURL` (the Alertmanager
  * itself), `generatorURL` (the rule that fired), and optionally `silenceURL`;
- * Grafana carries those plus `dashboardURL` and `panelURL`. They are rendered
- * as links instead of plain metadata so an operator can jump from the event
- * back to the dashboard, panel, or silence form that produced it.
+ * Grafana payloads additionally carry `dashboardURL` and `panelURL`. They are
+ * rendered as links instead of plain metadata so an operator can jump from the
+ * event back to the dashboard, panel, or silence form that produced it.
  */
 const LINK_KEYS = [
   "externalURL",
