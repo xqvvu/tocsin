@@ -2,6 +2,78 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 191 轮）
+
+- 时间：2026-10-30 19:28 CST 起（定时触发；并发锁获取于 19:28）。中途会话暂停约 2 小时，
+  实际交付完成于 22:0x CST。
+- 基线：`origin/main` @ `f18cb79d`；启动时 main CI 绿，无 open PR；执行中 main 前进到
+  `84617db9`（docs-site routine）。
+- 类型：**需求切片（非 full-audit）**。距上次全量审计（2026-10-30 16:40 CST）约 2h50m < 6h，
+  按第 1.5 步配额闸门不展开全量审计；backlog 有多个 ≥27 分候选，续做第 190 轮「下一轮优先项」第 1 条。
+- 车道轮转位置：本轮执行 `requirements` + `ui-triage` + `security-exposure`；下一个非必跑车道为
+  **architecture**。
+- `ui-triage`：**defer**。`last_ui_review_at` 17:45 CST（距今 1h45m < 48h）；自上次评审以来 UI 路径
+  2 个提交，实质新界面 0（`a2531cf8` 是该次评审的修复，`1df1b79` 为注释/测试）；backlog `UI-`
+  candidate 均为存量（最新 UI-126 出自第 168 轮），无新增发现。
+- `last_ui_review_at` 保持 **2026-10-30 17:45 CST**（本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 只用于并发锁与基线读取；实现、验证、浏览器实测均在本会话工作树
+  `recursing-diffie-09d27e`。
+
+### 本轮交付
+
+- **PR #786** `feat(console): show upstream alert-group size in the event list`（REQ-371，29 分）
+  - `EventListItem.alertCount: number | null`（`packages/core/src/operations.ts`）+
+    `EventListItemSchema`（`packages/api/src/schemas/operations.ts`）。
+  - 仓储 `alertCountFrom(providerMetadataJson)`（`history.helpers.ts`）复用
+    `readProviderAlertCount`：损坏 JSON / 非对象 / 缺失 / 非整数一律 `null`，与 `parseFailed`
+    一样容忍单行损坏。**未采用 backlog 原备注的「回退 1」**——`null` 更诚实，UI 行为等价（不显示徽标）。
+  - 标题单元格在组规模 >1 时显示 `N 条告警` 徽标 + 悬停说明（`event-title-cell.tsx`）；1 或未知不显示。
+  - 中英文案 + 中文 PRD `docs/prd/event-list-alert-group-size.md`。
+  - 验证：`vp check` 0 error（35 warning 基线）；`vp run -r test` 4/4（console 246 文件 / 1486 用例）；
+    `vp run -r build` 2/2；独立评审无发现。
+  - 真实浏览器验证（隔离实例、临时 SQLite、localhost:6181）：POST 含 20 条 alert 的 Alertmanager
+    payload 后事件流显示 `20 条告警`；再 POST 单条 alert 的 payload，该行不显示徽标。
+    截图 `/tmp/tocsin-req371-events-compare.png`（未提交）。
+
+### 专家发现
+
+**requirements（需求发现官）** —— 5 条新候选，已入 backlog：
+
+- REQ-375（29）接入 202 回执分解命中路由数：`webhook.ts:66-72` 只有
+  `deliveriesCreated/deduped`，而 `intake.service.ts:136-142,151` 已算出 `matchedRoutes`；
+  `provider-verification.md:30` 让运维靠猜「0 是没路由还是去重」。
+- REQ-376（27）模板补齐同指纹复发上下文；REQ-377（25）路由依赖标签缺失巡检；
+  REQ-378（22）按目标的通知摘要窗口（需 EXPERT_PANEL + 迁移）；REQ-379（21）路由优先级与命中即停
+  （需 EXPERT_PANEL）。
+
+**security-exposure（安全与数据暴露）** —— 重点复核项全部 clean：
+
+- 题面点名的 8 个 key（`appSecret/clientSecret/apiSecret/privateKey/X-Auth-Token/sessionId/jwt/signature`）
+  已全部被 `isSensitiveKey` 覆盖，四路（isSensitive/redactJson/redactHeaders/redactText）实测为
+  `[REDACTED]`；`redaction.test.ts:93-157` 逐键断言。**SEC-1 确认 shipped。**
+- 无 HIGH；Source token / tokenHash / Feishu appSecret / session token 均未进入 list/detail DTO；
+  配置导出 `includeSecrets` 锁死 false；17 个 `server-only` + 9 个 `client-only` 标记无违规。
+- 仍开放（均为既有项，本轮无新增）：SEC-37（目标编辑草稿带回 URL 内嵌密码，MEDIUM）、
+  SEC-26（Slack/Feishu webhook URL 路径 token 进入列表 DTO，MEDIUM，两处文档口径冲突需裁决）、
+  SEC-32（转义 JSON 文本不脱敏）、SEC-A2（自由文本 Cookie 只遮第一段）、SEC-11/30/38（凭据型
+  header 名）、SEC-23（fingerprint 展示）、SEC-42/30（manifest `secretFields` 一致性断言缺失）、
+  SEC-21（`auth.client.ts` type-only 引 `.server`）。
+- 旧仓库名 `xqvvu/vane` 仅存在于 ACR 镜像坐标与 planning 历史，无失效 GitHub 链接。
+
+### EXPERT_PANEL
+
+本轮无新 EXPERT_PANEL 事项（纯加法 DTO 字段 + 只读投影）。复核确认 `SEC-1`、`Q-1` 均已 shipped，
+routine 里并列的「最高优先面板事项」已清空。
+
+### 下一轮优先项
+
+1. **REQ-375（29）**：接入 202 回执分解命中路由数（本轮 requirements 最推荐，成本 S）。
+2. **REQ-372（28）**、**REQ-373（28）**、**REQ-374（27）**：第 190 轮遗留高价值候选。
+3. UI 评审车道：距上次 17:45 已达 48h 后优先重跑；UI-13/18/22/25 仍在 backlog。
+4. docs-drift 的 8 项批量更正（第 190 轮记录）。
+5. 车道轮转：下一个非必跑车道 **architecture**（ARCH-82/83 为成本 S 的 AUTO_FIX）。
+6. 全量审计：若触发时间 ≥ 22:40 CST（距 16:40 满 6h），下一轮展开全量审计。
+
 ## 2026-10-30（第 190 轮）
 
 - 时间：2026-10-30 18:26 CST 起（定时触发；并发锁获取于 18:26）。
