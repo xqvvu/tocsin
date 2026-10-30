@@ -2,6 +2,61 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 185 轮）
+
+- 时间：2026-10-30 13:26 CST 起（定时触发；并发锁获取于 13:26）。
+- 基线：`origin/main` @ `d02d7b9b`；启动时 main CI 绿，0 个 open PR。
+- 类型：**实施轮（不展开全量审计）+ 1 个需求切片（REQ-340）**。
+- **全量审计时间戳保持 2026-10-30 10:12 CST（第 181 轮）**：本轮距上次全量审计约 3h14m，
+  按第 1.5 步配额闸门不重复展开专家审计；backlog 无 `planned` / `in-progress` 项，
+  但有多个 27/28 分 `candidate`，故续做实施而非空转。
+- 车道轮转位置：本轮未跑审计车道（内联代码核实）；下一个非必跑车道仍为 **release-infra**。
+- `ui-triage`：**defer**（内联判定，未 spawn）。`last_ui_review_at` = 2026-10-29 21:30 CST
+  （约 16h，未达 48h）；本轮只是表格排序与一个小徽标，已有组件级 DOM 用例，不构成全量 UI 评审触发条件。
+- `last_ui_review_at`：保持 **2026-10-29 21:30 CST**。
+- 工作树：写入隔离拦截了 `agent-iteration`，实现改在本会话工作树
+  `fervent-jackson-111801`；`agent-iteration` 仅用于并发锁。
+
+### 代码核实（选题依据）
+
+- REQ-340 前提成立：路由匹配表直接 `matches.map`（`event-detail-route-matches-table.tsx:73-95`），
+  服务端按路由存储顺序返回（`history.repository.ts` 的 route matches 投影不做排序），
+  未命中行之间没有优先级。
+- 同类「最接近的排前面」先例已存在：`delivery-suppression-outlook.tsx:55-63` 按未通过校验数排序。
+- REQ-24（28，抑制窗口汇总）与 REQ-159（28，通用 Webhook 字段映射）仍为候选，本轮未做：
+  前者要新增只读聚合 procedure 与仓储聚合，后者横跨 provider 解析与表单；单轮预算内先交付
+  REQ-340 这块低风险切片。
+
+### 本轮交付
+
+- **PR #762** `feat(events): rank route-match evidence by nearest miss`（REQ-340）
+  - 新增纯函数 `features/events/model/route-match-explain-order.ts`：
+    `orderRouteMatches`（命中保持原顺序在前，未命中按未通过校验数升序 + 路由名/路由 id 稳定排序）、
+    `missedCheckCount`、`closestRouteMiss`（仅 ≥2 条未命中时返回；无结构化校验的历史快照不参与，
+    避免把「没有证据」读成「差 0 项」）。
+  - 事件详情路由匹配表使用该排序，最接近的未命中路由渲染「最接近：差 N 项」徽标（英文同步）。
+  - 测试：8 条纯函数用例 + 3 条表格用例（DOM 顺序、徽标唯一性、单条未命中不标、命中在上）。
+  - 验证：`vp fmt --write`；`vp check` 0 error（35 warning，与 main 基线一致）；
+    `vp run -r test` 4/4（console 240 文件 / 1448 用例）；`vp run -r build` 2/2。
+  - 未做浏览器实测：本机无运行中的 Tocsin console dev server（5173 属于其他项目），
+    改动为纯展示层，DOM 顺序与文案已由组件用例覆盖。
+  - PRD：`docs/prd/route-match-nearest-miss.md`。
+
+### EXPERT_PANEL
+
+本轮无 EXPERT_PANEL 事项（无 schema/投递/路由/auth/secret 语义变化）。
+
+### 发布
+
+- 待 PR #762 合并后按第 9.5 步评估（该切片属用户可见变更，若 main CI 绿且无其它 open PR 则可发版）。
+
+### 下一轮优先项
+
+1. **release-infra 车道**（轮转）：provider fixture 目录（REQ-360，23 分）+ provider 贡献指南。
+2. **REQ-24 / REQ-159**（28 分）：抑制窗口影响面汇总、通用 Webhook 源字段映射。
+3. **REQ-235 / REQ-257**（27 分）：全局投递暂停原因、`Retry-After` 冷却建议；改变投递语义，先走 EXPERT_PANEL。
+4. 发布评估：本轮有用户可见变更，合并后按门槛决定是否递增 `0.1.0-beta.148`。
+
 ## 2026-10-30（第 184 轮）
 
 - 时间：2026-10-30 12:25 CST 起（定时触发；并发锁获取于 12:26）。
