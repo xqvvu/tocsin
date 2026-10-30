@@ -800,6 +800,7 @@
   "events.detail.routeHeaders.result": "结果",
   "events.detail.routeHeaders.route": "路由",
   "events.detail.routeHeaders.targets": "通知目标数",
+  "events.detail.routeMatchesClosest": "最接近：差 {count} 项",
   "events.detail.routeMatchesProvenance.recomputed": "该事件没有快照，读时按当前路由重算——这不是当时的规则结论",
   "events.detail.routeMatchesProvenance.snapshot": "接入时刻记录——反映当时生效的路由，不会被改写",
   "events.detail.routeMatchesTitle": "路由匹配",

@@ -1,3 +1,4 @@
+import { Badge } from "#/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -6,6 +7,10 @@ import {
   TableHeader,
   TableRow,
 } from "#/components/ui/table";
+import {
+  closestRouteMiss,
+  orderRouteMatches,
+} from "#/features/events/model/route-match-explain-order";
 import { routeDeliveryOutcomes } from "#/features/events/ui/event-detail-route-delivery-outcomes";
 import { EventDetailSectionHeader } from "#/features/events/ui/event-detail-section-header";
 import type { EventDetailData } from "#/features/events/ui/event-detail-types";
@@ -29,6 +34,10 @@ export function EventDetailRouteMatchesTable({
 }) {
   const t = useTranslations();
   const outcomes = routeDeliveryOutcomes(deliveries);
+  // Storage order is not triage order: when several routes missed, the one that
+  // failed the fewest checks is the rule the operator probably meant to write.
+  const orderedMatches = orderRouteMatches(matches);
+  const closest = closestRouteMiss(matches);
 
   return (
     <section className="flex h-full min-h-0 flex-col gap-2">
@@ -70,10 +79,19 @@ export function EventDetailRouteMatchesTable({
                 </TableCell>
               </TableRow>
             ) : (
-              matches.map((match) => (
+              orderedMatches.map((match) => (
                 <TableRow key={match.routeId} className="align-top">
                   <TableCell className="truncate font-medium" title={match.routeName}>
-                    {match.routeName}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate">{match.routeName}</span>
+                      {closest?.routeId === match.routeId ? (
+                        <Badge variant="secondary" className="shrink-0">
+                          {t("events.detail.routeMatchesClosest", {
+                            count: closest.missedChecks,
+                          })}
+                        </Badge>
+                      ) : null}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <RouteMatchResultBadge matched={match.matched} />
