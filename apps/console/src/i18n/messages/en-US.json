@@ -989,6 +989,8 @@
   "operations.filters.minAttemptsOptions.1": "At least 1",
   "operations.filters.minAttemptsOptions.2": "At least 2 (retried)",
   "operations.filters.minAttemptsOptions.3": "At least 3",
+  "operations.filters.multiSelectHint": "Select one or more values, or clear all for any value",
+  "operations.filters.multiSelectValue": "{title}: {value}",
   "operations.filters.parseFailed": "Parse result",
   "operations.filters.parseFailedOptions.failed": "Parse failed",
   "operations.filters.parseFailedOptions.succeeded": "Parsed",

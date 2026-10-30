@@ -355,6 +355,7 @@ function OperationFiltersPanel({
         <FieldLabel htmlFor="operation-severity">{t("operations.filters.severity")}</FieldLabel>
         <OperationMultiSelect
           id="operation-severity"
+          title={t("operations.filters.severity")}
           values={splitFilterList(search.severity) ?? []}
           options={[
             { value: "critical", label: t("common.severity.critical") },
@@ -371,6 +372,7 @@ function OperationFiltersPanel({
         <FieldLabel htmlFor="operation-status">{t("operations.filters.status")}</FieldLabel>
         <OperationMultiSelect
           id="operation-status"
+          title={t("operations.filters.status")}
           values={splitFilterList(search.status) ?? []}
           options={[
             { value: "firing", label: t("common.alertStatus.firing") },
@@ -721,6 +723,7 @@ function OperationFiltersPanel({
           </FieldLabel>
           <OperationMultiSelect
             id="operation-delivery-state"
+            title={t("operations.filters.deliveryState")}
             values={splitFilterList(search.deliveryState) ?? []}
             options={[
               { value: "pending", label: t("common.deliveryState.pending") },

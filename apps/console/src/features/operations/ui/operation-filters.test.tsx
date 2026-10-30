@@ -343,6 +343,17 @@ describe("operation filters by page scope", () => {
     expect(screen.getByRole("button", { name: "Clear Time basis: Updated" })).toBeTruthy();
   });
 
+  it("names the multi-value popover and its trigger by dimension", () => {
+    renderFilters("events", { severity: "critical,warning" });
+
+    // The trigger used to be labelled with the bare selection, which said what
+    // was chosen but not which filter it belonged to.
+    fireEvent.click(screen.getByRole("button", { name: "Severity: Critical, Warning" }));
+
+    expect(screen.getByRole("dialog", { name: "Severity" })).toBeTruthy();
+    expect(screen.getByText("Select one or more values, or clear all for any value")).toBeTruthy();
+  });
+
   it("names the receipt chip on the deliveries page", () => {
     renderFilters("deliveries", { receipt: "missing" }, "toolbar");
 
