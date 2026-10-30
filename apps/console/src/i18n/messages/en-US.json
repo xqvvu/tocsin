@@ -800,6 +800,7 @@
   "events.detail.routeHeaders.result": "Result",
   "events.detail.routeHeaders.route": "Route",
   "events.detail.routeHeaders.targets": "Targets",
+  "events.detail.routeMatchesClosest": "Closest: off by {count}",
   "events.detail.routeMatchesProvenance.recomputed": "No snapshot exists for this event, so the current routes were evaluated on read — this is not what the rules said at the time",
   "events.detail.routeMatchesProvenance.snapshot": "Recorded when the event arrived — reflects the routes that were in force then, and never rewritten",
   "events.detail.routeMatchesTitle": "Route matches",

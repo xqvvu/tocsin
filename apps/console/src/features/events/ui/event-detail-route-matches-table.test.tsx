@@ -208,6 +208,45 @@ describe("event detail route matches table", () => {
     expect(screen.getByText("Not matched")).toBeTruthy();
   });
 
+  it("orders misses closest first and marks the nearest one", () => {
+    renderTable([
+      match({
+        routeId: "far",
+        routeName: "Far",
+        matched: false,
+        checks: [miss("severity"), miss("status")],
+      }),
+      match({
+        routeId: "near",
+        routeName: "Near",
+        matched: false,
+        checks: [miss("severity")],
+      }),
+    ]);
+
+    // The server lists routes in storage order, which is useless when nothing
+    // matched: the operator needs the rule that came closest first.
+    expect(routeRows()).toEqual(["Near", "Far"]);
+    expect(screen.getByText("Closest: off by 1")).toBeTruthy();
+  });
+
+  it("does not call a sole miss the closest one", () => {
+    renderTable([
+      match({ routeId: "only", routeName: "Only", matched: false, checks: [miss("severity")] }),
+    ]);
+
+    expect(screen.queryByText(/^Closest:/)).toBeNull();
+  });
+
+  it("keeps a matched route above nearer misses", () => {
+    renderTable([
+      match({ routeId: "near", routeName: "Near", matched: false, checks: [miss("severity")] }),
+      match({ routeId: "hit", routeName: "Delivered", matched: true }),
+    ]);
+
+    expect(routeRows()).toEqual(["Delivered", "Near"]);
+  });
+
   it("distinguishes an intake snapshot from a recomputed result", () => {
     const { unmount } = renderTable([match({})], "intake_snapshot");
 
@@ -246,6 +285,25 @@ function renderTable(
       />
     </AppIntlProvider>,
   );
+}
+
+/** Route names in rendered order, skipping the header row and the miss badge. */
+function routeRows(): string[] {
+  return screen
+    .getAllByRole("row")
+    .slice(1)
+    .map((row) => row.querySelector("td span.truncate")?.textContent?.trim() ?? "");
+}
+
+function miss(field: RouteMatches[number]["checks"][number]["field"]) {
+  return {
+    field,
+    matched: false,
+    detail: `Expected ${field} to match`,
+    condition: "compare" as const,
+    expected: ["critical"],
+    actual: "warning",
+  };
 }
 
 function delivery(overrides: Partial<Delivery> = {}): Delivery {
