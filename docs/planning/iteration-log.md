@@ -2,6 +2,65 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 189 轮）
+
+- 时间：2026-10-30 17:26 CST 起（定时触发；并发锁获取于 17:27）。
+- 基线：`origin/main` @ `56c6179c`；启动时 main CI 绿，无 open PR。
+- 类型：**实施轮（不展开全量审计）+ UI 主切片（UI-54）**。
+- **全量审计时间戳保持 2026-10-30 16:40 CST（第 188 轮）**：本轮距上次全量审计 46 分钟，
+  按第 1.5 步配额闸门不重复展开；backlog 有大量 ≥27 分候选，直接续做第 188 轮
+  「下一轮优先项」第 1 条。
+- 车道轮转位置：本轮执行 `ui-review`（承接第 188 轮 `ui-triage` 的 `review_now` 判定）；
+  因距上一轮仅 7 分钟、仓库代码未变，未重新 spawn `requirements` / `ui-triage` subagent，
+  沿用第 188 轮实测基线（见「相邻两轮间隔很近时不要重跑车道」）。下一个非必跑车道仍为
+  **docs-drift**。
+- `ui-triage`：沿用第 188 轮 **review_now（限缩）** 判定并执行；本轮完成了真实浏览器复核
+  （隔离 dev 实例 + 临时 SQLite + 1440×900 视口），未做完整页面巡检。
+- `last_ui_review_at`：更新为 **2026-10-30 17:45 CST**（本轮做了真实浏览器评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、推送在本会话工作树
+  `sweet-mcnulty-d62e23`。
+
+### UI 评审发现（浏览器实测）
+
+- **UI-54 已确认并修复**：`/deliveries?range=1h` 切换筛选（Slow 3G + 1440×900）时，挂起骨架
+  渲染「主列表 + 360px 右栏」两栏（截图 `/tmp/ui54-pending-rail-6h.png`），加载完成后
+  `DeliveriesPage` 只有单栏（`_dashboard.deliveries.tsx:37`、`deliveries-page.tsx:95`）。
+  修复后同一路径单栏渲染，无运行时错误；单测断言骨架不渲染 `complementary`。
+- **UI-54 附带发现（已一并修复）**：告警源、路由、飞书应用空态文案仍写「右侧栏」，但三页的
+  新建入口都在页面工具栏的「新增」按钮（`sources-page.tsx:83-92`、`routes-page.tsx:78-95`、
+  `feishu-apps-page.tsx:42-66`）；`DashboardContentLayout` 的 `sidebar` prop 全仓无调用方。
+- Deliveries 工具栏本轮复核未见新增问题：「运行工作进程」是该页唯一的强调色主操作，
+  与暂停状态联动，保留。
+
+### 本轮交付
+
+- **PR #777** `fix(console): remove the stale deliveries pending rail`（UI-54，24 分）
+  - `/deliveries` 的 `pendingComponent` 改用 `DashboardContentLayout.Skeleton`（单栏），与
+    事件/告警源/路由/通知目标一致。
+  - 删除死代码 `SkeletonWithRail`、`DashboardRailSkeleton`、`sidebar` prop、
+    `shell/dashboard-sidebar.tsx`。
+  - 三处空态文案改为指向工具栏「新增」（中英文）。
+  - 新增 `apps/console/src/shell/dashboard-layout.test.tsx`（2 例）。
+  - PRD：`docs/prd/deliveries-pending-layout.md`。
+  - 验证：`vp fmt --write`；`vp check` 0 error（35 warning，与基线一致）；
+    `vp run -r test` 4/4（console 245 文件 / 1478 用例）；`vp run -r build` 2/2。
+  - 浏览器验证：修复前右栏骨架、修复后单栏（见上）。
+
+### EXPERT_PANEL
+
+本轮无 EXPERT_PANEL 事项（纯前端 shell/i18n，无 schema/投递/路由/auth/secret 语义变化）。
+
+### 下一轮优先项
+
+1. **REQ-369（27）**：`tocsin.alertCount` 模板变量（告警组规模提示）。
+2. **REQ-368（26）**：通用 Webhook 表单编码；**REQ-370（26）**：目标批量停用。
+3. **REQ-365（27）** 多源筛选、**REQ-366（27）** 选择性补投、**REQ-367（26）** 按源解析失败归因。
+4. **ARCH-82 / ARCH-83**（AUTO_FIX，S）。
+5. **Q-303（25）** `deliveries.suppression_id` 索引迁移，先交 EXPERT_PANEL。
+6. **release-infra AUTO_FIX**：`docs/contributing/provider-adapter.md`。
+7. 若触发时间 ≥ 22:40 CST（距上次全量审计 ≥ 6h），下一轮展开全量审计，
+   非必跑车道从 **docs-drift** 开始。
+
 ## 2026-10-30（第 188 轮）
 
 - 时间：2026-10-30 16:37 CST 起（定时触发；并发锁获取于 16:37）。
