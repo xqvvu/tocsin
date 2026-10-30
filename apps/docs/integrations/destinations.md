@@ -323,6 +323,7 @@ Slack HTTP `2xx` 且响应体去空白后为 `ok` 才视为发送成功。其他
 | `destination.id`、`destination.name`、`destination.kind` | 当前通知目标信息 |
 | `tocsin.eventUrl` | 当前 Event 的 dashboard 直链；内置合成样例无法生成链接时为空 |
 | `tocsin.deliveryUrl` | 本次投递的 dashboard 直链；预演/测试发送没有真实投递记录时为空 |
+| `tocsin.alertCount` | 上游通知组包含的告警条数；上游不提供该数量、或内置合成样例时为空 |
 | `payload.<path>` | 已递归脱敏的原始载荷标量字段 |
 
 `payload` 路径支持对象属性和数组下标，例如：

@@ -45,6 +45,14 @@ export interface DestinationRenderInput<Config> {
    * an empty string in that case.
    */
   deliveryUrl?: string;
+  /**
+   * Group size reported by the upstream provider for this Event, filled by the
+   * rendering site from `providerMetadata.alertCount`. Group-based providers
+   * collapse a whole notification group into the first alert, so a template
+   * that says "5 alerts" cannot be written without it. Absent when the
+   * provider reports no count; the template renders an empty string.
+   */
+  alertCount?: number;
   source: SourceSummary;
   destination: DestinationSummary;
   normalizedEvent: NormalizedEvent;

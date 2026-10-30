@@ -54,8 +54,8 @@ export type TemplateVariableLayout = {
  * decides how it is grouped. Two invariants the panel test pins:
  * - every path appears exactly once (a path pinned as common is removed from
  *   its group, so `event.title` is not rendered twice);
- * - no group is rendered empty (pinning `tocsin.eventUrl` hides the `tocsin`
- *   group rather than leaving a header with nothing under it).
+ * - no group is rendered empty (a group whose every path is pinned as common
+ *   is dropped rather than left as a header with nothing under it).
  */
 export function layoutTemplateVariables(
   paths: readonly string[] = TemplateVariablePaths,

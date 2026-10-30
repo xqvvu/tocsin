@@ -3,6 +3,7 @@ import { getLogger } from "@logtape/logtape";
 import {
   DELIVERY_ACCEPTED_UNRECORDED_ERROR,
   type DeliveryJob,
+  readProviderAlertCount,
   redactJsonText,
   redactNormalizedEvent,
   redactText,
@@ -112,6 +113,9 @@ export class DeliveryExecution {
           eventId: delivery.event.id,
           eventUrl: eventDetailUrl(this.publicBaseUrl, delivery.event.id),
           deliveryUrl: deliveryDetailUrl(this.publicBaseUrl, delivery.job.id),
+          // The group size is an upstream fact recorded at intake; it is a
+          // count, not payload content, so it needs no redaction.
+          alertCount: readProviderAlertCount(delivery.event.providerMetadata),
           source: delivery.source,
           destination: delivery.destination,
           // Routing and suppression already decided against the raw event; the

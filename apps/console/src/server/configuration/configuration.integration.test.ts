@@ -1063,6 +1063,7 @@ describe("configuration capabilities", () => {
         labels: { service: "api" },
         occurredAt: "2026-06-09T07:59:00.000Z",
       },
+      providerMetadata: { alertCount: 2 },
       rawPayload: {
         alertname: "HighCPU",
         token: "raw-token",
@@ -1078,7 +1079,7 @@ describe("configuration capabilities", () => {
         url: "https://example.test/webhook",
         template: {
           mode: "text",
-          text: "{{event.title}} {{event.fingerprint}} {{payload.alertname}} token={{payload.token}} locale={{presentation.locale}} tz={{presentation.timeZone}}",
+          text: "{{event.title}} {{event.fingerprint}} {{payload.alertname}} token={{payload.token}} locale={{presentation.locale}} tz={{presentation.timeZone}} alerts={{tocsin.alertCount}}",
         },
       },
     });
@@ -1098,7 +1099,7 @@ describe("configuration capabilities", () => {
       eventId: event.id,
       source: { id: source.source.id, name: source.source.name },
       alert: { title: "High CPU", fingerprint: "signoz:cpu:api" },
-      message: "High CPU signoz:cpu:api HighCPU token=[REDACTED] locale=en-US tz=UTC",
+      message: "High CPU signoz:cpu:api HighCPU token=[REDACTED] locale=en-US tz=UTC alerts=2",
     });
     expect(JSON.stringify(result)).not.toContain("raw-token");
     expect(JSON.stringify(result)).not.toContain("source-token");
@@ -1148,6 +1149,51 @@ describe("configuration capabilities", () => {
     const builtIn = await services.destinations.previewDestination({ id: destination.id });
 
     expect(builtIn.context.tocsin.eventUrl).toBe("");
+
+    await store.close();
+  });
+
+  it("previews the upstream group size a delivery would carry", async () => {
+    const { store, services } = await createTestContext();
+    const source = await services.sources.createSource({ name: "Grafana", provider: "grafana" });
+    const event = await store.intake.recordEvent({
+      id: "event-group-sample",
+      sourceId: source.source.id,
+      idempotencyKey: null,
+      normalized: {
+        title: "Disk almost full",
+        message: "/var at 98%",
+        severity: "warning",
+        status: "firing",
+        fingerprint: "grafana:disk:node-1",
+        labels: {},
+        occurredAt: "2026-06-09T07:59:00.000Z",
+      },
+      providerMetadata: { alertCount: 3 },
+      rawPayload: {},
+      rawHeaders: {},
+    });
+    const destination = await services.destinations.createDestination({
+      name: "Ops webhook",
+      kind: "generic_webhook",
+      config: {
+        url: "https://example.test/webhook",
+        template: { mode: "text", text: "{{event.title}} ({{tocsin.alertCount}})" },
+      },
+    });
+
+    const historical = await services.destinations.previewDestination({
+      id: destination.id,
+      sampleEventId: event.id,
+    });
+
+    expect(historical.context.tocsin.alertCount).toBe("3");
+
+    // The built-in sample has no upstream group, so the variable stays empty
+    // instead of pretending the group carried one alert.
+    const builtIn = await services.destinations.previewDestination({ id: destination.id });
+
+    expect(builtIn.context.tocsin.alertCount).toBe("");
 
     await store.close();
   });

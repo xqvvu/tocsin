@@ -133,6 +133,34 @@ describe("source rehearsal service", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it("renders the upstream group size reported by the parser", async () => {
+    const parse = vi.fn<ProviderRegistry["parse"]>(() => ({
+      ok: true,
+      idempotencyKey: "evt-123",
+      normalized: {
+        title: "Checkout unavailable",
+        message: "checkout returned 503",
+        severity: "critical",
+        status: "firing",
+        fingerprint: "checkout-fingerprint",
+        labels: { service: "checkout" },
+        occurredAt: "2026-10-28T11:59:00.000Z",
+      },
+      providerMetadata: { alertCount: 4 },
+    }));
+    const { destinations, service } = await createHarness({
+      providers: { parse } as unknown as ProviderRegistry,
+    });
+    const preview = vi.spyOn(destinations, "preview");
+
+    await service.rehearseSource({ sourceId: "source-1", payload: alertPayload });
+
+    // The rehearsal shows the group size a real delivery would carry, so a
+    // template that references it can be validated before the alert fires.
+    const previewInput = preview.mock.calls[0]?.[1] as { alertCount?: number } | undefined;
+    expect(previewInput?.alertCount).toBe(4);
+  });
+
   it("projects the parsed event, metadata, and match evidence for display", async () => {
     const parse = vi.fn<ProviderRegistry["parse"]>(() => ({
       ok: true,

@@ -162,7 +162,7 @@ Alertmanager 使用原生 Webhook 通知格式；SigNoz 使用 Alertmanager 兼�
 - fingerprint 优先取首条 alert 的 `fingerprint`，其次取 `groupKey`，最后使用载荷哈希。
 - 幂等键基于完整请求载荷，不是基于 fingerprint。
 
-一个通知组包含多条 alerts 时，Tocsin 只为规范化 Event 使用首条 alert，并在 Provider metadata 中保留 `alertCount`。当前不会把同一通知组拆成多个 Event 或 Delivery。
+一个通知组包含多条 alerts 时，Tocsin 只为规范化 Event 使用首条 alert，并在 Provider metadata 中保留 `alertCount`。当前不会把同一通知组拆成多个 Event 或 Delivery。通知模板可以用 <code v-pre>{{tocsin.alertCount}}</code> 读出这个条数，在群里提示「本组共 N 条告警」；上游不提供该数量时渲染为空字符串。
 
 ## Grafana
 
