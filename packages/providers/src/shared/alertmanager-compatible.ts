@@ -74,6 +74,11 @@ export function parseAlertmanagerCompatibleProvider(
     "generatorURL",
     firstString(firstAlert, ["generatorURL", "generator_url"]),
   );
+  setOptionalString(
+    providerMetadata,
+    "silenceURL",
+    firstString(firstAlert, ["silenceURL", "silence_url"]),
+  );
 
   return {
     normalized: NormalizedEventSchema.parse({

@@ -4,11 +4,18 @@ import type { JsonObject, JsonValue } from "@tocsin/core";
  * Provider metadata keys that point back at the upstream alert.
  *
  * Alertmanager-compatible payloads carry `externalURL` (the Alertmanager
- * itself) and `generatorURL` (the rule that fired); Grafana carries
- * `externalURL`. They are rendered as links instead of plain metadata so an
- * operator can jump from the event back to the system that raised it.
+ * itself), `generatorURL` (the rule that fired), and optionally `silenceURL`;
+ * Grafana carries those plus `dashboardURL` and `panelURL`. They are rendered
+ * as links instead of plain metadata so an operator can jump from the event
+ * back to the dashboard, panel, or silence form that produced it.
  */
-const LINK_KEYS = ["externalURL", "generatorURL"] as const;
+const LINK_KEYS = [
+  "externalURL",
+  "generatorURL",
+  "dashboardURL",
+  "panelURL",
+  "silenceURL",
+] as const;
 
 type UpstreamLinkKey = (typeof LINK_KEYS)[number];
 
@@ -22,6 +29,9 @@ const METADATA_LABELS = {
   payloadHash: "events.detail.upstream.meta.payloadHash",
   externalURL: "events.detail.upstream.links.externalURL",
   generatorURL: "events.detail.upstream.links.generatorURL",
+  dashboardURL: "events.detail.upstream.links.dashboardURL",
+  panelURL: "events.detail.upstream.links.panelURL",
+  silenceURL: "events.detail.upstream.links.silenceURL",
 } as const satisfies Record<string, string>;
 
 const METADATA_ORDER = [

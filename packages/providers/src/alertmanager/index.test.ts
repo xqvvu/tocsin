@@ -76,6 +76,30 @@ describe("alertmanager provider parser", () => {
     expect(result.idempotencyKey).toMatch(/^alertmanager:/);
   });
 
+  it("keeps an optional upstream silence link from the first alert", () => {
+    const result = parseAlertmanagerProvider({
+      sourceId: "source-alertmanager",
+      sourceName: "Alertmanager prod",
+      receivedAt,
+      headers: {},
+      payload: {
+        status: "firing",
+        alerts: [
+          {
+            status: "firing",
+            labels: { alertname: "InstanceDown" },
+            startsAt: "2026-06-09T07:58:00Z",
+            silenceURL: "https://alertmanager.example.test/#/silences/new",
+          },
+        ],
+      },
+    });
+
+    expect(result.providerMetadata).toMatchObject({
+      silenceURL: "https://alertmanager.example.test/#/silences/new",
+    });
+  });
+
   it("registers Alertmanager in the default provider registry", () => {
     const adapter = createDefaultProviderRegistry().get("alertmanager");
 

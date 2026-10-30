@@ -69,6 +69,21 @@ export function parseGrafanaProviderResult(
     "externalURL",
     firstString(payload, ["externalURL", "external_url"]),
   );
+  setOptionalString(
+    providerMetadata,
+    "dashboardURL",
+    firstString(firstAlert, ["dashboardURL", "dashboard_url"]),
+  );
+  setOptionalString(
+    providerMetadata,
+    "panelURL",
+    firstString(firstAlert, ["panelURL", "panel_url"]),
+  );
+  setOptionalString(
+    providerMetadata,
+    "silenceURL",
+    firstString(firstAlert, ["silenceURL", "silence_url"]),
+  );
 
   return ParseResult.ok({
     normalized: NormalizedEventSchema.parse({
