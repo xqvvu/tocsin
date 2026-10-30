@@ -9,13 +9,13 @@
 
 事件详情页的「同指纹」页签能回答「这条告警之前出现过吗」，事件列表也已支持精确 `fingerprint` 过滤。
 但值班真正要确认的下一个问题往往是**这条告警一共发出过多少通知、发给了谁、有没有失败**——
-这属于投递维度，而投递列表没有任何指纹条件：
+这属于投递维度，而本切片之前投递列表没有任何指纹条件：
 
-- `DeliveryListQuery` 有 `eventId`、`suppressionId`、`routeId`，唯独没有 `fingerprint`
+- 当时 `DeliveryListQuery` 有 `eventId`、`suppressionId`、`routeId`，唯独没有 `fingerprint`
   （`apps/console/src/infra/sqlite/repositories/history/history.interface.ts`）。
 - `listDeliveries` / `countDeliveries` 只按单条事件 id 或跨字段子串 `q` 收窄
   （`history.repository.ts`）。
-- 契约与前端模型都把指纹标注为 Events-only
+- 当时契约与前端模型都把指纹标注为 Events-only
   （`packages/api/src/schemas/operations.ts`、`features/operations/model/operation-search.ts`）。
 
 于是同一个指纹重复 14 次时，值班只能逐条打开事件的「投递」页签；把指纹粘进投递搜索框则会

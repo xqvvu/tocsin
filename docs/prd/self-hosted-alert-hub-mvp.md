@@ -145,7 +145,7 @@ separate worker service, or SaaS-style tenancy.
 - Routes should match normalized fields through simple, inspectable conditions: source matches, severity matches, status matches, label equals or contains, title contains, and message contains.
 - Routes should send matching Events to one or more Destinations.
 - Route rules should not use arbitrary JavaScript expressions, workflow graphs, scheduled steps, if/else pipelines, or general automation logic.
-- Silence, suppression, maintenance windows, schedules, per-fingerprint mute, and alert grouping are future concepts, not MVP requirements.
+- Silence, suppression, maintenance windows, schedules, per-fingerprint mute, and alert grouping were future concepts at MVP definition time. Suppression, per-fingerprint mute, and maintenance windows have since shipped (see `docs/prd/alert-suppression.md` and `apps/docs/operations/suppressions.md`); schedules and alert grouping remain future work.
 - Each Destination represents one outbound integration such as Feishu, Slack, email, or generic webhook.
 - Destination integrations should be implemented through a shared destination adapter interface with adapter-owned config schema and send behavior.
 - Destination adapters should not own persistence, route matching, or retry orchestration.
@@ -210,7 +210,7 @@ separate worker service, or SaaS-style tenancy.
 - Arbitrary JavaScript, shell, SQL, or dynamic-code execution in route rules or templates.
 - Full incident management lifecycle.
 - On-call scheduling, escalation policies, and paging rotations.
-- Silence, suppression, maintenance windows, schedules, per-fingerprint mute, and alert grouping in the MVP.
+- Silence, suppression, maintenance windows, schedules, per-fingerprint mute, and alert grouping in the original MVP scope (suppression, per-fingerprint mute, and maintenance windows later shipped; schedules and alert grouping remain out of scope).
 - A stable public REST management API in the MVP.
 - YAML import/export or YAML files for Tocsin-owned configuration; use TOML instead.
 - Plaintext secret export in TOML.

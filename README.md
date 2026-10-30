@@ -239,9 +239,10 @@ BETTER_AUTH_SECRET="$(openssl rand -hex 32)" docker compose up --build
 
 ### 5. MVP 之后的可能方向
 
-这些能力为未来保留空间，但不是 MVP 承诺：
+这些能力为未来保留空间，但不是 MVP 承诺（per-fingerprint mute 已随告警抑制能力交付，见
+[告警抑制](apps/docs/operations/suppressions.md)）：
 
-- Alert grouping、per-fingerprint mute、重复告警聚合。
+- Alert grouping、重复告警聚合。
 - Incident lifecycle、on-call scheduling、escalation policy。
 - 多实例部署、分布式队列、Postgres/Redis/Kafka/Temporal 等外部中间件。
 - SaaS tenant、billing、organization workspace。
