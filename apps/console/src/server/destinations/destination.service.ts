@@ -32,7 +32,7 @@ import {
   type TestDestinationCommand,
   type UpdateDestinationCommand,
 } from "@tocsin/core";
-import { redactHeaders, redactJsonText } from "@tocsin/core";
+import { readProviderAlertCount, redactHeaders, redactJsonText } from "@tocsin/core";
 import type { DestinationCatalogItem } from "@tocsin/destinations";
 import { DestinationTemplateEngine } from "@tocsin/destinations";
 import type { TemplateDiagnostic } from "@tocsin/destinations";
@@ -246,6 +246,9 @@ export class DestinationService {
         source,
         destination: summary,
         normalizedEvent,
+        // Same rule as the preview: a historical Event carries its upstream
+        // group size, a synthetic sample has none.
+        alertCount: sample?.alertCount,
         ...(sample ? { payload: sample.payload } : {}),
         config,
         presentation: { locale: settings.locale, timeZone: settings.timeZone },
@@ -368,6 +371,7 @@ export class DestinationService {
           : undefined,
       source: sample.metadata.source,
       destination,
+      alertCount: sample.alertCount,
       normalizedEvent: sample.normalizedEvent,
       payload: sample.payload,
       config,
@@ -441,6 +445,9 @@ export class DestinationService {
         normalizedEvent: sampleStatus
           ? { ...normalizedEvent, status: sampleStatus }
           : normalizedEvent,
+        // The built-in sample has no upstream provider, so it has no group
+        // size to report either.
+        alertCount: undefined,
         rawPayloadReference: null,
         payload: {},
       };
@@ -462,6 +469,8 @@ export class DestinationService {
         receivedAt: detail.event.receivedAt,
       },
       normalizedEvent: detail.event.normalized,
+      // A historical preview renders exactly what the worker would send.
+      alertCount: readProviderAlertCount(detail.event.providerMetadata),
       payload,
       rawPayloadReference: {
         eventId: detail.event.id,

@@ -66,6 +66,8 @@ export interface DestinationSendInputOverrides<Config> {
   eventId?: string;
   source?: Partial<SourceSummary>;
   normalizedEvent?: Partial<NormalizedEvent>;
+  /** Upstream group size; omitted keeps `tocsin.alertCount` empty. */
+  alertCount?: number;
   payload?: JsonValue;
   presentation?: DestinationPresentation;
 }
@@ -86,6 +88,10 @@ export function destinationSendInput<Config>(
     normalizedEvent: { ...SampleEvent, ...overrides.normalizedEvent },
     config: overrides.config,
   };
+
+  if (overrides.alertCount !== undefined) {
+    input.alertCount = overrides.alertCount;
+  }
 
   if (overrides.payload !== undefined) {
     input.payload = overrides.payload;

@@ -185,6 +185,29 @@ describe("delivery execution", () => {
     await expect(execution.execute(delivery, now)).resolves.toBe("succeeded");
   });
 
+  it("passes the upstream group size to the adapter and omits it when unreported", async () => {
+    const sent: Array<number | undefined> = [];
+    const destinations = {
+      async send(_kind, input) {
+        sent.push(input.alertCount);
+
+        return { ok: true, statusCode: 200, responseBody: null, renderedPayload: {} };
+      },
+    } satisfies Pick<DestinationRegistry, "send">;
+    const execution = new DeliveryExecution({
+      store: createExecutionStore({ succeeded: [], failed: [] }),
+      destinations,
+    });
+
+    const grouped = createClaimedDelivery();
+    grouped.event = { ...grouped.event, providerMetadata: { alertCount: 5 } };
+    await expect(execution.execute(grouped, now)).resolves.toBe("succeeded");
+
+    await expect(execution.execute(createClaimedDelivery(), now)).resolves.toBe("succeeded");
+
+    expect(sent).toEqual([5, undefined]);
+  });
+
   it("records the send's own start and finish instead of the batch timestamp", async () => {
     const succeeded: Parameters<DeliveryRepository["markSucceeded"]>[0][] = [];
     const failed: Parameters<DeliveryRepository["markFailed"]>[0][] = [];

@@ -85,6 +85,22 @@ describe("destination templates", () => {
     expect(DestinationTemplateEngine.createRenderContext(input).tocsin.deliveryUrl).toBe("");
   });
 
+  it("renders the upstream group size carried by the send input", () => {
+    const context = DestinationTemplateEngine.createRenderContext({ ...input, alertCount: 5 });
+
+    expect(DestinationTemplateEngine.renderText(context, "group={{tocsin.alertCount}}")).toEqual({
+      ok: true,
+      value: "group=5",
+      diagnostics: [],
+    });
+  });
+
+  it("keeps the group size empty when the provider reports none", () => {
+    // A provider without a group concept, or a synthetic sample, must not be
+    // presented as a group of exactly one.
+    expect(DestinationTemplateEngine.createRenderContext(input).tocsin.alertCount).toBe("");
+  });
+
   it("rejects unknown variables with path-level diagnostics", () => {
     expect(
       DestinationTemplateEngine.diagnoseTemplateValue(

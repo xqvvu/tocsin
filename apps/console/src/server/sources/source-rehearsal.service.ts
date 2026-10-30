@@ -2,6 +2,7 @@ import {
   RehearseSourceCommandSchema,
   evaluateRouteMatch,
   formatSuppressionReason,
+  readProviderAlertCount,
   redactJsonText,
   redactNormalizedEvent,
   redactRouteMatchChecks,
@@ -125,6 +126,9 @@ export class SourceRehearsalService {
       // Suppression matching keeps the raw event for the same reason route
       // matching does: redacting first could change which rule matches.
       rawEvent: parsed.normalized,
+      // The rehearsal renders what a real delivery would carry, so it reads the
+      // group size from the same parser metadata the intake records.
+      alertCount: readProviderAlertCount(parsed.providerMetadata),
       payload: input.payload,
       receivedAt,
       presentation: { locale: settings.locale, timeZone: settings.timeZone },
@@ -187,6 +191,8 @@ export class SourceRehearsalService {
     source: SourceSummary;
     normalizedEvent: NormalizedEvent;
     rawEvent: NormalizedEvent;
+    /** Upstream group size, when the parser reported one. */
+    alertCount?: number;
     payload: RehearseSourceCommand["payload"];
     receivedAt: string;
     presentation: DestinationPresentation;
@@ -276,6 +282,7 @@ export class SourceRehearsalService {
             enabled: destination.enabled,
           },
           normalizedEvent: input.normalizedEvent,
+          alertCount: input.alertCount,
           payload,
           config,
           presentation,

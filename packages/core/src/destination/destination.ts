@@ -151,6 +151,12 @@ export const DestinationTemplateContextSchema = z.object({
      * parses; older preview results simply render the link as empty.
      */
     deliveryUrl: z.string().default(""),
+    /**
+     * Group size reported by the upstream provider, as a string so it renders
+     * like every other variable. Empty when the provider does not report one
+     * (or the Event predates it); defaulted for contexts serialized earlier.
+     */
+    alertCount: z.string().default(""),
   }),
   payload: JsonValueSchema,
   bindings: z.record(z.string(), z.string()),

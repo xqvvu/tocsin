@@ -377,6 +377,7 @@ function previewNotice(diagnostics: TemplateDiagnostic[]): DestinationPreviewRes
       tocsin: {
         eventUrl: "",
         deliveryUrl: "",
+        alertCount: "",
       },
       payload: {},
       bindings: {},
@@ -456,8 +457,11 @@ describe("template variable panel layout", () => {
       layout.groups.every((group) => group.paths.length > 0 || group.labelKeys.length > 0),
     ).toBe(true);
 
-    // Both `tocsin` links are pinned as common, so the group itself stays empty.
-    expect(layout.groups.map((group) => group.id)).not.toContain("tocsin");
+    // Both `tocsin` links are pinned as common, so the group keeps only the
+    // variables that are not pinned there.
+    expect(layout.groups.find((group) => group.id === "tocsin")?.paths).toEqual([
+      "tocsin.alertCount",
+    ]);
 
     // The engine's 26 presentation paths collapse to two entries plus the label
     // key list, instead of 24 flat label buttons.

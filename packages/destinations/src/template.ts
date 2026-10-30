@@ -139,7 +139,8 @@ export type TemplateStaticPath =
   | "presentation.labels.probeFailed"
   | "presentation.labels.probeUnknown"
   | "tocsin.eventUrl"
-  | "tocsin.deliveryUrl";
+  | "tocsin.deliveryUrl"
+  | "tocsin.alertCount";
 
 type TemplateStaticPathResolver = (context: TemplateContext) => string;
 
@@ -200,6 +201,7 @@ const TemplateStaticPathResolvers = {
   "presentation.labels.probeUnknown": (context) => context.presentation.labels.probeUnknown,
   "tocsin.eventUrl": (context) => context.tocsin.eventUrl,
   "tocsin.deliveryUrl": (context) => context.tocsin.deliveryUrl,
+  "tocsin.alertCount": (context) => context.tocsin.alertCount,
 } satisfies Record<TemplateStaticPath, TemplateStaticPathResolver>;
 
 const AllowedTemplatePaths: ReadonlySet<TemplateStaticPath> = new Set(
@@ -406,6 +408,10 @@ export class DestinationTemplateEngine {
         // Previews and test sends have no persisted delivery, so this stays
         // empty there rather than pointing at a delivery that does not exist.
         deliveryUrl: options.deliveryUrl ?? input.deliveryUrl ?? "",
+        // Only what the upstream group actually carried: a provider that does
+        // not report a count, or a sample with no stored Event, renders empty
+        // rather than claiming the group had exactly one alert.
+        alertCount: input.alertCount === undefined ? "" : String(input.alertCount),
       },
       payload: redactJsonText(input.payload ?? {}),
       bindings: {},
