@@ -1,6 +1,7 @@
 import {
   AlertSeveritySchema,
   AlertStatusSchema,
+  DeliveryAttemptStatusClassSchema,
   DeliveryJobSchema,
   DeliveryReceiptFilterSchema,
   DeliveryStateSchema,
@@ -369,6 +370,13 @@ export const ListOperationsInputSchema = z
      * jobs that were retried instead of reading the attempt column row by row.
      */
     minAttempts: z.number().int().min(1).max(100).optional(),
+    /**
+     * Delivery-only: the HTTP status class returned by the latest completed
+     * attempt. Separates a misconfigured target (4xx) from an unhealthy one
+     * (5xx) without reading each row's free-text error, and ignores attempts
+     * that never received a response.
+     */
+    lastAttemptStatusClass: DeliveryAttemptStatusClassSchema.optional(),
     /** Relative window resolved against the server's request time. */
     range: OperationTimeRangeSchema.optional(),
     /**

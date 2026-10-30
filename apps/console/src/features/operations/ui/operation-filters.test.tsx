@@ -65,6 +65,9 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByText("Delivery state")).toBeNull();
     expect(screen.queryByText("Receipt")).toBeNull();
     expect(screen.queryByText("Attempts")).toBeNull();
+    // The status class describes an attempt's response, which only the
+    // delivery list carries.
+    expect(screen.queryByText("Latest response status")).toBeNull();
     // The time basis only changes how the delivery list is windowed.
     expect(screen.queryByText("Time basis")).toBeNull();
   });
@@ -131,8 +134,18 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByText("Destination delivery")).toBeNull();
     expect(screen.getByText("Receipt")).toBeTruthy();
     expect(screen.getByText("Attempts")).toBeTruthy();
+    expect(screen.getByText("Latest response status")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
     expect(screen.getByText("Time basis")).toBeTruthy();
+  });
+
+  it("names the latest-response-status chip and keeps it off the events page", () => {
+    renderFilters("deliveries", { lastAttemptStatusClass: "4xx" }, "toolbar");
+    expect(screen.getByTitle("Clear Latest response status: 4xx client error")).toBeTruthy();
+
+    cleanup();
+    renderFilters("events", { lastAttemptStatusClass: "4xx" }, "toolbar");
+    expect(screen.queryByTitle(/^Clear Latest response status/)).toBeNull();
   });
 
   it("names the attempt-count chip and keeps it off the events page", () => {
@@ -181,6 +194,7 @@ describe("operation filters by page scope", () => {
         receipt: "present",
         deliveryState: "failed",
         minAttempts: 2,
+        lastAttemptStatusClass: "4xx",
         range: "1h",
         rangeAnchor: "2026-10-23T04:00:00.000Z",
         q: "checkout",
@@ -208,6 +222,7 @@ describe("operation filters by page scope", () => {
       receipt: "",
       deliveryState: "",
       minAttempts: 0,
+      lastAttemptStatusClass: "",
       range: "",
       timeField: "",
       rangeAnchor: "",

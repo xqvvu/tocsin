@@ -1,4 +1,5 @@
 import type {
+  DeliveryAttemptStatusClass,
   DeliveryListItem,
   DeliveryReceiptFilter,
   DeliveryState,
@@ -60,6 +61,11 @@ export interface ListOperationsInput {
   deliveryState?: DeliveryState | DeliveryState[];
   /** Delivery-only: keep jobs attempted at least this many times. */
   minAttempts?: number;
+  /**
+   * Delivery-only: the HTTP status class of the latest completed attempt.
+   * Separates a misconfigured target (4xx) from an unhealthy one (5xx).
+   */
+  lastAttemptStatusClass?: DeliveryAttemptStatusClass;
   range?: OperationTimeRange;
   /** Instant the window was opened; without it the window follows the clock. */
   rangeAnchor?: string;

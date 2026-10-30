@@ -97,6 +97,23 @@ export const DeliveryReceiptFilterSchema = z.enum(["present", "missing"]);
 export type DeliveryReceiptFilter = z.infer<typeof DeliveryReceiptFilterSchema>;
 
 /**
+ * Narrows the deliveries list by the HTTP status class of the latest completed
+ * attempt.
+ *
+ * The retry policy already separates the two classes: a 4xx is usually a
+ * configuration or credential problem on our side, while a 5xx is the target
+ * being unwell. The failures list only had free-text `last_error`, so an
+ * operator reading "401" had to guess whether it was a handful of bad
+ * credentials or an outage. Only the latest completed attempt counts, so the
+ * filter describes the failure the row currently shows instead of one a later
+ * retry already replaced. Attempts that never got a response (timeouts, DNS,
+ * TLS) have no status and match neither value.
+ */
+export const DeliveryAttemptStatusClassSchema = z.enum(["4xx", "5xx"]);
+
+export type DeliveryAttemptStatusClass = z.infer<typeof DeliveryAttemptStatusClassSchema>;
+
+/**
  * Which delivery timestamp the time window and the list order use.
  *
  * `created` is when the job was enqueued; `updated` is the last activity — a

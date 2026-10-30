@@ -717,6 +717,46 @@ function OperationFiltersPanel({
         </UiField>
       ) : null}
       {scope === "deliveries" ? (
+        <UiField>
+          <FieldLabel htmlFor="operation-last-attempt-status-class">
+            {t("operations.filters.lastAttemptStatusClass")}
+          </FieldLabel>
+          <Select
+            id="operation-last-attempt-status-class"
+            items={[
+              { value: null, label: t("operations.filters.anyLastAttemptStatusClass") },
+              { value: "4xx", label: t("operations.filters.lastAttemptStatusClassOptions.4xx") },
+              { value: "5xx", label: t("operations.filters.lastAttemptStatusClassOptions.5xx") },
+            ]}
+            value={search.lastAttemptStatusClass || null}
+            disabled={pending}
+            onValueChange={(value) =>
+              onChange({
+                lastAttemptStatusClass: (value ??
+                  "") as DashboardOperationSearch["lastAttemptStatusClass"],
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("operations.filters.anyLastAttemptStatusClass")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={null}>
+                  {t("operations.filters.anyLastAttemptStatusClass")}
+                </SelectItem>
+                <SelectItem value="4xx">
+                  {t("operations.filters.lastAttemptStatusClassOptions.4xx")}
+                </SelectItem>
+                <SelectItem value="5xx">
+                  {t("operations.filters.lastAttemptStatusClassOptions.5xx")}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </UiField>
+      ) : null}
+      {scope === "deliveries" ? (
         <UiField className={compact ? "sm:col-span-2" : undefined}>
           <FieldLabel htmlFor="operation-delivery-state">
             {t("operations.filters.deliveryState")}
@@ -926,6 +966,17 @@ function activeFilterChips(
       label: t("operations.filters.minAttempts"),
       valueLabel: t("operations.filters.minAttemptsAtLeast", { count: search.minAttempts }),
       clear: { minAttempts: 0 },
+    });
+  }
+
+  if (scope === "deliveries" && search.lastAttemptStatusClass) {
+    chips.push({
+      key: "lastAttemptStatusClass",
+      label: t("operations.filters.lastAttemptStatusClass"),
+      valueLabel: t(
+        `operations.filters.lastAttemptStatusClassOptions.${search.lastAttemptStatusClass}`,
+      ),
+      clear: { lastAttemptStatusClass: "" },
     });
   }
 
