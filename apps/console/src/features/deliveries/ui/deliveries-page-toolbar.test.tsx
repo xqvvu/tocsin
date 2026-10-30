@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { DeliveriesPageToolbar } from "#/features/deliveries/ui/deliveries-page-toolbar";
@@ -55,9 +55,32 @@ describe("deliveries page toolbar", () => {
       true,
     );
   });
+
+  it("opens the events list with the shared filters", () => {
+    const onViewEvents = vi.fn<() => void>();
+    renderToolbar({ onViewEvents });
+
+    fireEvent.click(screen.getByRole("button", { name: "View matching events" }));
+
+    expect(onViewEvents).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides the cross-list action when nothing is shared", () => {
+    // With only delivery-specific filters there is nothing to carry over, and
+    // the sidebar already links to Events; a "matching" label would be a lie.
+    renderToolbar({ onViewEvents: null });
+
+    expect(screen.queryByRole("button", { name: "View matching events" })).toBeNull();
+  });
 });
 
-function renderToolbar(props: { pending?: boolean; paused?: boolean } = {}): void {
+function renderToolbar(
+  props: {
+    pending?: boolean;
+    paused?: boolean;
+    onViewEvents?: (() => void) | null;
+  } = {},
+): void {
   render(
     <AppIntlProvider locale="en-US">
       <DeliveriesPageToolbar
@@ -65,6 +88,7 @@ function renderToolbar(props: { pending?: boolean; paused?: boolean } = {}): voi
         paused={props.paused ?? false}
         onRunWorker={vi.fn()}
         onResetFilters={vi.fn()}
+        onViewEvents={props.onViewEvents}
       />
     </AppIntlProvider>,
   );

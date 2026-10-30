@@ -361,6 +361,31 @@ export function pruneSearch(search: DashboardOperationSearch): DashboardOperatio
   ) as DashboardOperationSearch;
 }
 
+/**
+ * The subset of a list's filters the other list understands.
+ *
+ * Events and deliveries share the alert identity (source, severity, status,
+ * fingerprint), the search term, and the time window. Destination matches,
+ * delivery outcomes, and route/kind/receipt/state filters only exist on one
+ * page: the other page's schema would drop them, or worse, reuse the key with
+ * a different meaning. The cross-list switch therefore carries only these
+ * keys, and the other list starts at page 1 because the page counters count
+ * different result sets.
+ */
+export function crossListOperationSearch(
+  search: DashboardOperationSearch,
+): DashboardOperationSearch {
+  return pruneSearch({
+    sourceId: search.sourceId,
+    severity: search.severity,
+    status: search.status,
+    range: search.range,
+    rangeAnchor: search.rangeAnchor,
+    q: search.q,
+    fingerprint: search.fingerprint,
+  });
+}
+
 export function mergeOperationSearch(
   search: DashboardOperationSearch,
   next: Partial<DashboardOperationSearch>,
