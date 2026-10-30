@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import type { JsonObject } from "@tocsin/core";
+import type { JsonObject, RouteRuleInput } from "@tocsin/core";
 import {
   createDefaultDestinationRegistry,
   createDefaultUrgencyRegistry,
@@ -134,11 +134,65 @@ describe("source webhook API route", () => {
     await expectJson(response, {
       accepted: true,
       eventId: "event-1",
+      routesMatched: 1,
       deliveriesCreated: 1,
       deliveriesDeduped: 0,
     });
 
     expect((await testState.store?.history.getEventDetail("event-1"))?.deliveries).toHaveLength(1);
+  });
+
+  it("reports zero matched routes when the event matches no enabled route", async () => {
+    await configureSourceRouteAndDestination({ routeRule: { severities: ["warning"] } });
+
+    const response = await postWebhook({
+      headers: {
+        authorization: "Bearer source-token",
+      },
+      body: {
+        title: "Checkout unavailable",
+        severity: "critical",
+      },
+    });
+
+    expect(response.status).toBe(202);
+    await expectJson(response, {
+      accepted: true,
+      eventId: "event-1",
+      routesMatched: 0,
+      deliveriesCreated: 0,
+      deliveriesDeduped: 0,
+    });
+    expect(await testState.store?.history.listDeliveries()).toMatchObject({ items: [] });
+  });
+
+  it("counts every matching enabled route in the receipt", async () => {
+    await configureSourceRouteAndDestination();
+    await requireTestStore().routes.create({
+      id: "route-2",
+      name: "Every checkout alert",
+      rule: {},
+      destinationIds: ["destination-1"],
+    });
+
+    const response = await postWebhook({
+      headers: {
+        authorization: "Bearer source-token",
+      },
+      body: {
+        title: "Checkout unavailable",
+        severity: "critical",
+      },
+    });
+
+    expect(response.status).toBe(202);
+    await expectJson(response, {
+      accepted: true,
+      eventId: "event-1",
+      routesMatched: 2,
+      deliveriesCreated: 2,
+      deliveriesDeduped: 0,
+    });
   });
 
   it("accepts a webhook, delivers it asynchronously, and leaves inspectable history", async () => {
@@ -164,6 +218,7 @@ describe("source webhook API route", () => {
     await expectJson(response, {
       accepted: true,
       eventId: "event-1",
+      routesMatched: 1,
       deliveriesCreated: 1,
       deliveriesDeduped: 0,
     });
@@ -271,6 +326,7 @@ describe("source webhook API route", () => {
     await expectJson(response, {
       accepted: true,
       eventId: "event-1",
+      routesMatched: 1,
       deliveriesCreated: 1,
       deliveriesDeduped: 0,
     });
@@ -302,6 +358,7 @@ describe("source webhook API route", () => {
     await expectJson(response, {
       accepted: true,
       eventId: "event-1",
+      routesMatched: 1,
       deliveriesCreated: 1,
       deliveriesDeduped: 0,
     });
@@ -331,6 +388,7 @@ describe("source webhook API route", () => {
     await expectJson(firstResponse, {
       accepted: true,
       eventId: "event-1",
+      routesMatched: 1,
       deliveriesCreated: 1,
       deliveriesDeduped: 0,
     });
@@ -338,6 +396,7 @@ describe("source webhook API route", () => {
     await expectJson(secondResponse, {
       accepted: true,
       eventId: "event-3",
+      routesMatched: 1,
       deliveriesCreated: 0,
       deliveriesDeduped: 1,
     });
@@ -443,7 +502,11 @@ describe("source webhook API route", () => {
 });
 
 async function configureSourceRouteAndDestination(
-  input: { sourceConfig?: JsonObject; destinationConfig?: JsonObject } = {},
+  input: {
+    sourceConfig?: JsonObject;
+    destinationConfig?: JsonObject;
+    routeRule?: RouteRuleInput;
+  } = {},
 ): Promise<void> {
   const store = requireTestStore();
 
@@ -463,7 +526,7 @@ async function configureSourceRouteAndDestination(
   await store.routes.create({
     id: "route-1",
     name: "Critical checkout",
-    rule: {
+    rule: input.routeRule ?? {
       severities: ["critical"],
       labels: [{ key: "service", operator: "equals", value: "checkout" }],
     },

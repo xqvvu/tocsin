@@ -24,10 +24,16 @@ description: 使用可复制的最小载荷验证 Grafana、Alertmanager、SigNo
 | `401` / `403` / `404` | 凭据或告警源状态校验 | 否 | 先修 URL、Token、共享密钥或启停状态，不要继续调整 payload |
 | `400`，响应没有 `eventId` | JSON 解码 | 否 | 请求体为空或不是有效 JSON；先检查上游模板、转义和代理层 |
 | `400`，响应带 `eventId` | Provider 解析 | 是，解析失败 Event | payload 是有效 JSON，但当前 Provider 不接受；按 `eventId` 打开 Event 查看原因 |
-| `202` | 接入事务提交 | 是 | Provider 已接受；Route 未命中、目标未启用或发送失败仍可能发生 |
+| `202` | 接入事务提交 | 是 | Provider 已接受；先看 `routesMatched` 判断是否命中启用的路由，再看 `deliveriesCreated` / `deliveriesDeduped` |
 | `413` | 请求体大小校验 | 否 | 检查 `TOCSIN_MAX_WEBHOOK_BYTES` 与反向代理上限 |
 
-`202` 中的 `deliveriesCreated: 0` 并不表示接入失败。它通常表示没有启用的 Route 命中，或相同幂等键命中了投递去重窗口。目标停用不会阻止 Delivery 创建；如果路由命中，仍会创建 `pending` Delivery，Worker 会等目标重新启用后再领取。
+`202` 中的 `deliveriesCreated: 0` 并不表示接入失败。先看同一响应里的 `routesMatched`：
+
+- `routesMatched: 0`：没有启用的 Route 命中。检查路由规则（severity、label、文本条件）、路由是否绑定该告警源，以及路由是否被停用。
+- `routesMatched > 0` 且 `deliveriesCreated` 与 `deliveriesDeduped` 都为 `0`：命中的 Route 没有选择通知目标，补齐目标后事件才会进入投递。
+- `deliveriesDeduped > 0`：相同幂等键仍在去重窗口内，属于预期行为。
+
+目标停用不会阻止 Delivery 创建；如果路由命中，仍会创建 `pending` Delivery，Worker 会等目标重新启用后再领取。
 
 ## 通用验证命令
 
@@ -64,6 +70,7 @@ JSON
 {
   "accepted": true,
   "eventId": "event-...",
+  "routesMatched": 1,
   "deliveriesCreated": 0,
   "deliveriesDeduped": 0
 }
