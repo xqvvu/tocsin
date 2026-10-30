@@ -73,8 +73,21 @@ REQ-372/373（28）、REQ-374/376（27）等高分候选，不影响本轮选题
   - 运维回滚：无 Dockerfile / compose / env / 锁文件变化，无迁移；回滚只需换回 `0.1.0-beta.154`。
 - 版本 `0.1.0-beta.155`；PR #791（只改根 `package.json`，rebase 合并 `5392f77d`，main CI 绿）。
 - tag `v0.1.0-beta.155` @ `5392f77d`；GitHub Release（prerelease，body 非空）。
-- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.155`（linux/amd64 + linux/arm64）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.155`
+  （linux/amd64 + linux/arm64，`--provenance=false --sbom=false`）：
+  - index digest `sha256:766dbfa70329e5ac47c121759ed74af5e93c2b8d619c491f4722ea0015d9fafa`
+  - amd64 `sha256:f58e91e13389dbb528c19c0d388821eec7faab3a2eb5c6030db59b399e53e86c`
+  - arm64 `sha256:ddbf2fc6f34a5668681d84022f7804bc8fb862b833056212101af438928a40b2`
 - 回滚 `0.1.0-beta.154`，无需数据库操作；回滚后验收脚本需退回只看 `deliveriesCreated` 的旧口径。
+
+### 清理
+
+- 删除 `agent-iteration` 专用工作树（含并发锁）与已合并且干净的 `recursing-diffie-09d27e`；
+  `youthful-murdock-b65fc6` 有真实未提交改动（destinations/oncall/i18n），跳过。
+- 按 PR 状态删除已合并分支 `agent/webhook-receipt-route-count`、`agent/release-beta-155`；
+  无 PR 记录的存量 `agent/*` 分支保留。
+- `.claude/worktrees` 1.5G → 1.4G（剩余主要为 `youthful-murdock-b65fc6` 的 699M 与运行中的
+  docs-site 工作树）。
 
 ### 下一轮优先项
 
