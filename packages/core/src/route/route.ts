@@ -135,11 +135,13 @@ export const RouteMatchGapReasonSchema = z.enum([
 /**
  * A route that matched but produced no delivery.
  *
- * Route-level reasons (`route_deleted`, `route_disabled`) condemn the whole
- * route, so they are reported once with `destinationId: null` rather than
- * repeated for every target it selected. Everything else names the specific
- * target, because one route commonly has a healthy destination next to a
- * disabled one.
+ * Route-level reasons (`route_deleted`, `route_disabled`) condemn every target
+ * without a delivery, so when nothing was delivered they are reported once with
+ * `destinationId: null` rather than repeated for every target it selected. When
+ * the route delivered to some targets before it was disabled or deleted, each
+ * missing target is named instead: a route-level row would contradict the
+ * deliveries that still exist. Everything else names the specific target,
+ * because one route commonly has a healthy destination next to a disabled one.
  */
 export const RouteMatchGapSchema = z.object({
   routeId: NonEmptyRouteStringSchema,
