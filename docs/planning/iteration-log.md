@@ -50,6 +50,28 @@
 
 本轮无 EXPERT_PANEL 事项（纯前端 shell/i18n，无 schema/投递/路由/auth/secret 语义变化）。
 
+### 发布
+
+- 三位只读评审（发布经理 / 发布阻断审计员 / 运维回滚专家）结论：**发布**；
+  区间零 migration、零 schema、零 env/compose/依赖变化，完全可逆。
+- 阻断审计发现 open PR #776（docs-site，纯文档、CI 双绿、CLEAN）；先 rebase 合并 #776
+  （`a3aa16ec`）解除阻断，再合并 #777（`e56d9594`）。
+- 版本 `0.1.0-beta.152`；PR #778 只改根 `package.json`（rebase 合并 `e5e0de9a`）。
+- tag `v0.1.0-beta.152` @ `e5e0de9a`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.152`
+  （linux/amd64 + linux/arm64，index digest
+  `sha256:5f075e2bfb65910b57c05b5cfaf769c70e9c565a9541e46ae265286256d4b037`）；
+  回滚 `0.1.0-beta.151`，无需数据库操作。
+- 补建检查：最近 10 个 tag 均有对应 release。
+- 文档同步：本会话没有可用的 `obsidian-vault` skill，Obsidian 同步已跳过。
+
+### 清理
+
+- 本会话工作树移除 `node_modules` / `.output` / `.vite`：784M → 24M。
+- 回收已合并且干净的 `xenodochial-tu-e2df00`（24M）；`youthful-murdock-b65fc6` 有真实未提交
+  改动，跳过；`docs-site-20261030-175614` 属运行中的文档站 routine，保留。
+  `.claude/worktrees` 2.1G → 1.4G。
+
 ### 下一轮优先项
 
 1. **REQ-369（27）**：`tocsin.alertCount` 模板变量（告警组规模提示）。
