@@ -5,6 +5,7 @@ import {
   DeliveryReceiptFilterSchema,
   DeliveryStateSchema,
   DestinationKindSchema,
+  EventDeliveryCoverageSchema,
   OPERATION_SEARCH_MAX_LENGTH,
   OPERATION_SEARCH_MAX_TERMS,
   type RouteDefinition,
@@ -295,6 +296,16 @@ function OperationFiltersPanel({
       label: t(`operations.filters.deliveryOutcomeOptions.${state}`),
     })),
   ];
+  // The coverage facet answers the count question the per-state outcome cannot:
+  // "did every targeted destination get it". It stays next to the outcome
+  // select so the two read as one drill-down.
+  const deliveryCoverageItems = [
+    { value: null, label: t("operations.filters.anyCoverage") },
+    ...EventDeliveryCoverageSchema.options.map((coverage) => ({
+      value: coverage,
+      label: t(`operations.filters.deliveryCoverageOptions.${coverage}`),
+    })),
+  ];
   // The URL carries the string form of the boolean, and `null` is "any" so the
   // select shows the placeholder rather than an empty option. `false` is a real
   // filter: it excludes the payloads a parser rejected.
@@ -406,6 +417,37 @@ function OperationFiltersPanel({
             <SelectContent>
               <SelectGroup>
                 {deliveryOutcomeItems.map((item) => (
+                  <SelectItem key={item.value ?? "any"} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </UiField>
+      ) : null}
+      {scope === "events" ? (
+        <UiField>
+          <FieldLabel htmlFor="operation-delivery-coverage">
+            {t("operations.filters.deliveryCoverage")}
+          </FieldLabel>
+          <Select
+            id="operation-delivery-coverage"
+            items={deliveryCoverageItems}
+            value={search.deliveryCoverage || null}
+            disabled={pending}
+            onValueChange={(value) =>
+              onChange({
+                deliveryCoverage: (value ?? "") as DashboardOperationSearch["deliveryCoverage"],
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("operations.filters.anyCoverage")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {deliveryCoverageItems.map((item) => (
                   <SelectItem key={item.value ?? "any"} value={item.value}>
                     {item.label}
                   </SelectItem>
@@ -914,6 +956,15 @@ function activeFilterChips(
       label: t("operations.filters.deliveryOutcome"),
       valueLabel: t(`operations.filters.deliveryOutcomeOptions.${search.deliveryOutcome}`),
       clear: { deliveryOutcome: "" },
+    });
+  }
+
+  if (scope === "events" && search.deliveryCoverage) {
+    chips.push({
+      key: "deliveryCoverage",
+      label: t("operations.filters.deliveryCoverage"),
+      valueLabel: t(`operations.filters.deliveryCoverageOptions.${search.deliveryCoverage}`),
+      clear: { deliveryCoverage: "" },
     });
   }
 

@@ -52,6 +52,9 @@ export class OperationsService {
         // Events-only: answers "did this alert reach anyone". The delivery
         // list keeps its exact `deliveryState` dimension instead.
         deliveryOutcome: input.deliveryOutcome,
+        // Events-only: the count question, answered from the same fan-out the
+        // per-state filter drills into. Zero-delivery events stay outside it.
+        deliveryCoverage: input.deliveryCoverage,
         // Events-only: a rejected payload is stored as an event with no
         // deliveries, so without this dimension it reads exactly like an alert
         // that matched no route.

@@ -7,6 +7,7 @@ import type {
   DeliveryTimeField,
   DeletionImpact,
   DestinationKind,
+  EventDeliveryCoverage,
   EventDeliveryOutcome,
   EventDestinationMatch,
   EventDestinationOutcome,
@@ -122,6 +123,13 @@ export interface EventListQuery {
    * per-state counts the list shows.
    */
   deliveryOutcome?: EventDeliveryOutcome;
+  /**
+   * Only events whose deliveries did (`all`), partially did not (`partial`),
+   * or never (`none`) succeed. Events that produced no delivery are outside
+   * this facet — `deliveryOutcome=none` selects those — so the three values
+   * partition the events that have at least one delivery.
+   */
+  deliveryCoverage?: EventDeliveryCoverage;
   /**
    * Only events whose provider parser rejected the payload (`true`), or with
    * `false` every event the projection would not flag — including rows whose

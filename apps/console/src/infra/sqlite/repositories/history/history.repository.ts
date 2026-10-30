@@ -8,6 +8,7 @@ import type {
   DeliveryTimeField,
   DeletionImpact,
   DestinationKind,
+  EventDeliveryCoverage,
   EventDeliveryOutcome,
   EventDestinationMatch,
   EventDestinationOutcome,
@@ -139,6 +140,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.deliveryOutcome) {
       builder = builder.where(eventDeliveryOutcomePredicate(query.deliveryOutcome));
+    }
+
+    if (query.deliveryCoverage) {
+      builder = builder.where(eventDeliveryCoveragePredicate(query.deliveryCoverage));
     }
 
     if (query.parseFailed !== undefined) {
@@ -749,6 +754,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where(eventDeliveryOutcomePredicate(query.deliveryOutcome));
     }
 
+    if (query.deliveryCoverage) {
+      builder = builder.where(eventDeliveryCoveragePredicate(query.deliveryCoverage));
+    }
+
     if (query.parseFailed !== undefined) {
       builder = builder.where(eventParseFailedPredicate(query.parseFailed));
     }
@@ -1103,6 +1112,53 @@ function eventDeliveryOutcomePredicate(outcome: EventDeliveryOutcome) {
     SELECT 1 FROM deliveries AS outcome_deliveries
     WHERE outcome_deliveries.event_id = events.id
       AND outcome_deliveries.state = ${outcome}
+  )`;
+}
+
+/**
+ * Restricts events by how much of their fan-out reached a target.
+ *
+ * The three values partition the events that produced at least one delivery:
+ * an event without any delivery matches none of them, which is what separates
+ * this facet from `deliveryOutcome=none`. "Delivered" is exactly the
+ * `succeeded` state — pending and running jobs have not reached anyone yet, and
+ * failed or suppressed ones never will, so all four read as "not delivered".
+ *
+ * Correlated `EXISTS` probes keyed on `idx_deliveries_event_id` keep the count
+ * query's shape unchanged; joining `deliveries` instead would duplicate an
+ * event row once per delivery.
+ */
+function eventDeliveryCoveragePredicate(coverage: EventDeliveryCoverage) {
+  if (coverage === "all") {
+    return sql<boolean>`EXISTS (
+      SELECT 1 FROM deliveries AS coverage_deliveries
+      WHERE coverage_deliveries.event_id = events.id
+    ) AND NOT EXISTS (
+      SELECT 1 FROM deliveries AS coverage_deliveries
+      WHERE coverage_deliveries.event_id = events.id
+        AND coverage_deliveries.state <> 'succeeded'
+    )`;
+  }
+
+  if (coverage === "partial") {
+    return sql<boolean>`EXISTS (
+      SELECT 1 FROM deliveries AS coverage_deliveries
+      WHERE coverage_deliveries.event_id = events.id
+        AND coverage_deliveries.state = 'succeeded'
+    ) AND EXISTS (
+      SELECT 1 FROM deliveries AS coverage_deliveries
+      WHERE coverage_deliveries.event_id = events.id
+        AND coverage_deliveries.state <> 'succeeded'
+    )`;
+  }
+
+  return sql<boolean>`EXISTS (
+    SELECT 1 FROM deliveries AS coverage_deliveries
+    WHERE coverage_deliveries.event_id = events.id
+  ) AND NOT EXISTS (
+    SELECT 1 FROM deliveries AS coverage_deliveries
+    WHERE coverage_deliveries.event_id = events.id
+      AND coverage_deliveries.state = 'succeeded'
   )`;
 }
 

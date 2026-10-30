@@ -536,6 +536,53 @@ describe("delivery outcome filter in the operation search", () => {
   });
 });
 
+describe("delivery coverage filter in the operation search", () => {
+  it("accepts the three coverage values and rejects anything else", () => {
+    for (const coverage of ["all", "partial", "none"]) {
+      expect(
+        DashboardOperationSearchSchema.parse({ deliveryCoverage: coverage }).deliveryCoverage,
+      ).toBe(coverage);
+    }
+
+    // The URL is user-editable, so an unknown value means "any coverage"
+    // instead of an error page.
+    expect(
+      DashboardOperationSearchSchema.parse({ deliveryCoverage: "mostly" }).deliveryCoverage,
+    ).toBe("");
+  });
+
+  it("keeps the coverage out of the URL when it is cleared", () => {
+    expect(pruneSearch({ deliveryCoverage: "" }).deliveryCoverage).toBeUndefined();
+    expect(pruneSearch({ deliveryCoverage: "partial" }).deliveryCoverage).toBe("partial");
+    expect(operationFiltersFromSearch({ deliveryCoverage: "partial" }).deliveryCoverage).toBe(
+      "partial",
+    );
+  });
+
+  it("counts as an active filter so the empty state can explain itself", () => {
+    expect(hasOperationFilters({ deliveryCoverage: "none" })).toBe(true);
+  });
+
+  it("resets both lists to their first page when the coverage changes", () => {
+    const merged = mergeOperationSearch(
+      { eventPage: 3, deliveryPage: 2 },
+      { deliveryCoverage: "partial" },
+    );
+
+    expect(merged.deliveryCoverage).toBe("partial");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+
+  it("stays on the events list when the reader switches lists", () => {
+    // Coverage describes the event's fan-out, which the delivery list cannot
+    // express; carrying it across would silently drop it there.
+    const carried = crossListOperationSearch({ deliveryCoverage: "partial" });
+
+    expect(carried.deliveryCoverage).toBeUndefined();
+  });
+});
+
 describe("delivery receipt filter in the operation search", () => {
   it("parses the receipt state from the URL and falls back on garbage", () => {
     expect(DashboardOperationSearchSchema.parse({ receipt: "present" }).receipt).toBe("present");
@@ -610,6 +657,7 @@ describe("clearing the operation search", () => {
     // new filter is added without a clear value here, "Reset filters" leaves it
     // applied — exactly what happened to `minAttempts` on the deliveries page.
     expect(Object.keys(clearedOperationSearch).sort()).toEqual([
+      "deliveryCoverage",
       "deliveryOutcome",
       "deliveryState",
       "destinationId",
@@ -840,6 +888,7 @@ describe("cross-list switch in the operation search", () => {
     const carried = crossListOperationSearch({
       sourceId: "source-1",
       deliveryOutcome: "failed",
+      deliveryCoverage: "partial",
       parseFailed: "true",
       destinationId: "destination-1",
       destinationMatch: "missing",

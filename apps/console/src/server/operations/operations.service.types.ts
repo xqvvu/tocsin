@@ -6,6 +6,7 @@ import type {
   DeliveryState,
   DeliveryTimeField,
   DestinationKind,
+  EventDeliveryCoverage,
   EventDeliveryOutcome,
   EventDestinationMatch,
   EventDestinationOutcome,
@@ -41,6 +42,11 @@ export interface ListOperationsInput {
   status?: NormalizedEvent["status"] | NormalizedEvent["status"][];
   /** Events-only: no delivery, or at least one delivery in that state. */
   deliveryOutcome?: EventDeliveryOutcome;
+  /**
+   * Events-only: whether the fan-out fully, partially, or never succeeded.
+   * Events without a delivery are outside this facet.
+   */
+  deliveryCoverage?: EventDeliveryCoverage;
   /** Events-only: whether a provider parser rejected the webhook payload. */
   parseFailed?: boolean;
   destinationId?: string;

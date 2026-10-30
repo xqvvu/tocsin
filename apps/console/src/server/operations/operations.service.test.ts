@@ -176,6 +176,17 @@ describe("operations service", () => {
     expect(neverSent.events.total).toBe(0);
     expect(neverSent.deliveries.total).toBe(1);
 
+    // Coverage is the count question: this event did produce a delivery, and
+    // that delivery failed, so it reads as "nobody was reached". The delivery
+    // list has no coverage dimension, so it keeps its row either way.
+    const unreached = await service.listOperations({ limit: 10, deliveryCoverage: "none" });
+    expect(unreached.events.items.map((item) => item.id)).toEqual([event.id]);
+    expect(unreached.events.total).toBe(1);
+    expect(unreached.deliveries.total).toBe(1);
+    const fullyReached = await service.listOperations({ limit: 10, deliveryCoverage: "all" });
+    expect(fullyReached.events.total).toBe(0);
+    expect(fullyReached.deliveries.total).toBe(1);
+
     // Destination now narrows both lists: the event reached that target and the
     // delivery was sent to it. Keeping the two aligned is what stops
     // `/events?destinationId=` from being the silent no-op it used to be.

@@ -10,6 +10,7 @@ import type {
   DeliveryState,
   DeliveryTimeField,
   DestinationKind,
+  EventDeliveryCoverage,
   EventDeliveryOutcome,
   EventDestinationMatch,
   EventDestinationOutcome,
@@ -24,6 +25,7 @@ import {
   DeliveryStateSchema,
   DeliveryTimeFieldSchema,
   DestinationKindSchema,
+  EventDeliveryCoverageSchema,
   EventDeliveryOutcomeSchema,
   EventDestinationMatchSchema,
   EventDestinationOutcomeSchema,
@@ -73,6 +75,14 @@ export const DashboardOperationSearchSchema = z.object({
   // every other value is "has at least one delivery in that state".
   deliveryOutcome: z
     .union([EventDeliveryOutcomeSchema, z.literal("")])
+    .catch("")
+    .optional(),
+  // Events-only coverage facet: `all` / `partial` / `none` over the fan-out
+  // that actually produced deliveries. It complements `deliveryOutcome` instead
+  // of replacing it: outcome asks "did this state occur", coverage asks "did
+  // everyone who was targeted get it".
+  deliveryCoverage: z
+    .union([EventDeliveryCoverageSchema, z.literal("")])
     .catch("")
     .optional(),
   // Events-only: whether the provider parser rejected the payload. Search
@@ -173,6 +183,7 @@ export interface DashboardOperationSearch {
   severity?: string;
   status?: string;
   deliveryOutcome?: EventDeliveryOutcome | "";
+  deliveryCoverage?: EventDeliveryCoverage | "";
   parseFailed?: "true" | "false" | "";
   destinationId?: string;
   destinationMatch?: EventDestinationMatch | "";
@@ -202,6 +213,7 @@ export type OperationFilterData = {
   severity?: AlertSeverity | AlertSeverity[];
   status?: AlertStatus | AlertStatus[];
   deliveryOutcome?: EventDeliveryOutcome;
+  deliveryCoverage?: EventDeliveryCoverage;
   parseFailed?: boolean;
   destinationId?: string;
   destinationMatch?: EventDestinationMatch;
@@ -237,6 +249,7 @@ export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
   severity: "",
   status: "",
   deliveryOutcome: "",
+  deliveryCoverage: "",
   parseFailed: "",
   destinationId: "",
   destinationMatch: "",
@@ -268,6 +281,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.severity ||
     search.status ||
     search.deliveryOutcome ||
+    search.deliveryCoverage ||
     search.parseFailed ||
     search.destinationId ||
     search.destinationOutcome ||
@@ -409,6 +423,7 @@ export function mergeOperationSearch(
     "severity",
     "status",
     "deliveryOutcome",
+    "deliveryCoverage",
     "parseFailed",
     "destinationId",
     "destinationMatch",
