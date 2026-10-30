@@ -8,11 +8,13 @@ export function EventTitleCell({
   fingerprint,
   severity,
   parseFailed,
+  alertCount,
 }: {
   title: string;
   fingerprint: string;
   severity: Operations["events"]["items"][number]["severity"];
   parseFailed: boolean;
+  alertCount: number | null;
 }) {
   const t = useTranslations();
   /*
@@ -22,11 +24,27 @@ export function EventTitleCell({
     console; the stored value stays visible in the normalized and raw tabs.
   */
   const displayTitle = parseFailed ? t("events.parseFailure.fallbackTitle") : title;
+  /*
+    Tocsin normalizes only the first alert of an upstream notification group.
+    Show the group size only when it is larger than one: a single-alert group
+    is indistinguishable from an ordinary event, and a badge on every row
+    would be noise in a dense list.
+  */
+  const showAlertCount = alertCount !== null && alertCount > 1;
 
   return (
     <div className="min-w-0">
       <div className="mb-1 flex min-w-0 items-center gap-1.5">
         <SeverityBadge severity={severity} />
+        {showAlertCount ? (
+          <Badge
+            variant="secondary"
+            className="shrink-0"
+            title={t("events.table.alertGroupTitle", { count: alertCount })}
+          >
+            {t("events.table.alertGroup", { count: alertCount })}
+          </Badge>
+        ) : null}
         {/*
           A parser-rejected payload arrives with `unknown` severity and a
           generic title, so the raw row looks like a provider-authored alert.

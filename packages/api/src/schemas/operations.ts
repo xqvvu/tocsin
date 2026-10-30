@@ -60,6 +60,9 @@ export const EventListItemSchema = z.object({
   // Intake's audit rows for payloads a provider parser rejected. Derived from
   // provider metadata on read; old rows without the marker project as false.
   parseFailed: z.boolean(),
+  // Upstream alert-group size. Derived from provider metadata on read; rows
+  // without a usable count, including old ones, project as null.
+  alertCount: z.number().int().min(1).nullable(),
 });
 
 export const EventDetailDeliverySchema = DeliveryJobSchema.extend({

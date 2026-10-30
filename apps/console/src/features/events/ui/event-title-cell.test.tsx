@@ -19,6 +19,7 @@ describe("event title cell", () => {
           fingerprint="parse_failed:src-1:abc"
           severity="unknown"
           parseFailed
+          alertCount={null}
         />
       </AppIntlProvider>,
     );
@@ -34,6 +35,7 @@ describe("event title cell", () => {
           fingerprint="parse_failed:src-1:abc"
           severity="unknown"
           parseFailed
+          alertCount={null}
         />
       </AppIntlProvider>,
     );
@@ -52,6 +54,7 @@ describe("event title cell", () => {
           fingerprint="disk-full"
           severity="critical"
           parseFailed={false}
+          alertCount={null}
         />
       </AppIntlProvider>,
     );
@@ -68,10 +71,61 @@ describe("event title cell", () => {
           fingerprint="cpu:api"
           severity="critical"
           parseFailed={false}
+          alertCount={null}
         />
       </AppIntlProvider>,
     );
 
     expect(screen.queryByText("解析失败")).toBeNull();
+  });
+
+  it("shows the upstream alert-group size for a multi-alert notification group", () => {
+    render(
+      <AppIntlProvider locale="zh-Hans">
+        <EventTitleCell
+          title="磁盘将满"
+          fingerprint="disk-full"
+          severity="critical"
+          parseFailed={false}
+          alertCount={20}
+        />
+      </AppIntlProvider>,
+    );
+
+    // Tocsin normalizes only the group's first alert, so without the badge a
+    // twenty-alert outage reads like a single ordinary event.
+    expect(screen.getByText("20 条告警")).toBeTruthy();
+  });
+
+  it("hides the group badge for a single-alert group", () => {
+    render(
+      <AppIntlProvider locale="zh-Hans">
+        <EventTitleCell
+          title="磁盘将满"
+          fingerprint="disk-full"
+          severity="critical"
+          parseFailed={false}
+          alertCount={1}
+        />
+      </AppIntlProvider>,
+    );
+
+    expect(screen.queryByText("1 条告警")).toBeNull();
+  });
+
+  it("hides the group badge when the provider reported no count", () => {
+    render(
+      <AppIntlProvider locale="zh-Hans">
+        <EventTitleCell
+          title="CPU high"
+          fingerprint="cpu:api"
+          severity="critical"
+          parseFailed={false}
+          alertCount={null}
+        />
+      </AppIntlProvider>,
+    );
+
+    expect(screen.queryByText(/条告警/)).toBeNull();
   });
 });

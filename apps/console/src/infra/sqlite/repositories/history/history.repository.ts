@@ -37,6 +37,7 @@ import {
 import type { SqliteDeliveryRepository } from "#/infra/sqlite/repositories/delivery/delivery.repository";
 import type { DestinationRepository } from "#/infra/sqlite/repositories/destination/destination.interface";
 import {
+  alertCountFrom,
   eventDetailDeliveryFromRow,
   type EventDetailDeliveryRow,
   type EventDetailLatestAttempt,
@@ -197,6 +198,7 @@ export class SqliteHistoryRepository implements HistoryRepository {
         fingerprint: row.fingerprint,
         receivedAt: row.received_at,
         parseFailed: isParseFailureRow(row.provider_metadata_json),
+        alertCount: alertCountFrom(row.provider_metadata_json),
         routeMatchCount: countMatchedRoutes(row.route_matches_json),
         deliveryCounts: {
           pending: row.pending_count ?? 0,

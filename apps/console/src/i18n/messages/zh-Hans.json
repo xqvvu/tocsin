@@ -875,6 +875,8 @@
   "events.table.deliveryShort.pending": "待",
   "events.table.deliveryShort.running": "运",
   "events.table.deliveryShort.succeeded": "成",
+  "events.table.alertGroup": "{count} 条告警",
+  "events.table.alertGroupTitle": "上游系统把这 {count} 条告警聚合成一条事件，详情页可查看完整载荷",
   "events.table.clearFiltersLabel": "清除筛选并显示全部事件",
   "events.parseFailure.fallbackMessage": "原始载荷已保留，可在「原始调试」中核对",
   "events.parseFailure.fallbackTitle": "未能解析的上游载荷",

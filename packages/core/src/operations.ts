@@ -236,6 +236,15 @@ export interface EventListItem {
    * unreadable alert rather than like Tocsin failed to parse a real one.
    */
   parseFailed: boolean;
+  /**
+   * How many upstream alerts the provider grouped into this event.
+   *
+   * Alertmanager-compatible providers send one notification per alert group and
+   * Tocsin normalizes only its first alert, so without the count the list shows
+   * a twenty-alert outage as a single ordinary event. `null` when the provider
+   * reported no usable count, including events stored before the field existed.
+   */
+  alertCount: number | null;
 }
 
 export interface EventDetail {
