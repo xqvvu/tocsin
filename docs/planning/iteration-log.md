@@ -2,6 +2,93 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 186 轮）
+
+- 时间：2026-10-30 14:27 CST 起（定时触发；并发锁获取于 14:27）。
+- 基线：`origin/main` @ `95b2b6ac`；启动时 main CI 绿，open PR 仅 docs-site #765。
+- 类型：**实施轮（不展开全量审计）+ 1 个需求切片（REQ-24）+ 发布 `0.1.0-beta.149`**。
+- **全量审计时间戳保持 2026-10-30 10:12 CST（第 181 轮）**：本轮距上次全量审计约 4h15m，
+  按第 1.5 步配额闸门不重复展开专家审计；backlog 有多个 28 分 `candidate`，续做 REQ-24。
+- 车道轮转位置：requirements 车道本轮恢复执行（只读 subagent），产出 3 条新候选
+  REQ-363/364/365；下一个非必跑车道为 **release-infra**（第 185 轮排定，本轮顺延）。
+- `ui-triage`：**defer**（内联判定，未 spawn）。`last_ui_review_at` = 2026-10-29 21:30 CST
+  （约 17h，未达 48h）；本轮新增一个只读汇总面板，已有组件级 DOM 用例，不改既有交互。
+- `last_ui_review_at`：保持 **2026-10-29 21:30 CST**。
+- 工作树：写入隔离拦截了 `agent-iteration`，实现改在本会话工作树
+  `practical-haibt-f78782`；`agent-iteration` 仅用于并发锁。
+- 依赖：本会话工作树 `node_modules` 半删残留（`vp install` 误报 up to date，
+  `@tanstack/react-start` 等缺失），按已知处置删除全部 workspace `node_modules` 后重装恢复。
+
+### 代码核实（选题依据）
+
+- REQ-24 前提成立：详情页只取 `suppressionQueryOptions` + `suppressionHitsQueryOptions`
+  （`suppression-detail-page.tsx`），hits 只给分页与 `total`，没有聚合。
+- 仓储层已有同类聚合先例 `destinationDeliveryHealth`（`history.repository.ts:510-545`）；
+  `deliveries.suppression_id` 由 `ensure-complete-schema.ts:147,182` 定义，删除规则时
+  `ON DELETE SET NULL`，因此影响面随规则消失、逐条审计快照仍保留在投递行。
+- `deliveries.suppression_id` 无索引（`schema.ts:261-271`），影响面查询与既有 hits 都是
+  全表扫描 → 新增 Q-303 候选（schema 变更，交 EXPERT_PANEL）。
+
+### 需求车道发现（只读 subagent，已写入 backlog）
+
+- **REQ-363（28）**：事件列表按投递覆盖筛选（全部/部分/无人收到）。证据
+  `packages/core/src/operations.ts:52-54`、`history.repository.ts:1006-1019`、
+  `docs/prd/event-delivery-outcome-filter.md:71`。
+- **REQ-364（28）**：投递列表按「目标无 HTTP 响应」筛选。证据 `migrate/schema.ts:147`、
+  `server/deliveries/delivery-execution.ts:126-158,296,311`、
+  `history.repository.ts:1113-1128`。
+- **REQ-365（27）**：事件/投递列表按多个告警源筛选。证据
+  `features/operations/ui/operation-filters.tsx:332-352`、
+  `packages/api/src/schemas/operations.ts:307-311`、
+  `history.repository.ts:120-121,406-407,648-649,726`。
+
+### 本轮交付
+
+- **PR #766** `feat(suppressions): summarise the silenced impact of a rule`
+  （REQ-24，rebase 合并 `d574af70`）
+  - 新增只读 `suppressions.impact`：去重事件/告警源/目标数、首末静默时间、
+    严重级别分布（critical → unknown 固定顺序）、目标分布（最多 8 个，数量降序/名称升序）。
+  - 仓储 `suppressionDeliveryImpact` 用三条分组查询共享 `suppression_id` 谓词；
+    服务先 `requireSuppression`，缺失走既有 404。
+  - 详情页新增「影响面」面板（空态 + 「另有 N 个目标」）；中英文案各 12 键；
+    PRD `docs/prd/suppression-impact-summary.md`。
+  - 测试：仓储 3 例、服务 2 例、面板 3 例（含 404、目标上限、空窗口）；
+    console 242 文件 / 1455 用例。
+  - 验证：`vp fmt --write`；`vp check` 0 error（35 warning，与基线一致）；
+    `vp run -r test` 4/4；`vp run -r build` 2/2。
+  - 未做浏览器实测：本机无运行中的 Tocsin console dev server；改动为只读展示层，
+    计数与渲染顺序由用例覆盖。
+- `code-review`（low）：1 条 PLAUSIBLE 效率发现（`suppression_id` 无索引）→ Q-303，
+  本轮不修（schema 变更需 EXPERT_PANEL）。
+
+### EXPERT_PANEL
+
+本轮无 EXPERT_PANEL 事项（无 schema/投递/路由/auth/secret 语义变化）。
+
+### 发布
+
+- 三位只读发布评审一致同意：发布经理确认唯一用户可见变更为 #766；
+  阻断审计确认 `origin/main` @ `333e233a` CI/E2E 均 success、区间无迁移/Dockerfile/env/依赖变化、
+  无高优 `blocked-autonomous`；运维回滚专家确认无需数据库操作、换回旧镜像即可。
+- open PR 仅 docs-site #765，改动仅 `apps/docs/operations/deliveries.md`，不影响镜像与运行时，
+  按第 184 轮同样的口径视为非阻断。
+- 版本 `0.1.0-beta.149`；PR #767 只改根 `package.json`（rebase 合并 `d03c19f3`），
+  合并后 main CI success 才打 tag。
+- tag `v0.1.0-beta.149` @ `d03c19f3`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.149`
+  （linux/amd64 + linux/arm64，index digest `sha256:e66770d3cc0e6e39fc127395b00060634ff877fa133d33f5db48ace311f12862`）；
+  回滚 `0.1.0-beta.148`。
+- 补建检查：最近 10 个 tag 均有对应 release。
+- 文档同步：本会话没有可用的 `obsidian-vault` skill，Obsidian 同步已跳过
+  （PRD 与规划文档已随 PR #766 进入仓库）。
+
+### 下一轮优先项
+
+1. **release-infra 车道**（顺延两轮）：provider fixture 目录（REQ-360）+ provider 贡献指南。
+2. **REQ-363 / REQ-364**（28）：投递覆盖筛选、无响应筛选；均无 schema。
+3. **REQ-365**（27）：多告警源筛选。
+4. **Q-303**（25）：`deliveries.suppression_id` 索引迁移，先交 EXPERT_PANEL。
+
 ## 2026-10-30（第 185 轮）
 
 - 时间：2026-10-30 13:26 CST 起（定时触发；并发锁获取于 13:26）。
