@@ -38,7 +38,8 @@
 
 ### 本轮交付
 
-- PR（REQ-364，`feat(operations): filter deliveries by whether the target responded`）
+- **PR #770** `feat(operations): filter deliveries by whether the target responded`
+  （REQ-364）
   - `@tocsin/core` 新增 `DeliveryAttemptResponseSchema`（`received` / `missing`）；
     `@tocsin/api` 契约与 service 类型透传 `lastAttemptResponse`。
   - 仓储新增 `deliveryLastAttemptResponsePredicate`，`listDeliveries` 与 `countDeliveries` 共用：
