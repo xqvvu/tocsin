@@ -68,6 +68,17 @@ export type SuppressionMatcher = z.infer<typeof SuppressionMatcherSchema>;
 export type SuppressionMatcherInput = z.input<typeof SuppressionMatcherSchema>;
 
 /**
+ * How many destinations the impact summary breaks down in full.
+ *
+ * The panel is a review aid, not an exhaustive report: a rule can match every
+ * destination in the system, and once the list passes a screenful the remaining
+ * destinations are better summarised by their count. Both the service and the
+ * repository default to this value, so the panel and the SQL cannot disagree
+ * about how much "top N" means.
+ */
+export const SUPPRESSION_IMPACT_DESTINATION_LIMIT = 8;
+
+/**
  * Time-based lifecycle projection.
  *
  * `expired` is derived, never stored: it is a function of `endsAt` versus now,

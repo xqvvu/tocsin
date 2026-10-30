@@ -34,6 +34,13 @@ export interface HistoryRepository {
   getEventFingerprintContext(eventId: string): Promise<EventFingerprintContext | null>;
   listDeliveries(query?: DeliveryListQuery): Promise<NumberedPage<DeliveryListItem>>;
   /**
+   * One rule's silenced volume over its whole window, aggregated instead of
+   * paged. Counts distinct alerts, sources, and destinations, and breaks the
+   * volume down by severity and by the busiest destinations — the facts an
+   * operator reviews when a maintenance window ends.
+   */
+  suppressionDeliveryImpact(query: SuppressionImpactQuery): Promise<SuppressionImpact>;
+  /**
    * Delivery outcomes grouped by destination for the destinations list: one
    * aggregate pass instead of a query per row. Destinations with no deliveries
    * are absent, so the caller keeps its own "no history" fallback.
@@ -54,6 +61,35 @@ export type DeletionImpactTarget =
   | { sourceId: string }
   | { routeId: string }
   | { destinationId: string };
+
+export interface SuppressionImpactQuery {
+  suppressionId: string;
+  /** Destination breakdown rows to return; the rest are only counted. */
+  destinationLimit?: number;
+}
+
+export interface SuppressionImpactSeverityRow {
+  severity: NormalizedEvent["severity"];
+  deliveryCount: number;
+}
+
+export interface SuppressionImpactDestinationRow {
+  destinationId: string;
+  destinationName: string;
+  kind: DestinationKind;
+  deliveryCount: number;
+}
+
+export interface SuppressionImpact {
+  deliveryCount: number;
+  eventCount: number;
+  sourceCount: number;
+  destinationCount: number;
+  firstHitAt: string | null;
+  lastHitAt: string | null;
+  severities: SuppressionImpactSeverityRow[];
+  destinations: SuppressionImpactDestinationRow[];
+}
 
 export interface DestinationDeliveryHealthQuery {
   /** Inclusive lower bound on `deliveries.created_at` for the failure count. */

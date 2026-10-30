@@ -1599,5 +1599,17 @@
   "suppressions.toggle.enable.expired": "「{suppressionName}」已过结束时间，启用后不会生效，请先编辑结束时间",
   "suppressions.toggle.enable.scheduled": "启用后「{suppressionName}」将在开始时间到达时开始暂停符合条件的告警通知",
   "suppressions.toggle.enableConfirm": "启用静默规则",
-  "suppressions.toggle.enableTitle": "启用这条静默规则？"
+  "suppressions.toggle.enableTitle": "启用这条静默规则？",
+  "suppressions.impact.title": "影响面",
+  "suppressions.impact.terms.deliveries": "已静默通知",
+  "suppressions.impact.terms.events": "涉及告警",
+  "suppressions.impact.terms.sources": "告警源",
+  "suppressions.impact.terms.destinations": "通知目标",
+  "suppressions.impact.firstHit": "首次静默",
+  "suppressions.impact.lastHit": "最近静默",
+  "suppressions.impact.bySeverity": "严重级别分布",
+  "suppressions.impact.byDestination": "目标分布",
+  "suppressions.impact.moreDestinations": "另有 {count} 个目标未展示",
+  "suppressions.impact.empty.title": "窗口内没有被静默的通知",
+  "suppressions.impact.empty.description": "规则生效后，被它拦下的通知会在这里汇总"
 }

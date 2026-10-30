@@ -23,6 +23,7 @@ import {
   redactText,
   RouteMatchResultsSchema,
   splitOperationSearchTerms,
+  SUPPRESSION_IMPACT_DESTINATION_LIMIT,
 } from "@tocsin/core";
 import type { RouteMatchProvenance } from "@tocsin/core";
 
@@ -50,6 +51,8 @@ import type {
   DestinationDeliveryHealthRow,
   EventListQuery,
   HistoryRepository,
+  SuppressionImpact,
+  SuppressionImpactQuery,
 } from "#/infra/sqlite/repositories/history/history.interface";
 import {
   deliveryTargetKey,
@@ -542,6 +545,82 @@ export class SqliteHistoryRepository implements HistoryRepository {
       queuedCount: row.queued_count,
       recentFailureCount: row.recent_failure_count,
     }));
+  }
+
+  async suppressionDeliveryImpact(query: SuppressionImpactQuery): Promise<SuppressionImpact> {
+    const destinationLimit = Math.max(
+      query.destinationLimit ?? SUPPRESSION_IMPACT_DESTINATION_LIMIT,
+      1,
+    );
+    const db = this.context.db;
+    // Three grouped reads instead of paging every hit: the totals, the
+    // severity split, and the busiest destinations. All share one predicate
+    // (`suppression_id`), so the summary and the hits list cannot disagree
+    // about which deliveries belong to the rule. `suppression_id` is cleared
+    // when the rule is deleted, so the summary disappears with it; the reason
+    // snapshot stays on each delivery row.
+    const [totals, severityRows, destinationRows] = await Promise.all([
+      db
+        .selectFrom("deliveries")
+        .innerJoin("events", "events.id", "deliveries.event_id")
+        .select([
+          sql<number>`COUNT(*)`.as("delivery_count"),
+          sql<number>`COUNT(DISTINCT deliveries.event_id)`.as("event_count"),
+          sql<number>`COUNT(DISTINCT events.source_id)`.as("source_count"),
+          sql<number>`COUNT(DISTINCT deliveries.destination_id)`.as("destination_count"),
+          sql<string | null>`MIN(deliveries.created_at)`.as("first_hit_at"),
+          sql<string | null>`MAX(deliveries.created_at)`.as("last_hit_at"),
+        ])
+        .where("deliveries.suppression_id", "=", query.suppressionId)
+        .executeTakeFirst(),
+      db
+        .selectFrom("deliveries")
+        .innerJoin("events", "events.id", "deliveries.event_id")
+        .select(["events.severity as severity", sql<number>`COUNT(*)`.as("delivery_count")])
+        .where("deliveries.suppression_id", "=", query.suppressionId)
+        .groupBy("events.severity")
+        // Canonical order rather than count order: the panel reads like the
+        // severity filter everywhere else, and a quiet rule still renders in
+        // the same sequence once deliveries arrive.
+        .orderBy(
+          sql`CASE events.severity WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 WHEN 'info' THEN 2 ELSE 3 END`,
+        )
+        .execute(),
+      db
+        .selectFrom("deliveries")
+        .innerJoin("destinations", "destinations.id", "deliveries.destination_id")
+        .select([
+          "destinations.id as destination_id",
+          "destinations.name as destination_name",
+          "destinations.kind as destination_kind",
+          sql<number>`COUNT(*)`.as("delivery_count"),
+        ])
+        .where("deliveries.suppression_id", "=", query.suppressionId)
+        .groupBy(["destinations.id", "destinations.name", "destinations.kind"])
+        .orderBy(sql`COUNT(*)`, "desc")
+        .orderBy("destinations.name")
+        .limit(destinationLimit)
+        .execute(),
+    ]);
+
+    return {
+      deliveryCount: totals?.delivery_count ?? 0,
+      eventCount: totals?.event_count ?? 0,
+      sourceCount: totals?.source_count ?? 0,
+      destinationCount: totals?.destination_count ?? 0,
+      firstHitAt: totals?.first_hit_at ?? null,
+      lastHitAt: totals?.last_hit_at ?? null,
+      severities: severityRows.map((row) => ({
+        severity: row.severity,
+        deliveryCount: row.delivery_count,
+      })),
+      destinations: destinationRows.map((row) => ({
+        destinationId: row.destination_id,
+        destinationName: row.destination_name,
+        kind: row.destination_kind,
+        deliveryCount: row.delivery_count,
+      })),
+    };
   }
 
   async countDeletionImpact(target: DeletionImpactTarget): Promise<DeletionImpact> {

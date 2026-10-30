@@ -144,7 +144,7 @@ const expectedProcedures: Record<
   routes: { public: [], private: ["list", "create", "update", "delete", "previewDelete"] },
   suppressions: {
     public: [],
-    private: ["list", "get", "hits", "create", "update", "setEnabled", "delete"],
+    private: ["list", "get", "hits", "impact", "create", "update", "setEnabled", "delete"],
   },
   settings: {
     public: [],
@@ -228,6 +228,7 @@ const featureProcedureArgs: Record<string, unknown> = {
   },
   "suppressions.get": { id: "suppression-missing" },
   "suppressions.hits": { id: "suppression-missing" },
+  "suppressions.impact": { id: "suppression-missing" },
   "suppressions.setEnabled": { id: "suppression-missing", enabled: false },
 };
 

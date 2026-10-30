@@ -1599,5 +1599,17 @@
   "suppressions.toggle.enable.expired": "「{suppressionName}」 already ended — enabling it has no effect, edit the end time first",
   "suppressions.toggle.enable.scheduled": "「{suppressionName}」 starts silencing matching alerts when its window opens",
   "suppressions.toggle.enableConfirm": "Enable suppression",
-  "suppressions.toggle.enableTitle": "Enable this suppression?"
+  "suppressions.toggle.enableTitle": "Enable this suppression?",
+  "suppressions.impact.title": "Impact",
+  "suppressions.impact.terms.deliveries": "Silenced notifications",
+  "suppressions.impact.terms.events": "Alerts affected",
+  "suppressions.impact.terms.sources": "Sources",
+  "suppressions.impact.terms.destinations": "Destinations",
+  "suppressions.impact.firstHit": "First silenced",
+  "suppressions.impact.lastHit": "Latest silenced",
+  "suppressions.impact.bySeverity": "By severity",
+  "suppressions.impact.byDestination": "By destination",
+  "suppressions.impact.moreDestinations": "{count, plural, one {# more destination not shown} other {# more destinations not shown}}",
+  "suppressions.impact.empty.title": "Nothing silenced in this window",
+  "suppressions.impact.empty.description": "Notifications this rule blocks will be summarised here"
 }

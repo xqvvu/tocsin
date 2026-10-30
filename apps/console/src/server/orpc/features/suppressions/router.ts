@@ -19,6 +19,10 @@ export const suppressionsRouter = os.suppressions.router({
     .use(withSuppressionService)
     .handler(({ context, input }) => context.service.listSuppressionHits(input)),
 
+  impact: os.suppressions.impact
+    .use(withSuppressionService)
+    .handler(({ context, input }) => context.service.getSuppressionImpact(input)),
+
   create: os.suppressions.create
     .use(withSuppressionService)
     .handler(({ context, input }) => context.service.createSuppression(input)),

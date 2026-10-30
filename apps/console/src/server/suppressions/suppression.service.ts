@@ -21,6 +21,8 @@ import { DomainValidationError } from "#/server/runtime/domain-errors";
 import type {
   ListSuppressionHitsInput,
   SuppressionHits,
+  SuppressionImpact,
+  SuppressionImpactInput,
   SuppressionServiceOptions,
 } from "#/server/suppressions/suppression.service.types";
 
@@ -119,6 +121,12 @@ export class SuppressionService {
       page: input.page,
       limit: input.limit,
     });
+  }
+
+  async getSuppressionImpact(input: SuppressionImpactInput): Promise<SuppressionImpact> {
+    requireSuppression(await this.store.suppressions.get(input.id));
+
+    return this.store.history.suppressionDeliveryImpact({ suppressionId: input.id });
   }
 
   private async requireKnownMatcherTargets(matcher: SuppressionMatcher): Promise<void> {
