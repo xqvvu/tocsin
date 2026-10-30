@@ -2,6 +2,88 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 192 轮）
+
+- 时间：2026-10-30 22:51 CST 起（定时触发；并发锁获取于 22:51）。
+- 基线：`origin/main` @ `4195eb8d`；启动时 main CI 双绿；唯一 open PR 为文档站 routine 的 #789
+  （发布前按其单文件、CI 绿先例先合并以解除阻断）。
+- 类型：**full-audit（距上次全量审计 16:40 已 6h11m ≥ 6h）+ 1 个需求切片（REQ-375）+
+  发布 `0.1.0-beta.155`**。
+- **全量审计时间戳更新为 2026-10-30 22:51 CST**。
+- 车道轮转位置：本轮执行 `requirements`、`ui-triage`、`architecture`；下一个非必跑车道为
+  **quality**。
+- `ui-triage`：**defer**。`last_ui_review_at` 17:45 CST（距 5h08m < 48h）；按提交时间有 3 个
+  UI 路径提交，但 `a2531cf8` 是上次评审自身的修复、`1df97b79` 的 UI 仅 4 行、`0d9bce75`
+  已做真实浏览器验证，真正未评审的 UI churn 为 0；67 条 `UI-` candidate 属饱和存量。
+  下一次触发：2026-11-01 17:45 CST 后首个轮次（做整页巡检），或新增 ≥3 个真正新的 UI 合并 /
+  ≥2 条 `UI-127+` 发现。
+- `last_ui_review_at` 保持 **2026-10-30 17:45 CST**（本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 只用于并发锁与基线读取；实现、验证、发版均在本会话工作树
+  `focused-tharp-4a1934`。
+- 依赖修复：本会话工作树 node_modules 半删残留导致测试报 `@rolldown/plugin-babel` /
+  `@vitejs/plugin-react` 缺失；按既定做法删除全部 workspace node_modules 后
+  `vp install --frozen-lockfile` 3 秒恢复。
+
+### 本轮交付
+
+- **PR #790** `feat(console): report matched route count in the webhook receipt`（REQ-375，29 分）
+  - `202` 回执新增 `routesMatched`：本次事件命中的**启用**路由数，只计数，不含路由 id、
+    名称或目标（`webhook.ts`，取自 service 已算出的 `matchedRoutes`）。
+  - 判读口径写入 `apps/docs/integrations/provider-verification.md`、`providers.md`、
+    `apps/docs/operations/deploy-docker.md`；中文 PRD
+    `docs/prd/webhook-receipt-route-count.md`。
+  - 测试覆盖 0 / 1 / 2 条命中与去重；既有 202 断言全部补上 `routesMatched`。
+  - self-review 修正两处文档错误：Route 至少保留一个通知目标（删除最后一个目标会删除该
+    Route），因此「命中路由、却既未创建投递也未去重」不可达；PRD 不再声称 `routesMatched`
+    消歧 `deliveriesDeduped` 已能编码的区分。
+  - 验证：`vp check` 0 error（35 warning 为存量基线）；`vp run -r test` 4/4
+    （console 246 文件 / 1488 用例）；`vp run -r build` 2/2。rebase 合并 `58e9082d`。
+
+### 专家发现
+
+**requirements**：本轮按时启动，但超过 70 分钟未返回（车道超时，未产生新候选）。backlog 已有
+REQ-372/373（28）、REQ-374/376（27）等高分候选，不影响本轮选题；下一轮优先重跑该车道。
+
+**architecture**（只读，6 条，均为存量或缓慢累积债务，无 HIGH）：
+
+- ARCH-47 复核：`operation-filters.tsx` 已从 695 行增长到 **1159 行**
+  （`:232` `OperationFiltersPanel`、`:1134` `OperationSearchInput`）；最近两次筛选迭代
+  （`9c5eacd7` +55、`1eeeb5d4` +51）继续堆同一文件；建议先纯移动拆 sibling。
+- `history.repository.ts` 1321 行（`:73` 单类内含列表/详情/抑制影响/删除影响四类读模型），
+  仍守 interface/helpers/repository 三分，未突破硬性条款。
+- `destination-form.tsx` 1393 行为仓库最大 UI 文件（ARCH-10 已跟踪）。
+- import 边界：`components/ui/dropdown-menu.tsx:1` 的 `client-only` 属过度标记（ARCH-35 已跟踪）；
+  `components/ai-elements/code-block.tsx:417-429` 直接用 `navigator.clipboard` / `window.*`，
+  但有 `typeof window` 守卫，整文件加标记会打断服务端渲染链，建议拆 `.client.tsx` 子组件。
+- **新增 ARCH-55（14，AUTO_FIX）**：`session.repository.ts:20-29` 内联行映射，是全仓库唯一
+  没有 `*.helpers.ts` 的 repository 模块。
+- 结论：最近 5 个代码提交在分层、service 纯度、容器装配、import 边界上 clean。
+
+### EXPERT_PANEL
+
+本轮无新 EXPERT_PANEL 事项。
+
+### 发布
+
+- 三位只读专家（发布经理 / 阻断审计 / 运维回滚）一致：**发布**。
+  - 发布经理：自 beta.154 起 1 个用户可见变更（#790），建议 `beta.N + 1`；beta.155 tag 未被占用。
+  - 阻断审计：`origin/main` @ `ed0b89bd` CI 双绿；唯一 open PR #789 为文档站单文件，已先合并；
+    无迁移改动（迁移计划仍止 `0005_deliveries_destination_id_health`）；`blocked-autonomous`
+    仅 REL-13 / REL-16 / REL-23 常驻项。
+  - 运维回滚：无 Dockerfile / compose / env / 锁文件变化，无迁移；回滚只需换回 `0.1.0-beta.154`。
+- 版本 `0.1.0-beta.155`；PR #791（只改根 `package.json`，rebase 合并 `5392f77d`，main CI 绿）。
+- tag `v0.1.0-beta.155` @ `5392f77d`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.155`（linux/amd64 + linux/arm64）。
+- 回滚 `0.1.0-beta.154`，无需数据库操作；回滚后验收脚本需退回只看 `deliveriesCreated` 的旧口径。
+
+### 下一轮优先项
+
+1. **REQ-372（28）**、**REQ-373（28）**、**REQ-374（27）**：第 190/191 轮遗留高价值候选。
+2. requirements 车道重跑（本轮超时未返回）。
+3. UI 评审：2026-11-01 17:45 CST 后首个轮次做整页巡检（UI-123/124/126 与告警组徽标）。
+4. ARCH-55（AUTO_FIX）、ARCH-82/83。
+5. 车道轮转：下一个非必跑车道 **quality**。
+
 ## 2026-10-30（第 191 轮）
 
 - 时间：2026-10-30 19:28 CST 起（定时触发；并发锁获取于 19:28）。中途会话暂停约 2 小时，
