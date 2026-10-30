@@ -15,7 +15,7 @@
 
 ## 一句话结论
 
-**部分能。** Tocsin 已经在**接入时刻**为每条 route 落盘了完整、逐条件的匹配证据（`events.route_matches_json`，含 `matched` 与 `checks`），并在 Event detail 以「路由匹配」页签展示。「命中却没投递」也已有解释通道（2026-10-19 第 17 轮交付）：`route-match-gaps.ts` 按 route × destination 给出 `route_deleted` / `route_disabled` / `destination_missing` / `destination_disabled` / `duplicate_within_window` / `unknown`，`event-detail-route-gaps.tsx` 在详情页渲染。仍未满足的是：证据文案**英文硬编码、不含实际值**，以及 `routeMatches` 为 `null` 时被**当前规则静默重算**、UI 不区分「接入快照」与「现状重算」。
+**部分能。** Tocsin 已经在**接入时刻**为每条 route 落盘了完整、逐条件的匹配证据（`events.route_matches_json`，含 `matched` 与 `checks`），并在 Event detail 以「路由匹配」页签展示。「命中却没投递」也已有解释通道（2026-10-19 第 17 轮交付）：`route-match-gaps.ts` 按 route × destination 给出 `route_deleted` / `route_disabled` / `destination_missing` / `destination_disabled` / `duplicate_within_window` / `unknown`，`event-detail-route-gaps.tsx` 在详情页渲染。该轮之后又补齐了两处：逐条件证据由 `apps/console/src/features/routes/ui/route-match-check-badges.tsx` 按 `condition` / `expected` / `actual` 渲染为中文并显示事件里的实际值（无结构化字段的历史快照回退到原始英文 `detail`）；`routeMatches` 为 `null` 被当前规则回填时带 `routeMatchesProvenance` 标注，UI 明确区分「接入快照」与「现状重算」（`event-detail-route-matches-table.tsx:47`）。
 
 ---
 
@@ -92,24 +92,23 @@
 - **写入时机**：接入时写 `routes.map(evaluateRouteMatch)`（**含未命中 route**），见 `intake.service.ts:89-94` → `tx.intake.recordEvent({ routeMatches })`；仓储 `intake.repository.ts:55` 编码，`intake.helpers.ts:27` 解码。
 - **读取与回显**：`history.repository.ts:122` `getEventDetail` 返回 `routeMatches`；UI 在 `apps/console/src/features/events/ui/event-detail-view.tsx`「路由匹配」页签 → `event-detail-route-matches-table.tsx`（route 名 / 命中·未命中 Badge / 目标数 / 逐 check Badge）。
 - **快照语义已被测试钉死**：`intake.service.test.ts:105`「preserves route match explanations from intake time」——改规则后历史 event 仍显示接入时的 `routeName` 与 `checks`。
-- **列表页有计数**：`EventListItem.routeMatchCount`（`packages/core/src/operations.ts:40`）由 `countMatchedRoutes`（`history.repository.ts:276`）从 JSON 解出；无命中且无投递时显示「未匹配路由」徽标（`event-delivery-counts-cell.tsx:17-24`，i18n `events.table.unmatchedRoutes`）。
+- **列表页有计数**：`EventListItem.routeMatchCount`（`packages/core/src/operations.ts:176`）由 `countMatchedRoutes`（`history.repository.ts:832`）从 JSON 解出；无命中且无投递时显示「未匹配路由」徽标（`event-delivery-counts-cell.tsx:17-24`，i18n `events.table.unmatchedRoutes`）。
 
 结论：**「匹配了哪条规则、每条规则的哪个条件过没过」——能答，且是接入时刻的不可篡改快照。**
 
 ### 4.2 缺口（按严重度）
 
-1. **`checks.detail` 是英文硬编码，且大部分不含「实际值」。**
-   - 文案在 core 里拼接，如 `route.ts:137` `` `Expected one of ${…}, received ${actualSourceId}` ``、`route.ts:179` `` `Expected label ${key} ${operator} ${value}` ``、`route.ts:201` `` `Expected ${field} to contain ${needle}` ``。
-   - `label` / `title` / `message` 三类**只输出期望值，不输出事件里的实际值**——用户必须自己切到 Normalized 页签对照。
-   - UI 直接渲染原始字符串：`event-detail-route-matches-table.tsx` 的 `RouteCheckBadge` `{check.detail}`。中文化只覆盖到 `field` 标签（i18n `events.detail.routeCheckFields.*`），**detail 正文仍是英文**。
+1. **`checks.detail` 的英文硬编码已由结构化字段与中文化渲染替代（已交付）。**
+   - core 仍会在 `detail` 里拼接英文文案（如 `route.ts:137`、`route.ts:179`、`route.ts:201`），但同时输出结构化的 `condition` / `expected` / `actual`；UI 优先按结构化字段渲染（`route-match-check-badges.tsx` 的 `describeRouteCheck`），`label` / `title` / `message` 都会显示事件里的实际值。
+   - 仍存限制：`condition` 字段出现之前写入的历史快照没有结构化数据，只能回退渲染原始英文 `detail`；快照不可改写，因此这类旧事件无法补齐实际值。
 
 2. **「命中却没投递」的解释通道已交付（2026-10-19 第 17 轮）。** `route-match-gaps.ts` 以接入快照为基准，对每个 route × destination 判定 `route_deleted` / `route_disabled` / `destination_missing` / `destination_disabled` / `duplicate_within_window` / `unknown`，并由 `event-detail-route-gaps.tsx` 渲染。仍存限制：`duplicate_within_window` 依赖仍在窗口内的 dedupe 行，窗口被清理后退化为 `unknown`；`AcceptedWebhook` 的 `dedupedDeliveryCount` / `skippedExisting` 计数仍不落库（`delivery.repository.ts:81-107`、`intake.service.types.ts:26`）。
 
-3. **`routeMatches` 为 `null` 时被当前规则静默重算，UI 不区分。** `history.repository.ts:131-137`：
+3. **`routeMatches` 为 `null` 时被当前规则回填（已加来源标注，不再静默）。** `history.repository.ts:131-137`：
    ```
    const routeMatches = event.routeMatches ?? (await this.routes.list()).map(route => evaluateRouteMatch(route, …))
    ```
-   即历史存在两类 event：接入时写了快照的（绝大多数 webhook 事件），和 `null` 需回填的——`intake.service.ts:194` 的 **parser 失败审计事件显式写 `routeMatches: []`**（不是 null），而通过 `recordEvent` 直写的事件（如 `event-replay.service.test.ts:51` 的构造）为 `null`。两类在 UI 上**外观一致**，用户无法判断眼前是「当时真相」还是「现在的规则算出来的」。
+   即历史存在两类 event：接入时写了快照的（绝大多数 webhook 事件），和 `null` 需回填的——`intake.service.ts:194` 的 **parser 失败审计事件显式写 `routeMatches: []`**（不是 null），而通过 `recordEvent` 直写的事件（如 `event-replay.service.test.ts:51` 的构造）为 `null`。两类在 UI 上通过 `routeMatchesProvenance` 区分：快照显示「接入快照」，回填结果显示「现状重算」（`event-detail-route-matches-table.tsx:47`），用户能判断眼前是「当时真相」还是「现在的规则算出来的」。
 
 4. **route 事后禁用会让快照与行为分叉。** 快照永久保留 `matched: true`（测试钉死），但 `claimNext`（`delivery.repository.ts:192`）会因 `routes.enabled = 0` 永不认领。用户看到「命中」却永远等不到投递，且无任何 UI 提示「该 route 已禁用」。
 
@@ -195,13 +194,13 @@
    `enqueueForEvent` 的 `skipExisting` 仍只回传计数、不落库（`delivery.repository.ts:81-107`；`AcceptedWebhook` 非持久化）；去重证据已持久化在 `delivery_dedupe_keys`（`schema.ts:164-185`、`delivery.repository.ts:95,109`），但 Event detail 仍无对应证据位。
 
 2. **「label 没匹配上——事件里 `service` 到底是什么值？」**
-   `evaluateLabels`（`route.ts:172-181`）的 detail 只含期望值；UI 原样渲染英文 detail（`event-detail-route-matches-table.tsx` `RouteCheckBadge`）。
+   已能回答：`evaluateLabels` 同时输出 `expected` 与事件里的 `actual`，`route-match-check-badges.tsx` 渲染为「label key 期望值 / 实际值」；只有缺少结构化字段的历史快照回退英文 `detail`。
 
 3. **「title/message 为什么没命中？我的标题实际长什么样？」**
-   同 2，`evaluateContainsAll`（`route.ts:194-202`）不输出 haystack。
+   已能回答：`evaluateContainsAll` 输出 `actual`，UI 显示命中片段与事件实际值，无需再切到 Normalized 页签。
 
 4. **「我现在看到的匹配结果是接入当时的，还是按现在的规则重算的？」**
-   `history.repository.ts:131-137` 的 `??` 回填让 `null` 事件静默变成「当前规则」结果，UI 无任何标记；`intake.service.ts:194` 的 `[]` 与 `null` 在外观上也不同语义却同样无标记。
+   已能回答：`history.repository.ts:131-137` 的 `??` 回填仍会发生，但结果带 `routeMatchesProvenance`，UI 在表格上方明确显示「接入快照」或「现状重算」。
 
 5. **「这条 route 显示命中，为什么永远不会投递？」**
    快照永久 `matched: true`，但 `claimNext` 的 `routes.enabled = 1` 条件（`delivery.repository.ts:192`）会永久挡住。

@@ -16,7 +16,7 @@ Events 列表的 `EventDeliveryCountsCell` 只是不可点击的徽标
 字段做 LIKE 模糊匹配（`apps/console/src/infra/sqlite/repositories/history/history.repository.ts`
 的 `deliverySearchPredicate`），既慢又不精确：同一个 ID 子串可能命中别的行，也无法与投递状态组合。
 
-投递列表本身没有 `eventId` 维度（`history.interface.ts` 的 `DeliveryListQuery`、
+本切片之前，投递列表本身没有 `eventId` 维度（`history.interface.ts` 的 `DeliveryListQuery`、
 `packages/api/src/schemas/operations.ts` 的 `ListOperationsInputSchema`），所以「这条告警到底发给了
 谁、哪几条失败」在运维视角下缺少一条直接路径。
 
