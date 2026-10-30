@@ -58,8 +58,15 @@
 ### 工作树清理
 
 - 删除并发锁与 `agent-iteration` 专用工作树；删除本会话工作树的 `node_modules`、
-  `apps/console/node_modules` 与 `.output` 等构建产物（见下一条记录的实际结果）。
-- 已合并的本地分支 `agent/delivery-status-class-filter`、`chore/release-0.1.0-beta.146` 删除。
+  `apps/console` 与各 package 的 `node_modules`、`.output`、`.vite`、`coverage` 等构建产物。
+- 回收 1 个已注册且工作区干净的会话工作树（`elated-ishizaka-884bd7`，PR #748 已合并）；
+  跳过 `youthful-murdock-b65fc6`（仍有 18 个文件的真实未提交改动）与 docs-site routine
+  可能仍在使用的 `docs-site-20261030-105655`。
+- `.claude/worktrees` 占用从 **2.1G 降到 1.4G**（剩余为上述两个保留工作树）；注册工作树剩主
+  checkout、2 个仓库外 docs-site 工作树、`docs-site-20261030-105655`、`youthful-murdock-b65fc6`
+  与本会话。
+- 已合并的本地分支 `agent/delivery-status-class-filter`、`chore/release-0.1.0-beta.146` 删除；
+  `docs/planning-round-182` 在本 PR 合并后删除。
 
 ### 下一轮优先项
 
