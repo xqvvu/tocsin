@@ -4,6 +4,7 @@ import type {
   EventFingerprintFieldChange,
   EventFingerprintLabelChange,
   EventFingerprintOccurrence,
+  JsonObject,
   NormalizedEvent,
 } from "@tocsin/core";
 import {
@@ -11,6 +12,7 @@ import {
   EVENT_FINGERPRINT_CHANGE_FIELDS,
   LabelsSchema,
   parseFailureMetadataFrom,
+  readProviderAlertCount,
   redactNormalizedEvent,
 } from "@tocsin/core";
 
@@ -79,6 +81,25 @@ export function eventDetailDeliveryFromRow(
  */
 export function isParseFailureRow(providerMetadataJson: string): boolean {
   return parseFailureMetadataFrom(decodeJsonTolerantly(providerMetadataJson)) !== null;
+}
+
+/**
+ * The upstream alert-group size recorded in provider metadata, or `null`.
+ *
+ * Alertmanager-compatible providers send one notification per alert group and
+ * Tocsin normalizes only its first alert, so the list needs the group size to
+ * avoid showing a twenty-alert outage as a single ordinary event. A corrupt or
+ * non-object blob reads as "no count" for the same reason `isParseFailureRow`
+ * tolerates it: one damaged row must not fail the whole list.
+ */
+export function alertCountFrom(providerMetadataJson: string): number | null {
+  const metadata = decodeJsonTolerantly(providerMetadataJson);
+
+  if (metadata === null || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  return readProviderAlertCount(metadata as JsonObject) ?? null;
 }
 
 function decodeJsonTolerantly(value: string): unknown {

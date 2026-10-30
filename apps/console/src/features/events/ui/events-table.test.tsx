@@ -185,6 +185,7 @@ function eventFixture(id: string): Operations["events"]["items"][number] {
     receivedAt: "2026-06-06T00:00:00.000Z",
     routeMatchCount: 1,
     parseFailed: false,
+    alertCount: null,
     deliveryCounts: {
       pending: 0,
       running: 0,
