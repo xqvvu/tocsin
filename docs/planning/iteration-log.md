@@ -58,6 +58,24 @@
 
 本轮无 EXPERT_PANEL 事项（无 schema/投递/路由/auth/secret 语义变化）。
 
+### 发布
+
+- 三位只读发布评审一致同意：发布经理确认区间唯一用户可见变更为 #770；阻断审计确认
+  `origin/main` @ `2746ec9e` 的 CI 与 E2E 均 success、区间无 migration/Dockerfile/env/依赖变化、
+  无高优 `blocked-autonomous`；运维回滚专家确认无需数据库操作、换回旧镜像即可。
+- 合并 docs-only PR #765（文档站，CI 双绿、MERGEABLE/CLEAN）以解除「无 open PR」阻断。
+- 版本 `0.1.0-beta.150`；PR #771 只改根 `package.json`（rebase 合并 `2746ec9e`）。
+- tag `v0.1.0-beta.150` @ `2746ec9e`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.150`
+  （linux/amd64 + linux/arm64，index digest `sha256:073236b3400012faa4a0fbcb0d2a6d8d3960c56797e06ab82857767c93bd2949`）；
+  回滚 `0.1.0-beta.149`。
+- 补建检查：最近 10 个 tag 均有对应 release。
+- 文档同步：本会话没有可用的 `obsidian-vault` skill，Obsidian 同步已跳过。
+- 工作树清理：回收 `practical-haibt-f78782`（PR #766 已合并、工作区干净）；
+  `docs-site-20261030-135720` 已不存在；跳过 `youthful-murdock-b65fc6`（18 个未提交改动，
+  留给后续轮次）；`.claude/worktrees` 现有 3 个目录 / 2.1G，本会话工作树的 `node_modules`
+  与 `agent-iteration` 工作树在收尾时删除。
+
 ### 下一轮优先项
 
 1. **release-infra AUTO_FIX**：`docs/contributing/provider-adapter.md` + README/checklist 链接。
