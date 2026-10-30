@@ -61,12 +61,13 @@ Token 与共享密钥不必同时提供。未配置额外共享密钥时，`X-To
 {
   "accepted": true,
   "eventId": "event-...",
+  "routesMatched": 1,
   "deliveriesCreated": 1,
   "deliveriesDeduped": 0
 }
 ```
 
-`202` 只代表接入成功。Route 未命中、Destination 发送失败或 Delivery 被抑制时，该响应仍然可能是 `202`。
+`202` 只代表接入成功。`routesMatched` 是本次命中的启用路由数：它为 `0` 表示事件没有命中任何启用路由，与投递失败无关；它大于 `0` 而两个投递计数都为 `0`，说明命中的路由没有选择通知目标。Route 未命中、Destination 发送失败或 Delivery 被抑制时，该响应仍然可能是 `202`。
 
 ## 通用字段规范化
 

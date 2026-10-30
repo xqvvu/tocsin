@@ -67,6 +67,10 @@ export async function handleSourceWebhookPost(input: {
       {
         accepted: true,
         eventId: result.eventId,
+        // Splits the "no delivery" case for the operator: zero matches means the
+        // event did not reach any enabled Route, while a positive count with
+        // zero deliveries points at the Route's target list or the dedupe window.
+        routesMatched: result.matchedRoutes.length,
         deliveriesCreated: result.createdDeliveryIds.length,
         deliveriesDeduped: result.dedupedDeliveryCount,
       },
