@@ -2,6 +2,68 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 187 轮）
+
+- 时间：2026-10-30 15:26 CST 起（定时触发；并发锁获取于 15:27）。
+- 基线：`origin/main` @ `442233fd`；启动时 main CI 绿，open PR 仅 docs-site #765。
+- 类型：**实施轮（不展开全量审计）+ 1 个需求切片（REQ-364）**。
+- **全量审计时间戳保持 2026-10-30 10:12 CST（第 181 轮）**：本轮距上次全量审计约 5h15m，
+  按第 1.5 步配额闸门不重复展开；backlog 有多个 27/28 分 `candidate`，续做 REQ-364。
+- 车道轮转位置：`requirements` 与 **release-infra**（顺延两轮）本轮执行；下一个非必跑车道为
+  **architecture**。
+- `ui-triage`：**defer**（内联判定，未 spawn）。`last_ui_review_at` = 2026-10-29 21:30 CST
+  （约 18h，未达 48h）；本轮只新增一个筛选下拉与 chip，复用既有 `Select` 模式，已有组件级
+  DOM 用例，不构成全量 UI 评审触发条件。
+- `last_ui_review_at`：保持 **2026-10-29 21:30 CST**。
+- 工作树：写入隔离拦截了 `agent-iteration`，实现改在本会话工作树 `zen-roentgen-96636c`；
+  `agent-iteration` 仅用于并发锁与基线读取。
+
+### 需求车道发现（只读 subagent，已写入 backlog）
+
+- **REQ-366（27）**：补投改为按「路由 × 目标」选择性重放。证据
+  `server/operations/event-replay.service.ts:56-78`、`features/events/ui/event-replay-action.tsx:197-214`。
+- **REQ-367（26）**：告警源列表显示「最近一次解析失败」并可下钻。证据
+  `packages/core/src/source/source.ts:12-17`、`features/sources/ui/sources-section.tsx:47-72`、
+  `server/intake/intake.service.ts:192-230`。
+
+### release-infra 车道发现（只读 subagent）
+
+- `packages/providers` 确无 fixture 目录，payload 全内联（`signoz/index.test.ts:17` 等六个文件）。
+- RC checklist 全文仅 4 项未勾（`mvp-rc-checklist.md:132,186,188,189`）。
+  **更正**：E2E workflow 已存在（`.github/workflows/e2e.yml:4,7,54`），`Justfile:80` 有 `just e2e`，
+  `apps/console/e2e/alert-flow.spec.ts:28` 覆盖 Route + Delivery；checklist:132 的「E2E 覆盖」
+  只有「历史过滤 + 失败 retry」仍缺，此前「没有 E2E workflow」的断言已过时。
+- `docs/contributing/` 只有 destination 指南，provider contributor guide 缺失。
+- 下一轮 AUTO_FIX 首选：新增 `docs/contributing/provider-adapter.md` + README/checklist 链接。
+
+### 本轮交付
+
+- PR（REQ-364，`feat(operations): filter deliveries by whether the target responded`）
+  - `@tocsin/core` 新增 `DeliveryAttemptResponseSchema`（`received` / `missing`）；
+    `@tocsin/api` 契约与 service 类型透传 `lastAttemptResponse`。
+  - 仓储新增 `deliveryLastAttemptResponsePredicate`，`listDeliveries` 与 `countDeliveries` 共用：
+    最新已完成尝试有 `response_status` → `received`，无 → `missing`；运行中尝试不遮蔽上一条；
+    零完成尝试两者都不匹配。
+  - 控制台：URL 参数、投递页下拉（位于「最近一次响应状态」之前）、chip、内联/页面级重置、
+    中英文案；PRD `docs/prd/delivery-last-attempt-response-filter.md`。
+  - 测试：仓储 5 例（含先成功后超时、先超时后恢复、运行中、零尝试、与状态组合）、
+    service 2 例、URL 3 例、筛选面板 2 例；console 243 文件 / 1464 用例。
+  - 验证：`vp fmt --write`；`vp check` 0 error（35 warning，与基线一致）；
+    `vp run -r test` 4/4；`vp run -r build` 2/2。
+  - 未做浏览器实测：本机无运行中的 Tocsin console dev server；改动为只读筛选，
+    谓词与 URL 行为由用例覆盖。
+
+### EXPERT_PANEL
+
+本轮无 EXPERT_PANEL 事项（无 schema/投递/路由/auth/secret 语义变化）。
+
+### 下一轮优先项
+
+1. **release-infra AUTO_FIX**：`docs/contributing/provider-adapter.md` + README/checklist 链接。
+2. **REQ-363**（28）：事件列表按投递覆盖（全部/部分/无人收到）筛选。
+3. **REQ-366 / REQ-367**（27/26）：选择性补投、按源解析失败归因。
+4. **Q-303**（25）：`deliveries.suppression_id` 索引迁移，先交 EXPERT_PANEL。
+
 ## 2026-10-30（第 186 轮）
 
 - 时间：2026-10-30 14:27 CST 起（定时触发；并发锁获取于 14:27）。

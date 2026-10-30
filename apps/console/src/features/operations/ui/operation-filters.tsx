@@ -718,6 +718,52 @@ function OperationFiltersPanel({
       ) : null}
       {scope === "deliveries" ? (
         <UiField>
+          <FieldLabel htmlFor="operation-last-attempt-response">
+            {t("operations.filters.lastAttemptResponse")}
+          </FieldLabel>
+          <Select
+            id="operation-last-attempt-response"
+            items={[
+              { value: null, label: t("operations.filters.anyLastAttemptResponse") },
+              {
+                value: "received",
+                label: t("operations.filters.lastAttemptResponseOptions.received"),
+              },
+              {
+                value: "missing",
+                label: t("operations.filters.lastAttemptResponseOptions.missing"),
+              },
+            ]}
+            value={search.lastAttemptResponse || null}
+            disabled={pending}
+            onValueChange={(value) =>
+              onChange({
+                lastAttemptResponse: (value ??
+                  "") as DashboardOperationSearch["lastAttemptResponse"],
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("operations.filters.anyLastAttemptResponse")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value={null}>
+                  {t("operations.filters.anyLastAttemptResponse")}
+                </SelectItem>
+                <SelectItem value="received">
+                  {t("operations.filters.lastAttemptResponseOptions.received")}
+                </SelectItem>
+                <SelectItem value="missing">
+                  {t("operations.filters.lastAttemptResponseOptions.missing")}
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </UiField>
+      ) : null}
+      {scope === "deliveries" ? (
+        <UiField>
           <FieldLabel htmlFor="operation-last-attempt-status-class">
             {t("operations.filters.lastAttemptStatusClass")}
           </FieldLabel>
@@ -966,6 +1012,15 @@ function activeFilterChips(
       label: t("operations.filters.minAttempts"),
       valueLabel: t("operations.filters.minAttemptsAtLeast", { count: search.minAttempts }),
       clear: { minAttempts: 0 },
+    });
+  }
+
+  if (scope === "deliveries" && search.lastAttemptResponse) {
+    chips.push({
+      key: "lastAttemptResponse",
+      label: t("operations.filters.lastAttemptResponse"),
+      valueLabel: t(`operations.filters.lastAttemptResponseOptions.${search.lastAttemptResponse}`),
+      clear: { lastAttemptResponse: "" },
     });
   }
 

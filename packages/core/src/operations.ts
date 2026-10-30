@@ -114,6 +114,26 @@ export const DeliveryAttemptStatusClassSchema = z.enum(["4xx", "5xx"]);
 export type DeliveryAttemptStatusClass = z.infer<typeof DeliveryAttemptStatusClassSchema>;
 
 /**
+ * Narrows the deliveries list by whether the latest completed attempt received
+ * an HTTP response at all.
+ *
+ * `received` means the target answered with a status code, whatever its class;
+ * `missing` means the attempt ended without one — a timeout, a DNS failure, or
+ * a TLS rejection. The status-class filter can only describe attempts the
+ * target answered, so "the endpoint never responded" was previously readable
+ * only in the free-text `last_error`. That is the first question in a
+ * connectivity incident: is the target unreachable, or is it rejecting us?
+ *
+ * Only the latest completed attempt counts, so a retry that replaces a timeout
+ * with a 200 moves the job out of `missing`. A delivery with no completed
+ * attempt (still queued, running its first attempt, or silenced) matches
+ * neither value, mirroring the status classes.
+ */
+export const DeliveryAttemptResponseSchema = z.enum(["received", "missing"]);
+
+export type DeliveryAttemptResponse = z.infer<typeof DeliveryAttemptResponseSchema>;
+
+/**
  * Which delivery timestamp the time window and the list order use.
  *
  * `created` is when the job was enqueued; `updated` is the last activity — a

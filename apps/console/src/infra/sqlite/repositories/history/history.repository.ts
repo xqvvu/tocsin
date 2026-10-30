@@ -1,6 +1,7 @@
 import { sql } from "kysely";
 
 import type {
+  DeliveryAttemptResponse,
   DeliveryAttemptStatusClass,
   DeliveryListItem,
   DeliveryReceiptFilter,
@@ -469,6 +470,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       );
     }
 
+    if (query.lastAttemptResponse) {
+      builder = builder.where(deliveryLastAttemptResponsePredicate(query.lastAttemptResponse));
+    }
+
     if (query.since) {
       builder = builder.where(timeColumn, ">=", query.since);
     }
@@ -864,6 +869,10 @@ export class SqliteHistoryRepository implements HistoryRepository {
       );
     }
 
+    if (query.lastAttemptResponse) {
+      builder = builder.where(deliveryLastAttemptResponsePredicate(query.lastAttemptResponse));
+    }
+
     if (query.since) {
       builder = builder.where(timeColumn, ">=", query.since);
     }
@@ -1197,6 +1206,38 @@ function deliveryLastAttemptStatusClassPredicate(statusClass: DeliveryAttemptSta
     WHERE filtered_attempts.delivery_id = deliveries.id
       AND filtered_attempts.state != 'running'
       AND filtered_attempts.response_status BETWEEN ${lower} AND ${upper}
+      AND NOT EXISTS (
+        SELECT 1 FROM delivery_attempts AS newer_attempts
+        WHERE newer_attempts.delivery_id = filtered_attempts.delivery_id
+          AND newer_attempts.state != 'running'
+          AND newer_attempts.attempt_number > filtered_attempts.attempt_number
+      )
+  )`;
+}
+
+/**
+ * Restricts deliveries by whether the latest completed attempt got an HTTP
+ * response at all.
+ *
+ * "Latest" follows the status-class predicate: the highest `attempt_number`
+ * among attempts that are no longer running, so a later retry replaces an
+ * earlier outcome instead of widening the match. `missing` is the half the
+ * status classes cannot show — a timeout, DNS failure, or TLS rejection ends
+ * the attempt with no `response_status`, and until now only the free-text
+ * error recorded it. A delivery with no completed attempt has no latest
+ * attempt and matches neither value.
+ */
+function deliveryLastAttemptResponsePredicate(response: DeliveryAttemptResponse) {
+  const statusClause =
+    response === "received"
+      ? sql`AND filtered_attempts.response_status IS NOT NULL`
+      : sql`AND filtered_attempts.response_status IS NULL`;
+
+  return sql<boolean>`EXISTS (
+    SELECT 1 FROM delivery_attempts AS filtered_attempts
+    WHERE filtered_attempts.delivery_id = deliveries.id
+      AND filtered_attempts.state != 'running'
+      ${statusClause}
       AND NOT EXISTS (
         SELECT 1 FROM delivery_attempts AS newer_attempts
         WHERE newer_attempts.delivery_id = filtered_attempts.delivery_id

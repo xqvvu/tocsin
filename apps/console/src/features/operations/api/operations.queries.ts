@@ -250,6 +250,9 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.lastAttemptStatusClass
       ? { lastAttemptStatusClass: filters.lastAttemptStatusClass }
       : {}),
+    // Leaving this out would drop the filter from the request and the query
+    // key, so the list would look unfiltered while the chip claimed otherwise.
+    ...(filters.lastAttemptResponse ? { lastAttemptResponse: filters.lastAttemptResponse } : {}),
     ...(filters.range ? { range: filters.range } : {}),
     // `created` is the server default; only a non-default basis needs to be
     // sent (and keyed), otherwise every default request differs from the rest.

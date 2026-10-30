@@ -312,6 +312,44 @@ describe("latest-attempt status class in the operation search", () => {
   });
 });
 
+describe("latest-attempt response in the operation search", () => {
+  it("accepts both responses and drops an unknown one", () => {
+    for (const response of ["received", "missing"]) {
+      expect(
+        DashboardOperationSearchSchema.parse({ lastAttemptResponse: response }).lastAttemptResponse,
+      ).toBe(response);
+    }
+
+    // The URL is user-editable, so an unknown value means "any" instead of an
+    // error or an unvalidated string reaching the server.
+    expect(
+      DashboardOperationSearchSchema.parse({ lastAttemptResponse: "timeout" }).lastAttemptResponse,
+    ).toBe("");
+  });
+
+  it("counts as an active filter and sends the value to the contract", () => {
+    expect(hasOperationFilters({ lastAttemptResponse: "missing" })).toBe(true);
+    expect(hasOperationFilters({ lastAttemptResponse: "" })).toBe(false);
+    expect(
+      operationFiltersFromSearch({ lastAttemptResponse: "received" }).lastAttemptResponse,
+    ).toBe("received");
+    expect(
+      operationFiltersFromSearch({ lastAttemptResponse: "" }).lastAttemptResponse,
+    ).toBeUndefined();
+  });
+
+  it("resets both lists to the first page when the response changes", () => {
+    const merged = mergeOperationSearch(
+      { eventPage: 4, deliveryPage: 3 },
+      { lastAttemptResponse: "missing" },
+    );
+
+    expect(merged.lastAttemptResponse).toBe("missing");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+});
+
 describe("time range in the operation search", () => {
   it("accepts every supported window and rejects an unknown one", () => {
     // The URL is user-editable; an unknown window must fall back to "all time"
@@ -580,6 +618,7 @@ describe("clearing the operation search", () => {
       "destinationOutcome",
       "eventId",
       "fingerprint",
+      "lastAttemptResponse",
       "lastAttemptStatusClass",
       "minAttempts",
       "parseFailed",

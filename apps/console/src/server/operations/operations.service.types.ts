@@ -1,4 +1,5 @@
 import type {
+  DeliveryAttemptResponse,
   DeliveryAttemptStatusClass,
   DeliveryListItem,
   DeliveryReceiptFilter,
@@ -66,6 +67,12 @@ export interface ListOperationsInput {
    * Separates a misconfigured target (4xx) from an unhealthy one (5xx).
    */
   lastAttemptStatusClass?: DeliveryAttemptStatusClass;
+  /**
+   * Delivery-only: whether the latest completed attempt got an HTTP response.
+   * The complement of the status class: `missing` is the timeout, DNS, and
+   * TLS case that has no status to classify.
+   */
+  lastAttemptResponse?: DeliveryAttemptResponse;
   range?: OperationTimeRange;
   /** Instant the window was opened; without it the window follows the clock. */
   rangeAnchor?: string;

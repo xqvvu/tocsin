@@ -1,6 +1,7 @@
 import {
   AlertSeveritySchema,
   AlertStatusSchema,
+  DeliveryAttemptResponseSchema,
   DeliveryAttemptStatusClassSchema,
   DeliveryJobSchema,
   DeliveryReceiptFilterSchema,
@@ -377,6 +378,12 @@ export const ListOperationsInputSchema = z
      * that never received a response.
      */
     lastAttemptStatusClass: DeliveryAttemptStatusClassSchema.optional(),
+    /**
+     * Delivery-only: whether the latest completed attempt received an HTTP
+     * response. Complements the status class, which can only describe attempts
+     * the target answered; `missing` is the timeout, DNS, and TLS case.
+     */
+    lastAttemptResponse: DeliveryAttemptResponseSchema.optional(),
     /** Relative window resolved against the server's request time. */
     range: OperationTimeRangeSchema.optional(),
     /**

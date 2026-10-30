@@ -88,6 +88,9 @@ export class OperationsService {
         state: input.deliveryState,
         minAttempts: input.minAttempts,
         lastAttemptStatusClass: input.lastAttemptStatusClass,
+        // The companion question: did the target answer at all? Without it a
+        // timeout is only visible in the row's free-text error.
+        lastAttemptResponse: input.lastAttemptResponse,
         timeField: input.timeField,
         q: input.q,
         since,
