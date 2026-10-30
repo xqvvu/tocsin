@@ -16,6 +16,7 @@ import { useOperationMutations } from "#/features/operations/api/operation.mutat
 import { operationsQueryOptions } from "#/features/operations/api/operations.queries";
 import {
   clearedOperationSearch,
+  crossListOperationSearch,
   hasOperationFilters,
   type DashboardOperationSearch,
   type OperationFilterData,
@@ -57,6 +58,10 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
   const { data: settings } = useSuspenseQuery(appSettingsQueryOptions());
   const operationConfiguration = { sources, destinations, routes };
   const hasActiveFilters = hasOperationFilters(search);
+  // The cross-list action is only useful when at least one shared filter
+  // survives; otherwise it duplicates the sidebar link under a misleading label.
+  const crossListSearch = crossListOperationSearch(search);
+  const canViewEvents = hasOperationFilters(crossListSearch);
   const { invalidateOperations, retryDelivery, runDeliveryWorker } = useOperationMutations();
   const [pendingAction, setPendingAction] = React.useState<string | null>(null);
   const pending = pendingAction !== null;
@@ -104,6 +109,9 @@ export function DeliveriesPage({ search, filters, onSearchChange }: DeliveriesPa
               })
             }
             onResetFilters={resetFilters}
+            onViewEvents={
+              canViewEvents ? () => void navigate({ to: "/events", search: crossListSearch }) : null
+            }
           />
           <OperationFilters
             configuration={operationConfiguration}

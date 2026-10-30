@@ -1,4 +1,4 @@
-import { RiFilterOffLine, RiPlayLine } from "@remixicon/react";
+import { RiArrowLeftRightLine, RiFilterOffLine, RiPlayLine } from "@remixicon/react";
 import * as React from "react";
 
 import { PageToolbar } from "#/components/common/page-toolbar";
@@ -10,11 +10,17 @@ export function DeliveriesPageToolbar({
   paused,
   onRunWorker,
   onResetFilters,
+  onViewEvents,
 }: {
   pending: boolean;
   paused: boolean;
   onRunWorker: () => void;
   onResetFilters: () => void;
+  /**
+   * Opens the events list with the filters both lists share. `null` hides the
+   * action when there is nothing shared to carry.
+   */
+  onViewEvents?: (() => void) | null;
 }) {
   const t = useTranslations();
   // A native `title` never reaches touch users and is announced unreliably, so
@@ -28,6 +34,18 @@ export function DeliveriesPageToolbar({
       actions={
         <div className="flex flex-col items-start gap-1 sm:items-end">
           <div className="flex flex-wrap items-center gap-2">
+            {onViewEvents ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onViewEvents}
+                title={t("deliveries.page.viewMatchingEventsTitle")}
+              >
+                <RiArrowLeftRightLine data-icon="inline-start" aria-hidden />
+                {t("deliveries.page.viewMatchingEvents")}
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"

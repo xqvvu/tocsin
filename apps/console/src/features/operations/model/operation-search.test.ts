@@ -4,6 +4,7 @@ import { EVENT_FINGERPRINT_FILTER_MAX_LENGTH, OPERATION_SEARCH_MAX_LENGTH } from
 
 import {
   clearedOperationSearch,
+  crossListOperationSearch,
   DashboardOperationSearchSchema,
   hasOperationFilters,
   mergeOperationSearch,
@@ -768,5 +769,79 @@ describe("multi-value filters in the operation search", () => {
     expect(clearedOperationSearch.severity).toBe("");
     expect(clearedOperationSearch.status).toBe("");
     expect(clearedOperationSearch.deliveryState).toBe("");
+  });
+});
+
+describe("cross-list switch in the operation search", () => {
+  it("carries the alert identity, search term, and time window", () => {
+    const carried = crossListOperationSearch({
+      sourceId: "source-1",
+      severity: "critical,warning",
+      status: "firing",
+      q: "disk usage",
+      fingerprint: "grafana:disk:api",
+      range: "1h",
+      rangeAnchor: "2026-10-30T04:00:00.000Z",
+    });
+
+    // These filters mean the same thing on both lists, so the switch keeps
+    // them; anything else would silently change the result set.
+    expect(carried).toEqual({
+      sourceId: "source-1",
+      severity: "critical,warning",
+      status: "firing",
+      q: "disk usage",
+      fingerprint: "grafana:disk:api",
+      range: "1h",
+      rangeAnchor: "2026-10-30T04:00:00.000Z",
+    });
+  });
+
+  it("drops page-specific filters and both page counters", () => {
+    const carried = crossListOperationSearch({
+      sourceId: "source-1",
+      deliveryOutcome: "failed",
+      parseFailed: "true",
+      destinationId: "destination-1",
+      destinationMatch: "missing",
+      destinationOutcome: "failed",
+      destinationKind: "feishu",
+      routeId: "route-1",
+      eventId: "event-1",
+      receipt: "present",
+      deliveryState: "failed",
+      minAttempts: 2,
+      lastAttemptStatusClass: "5xx",
+      timeField: "updated",
+      eventPage: 4,
+      deliveryPage: 3,
+    });
+
+    // The other list does not render these controls, and its page counters
+    // describe a different result set, so only the shared source survives.
+    expect(carried).toEqual({ sourceId: "source-1" });
+  });
+
+  it("drops an anchor that has no window to describe", () => {
+    // An anchor is the frozen lower bound of one window. Carrying it without
+    // the window would attach a stale instant to whatever the reader picks
+    // next on the other page.
+    expect(
+      crossListOperationSearch({ rangeAnchor: "2026-10-30T04:00:00.000Z" }).rangeAnchor,
+    ).toBeUndefined();
+  });
+
+  it("returns an empty search when there is nothing shared to carry", () => {
+    expect(crossListOperationSearch({ routeId: "route-1", deliveryPage: 2 })).toEqual({});
+  });
+
+  it("treats a whitespace-only query as nothing to carry", () => {
+    // The URL keeps the operator's in-progress spacing, so the text survives
+    // the switch; it must not make the cross-list action claim there is a
+    // condition when the server filter would ignore it.
+    const carried = crossListOperationSearch({ q: "   " });
+
+    expect(carried.q).toBe("   ");
+    expect(hasOperationFilters(carried)).toBe(false);
   });
 });

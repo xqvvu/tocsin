@@ -1,4 +1,4 @@
-import { RiFilterOffLine, RiRefreshLine } from "@remixicon/react";
+import { RiArrowLeftRightLine, RiFilterOffLine, RiRefreshLine } from "@remixicon/react";
 
 import { PageToolbar } from "#/components/common/page-toolbar";
 import { Button } from "#/components/ui/button";
@@ -8,10 +8,16 @@ export function EventsPageToolbar({
   pending,
   onRefresh,
   onResetFilters,
+  onViewDeliveries,
 }: {
   pending: boolean;
   onRefresh: () => void;
   onResetFilters: () => void;
+  /**
+   * Opens the deliveries list with the filters both lists share. `null` hides
+   * the action when there is nothing shared to carry.
+   */
+  onViewDeliveries?: (() => void) | null;
 }) {
   const t = useTranslations();
 
@@ -21,6 +27,18 @@ export function EventsPageToolbar({
       description={t("events.page.description")}
       actions={
         <>
+          {onViewDeliveries ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onViewDeliveries}
+              title={t("events.page.viewMatchingDeliveriesTitle")}
+            >
+              <RiArrowLeftRightLine data-icon="inline-start" aria-hidden />
+              {t("events.page.viewMatchingDeliveries")}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
