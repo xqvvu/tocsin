@@ -87,6 +87,61 @@ async function repositoryWithTwoWindows() {
   return (await repositoryWithDb()).history;
 }
 
+/**
+ * Two jobs whose creation order and 更新时间 order disagree: the older one was
+ * retried after the newer one arrived. A single timestamp column cannot stand
+ * in for both, so the fixture exposes whichever column the query picked.
+ */
+async function repositoryWithRetriedDelivery() {
+  const db = createSqliteDatabase({ databasePath: ":memory:" });
+  await migrateSqliteDatabase(db);
+
+  await db
+    .insertInto("sources")
+    .values({
+      id: "src-1",
+      name: "Prometheus",
+      provider: "generic",
+      token_hash: "hash",
+      created_at: NOW,
+      updated_at: NOW,
+    })
+    .execute();
+
+  await db
+    .insertInto("destinations")
+    .values({
+      id: "dest-1",
+      name: "Pager",
+      kind: "generic_webhook",
+      created_at: NOW,
+      updated_at: NOW,
+    })
+    .execute();
+
+  await db
+    .insertInto("events")
+    .values([
+      event("event-old", "fp-old", "2026-10-12T09:00:00.000Z"),
+      event("event-new", "fp-new", "2026-10-12T09:30:00.000Z"),
+    ])
+    .execute();
+
+  await db
+    .insertInto("deliveries")
+    .values([
+      {
+        ...delivery("delivery-retried", "event-old", "2026-10-12T09:00:00.000Z"),
+        state: "failed" as const,
+        updated_at: "2026-10-12T09:40:00.000Z",
+      },
+      delivery("delivery-fresh", "event-new", "2026-10-12T09:30:00.000Z"),
+    ])
+    .execute();
+
+  return createSqliteRepositories(new SqliteRepositoryContext({ db })).history;
+}
+
 describe("history time range", () => {
   it("narrows events by an inclusive received_at lower bound", async () => {
     const repository = await repositoryWithTwoWindows();
@@ -125,6 +180,66 @@ describe("history time range", () => {
 
     expect(page.items.map((item) => item.id)).toEqual(["delivery-old"]);
     expect(page.total).toBe(1);
+  });
+
+  it("applies both bounds to events when a frozen page carries them together", async () => {
+    const repository = await repositoryWithTwoWindows();
+
+    const page = await repository.listEvents({
+      since: "2026-10-12T09:00:00.000Z",
+      until: "2026-10-12T09:30:00.000Z",
+    });
+
+    // Both predicates have to survive on the same query: dropping `since` would
+    // leak rows older than the window, dropping `until` rows newer than it.
+    expect(page.items.map((item) => item.id)).toEqual(["event-old"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("applies both bounds to deliveries when a frozen page carries them together", async () => {
+    const repository = await repositoryWithTwoWindows();
+
+    const page = await repository.listDeliveries({
+      since: "2026-10-12T09:00:00.000Z",
+      until: "2026-10-12T09:30:00.000Z",
+    });
+
+    expect(page.items.map((item) => item.id)).toEqual(["delivery-old"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("windows a retried delivery by 更新时间 when that field is selected", async () => {
+    const repository = await repositoryWithRetriedDelivery();
+
+    // `delivery-retried` was created before the window opens but retried into
+    // it; `delivery-fresh` was created inside it. Selecting `updated` has to
+    // move the bound to that column, and the default has to keep using
+    // `created_at` — otherwise the two views would disagree about the same job.
+    const updated = await repository.listDeliveries({
+      timeField: "updated",
+      until: "2026-10-12T09:35:00.000Z",
+    });
+    const created = await repository.listDeliveries({ until: "2026-10-12T09:35:00.000Z" });
+
+    expect(updated.items.map((item) => item.id)).toEqual(["delivery-fresh"]);
+    expect(updated.total).toBe(1);
+    expect(created.items.map((item) => item.id).sort()).toEqual([
+      "delivery-fresh",
+      "delivery-retried",
+    ]);
+    expect(created.total).toBe(2);
+  });
+
+  it("orders a retried delivery by 更新时间 when that field is selected", async () => {
+    const repository = await repositoryWithRetriedDelivery();
+
+    // Same rows, opposite order: the retry is the newest visit even though it
+    // is the oldest job, so the page has to sort by the selected column too.
+    const updated = await repository.listDeliveries({ timeField: "updated", limit: 1 });
+    const created = await repository.listDeliveries({ limit: 1 });
+
+    expect(updated.items.map((item) => item.id)).toEqual(["delivery-retried"]);
+    expect(created.items.map((item) => item.id)).toEqual(["delivery-fresh"]);
   });
 
   it("holds the page boundary still while newer events keep arriving", async () => {

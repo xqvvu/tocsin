@@ -150,6 +150,25 @@ describe("multi-value list filters", () => {
     expect(page.total).toBe(1);
   });
 
+  it("matches any of several event severities on the deliveries list", async () => {
+    const history = await repositoryWithSeverityFixtures();
+
+    const page = await history.listDeliveries({ severity: ["critical", "warning"] });
+
+    // The deliveries filter carries the same multi-select as events, but reads
+    // severity through the joined event; the count has to answer it too.
+    expect(page.items.map((item) => item.id).sort()).toEqual(["del-failed", "del-pending"]);
+    expect(page.total).toBe(2);
+  });
+
+  it("treats an empty severity selection on deliveries as no filter", async () => {
+    const history = await repositoryWithSeverityFixtures();
+
+    const page = await history.listDeliveries({ severity: [] });
+
+    expect(page.total).toBe(3);
+  });
+
   it("matches any of several statuses on both lists", async () => {
     const history = await repositoryWithSeverityFixtures();
 
