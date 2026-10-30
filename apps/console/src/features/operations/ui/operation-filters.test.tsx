@@ -13,7 +13,7 @@ import {
 import { AppIntlProvider } from "#/i18n/provider";
 
 const EVENT_SEARCH_PLACEHOLDER =
-  "title, message, fingerprint, idempotency key, label, upstream metadata, ID, or external reference (space-separated terms must all match)";
+  "title, message, fingerprint, idempotency key, label, upstream metadata, ID, delivery error, or external reference (space-separated terms must all match)";
 const DELIVERY_SEARCH_PLACEHOLDER =
   "title, message, fingerprint, idempotency key, label, upstream metadata, ID, error from any attempt, destination, route, or external reference (space-separated terms must all match)";
 
