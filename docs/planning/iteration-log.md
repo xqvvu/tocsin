@@ -92,6 +92,16 @@
   回滚 `0.1.0-beta.152`，无需数据库操作。
 - 补建检查：最近 10 个 tag 均有对应 release。
 
+### 清理
+
+- 本会话工作树移除 `node_modules` / `.output` / `.vite` / coverage：759M → 24M。
+- 回收已合并且干净的 `serene-wright-cf38a2`、`sweet-mcnulty-d62e23`；
+  `youthful-murdock-b65fc6` 有 18 个真实未提交改动，跳过；
+  `docs-site-20261030-185940` 属运行中的文档站 routine，保留。
+- 删除 `agent-iteration` 专用工作树（含其并发锁）；已合并分支
+  `agent/template-alert-count`、`agent/release-beta-153`、`agent/planning-round190` 已删除。
+- `.claude/worktrees` 2.1G → 1.4G。
+
 ### 下一轮优先项
 
 1. **REQ-371（29）**：事件列表显示上游告警组规模——与本轮 `tocsin.alertCount` 同一数据源，
