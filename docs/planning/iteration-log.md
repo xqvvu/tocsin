@@ -2,6 +2,86 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 180 轮）
+
+- 时间：2026-10-30 08:17 CST 起（定时触发；并发锁获取于 08:17）。
+- 基线：`origin/main` @ `276c0c9c`；启动时 0 个 open `agent/` PR，main CI 双绿
+  （`40962308006` / `40962308110`）。
+- 类型：**UI 评审触发（ui-triage review_now）+ 1 个 UI 切片 + DOC-122 文档 AUTO_FIX**。
+- **全量审计时间戳保持 2026-10-30 01:40 CST（本轮不刷新）**：`requirements` 车道运行超过
+  100 分钟仍未返回，审计未完整完成；按第 178 轮先例，只有 ui-triage 与 quality 两条车道产出。
+- 车道轮转位置：本轮跑 `quality`；下一个非必跑车道为 **release-infra**。
+- `ui-triage`：**review_now**。`last_ui_review_at` = 2026-10-29 21:30 CST（11h37m，未达 48h），
+  但自上次评审以来触及 `features/*/ui`、`routes`、`shell`、`components` 的合并有 3 个
+  （`a97af117`、`e0cc15f9`、`1f765c8f`），达到 ≥3 强信号；其中 `1f765c8f` 新增的多值筛选控件
+  完全没有真实浏览器验证，快查发现弹层缺标题/说明、触发器可访问名称不含筛选维度。
+- `last_ui_review_at`：保持 **2026-10-29 21:30 CST**（本轮只做聚焦评审与一处修复，
+  未做全量浏览器 UI 评审）。
+
+### 专家发现
+
+**quality（1 条 P1 可复现 + 4 组缺口）**
+
+- **Q-53（P1）**：`route-match-gaps.ts:85-98` 的路由级短路在判断「该路由是否已产生投递」之前
+  直接 `continue`，路由在投递后被停用就会把「已投递」误报成 `route_disabled`；详情页
+  「未投递的原因」与同页投递表互相矛盾。已用 node 直接复现（matches + deliveries + 停用路由
+  → 期望 `[]`，实际 `[{reason:"route_disabled",destinationId:null}]`），现有测试
+  `route-match-gaps.test.ts:66-76` 只覆盖无投递场景。
+- **Q-54（P2）**：history 仓储未测分支：`suppressionId` 过滤零测试且无生产调用方；
+  `since`+`until`、`timeField:"updated"`+`until` 组合从未测；超出末页的 page 钳制
+  （`history.repository.ts:80,371`）无测试；deliveries 的 severity 数组未测。
+- **P2**：`1f765c8f` 新增的 `operation-multi-select.tsx` 无任何交互测试（本轮补了弹层与触发器
+  断言，仍未覆盖勾选回调与清空最后一项）。
+- **P3**：`destination.service.ts:194/214/274/322/452` 的 `RecordNotFoundError` 守卫无测试；
+  `history.helpers.ts:199-214` 的 `encodeHistoryCursor` / `decodeHistoryCursor` 零调用、零测试。
+
+**requirements**：超过 100 分钟未返回，本轮无新需求候选；未返回本身记入下一轮重跑。
+
+### 本轮交付
+
+- **PR #743** `fix(operations): name multi-value filter popovers by dimension`
+  - `OperationMultiSelect` 新增必填 `title`（维度名），作为 `PopoverTitle` 与触发器
+    `aria-label` 的一部分；弹层补 `PopoverDescription` 说明「全部不勾选表示不限」；
+    选项行内边距对齐相邻 `SelectItem`。
+  - 新增 i18n 键 `operations.filters.multiSelectHint` / `multiSelectValue`；
+    `operation-filters.test.tsx` 新增用例断言触发器名称「Severity: Critical, Warning」
+    与弹层 `dialog` 的可访问名称「Severity」。
+  - 验证：`vp check` 0 error（35 warning，与 main 基线一致）；`vp run -r test` 4/4
+    （236 文件 / 1402 用例）；`vp run -r build` 2/2；PR CI 双绿后 rebase 合并。
+- **PR #744** `docs: correct shipped-capability and confirmation drift`（DOC-122）
+  - 修正 MVP PRD:148,213、README:244 的 suppression / per-fingerprint mute 状态；
+    research 文档的「英文硬编码 / 无实际值 / 不区分快照与重算」与失效行号；
+    文档站新增「启用确认框」并同步 3 处入链；三份投递 PRD 的问题陈述改为历史时态。
+  - 验证：`vp fmt --check` 通过（文档-only）。
+
+### 发布
+
+- **本轮发布 `0.1.0-beta.145`。** #738（docs-site routine）在本轮期间由另一 routine 合并，
+  上两轮遗留的阻断解除。
+  - 三位专家（窄 brief，均只读）：发布经理 RELEASE——用户可见提交 #741（多值筛选）、
+    #739（窄屏固定操作列）、#743（弹层可访问性）；阻断审计逐项 PASS（无迁移、无锁文件变动、
+    无依赖升级、无高优 `blocked-autonomous`）；运维/回滚低风险——Dockerfile、compose、
+    migrate、依赖均无 diff，回滚只需换回 `0.1.0-beta.144`。
+  - 版本 PR **#745** `chore(release): v0.1.0-beta.145`（rebase 合并 `b42ae33f`）。
+  - tag `v0.1.0-beta.145` @ `b42ae33f`；GitHub Release（prerelease，body 非空，976 字符）。
+  - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.145`
+    （linux/amd64 + linux/arm64）；回滚镜像 `0.1.0-beta.144`，无需数据库操作。
+  - 打 tag 前确认目标 commit 的 main CI 双绿（`40988853764` CI + `40988853843` E2E）。
+
+### 工具链观察
+
+- 本 session 工作树的 `node_modules` 再次出现半删残留
+  （`Cannot find package '@rolldown/plugin-babel'`）；按记忆先删根 `node_modules` 再
+  `vp install --frozen-lockfile` 修复。注意 zsh 在 `rm -rf node_modules apps/*/node_modules`
+  这类多 glob 命令上会因未匹配的 glob 整体中止，需显式路径或 `setopt null_glob`。
+
+### 下一轮优先项
+
+1. **Q-53**：修 `route-match-gaps` 的路由级误报并补回归测试（P1，真实用户可见）。
+2. **Q-54**：补 history 仓储的组合谓词、分页钳制与多值 severity 测试。
+3. 重跑 `requirements` 车道（连续两轮未返回）。
+4. `release-infra` 车道（轮转）；发版评估需先确认无其它 open PR。
+
 ## 2026-10-30（第 179 轮）
 
 - 时间：2026-10-30 01:35 CST 起（定时触发于 23:34）。
