@@ -59,8 +59,9 @@ export function EventDetailRouteGaps({ gaps }: { gaps: EventDetailData["routeMat
                 </TableCell>
                 <TableCell className="truncate">
                   {gap.destinationId === null ? (
-                    // Route-level reason: it condemns every target, so naming one
-                    // would imply the others were fine.
+                    // Route-level reason: every target this route selected is
+                    // missing a delivery, so naming one would imply the others
+                    // were fine.
                     <span className="text-muted-foreground">
                       {t("events.detail.routeGapsAllTargets")}
                     </span>

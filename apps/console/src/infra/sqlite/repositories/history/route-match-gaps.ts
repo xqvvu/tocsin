@@ -78,13 +78,45 @@ export function routeMatchGaps(input: RouteMatchGapInput): RouteMatchGap[] {
 
     const route = routesById.get(match.routeId);
 
-    // Route-level reasons first, and emitted ONCE for the whole route.
+    // A pair that already has a delivery is not a gap: a route can be disabled
+    // after it delivered, and a delivery row survives the disable. Judging the
+    // route before looking at deliveries would report "route disabled" for a
+    // route whose deliveries are rendered right below the gap table.
+    const undeliveredDestinationIds = match.destinationIds.filter(
+      (destinationId) => !existingTargets.has(deliveryTargetKey(match.routeId, destinationId)),
+    );
+
+    // Route-level reasons next, and emitted ONCE for the whole route.
     // A deleted route leaves every one of its destinations undelivered, so
     // reporting per destination would repeat the same sentence three times and
     // bury the pair-level gaps that actually differ from one another.
     const routeLevelReason = routeLevelGapReason(route);
 
     if (routeLevelReason) {
+      if (undeliveredDestinationIds.length === 0) {
+        // Everything the route selected was delivered before it was disabled
+        // or deleted. There is nothing to explain.
+        continue;
+      }
+
+      if (undeliveredDestinationIds.length < match.destinationIds.length) {
+        // Partial delivery: the route was healthy at intake, so a route-level
+        // "all targets" row would wrongly condemn the pairs that did deliver.
+        // Name only the target still missing a delivery.
+        for (const destinationId of undeliveredDestinationIds) {
+          gaps.push({
+            routeId: match.routeId,
+            routeName: match.routeName,
+            destinationId,
+            destinationName: destinationsById.get(destinationId)?.name ?? null,
+            reason: routeLevelReason,
+            firstEventId: null,
+          });
+        }
+
+        continue;
+      }
+
       gaps.push({
         routeId: match.routeId,
         routeName: match.routeName,
@@ -97,13 +129,8 @@ export function routeMatchGaps(input: RouteMatchGapInput): RouteMatchGap[] {
       continue;
     }
 
-    for (const destinationId of match.destinationIds) {
+    for (const destinationId of undeliveredDestinationIds) {
       const key = deliveryTargetKey(match.routeId, destinationId);
-
-      if (existingTargets.has(key)) {
-        continue;
-      }
-
       const destination = destinationsById.get(destinationId) ?? null;
       const firstEventId = input.dedupeFirstEvents.get(key) ?? null;
 
