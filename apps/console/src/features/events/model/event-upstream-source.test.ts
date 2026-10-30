@@ -47,18 +47,48 @@ describe("buildEventUpstreamSource", () => {
     ]);
   });
 
+  it("turns Grafana dashboard, panel, and silence URLs into links", () => {
+    const upstream = buildEventUpstreamSource({
+      provider: "grafana",
+      externalURL: "https://grafana.example.test/",
+      dashboardURL: "https://grafana.example.test/d/checkout-latency",
+      panelURL: "https://grafana.example.test/d/checkout-latency?viewPanel=2",
+      silenceURL: "https://grafana.example.test/alerting/silence/new?alertmanager=grafana",
+    });
+
+    expect(upstream?.links.map((link) => link.key)).toEqual([
+      "externalURL",
+      "dashboardURL",
+      "panelURL",
+      "silenceURL",
+    ]);
+    expect(upstream?.links[1]).toEqual({
+      key: "dashboardURL",
+      href: "https://grafana.example.test/d/checkout-latency",
+      host: "grafana.example.test",
+      labelKey: "events.detail.upstream.links.dashboardURL",
+    });
+    expect(upstream?.links[2]?.labelKey).toBe("events.detail.upstream.links.panelURL");
+    expect(upstream?.links[3]?.labelKey).toBe("events.detail.upstream.links.silenceURL");
+  });
+
   it("refuses non-http protocols instead of rendering an executable anchor", () => {
     const upstream = buildEventUpstreamSource({
       externalURL: "javascript:alert(1)",
       generatorURL: "data:text/html,<script>alert(1)</script>",
+      dashboardURL: "javascript:alert(2)",
     });
 
     expect(upstream?.links).toEqual([]);
     // The values are still visible as inert metadata for troubleshooting.
     expect(upstream?.metadata.map((entry) => entry.key).sort()).toEqual([
+      "dashboardURL",
       "externalURL",
       "generatorURL",
     ]);
+    expect(upstream?.metadata.find((entry) => entry.key === "dashboardURL")?.labelKey).toBe(
+      "events.detail.upstream.links.dashboardURL",
+    );
   });
 
   it("strips credentials embedded in the URL", () => {

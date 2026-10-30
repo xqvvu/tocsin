@@ -43,6 +43,9 @@ describe("grafana provider parser", () => {
             startsAt: "2026-06-09T07:59:00Z",
             endsAt: "0001-01-01T00:00:00Z",
             fingerprint: "grafana-fingerprint-1",
+            dashboardURL: "https://grafana.example.test/d/checkout-latency",
+            panelURL: "https://grafana.example.test/d/checkout-latency?viewPanel=2",
+            silenceURL: "https://grafana.example.test/alerting/silence/new?alertmanager=grafana",
           },
         ],
       },
@@ -69,6 +72,9 @@ describe("grafana provider parser", () => {
       receiver: "tocsin",
       groupKey: '{}:{alertname="CheckoutLatencyHigh"}',
       externalURL: "https://grafana.example.test/",
+      dashboardURL: "https://grafana.example.test/d/checkout-latency",
+      panelURL: "https://grafana.example.test/d/checkout-latency?viewPanel=2",
+      silenceURL: "https://grafana.example.test/alerting/silence/new?alertmanager=grafana",
     });
     expect(result.idempotencyKey).toMatch(/^grafana:/);
   });

@@ -32,6 +32,30 @@ describe("event upstream source", () => {
     );
   });
 
+  it("links Grafana dashboard, panel, and silence pages", () => {
+    renderSource("zh-Hans", {
+      provider: "grafana",
+      externalURL: "https://grafana.example.test/",
+      dashboardURL: "https://grafana.example.test/d/checkout-latency",
+      panelURL: "https://grafana.example.test/d/checkout-latency?viewPanel=2",
+      silenceURL: "https://grafana.example.test/alerting/silence/new?alertmanager=grafana",
+    });
+
+    const dashboardLink = screen.getByRole("link", { name: /仪表盘/ });
+    expect(dashboardLink.getAttribute("href")).toBe(
+      "https://grafana.example.test/d/checkout-latency",
+    );
+    expect(dashboardLink.getAttribute("target")).toBe("_blank");
+    expect(dashboardLink.getAttribute("rel")).toBe("noopener noreferrer");
+
+    expect(screen.getByRole("link", { name: /面板/ }).getAttribute("href")).toBe(
+      "https://grafana.example.test/d/checkout-latency?viewPanel=2",
+    );
+    expect(screen.getByRole("link", { name: /上游静默页/ }).getAttribute("href")).toBe(
+      "https://grafana.example.test/alerting/silence/new?alertmanager=grafana",
+    );
+  });
+
   it("renders the intake metadata with product labels", () => {
     renderSource("zh-Hans", {
       provider: "alertmanager",
