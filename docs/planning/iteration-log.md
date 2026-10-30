@@ -2,6 +2,70 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 183 轮）
+
+- 时间：2026-10-30 11:25 CST 起（定时触发；并发锁获取于 11:25）。
+- 基线：`origin/main` @ `1fa030f2`；启动时 main CI 绿，实际 open PR 只有 docs-site routine 的 #756。
+- 类型：**实施轮（不展开全量审计）+ 1 个 AUTO_FIX 切片（history 仓储测试补强）**。
+- **全量审计时间戳保持 2026-10-30 10:12 CST（第 181 轮）**：本轮距上次全量审计约 1h13m，
+  按第 1.5 步配额闸门不重复展开专家审计；backlog 无 `planned` / `in-progress` 项，
+  续做第 182 轮排定的下一轮优先项 **Q-54**。
+- 车道轮转位置：本轮未跑审计车道；下一个非必跑车道仍为 **security-exposure**。
+- `ui-triage`：**defer**（内联判定，未 spawn）。`last_ui_review_at` = 2026-10-29 21:30 CST
+  （约 14h，未达 48h）；本轮为纯测试改动，无新增 UI 主题。
+- `last_ui_review_at`：保持 **2026-10-29 21:30 CST**。
+
+### 代码核实（替代本轮审计车道）
+
+- **Q-54 的一条断言不成立**：原记录称 `suppressionId` 过滤「无生产调用方」，实际抑制规则的命中列表
+  正是通过它查询（`server/suppressions/suppression.service.ts:117-118` →
+  `history.listDeliveries({ suppressionId })`，服务层用例 `suppression.service.test.ts:160-190` 已覆盖）。
+  因此**不删除**该分支，已更正 backlog 备注。
+- 其余缺口属实：history 仓储测试中 `timeField` 零覆盖；`since` + `until` 只测过单边；
+  越界/零/负 `page` 与 `limit: 0` 无用例；Deliveries 的 `severity` 只测过单值
+  （`store.test.ts:1086`）。
+- 「清理旧仓库名 `xqvvu/vane`」不成立：`docs/` 中 347 处全部是镜像仓库前缀
+  `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane`，是 routine 固定地址；未发现
+  `github.com/xqvvu/vane` 形式的失效引用。本轮不再安排该清理项。
+
+### 本轮交付
+
+- **PR #757** `test(operations): cover history window, pagination, and severity predicates`（Q-54）
+  - 新增 `apps/console/src/infra/sqlite/repositories/history/pagination.test.ts`（5 例）：越界页钳制到
+    末页（事件/投递）、0/负数页钳制到首页、`limit: 0` 视为每页 1 条、空结果稳定停在首页 1。
+  - `time-range.test.ts`（+4 例）：`since` + `until` 组合（事件/投递）；`timeField: "updated"` 的
+    窗口与排序，附「创建时间与更新时间顺序相反」的 fixture。
+  - `multi-value-filters.test.ts`（+2 例）：Deliveries 的 `severity` 多选与空选择。
+  - 验证：`vp check` 0 error（35 warning，与 main 基线一致）；`vp run -r test` 4/4
+    （console 238 文件 / 1426 用例）；`vp run -r build` 2/2；PR CI 双绿后 rebase 合并 `21e76a0b`。
+
+### EXPERT_PANEL
+
+本轮无 EXPERT_PANEL 事项。
+
+### 发布
+
+本轮不发布：只有测试改动，没有用户可见变更（第 9.5 步门槛）。#756 为 docs-site routine 的
+docs-only PR（CI 双绿），与本轮发布无关，留给该 routine 自行合并。
+
+### 工作树清理
+
+- 回收 1 个已注册且工作区干净的会话工作树（`gallant-hellman-660c10`，PR #753 已合并）；
+  跳过 `youthful-murdock-b65fc6`（仍有真实未提交改动）与 `docs-site-20261030-105655`
+  （docs-site routine 的 #756 仍在用）。
+- `.claude/worktrees` 占用从 **1.5G 降到 1.4G**；剩余为上述两个保留工作树与本会话。
+- 删除并发锁与 `agent-iteration` 专用目录。
+
+### 下一轮优先项
+
+1. **security-exposure 车道**（轮转）：复核参数化脱敏回归测试是否仍覆盖全部
+   `DestinationKindSchema.options`；`SEC-1`（`isSensitiveKey` 漏项）仍按 EXPERT_PANEL 处理。
+2. **REQ-360**：provider fixture 目录 + provider 贡献指南（第 181 轮已复核缺口属实）。
+3. **REQ-233**：Events/Deliveries 同条件切换（27 分），实施前先复核 URL 与筛选面板现状。
+4. **REQ-235 / REQ-257**（27 分）：全局投递暂停原因、`Retry-After` 冷却建议；
+   两者改变投递语义，需先走 EXPERT_PANEL。
+5. 发布评估：下一轮若只有测试/文档改动则继续跳过；有用户可见变更再递增 `0.1.0-beta.147`。
+
 ## 2026-10-30（第 182 轮）
 
 - 时间：2026-10-30 10:43 CST 起（定时触发；并发锁获取于 10:43）。
