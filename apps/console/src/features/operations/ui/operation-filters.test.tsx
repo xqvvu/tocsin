@@ -134,9 +134,19 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByText("Destination delivery")).toBeNull();
     expect(screen.getByText("Receipt")).toBeTruthy();
     expect(screen.getByText("Attempts")).toBeTruthy();
+    expect(screen.getByText("Latest attempt response")).toBeTruthy();
     expect(screen.getByText("Latest response status")).toBeTruthy();
     expect(screen.getByText("Time range")).toBeTruthy();
     expect(screen.getByText("Time basis")).toBeTruthy();
+  });
+
+  it("names the attempt-response chip and keeps it off the events page", () => {
+    renderFilters("deliveries", { lastAttemptResponse: "missing" }, "toolbar");
+    expect(screen.getByTitle("Clear Latest attempt response: No HTTP response")).toBeTruthy();
+
+    cleanup();
+    renderFilters("events", { lastAttemptResponse: "missing" }, "toolbar");
+    expect(screen.queryByTitle(/^Clear Latest attempt response/)).toBeNull();
   });
 
   it("names the latest-response-status chip and keeps it off the events page", () => {
@@ -195,6 +205,7 @@ describe("operation filters by page scope", () => {
         deliveryState: "failed",
         minAttempts: 2,
         lastAttemptStatusClass: "4xx",
+        lastAttemptResponse: "received",
         range: "1h",
         rangeAnchor: "2026-10-23T04:00:00.000Z",
         q: "checkout",
@@ -223,6 +234,7 @@ describe("operation filters by page scope", () => {
       deliveryState: "",
       minAttempts: 0,
       lastAttemptStatusClass: "",
+      lastAttemptResponse: "",
       range: "",
       timeField: "",
       rangeAnchor: "",

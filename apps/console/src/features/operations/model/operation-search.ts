@@ -4,6 +4,7 @@ import { z } from "zod";
 import type {
   AlertSeverity,
   AlertStatus,
+  DeliveryAttemptResponse,
   DeliveryAttemptStatusClass,
   DeliveryReceiptFilter,
   DeliveryState,
@@ -17,6 +18,7 @@ import type {
 import {
   AlertSeveritySchema,
   AlertStatusSchema,
+  DeliveryAttemptResponseSchema,
   DeliveryAttemptStatusClassSchema,
   DeliveryReceiptFilterSchema,
   DeliveryStateSchema,
@@ -122,6 +124,13 @@ export const DashboardOperationSearchSchema = z.object({
     .union([DeliveryAttemptStatusClassSchema, z.literal("")])
     .catch("")
     .optional(),
+  // Delivery-only: whether the latest completed attempt got an HTTP response.
+  // Empty means "any"; an unknown value falls back to "any" like every other
+  // URL-backed enum instead of breaking an old link.
+  lastAttemptResponse: z
+    .union([DeliveryAttemptResponseSchema, z.literal("")])
+    .catch("")
+    .optional(),
   range: z
     .union([OperationTimeRangeSchema, z.literal("")])
     .catch("")
@@ -176,6 +185,7 @@ export interface DashboardOperationSearch {
   deliveryState?: string;
   minAttempts?: number;
   lastAttemptStatusClass?: DeliveryAttemptStatusClass | "";
+  lastAttemptResponse?: DeliveryAttemptResponse | "";
   range?: OperationTimeRange | "";
   timeField?: DeliveryTimeField | "";
   rangeAnchor?: string;
@@ -203,6 +213,7 @@ export type OperationFilterData = {
   deliveryState?: DeliveryState | DeliveryState[];
   minAttempts?: number;
   lastAttemptStatusClass?: DeliveryAttemptStatusClass;
+  lastAttemptResponse?: DeliveryAttemptResponse;
   range?: OperationTimeRange;
   timeField?: DeliveryTimeField;
   rangeAnchor?: string;
@@ -237,6 +248,7 @@ export const clearedOperationSearch: Readonly<DashboardOperationSearch> = {
   deliveryState: "",
   minAttempts: 0,
   lastAttemptStatusClass: "",
+  lastAttemptResponse: "",
   range: "",
   timeField: "",
   rangeAnchor: "",
@@ -266,6 +278,7 @@ export function hasOperationFilters(search: DashboardOperationSearch): boolean {
     search.deliveryState ||
     search.minAttempts ||
     search.lastAttemptStatusClass ||
+    search.lastAttemptResponse ||
     search.range ||
     // `created` is the default basis, so only "last activity" narrows the list.
     // Counting the default made a hand-edited `timeField=created` claim the
@@ -407,6 +420,7 @@ export function mergeOperationSearch(
     "deliveryState",
     "minAttempts",
     "lastAttemptStatusClass",
+    "lastAttemptResponse",
     "range",
     "timeField",
     "rangeAnchor",

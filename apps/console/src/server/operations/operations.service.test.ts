@@ -139,6 +139,22 @@ describe("operations service", () => {
     expect(serverError.deliveries.total).toBe(0);
     expect(serverError.events.total).toBe(1);
 
+    // The same attempt never got an HTTP response, so it is the `missing` half
+    // of the response dimension. Events have no attempt at all and stay put.
+    const withoutResponse = await service.listOperations({
+      limit: 10,
+      lastAttemptResponse: "missing",
+    });
+    expect(withoutResponse.deliveries.items.map((item) => item.id)).toEqual([delivery.id]);
+    expect(withoutResponse.deliveries.total).toBe(1);
+    expect(withoutResponse.events.total).toBe(1);
+    const withResponse = await service.listOperations({
+      limit: 10,
+      lastAttemptResponse: "received",
+    });
+    expect(withResponse.deliveries.total).toBe(0);
+    expect(withResponse.events.total).toBe(1);
+
     // The failed job never recorded a provider reference, so it is the only
     // row in the missing bucket and neither list has a present receipt.
     const missingReceipt = await service.listOperations({ limit: 10, receipt: "missing" });
