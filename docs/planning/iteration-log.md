@@ -2,6 +2,103 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-30（第 188 轮）
+
+- 时间：2026-10-30 16:37 CST 起（定时触发；并发锁获取于 16:37）。
+- 基线：`origin/main` @ `96f1a56c`；启动时 main CI 绿，无 open PR。
+- 类型：**full-audit（距上次全量审计 10:12 CST 已 6h25m ≥ 6h）+ 1 个需求切片（REQ-363）+
+  发布 `0.1.0-beta.151`**。
+- **全量审计时间戳更新为 2026-10-30 16:40 CST**（本轮展开全量审计）。
+- 车道轮转位置：`requirements`、`ui-triage`、`architecture` 本轮执行；下一个非必跑车道为
+  **docs-drift**。
+- `ui-triage`：**review_now（限缩）**。信号：距上次真实评审 19h18m（<48h）；19 小时内
+  11 个 UI 相关合并（≥3，强）；68 条 `candidate` UI 发现（饱和存量，仅作辅助）；
+  最近 10 个 UI 提交零浏览器验证。triage 建议限定为「针对这 10 个提交与 4 处代码级发现的
+  聚焦浏览器复核」。
+  **本轮未执行完整 UI 评审**：无运行中的 console dev server，且 75 分钟预算已用于
+  REQ-363 与发布；triage 的代码级发现已复核并写入 backlog（UI-54、UI-37 复核；
+  Deliveries 缺手动刷新已由 REQ-35 跟踪；「运行 worker」是列表页唯一强调色动作，
+  视为该页主操作，不单列）。未实现新的 UI 切片。
+- `last_ui_review_at`：保持 **2026-10-29 21:30 CST**（本轮未做真实浏览器评审）。
+- 工作树：写入隔离拦截了 `agent-iteration`，实现改在本会话工作树
+  `xenodochial-tu-e2df00`；`agent-iteration` 仅用于并发锁与基线读取。
+
+### 需求车道发现（只读 subagent，已写入 backlog）
+
+- **REQ-369（27）**：通知模板暴露告警组规模 `tocsin.alertCount`。Alertmanager 兼容解析
+  只规范化首条 alert、其余仅记数量（`packages/providers/src/shared/alertmanager-compatible.ts:35-36,63`），
+  文档已承认该边界（`apps/docs/integrations/providers.md:165`），但模板输入不含该数量
+  （`packages/destinations/src/types.ts:33-54`、`template.ts:141-142`），一个组多条告警时
+  值班群只收到一条且正文无提示。
+- **REQ-368（26）**：通用 Webhook 目标支持表单编码请求体。发送路径写死 JSON
+  （`packages/destinations/src/generic-webhook/adapter.ts:76-81`），schema 无 body 格式位
+  （`generic-webhook/schema.ts:14-19`）；只认 `application/x-www-form-urlencoded` 的老系统
+  返回 400/415。
+- **REQ-370（26）**：通知目标列表当前页批量停用（带逐目标影响披露）。目标列表只有行内
+  操作（`features/destinations/ui/destinations-section.tsx:69-115`），与已交付的源/路由/
+  静默批量启停不对称。
+
+### 架构车道发现（只读 subagent）
+
+- 最近 25 个提交在 service 纯度、DI 装配、entrypoint 薄度、repository 拆分、
+  import 边界与状态归属上均 clean，无 HIGH/MEDIUM 契约违规。
+- **ARCH-82（20，AUTO_FIX）**：静默详情路由 loader 未预取影响面查询
+  （`routes/_dashboard.suppressions_.$suppressionId.tsx:11-16`、
+  `suppression-detail-page.tsx:44-53`），loader 结束后再次挂起。
+- **ARCH-83（18，AUTO_FIX）**：`packages/core/src/suppression/suppression.ts:74-79`
+  称 service 与 repository 都默认 top N，实际只有仓储应用
+  （`history.repository.ts:555-558`、`suppression.service.ts:151-153`）。
+- 其他：F2 与既有 ARCH-18 重复；F6 与 Q-303 重复；F3（`use-debounced-search-draft.ts:50,68`
+  使用 `window.*` 无 `client-only` 标记）属既有债务，加标记会触发 import protection，
+  暂不处理；F5（events/deliveries 复用 operations 的 api 层）属既有合理设计，不单列。
+
+### 本轮交付
+
+- **PR #773** `feat(operations): filter events by delivery coverage`（REQ-363，28 分）
+  - `@tocsin/core` 新增 `EventDeliveryCoverageSchema`（`all` / `partial` / `none`）；
+    `@tocsin/api` 契约透传 `deliveryCoverage`。
+  - 仓储 `eventDeliveryCoveragePredicate` 用相关 `EXISTS` / `NOT EXISTS`，
+    `listEvents` 与 `countEvents` 共用；零投递事件不落在任何覆盖值，
+    继续由 `deliveryOutcome=none` 选择。
+  - 控制台：URL 参数、Events 筛选面板下拉（位于「投递结果」之后）、chip、
+    内联/页面级重置、请求归一化；Deliveries 页不渲染也不消费。
+  - 测试：仓储 6 例（三取值、零投递排除、total 一致、组合筛选）、service 2 例、
+    URL 5 例、筛选面板 1 例，并更新 `clearedOperationSearch` 键集用例。
+  - 验证：`vp fmt --write`；`vp check` 0 error（35 warning，与基线一致）；
+    `vp run -r test` 4/4（console 244 文件 / 1476 用例）；`vp run -r build` 2/2。
+  - 未做浏览器实测：本机无运行中的 console dev server；改动为只读筛选，
+    谓词与 URL 行为由用例覆盖。
+  - PRD：`docs/prd/event-delivery-coverage-filter.md`。
+
+### EXPERT_PANEL
+
+本轮无 EXPERT_PANEL 事项（无 schema/投递/路由/auth/secret 语义变化）。
+
+### 发布
+
+- 三位只读发布评审：发布经理确认区间唯一用户可见变更为 #773；阻断审计确认
+  `origin/main` @ `23b6e0ad` 的 CI success、无其他 open PR、无高优 `blocked-autonomous`、
+  区间无 migration/Dockerfile/env/依赖变化；运维回滚专家确认零迁移、零 env、
+  回滚只需换回旧镜像（风险低）。
+- 版本 `0.1.0-beta.151`；PR #774 只改根 `package.json`（rebase 合并 `23b6e0ad`）。
+- tag `v0.1.0-beta.151` @ `23b6e0ad`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.151`
+  （linux/amd64 + linux/arm64，index digest `sha256:981f93acaed020a5de7c912dc746fb56174b2d2a74ce06f3d17c819894f3c461`）；回滚 `0.1.0-beta.150`。
+- 补建检查：最近 10 个 tag 均有对应 release。
+- 文档同步：本会话没有可用的 `obsidian-vault` skill，Obsidian 同步已跳过。
+
+### 下一轮优先项
+
+1. **UI 主切片（triage 已判 review_now）**：先起本地 dev server 做真实浏览器评审，
+   首选 UI-54（`/deliveries` 挂起骨架带 360px 右栏，加载完成变单栏），并复核
+   Deliveries 工具栏动作集合。
+2. **REQ-369（27）**：`tocsin.alertCount` 模板变量。
+3. **REQ-368（26）**：通用 Webhook 表单编码；**REQ-370（26）**：目标批量停用。
+4. **REQ-365（27）** 多源筛选、**REQ-366（27）** 选择性补投、**REQ-367（26）** 按源解析失败归因。
+5. **ARCH-82 / ARCH-83**（AUTO_FIX，S）。
+6. **Q-303（25）** `deliveries.suppression_id` 索引迁移，先交 EXPERT_PANEL。
+7. **release-infra AUTO_FIX**：`docs/contributing/provider-adapter.md`。
+
 ## 2026-10-30（第 187 轮）
 
 - 时间：2026-10-30 15:26 CST 起（定时触发；并发锁获取于 15:27）。
