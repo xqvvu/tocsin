@@ -16,6 +16,9 @@
 - `last_ui_review_at`：保持 **2026-10-29 21:30 CST**。
 - 工作树：写入隔离拦截了 `agent-iteration`，实现改在本会话工作树
   `practical-haibt-f78782`；`agent-iteration` 仅用于并发锁。
+- 工作树已清理：回收 `docs-site-20261030-125644`、`fervent-jackson-111801`、
+  `agent-iteration` 三个工作树（跳过 `youthful-murdock-b65fc6`：699M 且有未提交改动）；
+  `.claude/worktrees` 2.1G → 1.4G。
 - 依赖：本会话工作树 `node_modules` 半删残留（`vp install` 误报 up to date，
   `@tanstack/react-start` 等缺失），按已知处置删除全部 workspace `node_modules` 后重装恢复。
 
