@@ -1,3 +1,4 @@
+import type { SuppressionImpactOutput } from "@tocsin/api";
 import type { DeliveryListItem, NumberedPage } from "@tocsin/core";
 
 import type { SqliteStore } from "#/infra/sqlite/store";
@@ -15,3 +16,9 @@ export interface ListSuppressionHitsInput {
 }
 
 export type SuppressionHits = NumberedPage<DeliveryListItem>;
+
+export interface SuppressionImpactInput {
+  id: string;
+}
+
+export type SuppressionImpact = SuppressionImpactOutput;

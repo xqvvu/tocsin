@@ -5,6 +5,7 @@ export const suppressionQueryKeys = {
   list: () => [...suppressionQueryKeys.all, "list"] as const,
   detail: (id: string) => [...suppressionQueryKeys.all, "detail", id] as const,
   hits: (id: string, page: number) => [...suppressionQueryKeys.detail(id), "hits", page] as const,
+  impact: (id: string) => [...suppressionQueryKeys.detail(id), "impact"] as const,
 };
 
 export function suppressionsQueryOptions() {
@@ -24,5 +25,12 @@ export function suppressionHitsQueryOptions(id: string, page = 1) {
   return orpc.suppressions.hits.queryOptions({
     input: { id, page, limit: 20 },
     queryKey: suppressionQueryKeys.hits(id, page),
+  });
+}
+
+export function suppressionImpactQueryOptions(id: string) {
+  return orpc.suppressions.impact.queryOptions({
+    input: { id },
+    queryKey: suppressionQueryKeys.impact(id),
   });
 }

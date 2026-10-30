@@ -143,6 +143,9 @@ describe("suppression service", () => {
     await expect(service.listSuppressionHits({ id: "suppression-missing" })).rejects.toBeInstanceOf(
       RecordNotFoundError,
     );
+    await expect(
+      service.getSuppressionImpact({ id: "suppression-missing" }),
+    ).rejects.toBeInstanceOf(RecordNotFoundError);
   });
 
   it("returns the silenced deliveries as the rule's hits, keeping the reason after deletion", async () => {
@@ -178,5 +181,33 @@ describe("suppression service", () => {
       suppressedAt: INSIDE_WINDOW,
       suppressReason: expect.stringContaining("October database migration"),
     });
+  });
+
+  it("summarises the rule's silenced volume for the impact panel", async () => {
+    const { store, service } = await openTestService();
+    await seedDeliveryTargets(store);
+    const rule = await service.createSuppression({
+      name: "October database migration",
+      kind: "maintenance_window",
+      matcher: { destinationIds: ["destination-1"] },
+      startsAt: WINDOW_START,
+      endsAt: WINDOW_END,
+    });
+    await enqueueSuppressedDelivery(store);
+
+    const impact = await service.getSuppressionImpact({ id: rule.id });
+
+    expect(impact).toMatchObject({
+      deliveryCount: 1,
+      eventCount: 1,
+      sourceCount: 1,
+      destinationCount: 1,
+      firstHitAt: INSIDE_WINDOW,
+      lastHitAt: INSIDE_WINDOW,
+    });
+    expect(impact.severities).toEqual([{ severity: "critical", deliveryCount: 1 }]);
+    expect(impact.destinations).toMatchObject([
+      { destinationId: "destination-1", destinationName: "Primary webhook", deliveryCount: 1 },
+    ]);
   });
 });

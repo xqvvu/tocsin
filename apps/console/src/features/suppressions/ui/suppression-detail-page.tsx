@@ -14,6 +14,7 @@ import { OperationTimestamp } from "#/features/operations/ui/operation-timestamp
 import { sourcesQueryOptions } from "#/features/sources/api/source.queries";
 import {
   suppressionHitsQueryOptions,
+  suppressionImpactQueryOptions,
   suppressionQueryOptions,
 } from "#/features/suppressions/api/suppression.queries";
 import {
@@ -21,6 +22,7 @@ import {
   type SuppressionSummaryCopy,
 } from "#/features/suppressions/model/suppression-summary";
 import { SuppressionHitsTable } from "#/features/suppressions/ui/suppression-hits-table";
+import { SuppressionImpactPanel } from "#/features/suppressions/ui/suppression-impact-panel";
 import { SuppressionStateBadge } from "#/features/suppressions/ui/suppression-state-badge";
 import { useTranslations } from "#/i18n/use-i18n";
 import { useOperationalNow } from "#/i18n/use-operational-now";
@@ -33,15 +35,21 @@ export function SuppressionDetailPage({ suppressionId }: { suppressionId: string
   // instead of freezing a `new Date()` taken during render.
   const now = useOperationalNow();
   const [hitsPage, setHitsPage] = React.useState(1);
-  const [{ data: suppression }, { data: hits }, { data: sources }, { data: destinations }] =
-    useSuspenseQueries({
-      queries: [
-        suppressionQueryOptions(suppressionId),
-        suppressionHitsQueryOptions(suppressionId, hitsPage),
-        sourcesQueryOptions(),
-        destinationsQueryOptions(),
-      ],
-    });
+  const [
+    { data: suppression },
+    { data: impact },
+    { data: hits },
+    { data: sources },
+    { data: destinations },
+  ] = useSuspenseQueries({
+    queries: [
+      suppressionQueryOptions(suppressionId),
+      suppressionImpactQueryOptions(suppressionId),
+      suppressionHitsQueryOptions(suppressionId, hitsPage),
+      sourcesQueryOptions(),
+      destinationsQueryOptions(),
+    ],
+  });
 
   const copy = suppressionSummaryCopy(t);
   const chips = buildSuppressionMatcherChips(
@@ -117,6 +125,7 @@ export function SuppressionDetailPage({ suppressionId }: { suppressionId: string
               </div>
             </div>
           </ContentPanel>
+          <SuppressionImpactPanel impact={impact} />
           <SuppressionHitsTable hits={hits} page={hitsPage} onPageChange={setHitsPage} />
         </>
       }

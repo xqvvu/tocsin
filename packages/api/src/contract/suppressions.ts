@@ -13,6 +13,7 @@ import {
   SuppressionDetailInputSchema,
   SuppressionHitsInputSchema,
   SuppressionHitsOutputSchema,
+  SuppressionImpactOutputSchema,
   SuppressionListOutputSchema,
   SuppressionOutputSchema,
 } from "../schemas/suppressions";
@@ -43,6 +44,14 @@ export const suppressions = {
     .errors(dashboardErrors)
     .errors(resourceErrors.error)
     .output(SuppressionHitsOutputSchema),
+
+  // The same blast radius as `hits`, aggregated instead of paged: how many
+  // alerts, sources, and destinations one rule's window actually covered.
+  impact: oc
+    .input(SuppressionDetailInputSchema)
+    .errors(dashboardErrors)
+    .errors(resourceErrors.error)
+    .output(SuppressionImpactOutputSchema),
 
   create: oc
     .input(CreateSuppressionCommandSchema)
