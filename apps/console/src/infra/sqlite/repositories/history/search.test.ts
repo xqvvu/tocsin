@@ -362,6 +362,28 @@ describe("history search", () => {
     expect(page.items[0]?.lastError).toBeNull();
   });
 
+  it("matches the latest delivery error on the events list", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    // The failure text on-call sees on a delivery must lead back to the alert
+    // that produced it, without a detour through the deliveries list.
+    const page = await repository.listEvents({ q: "connection refused" });
+
+    expect(ids(page.items)).toEqual(["event-message"]);
+    expect(page.total).toBe(1);
+  });
+
+  it("matches an attempt-only delivery error on the events list", async () => {
+    const repository = await repositoryWithSearchFixtures();
+
+    // The delivery succeeded, so `last_error` is already cleared: the hit can
+    // only come from the failed attempt history.
+    const page = await repository.listEvents({ q: "handshake timeout" });
+
+    expect(ids(page.items)).toEqual(["event-retried"]);
+    expect(page.total).toBe(1);
+  });
+
   it("matches the destination name shown in the deliveries table", async () => {
     const repository = await repositoryWithSearchFixtures();
 
