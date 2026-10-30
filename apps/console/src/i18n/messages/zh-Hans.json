@@ -989,6 +989,8 @@
   "operations.filters.minAttemptsOptions.1": "至少 1 次",
   "operations.filters.minAttemptsOptions.2": "至少 2 次（已重试）",
   "operations.filters.minAttemptsOptions.3": "至少 3 次",
+  "operations.filters.multiSelectHint": "可勾选多个取值，全部不勾选表示不限",
+  "operations.filters.multiSelectValue": "{title}：{value}",
   "operations.filters.parseFailed": "解析结果",
   "operations.filters.parseFailedOptions.failed": "解析失败",
   "operations.filters.parseFailedOptions.succeeded": "解析成功",

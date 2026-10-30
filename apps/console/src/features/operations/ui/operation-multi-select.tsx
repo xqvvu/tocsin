@@ -2,7 +2,15 @@ import { RiArrowDownSLine } from "@remixicon/react";
 
 import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "#/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "#/components/ui/popover";
+import { useTranslations } from "#/i18n/use-i18n";
 
 export interface OperationMultiSelectOption {
   value: string;
@@ -19,6 +27,7 @@ export interface OperationMultiSelectOption {
  */
 export function OperationMultiSelect({
   id,
+  title,
   values,
   options,
   placeholder,
@@ -26,6 +35,8 @@ export function OperationMultiSelect({
   onChange,
 }: {
   id: string;
+  /** Dimension name: the popover heading and the trigger's accessible name. */
+  title: string;
   values: string[];
   options: OperationMultiSelectOption[];
   /** Shown when nothing is selected; it is also the "any" state. */
@@ -33,10 +44,12 @@ export function OperationMultiSelect({
   disabled?: boolean;
   onChange: (values: string[]) => void;
 }) {
+  const t = useTranslations();
   const selected = new Set(values);
   const selectedLabels = options
     .filter((option) => selected.has(option.value))
     .map((option) => option.label);
+  const selection = selectedLabels.length > 0 ? selectedLabels.join(", ") : placeholder;
 
   return (
     <Popover>
@@ -49,23 +62,25 @@ export function OperationMultiSelect({
             size="sm"
             disabled={disabled}
             className="w-full justify-between font-normal"
-            aria-label={selectedLabels.length > 0 ? selectedLabels.join(", ") : placeholder}
+            aria-label={t("operations.filters.multiSelectValue", { title, value: selection })}
           />
         }
       >
-        <span className="truncate">
-          {selectedLabels.length > 0 ? selectedLabels.join(", ") : placeholder}
-        </span>
+        <span className="truncate">{selection}</span>
         <RiArrowDownSLine className="size-4 shrink-0 opacity-60" aria-hidden="true" />
       </PopoverTrigger>
       <PopoverContent align="start" className="w-[13rem] p-1">
+        <PopoverHeader className="px-2 pt-1.5">
+          <PopoverTitle>{title}</PopoverTitle>
+          <PopoverDescription>{t("operations.filters.multiSelectHint")}</PopoverDescription>
+        </PopoverHeader>
         <ul className="flex flex-col">
           {options.map((option) => {
             const checked = selected.has(option.value);
 
             return (
               <li key={option.value}>
-                <label className="hover:bg-accent flex cursor-pointer items-center gap-2 px-2 py-1.5 text-xs">
+                <label className="hover:bg-accent flex cursor-pointer items-center gap-2 px-2 py-2 text-xs">
                   <Checkbox
                     checked={checked}
                     onCheckedChange={(next) => {
