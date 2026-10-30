@@ -54,6 +54,23 @@ export const EventDeliveryOutcomeSchema = z.union([z.literal("none"), DeliverySt
 export type EventDeliveryOutcome = z.infer<typeof EventDeliveryOutcomeSchema>;
 
 /**
+ * Narrows the events list by how much of the fan-out reached a target.
+ *
+ * `all` means every delivery of the event succeeded, `partial` means at least
+ * one succeeded while at least one did not, and `none` means the event produced
+ * deliveries but none of them succeeded. The three values partition the events
+ * that produced at least one delivery; events with no delivery at all stay
+ * outside this facet and are selected with `deliveryOutcome=none`.
+ *
+ * Pending, running, failed, and suppressed deliveries all count as "not
+ * delivered": the question is whether a human was reached, and a job still in
+ * the queue has not reached anyone yet.
+ */
+export const EventDeliveryCoverageSchema = z.enum(["all", "partial", "none"]);
+
+export type EventDeliveryCoverage = z.infer<typeof EventDeliveryCoverageSchema>;
+
+/**
  * Narrows the events list by whether the alert reached one destination.
  *
  * `delivered` means at least one delivery of the event targets the selected

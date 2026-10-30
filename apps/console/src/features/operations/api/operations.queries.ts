@@ -218,6 +218,7 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.severity ? { severity: filters.severity } : {}),
     ...(filters.status ? { status: filters.status } : {}),
     ...(filters.deliveryOutcome ? { deliveryOutcome: filters.deliveryOutcome } : {}),
+    ...(filters.deliveryCoverage ? { deliveryCoverage: filters.deliveryCoverage } : {}),
     // `false` is a real filter here (it excludes rejected payloads), so the
     // truthiness guard every other dimension uses would drop it from the
     // request while the chip still claimed the list was narrowed.

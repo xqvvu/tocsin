@@ -177,6 +177,15 @@ describe("operation filters by page scope", () => {
     expect(screen.queryByTitle(/^Clear Delivery outcome/)).toBeNull();
   });
 
+  it("names the delivery coverage chip and keeps it off the deliveries page", () => {
+    renderFilters("events", { deliveryCoverage: "partial" }, "toolbar");
+    expect(screen.getByTitle("Clear Delivery coverage: Partially delivered")).toBeTruthy();
+
+    cleanup();
+    renderFilters("deliveries", { deliveryCoverage: "partial" }, "toolbar");
+    expect(screen.queryByTitle(/^Clear Delivery coverage/)).toBeNull();
+  });
+
   it("names the destination kind chip and keeps it off the events page", () => {
     renderFilters("deliveries", { destinationKind: "feishu" }, "toolbar");
     expect(screen.getByTitle("Clear Destination kind: Feishu")).toBeTruthy();
@@ -222,6 +231,7 @@ describe("operation filters by page scope", () => {
       severity: "",
       status: "",
       deliveryOutcome: "",
+      deliveryCoverage: "",
       parseFailed: "",
       destinationId: "",
       destinationKind: "",

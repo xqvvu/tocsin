@@ -8,6 +8,7 @@ import {
   DeliveryStateSchema,
   DeliveryTimeFieldSchema,
   DestinationKindSchema,
+  EventDeliveryCoverageSchema,
   EventDeliveryOutcomeSchema,
   EventDestinationMatchSchema,
   EventDestinationOutcomeSchema,
@@ -335,6 +336,14 @@ export const ListOperationsInputSchema = z
      * delivery list, which has the exact `deliveryState` dimension instead.
      */
     deliveryOutcome: EventDeliveryOutcomeSchema.optional(),
+    /**
+     * Events-only: how much of the fan-out reached a target. `all` keeps events
+     * whose every delivery succeeded, `partial` events where some did and some
+     * did not, and `none` events that produced deliveries but none succeeded.
+     * Events without any delivery are outside this facet; `deliveryOutcome`
+     * selects them. Ignored by the delivery list.
+     */
+    deliveryCoverage: EventDeliveryCoverageSchema.optional(),
     /**
      * Events-only: whether intake's provider parser rejected the webhook
      * payload. A rejected payload is still recorded as an event so the raw body
