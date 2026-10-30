@@ -48,14 +48,21 @@
 
 ### 发布
 
-- 待 PR #762 合并后按第 9.5 步评估（该切片属用户可见变更，若 main CI 绿且无其它 open PR 则可发版）。
+- 三位只读发布评审一致同意（发布经理：唯一用户可见变更为 #762；阻断审计：区间无迁移/Dockerfile/锁文件改动、
+  0 个 open PR、无高优 `blocked-autonomous`；运维回滚：无 schema/env/启动参数变化，换回旧镜像即可回滚）。
+- 版本 `0.1.0-beta.148`；PR #763 只改根 `package.json`（rebase 合并 `c0746831`）。
+- tag `v0.1.0-beta.148` @ `c0746831`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.148`
+  （linux/amd64 + linux/arm64，index digest `sha256:d3e373f342c69cf26881f35084ff35cc33b6e675d12d7cf32e9ac6e3c1cceae1`）；
+  回滚 `0.1.0-beta.147`。
+- 补建检查：最近 10 个 tag 均有对应 release。
 
 ### 下一轮优先项
 
 1. **release-infra 车道**（轮转）：provider fixture 目录（REQ-360，23 分）+ provider 贡献指南。
 2. **REQ-24 / REQ-159**（28 分）：抑制窗口影响面汇总、通用 Webhook 源字段映射。
 3. **REQ-235 / REQ-257**（27 分）：全局投递暂停原因、`Retry-After` 冷却建议；改变投递语义，先走 EXPERT_PANEL。
-4. 发布评估：本轮有用户可见变更，合并后按门槛决定是否递增 `0.1.0-beta.148`。
+4. 发布评估：本轮已发 `0.1.0-beta.148`；下一轮若只有测试/文档改动则跳过发版。
 
 ## 2026-10-30（第 184 轮）
 
