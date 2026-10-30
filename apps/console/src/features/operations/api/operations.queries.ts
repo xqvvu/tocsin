@@ -245,6 +245,11 @@ function normalizeOperationFilters(filters: OperationFilterData): OperationFilte
     ...(filters.receipt ? { receipt: filters.receipt } : {}),
     ...(filters.deliveryState ? { deliveryState: filters.deliveryState } : {}),
     ...(filters.minAttempts && filters.minAttempts > 0 ? { minAttempts: filters.minAttempts } : {}),
+    // Leaving this out would drop the filter from the request and the query
+    // key, so the list would look unfiltered while the chip claimed otherwise.
+    ...(filters.lastAttemptStatusClass
+      ? { lastAttemptStatusClass: filters.lastAttemptStatusClass }
+      : {}),
     ...(filters.range ? { range: filters.range } : {}),
     // `created` is the server default; only a non-default basis needs to be
     // sent (and keyed), otherwise every default request differs from the rest.

@@ -1,4 +1,5 @@
 import type {
+  DeliveryAttemptStatusClass,
   DeliveryListItem,
   DeliveryReceiptFilter,
   DeliveryState,
@@ -161,6 +162,12 @@ export interface DeliveryListQuery {
   state?: DeliveryState | DeliveryState[];
   /** Inclusive lower bound on `deliveries.attempt_count`; 0 is "any". */
   minAttempts?: number;
+  /**
+   * Only deliveries whose latest completed attempt returned this HTTP status
+   * class. Failures without a response (timeouts, DNS, TLS) match neither
+   * value, so "what is the target answering" stays a question about responses.
+   */
+  lastAttemptStatusClass?: DeliveryAttemptStatusClass;
   /**
    * Which timestamp `since` compares against and which one orders the list.
    * Defaults to `created`; `updated` keeps retried jobs inside the window their

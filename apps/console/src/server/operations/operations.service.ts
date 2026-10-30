@@ -87,6 +87,7 @@ export class OperationsService {
         receipt: input.receipt,
         state: input.deliveryState,
         minAttempts: input.minAttempts,
+        lastAttemptStatusClass: input.lastAttemptStatusClass,
         timeField: input.timeField,
         q: input.q,
         since,

@@ -271,6 +271,46 @@ describe("minimum attempt count in the operation search", () => {
   });
 });
 
+describe("latest-attempt status class in the operation search", () => {
+  it("accepts both status classes and drops an unknown one", () => {
+    for (const statusClass of ["4xx", "5xx"]) {
+      expect(
+        DashboardOperationSearchSchema.parse({ lastAttemptStatusClass: statusClass })
+          .lastAttemptStatusClass,
+      ).toBe(statusClass);
+    }
+
+    // The URL is user-editable, so an unknown class means "any" instead of an
+    // error or an unvalidated string reaching the server.
+    expect(
+      DashboardOperationSearchSchema.parse({ lastAttemptStatusClass: "3xx" })
+        .lastAttemptStatusClass,
+    ).toBe("");
+  });
+
+  it("counts as an active filter and sends the value to the contract", () => {
+    expect(hasOperationFilters({ lastAttemptStatusClass: "4xx" })).toBe(true);
+    expect(hasOperationFilters({ lastAttemptStatusClass: "" })).toBe(false);
+    expect(
+      operationFiltersFromSearch({ lastAttemptStatusClass: "5xx" }).lastAttemptStatusClass,
+    ).toBe("5xx");
+    expect(
+      operationFiltersFromSearch({ lastAttemptStatusClass: "" }).lastAttemptStatusClass,
+    ).toBeUndefined();
+  });
+
+  it("resets both lists to the first page when the class changes", () => {
+    const merged = mergeOperationSearch(
+      { eventPage: 4, deliveryPage: 3 },
+      { lastAttemptStatusClass: "4xx" },
+    );
+
+    expect(merged.lastAttemptStatusClass).toBe("4xx");
+    expect(merged.eventPage).toBeUndefined();
+    expect(merged.deliveryPage).toBeUndefined();
+  });
+});
+
 describe("time range in the operation search", () => {
   it("accepts every supported window and rejects an unknown one", () => {
     // The URL is user-editable; an unknown window must fall back to "all time"
@@ -539,6 +579,7 @@ describe("clearing the operation search", () => {
       "destinationOutcome",
       "eventId",
       "fingerprint",
+      "lastAttemptStatusClass",
       "minAttempts",
       "parseFailed",
       "q",

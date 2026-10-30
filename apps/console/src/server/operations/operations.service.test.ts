@@ -129,6 +129,16 @@ describe("operations service", () => {
     expect(retried.deliveries.total).toBe(0);
     expect(retried.events.total).toBe(1);
 
+    // This attempt failed before the target answered, so it has no response
+    // status and matches neither class. The dimension still reaches the
+    // repository and narrows only the delivery list.
+    const serverError = await service.listOperations({
+      limit: 10,
+      lastAttemptStatusClass: "5xx",
+    });
+    expect(serverError.deliveries.total).toBe(0);
+    expect(serverError.events.total).toBe(1);
+
     // The failed job never recorded a provider reference, so it is the only
     // row in the missing bucket and neither list has a present receipt.
     const missingReceipt = await service.listOperations({ limit: 10, receipt: "missing" });

@@ -1,6 +1,7 @@
 import { sql } from "kysely";
 
 import type {
+  DeliveryAttemptStatusClass,
   DeliveryListItem,
   DeliveryReceiptFilter,
   DeliveryTimeField,
@@ -459,6 +460,12 @@ export class SqliteHistoryRepository implements HistoryRepository {
       builder = builder.where("deliveries.attempt_count", ">=", query.minAttempts);
     }
 
+    if (query.lastAttemptStatusClass) {
+      builder = builder.where(
+        deliveryLastAttemptStatusClassPredicate(query.lastAttemptStatusClass),
+      );
+    }
+
     if (query.since) {
       builder = builder.where(timeColumn, ">=", query.since);
     }
@@ -770,6 +777,12 @@ export class SqliteHistoryRepository implements HistoryRepository {
 
     if (query.minAttempts) {
       builder = builder.where("deliveries.attempt_count", ">=", query.minAttempts);
+    }
+
+    if (query.lastAttemptStatusClass) {
+      builder = builder.where(
+        deliveryLastAttemptStatusClassPredicate(query.lastAttemptStatusClass),
+      );
     }
 
     if (query.since) {
@@ -1084,6 +1097,34 @@ function deliveryReceiptPredicate(receipt: DeliveryReceiptFilter) {
   )`;
 
   return receipt === "present" ? present : sql<boolean>`NOT ${present}`;
+}
+
+/**
+ * Restricts deliveries by the HTTP status class of the latest completed
+ * attempt.
+ *
+ * "Latest" means the highest `attempt_number` among attempts that are no longer
+ * running, matching how the event detail reads the latest attempt. A later
+ * retry therefore replaces an earlier status instead of widening the match: a
+ * job that failed twice with 502 and then succeeded with 200 does not belong in
+ * the 5xx list even though a 5xx attempt exists. Attempts without a response
+ * (timeout, DNS, TLS) have a null status and match neither class.
+ */
+function deliveryLastAttemptStatusClassPredicate(statusClass: DeliveryAttemptStatusClass) {
+  const [lower, upper] = statusClass === "4xx" ? [400, 499] : [500, 599];
+
+  return sql<boolean>`EXISTS (
+    SELECT 1 FROM delivery_attempts AS filtered_attempts
+    WHERE filtered_attempts.delivery_id = deliveries.id
+      AND filtered_attempts.state != 'running'
+      AND filtered_attempts.response_status BETWEEN ${lower} AND ${upper}
+      AND NOT EXISTS (
+        SELECT 1 FROM delivery_attempts AS newer_attempts
+        WHERE newer_attempts.delivery_id = filtered_attempts.delivery_id
+          AND newer_attempts.state != 'running'
+          AND newer_attempts.attempt_number > filtered_attempts.attempt_number
+      )
+  )`;
 }
 
 /**
