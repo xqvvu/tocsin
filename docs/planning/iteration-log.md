@@ -65,8 +65,19 @@
   - 版本 PR **#745** `chore(release): v0.1.0-beta.145`（rebase 合并 `b42ae33f`）。
   - tag `v0.1.0-beta.145` @ `b42ae33f`；GitHub Release（prerelease，body 非空，976 字符）。
   - 镜像：`registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.145`
-    （linux/amd64 + linux/arm64）；回滚镜像 `0.1.0-beta.144`，无需数据库操作。
+    （linux/amd64 + linux/arm64，index digest
+    `sha256:1d66ed02dab9c6d0c46f6f5ed6a4c5db0b2d16d480c5e267e2e44c5d8756297c`）；
+    回滚镜像 `0.1.0-beta.144`，无需数据库操作。
   - 打 tag 前确认目标 commit 的 main CI 双绿（`40988853764` CI + `40988853843` E2E）。
+
+### 工作树清理
+
+- 删除 `agent-iteration` 专用工作树、`/tmp/tocsin-release-build` 发布构建工作树与并发锁。
+- 回收 2 个已注册且工作区干净的会话工作树（`intelligent-hertz-ebaf9c`、
+  `nice-diffie-71a1ac`）；跳过 `youthful-murdock-b65fc6`（有真实未提交改动）。
+- `.claude/worktrees` 占用从 2.8G 降到 2.1G；本会话工作树的 `node_modules` 在收尾时删除。
+- 删除 4 个已合并的本地分支（`agent/ui-multi-select-popover`、`agent/doc-122-drift`、
+  `docs/planning-round-180`、`chore/release-0.1.0-beta.145`）。
 
 ### 工具链观察
 
