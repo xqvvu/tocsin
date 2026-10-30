@@ -20,6 +20,24 @@ description: 按接收、解析、路由与投递顺序诊断 Tocsin 的 Webhook
 首个 owner 抢注、登录循环、session 撤销与认证密钥轮换见[认证与账号安全](/operations/authentication)。
 环境变量默认值、Compose 透传差异与修改后的生效步骤见[环境变量与运行时配置](/operations/configuration)。
 
+## 先判定故障断点
+
+拿到一条告警的 Event ID 后，先按下面的证据分流，再进入具体页面。`deliveryOutcome=none` 和
+`deliveryCoverage=none` 不是同一个条件：前者表示完全没有 Delivery，后者表示已经有 Delivery、
+但当前没有一条成功。
+
+| 线索 | 先得出的结论 | 下一步 |
+| --- | --- | --- |
+| Webhook 返回 `400`，响应含 `eventId`，事件标记为 `parseFailed=true` | Provider 拒绝了载荷；Tocsin 仍保存了审计 Event，但不会产生路由匹配或 Delivery | 打开事件详情的解析失败提示，核对告警源 Provider、脱敏原始调试和解析诊断；修复上游后重发，不要按“未命中路由”处理 |
+| Event 为 `parseFailed=false`，且筛选 `deliveryOutcome=none` 命中 | 当前没有任何 Delivery；可能是没有路由命中、命中路由没有通知目标，或历史记录已被清理 | 打开事件详情的「路由匹配」标签，先看接入时快照及未投递原因；旧 Event 的 Provider 元数据损坏时，`false` 不能单独证明解析成功 |
+| Event 的 `deliveryCoverage=none` 命中 | 已创建至少一条 Delivery，但没有一条当前为 `succeeded`；`pending`、`running`、`failed` 和 `suppressed` 都算未送达 | 点击事件列表对应的投递状态徽标，逐条检查 Worker、静默、退避和目标错误；不要只凭覆盖结果决定重试 |
+| Event 的 `deliveryCoverage=partial` 命中 | 同一 Event 的扇出中至少一条成功，仍有其它投递未成功 | 对照成功与非成功目标；只处理失败、待处理、运行中或已抑制的投递，避免把已送达目标重复发送 |
+| Event 的 `deliveryOutcome=failed` 命中 | 至少有一条当前为 `failed` 的 Delivery；同一 Event 也可能有成功或其它状态的投递 | 点击「失败」徽标进入投递列表，查看尝试记录、最后错误与目标是否已受理，再按[投递重试规则](/operations/deliveries#手动重试)决定是否重试 |
+
+`parseFailed=false` 只是排除明确的解析失败标记。正常解析的 Event 也可能没有命中路由；反过来，
+Provider 元数据损坏或缺失的旧记录也可能落在这一侧。若 Webhook 没有返回 `eventId`，先回到下一节
+检查认证、JSON 格式和请求体大小，因为这类请求通常没有可供事件页下钻的审计记录。
+
 ## Webhook 没有 Event
 
 1. 确认请求目标是告警源自己的 `/api/sources/<source-id>/webhook` URL，而不是 dashboard 页面或通用 `/api` 路径。
