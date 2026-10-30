@@ -14,7 +14,7 @@ Docker runtime 形态。
 这个结论的含义是：可以停止继续往 MVP PRD 里追加功能，进入下一轮产品讨论、产出新的 post-MVP PRD，
 再用 `to-issues` 拆分新需求。
 
-它不等于稳定公开发布已经完成。截至 2026-10-20，发布文档（release checklist、Docker 生产部署、
+它不等于稳定公开发布已经完成。截至 2026-10-22，发布文档（release checklist、Docker 生产部署、
 备份/恢复/升级/回滚）与 README 的状态措辞已经补齐，见 `docs/release/`；仍未完成的发布 gate 有
 三类：provider inline payload fixture 化与多版本 payload 覆盖（E 节）、provider 侧 contributor
 guide（B/E 节），以及 E2E spec 覆盖面（A 节）。关键浏览器 E2E 已接入 CI

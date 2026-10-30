@@ -5,7 +5,8 @@
 > 最新版本以 `git tag --list` 为准），并且 tag 本身不会触发任何东西。
 
 核实时间 2026-10-22，核实基线 `origin/main` @ `63c8931`；2026-10-23 在 `origin/main` @ `3ff8ef5`
-复核 tag 数量与当前版本号。本文只回答“怎么切一个 tag”；发布前的产品验收
+复核 tag 数量与当前版本号；2026-10-30 复核 workflow 清单，并把版本号写法改为不写死具体值
+（此前写死的 `0.1.0-beta.137` 已过期两轮）。本文只回答“怎么切一个 tag”；发布前的产品验收
 清单在 `docs/release/mvp-rc-checklist.md`，部署与数据操作见
 `docs/release/docker-production-deployment.md` 和 `docs/release/backup-restore-upgrade.md`。
 
@@ -18,7 +19,7 @@
 | Release / publish workflow | 不存在                                                         | `.github/` 下只有 `ci.yml` 与 `e2e.yml`                                   |
 | Changelog 与版本递增工具 | 不存在                                                           | 没有 `.changeset/`、没有 `CHANGELOG.md`、根 `package.json` 没有 `release` script |
 | git tag                  | 首个 tag 为 `v0.1.0-beta.9`（2026-10-19）                        | 此前的 `0.1.0-beta.8` 没有对应 tag，版本追溯以发布记录为准                |
-| 版本号来源               | 只有根 `package.json`（当前为 `0.1.0-beta.137`，以下次发布时的值为准） | 启动日志的 `tocsin.runtime` 版本来自根 `package.json`（`apps/console/src/server/runtime/system-information.ts`） |
+| 版本号来源               | 只有根 `package.json`（本文不写死版本号，发布时以根 `package.json` 与 `git tag --list` 为准） | 启动日志的 `tocsin.runtime` 版本来自根 `package.json`（`apps/console/src/server/runtime/system-information.ts`） |
 | 容器镜像发布             | 没有自动化，只有手工 recipe                                       | 没有 CI 构建/推送步骤；`Justfile` 提供 `just docker-buildx <image> <tag>`（多平台构建并 `--push`）、`just docker-tag`、`just docker-push`，registry 与 tag 约定见第 4 节。`docker-compose.yml` 默认用本机构建的 `image: tocsin:local` |
 | E2E / Docker smoke 自动化 | E2E 已接入 CI，Docker smoke 仍为本地 gate                      | `apps/console/e2e/alert-flow.spec.ts` + `apps/console/playwright.config.ts`，由 `.github/workflows/e2e.yml` 在 push 到 main 与 PR 上运行；`scripts/docker-smoke.sh` 与 `just docker-smoke` 保留为本地人工 gate |
 
