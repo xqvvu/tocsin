@@ -70,11 +70,23 @@
     `0005`）、无高优 `blocked-autonomous`、tag 未占用。
   - 运维回滚：无 Dockerfile/compose/env/锁文件变化；回滚只需换回 `0.1.0-beta.155`，无需数据库
     操作；旧镜像可读新 metadata（未知键按普通元数据展示）；升级前已存在的事件不会回填新链接。
-- 版本 `0.1.0-beta.156`；PR #795（只改根 `package.json`，rebase 合并 `f608262f`）。
+- 版本 `0.1.0-beta.156`；PR #795（只改根 `package.json`，rebase 合并 `f608262f`，main CI 双绿）。
+- tag `v0.1.0-beta.156` @ `f608262f`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.156`
+  （linux/amd64 + linux/arm64，`--provenance=false --sbom=false`）：
+  - index digest `sha256:a3bf142139ff7fb09e08a61131ff819264300b918bd39c9c06ab8eceec934365`
+  - amd64 `sha256:471142bd6039c83e7cede667485dd855d9371593f8da2ee761d3d46bd06082d6`
+  - arm64 `sha256:985e6fdd68dd0b04dcb955f90d2a2d6a31e96911556dad510a1c096317231cad`
+- 回滚 `0.1.0-beta.155`，无需数据库操作。
 
 ### 清理
 
-（见本节末尾更新）
+- 删除本轮临时构建工作树 `/tmp/tocsin-build-beta156`（tag 检出，镜像构建用）。
+- 回收干净的历史 session 工作树 `focused-tharp-4a1934`、`quizzical-burnell-c1ed05`；
+  `youthful-murdock-b65fc6` 有真实未提交改动（destinations/oncall/i18n），跳过。
+- 按 PR 状态删除已合并分支 `agent/event-upstream-deep-links`、`agent/iteration-log-193`；
+  无 PR 记录的存量 `agent/*` 分支保留。
+- `.claude/worktrees` 3.5G → 2.8G。
 
 ### 下一轮优先项
 
