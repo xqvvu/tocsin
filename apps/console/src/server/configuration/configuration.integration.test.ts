@@ -1816,6 +1816,26 @@ describe("configuration capabilities", () => {
     await store.close();
   });
 
+  it("exports the generic webhook idempotency opt-in", async () => {
+    const { store, services } = await createTestContext();
+    await services.destinations.createDestination({
+      name: "Idempotent relay",
+      kind: "generic_webhook",
+      config: {
+        url: "https://relay.example.test/tocsin",
+        idempotencyKey: true,
+      },
+    });
+
+    const json = await services.portability.exportJson({ now: () => now });
+
+    // The URL becomes a secret reference, but the opt-in is ordinary
+    // operational configuration and must survive the export.
+    expect(JSON.parse(json).destinations[0]?.config).toMatchObject({ idempotencyKey: true });
+
+    await store.close();
+  });
+
   it.each(registeredDestinationKinds)(
     "omits secret fields of every %s destination from exported configuration",
     async (kind) => {
