@@ -214,6 +214,16 @@ Provider 拒绝 Webhook 载荷时，Tocsin 仍会保存一条用于审计的 Eve
 
 投递列表检索、状态、自动退避、手动重试和积压处置见[投递检索、生命周期与重试](/operations/deliveries)，徽标链接的参数与清除方式见[从事件下钻到具体投递](/operations/deliveries#从事件下钻到具体投递)。若 Delivery 为 `suppressed`，说明它命中了静默规则或维护时段，并不代表发送失败；具体规则见[告警静默与维护时段](/operations/suppressions)。
 
+## 上游告警回链
+
+「标准化字段」底部的「上游告警」区块展示 Provider 记录的接入事实与回链：
+
+- `externalURL`（上游系统首页）、`generatorURL`（规则来源），以及 Grafana 载荷的
+  `dashboardURL`（仪表盘）、`panelURL`（面板）、`silenceURL`（预填的静默表单）会渲染为外链。
+- 只接受 `http(s)` 地址；URL 中的用户名与密码会被剥离。非 `http(s)` 或无法解析的值仍以普通
+  元数据展示，便于排障，但不可点击。
+- `provider`、`receiver`、`groupKey`、`alertCount`、`payloadHash` 等标量按稳定顺序展示。
+
 ## 判断是否重复发生
 
 「同指纹」标签回答“同一个告警是否又来了”：
