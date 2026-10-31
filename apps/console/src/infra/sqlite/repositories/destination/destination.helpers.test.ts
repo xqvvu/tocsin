@@ -222,6 +222,23 @@ describe("destinationMetadataFromRuntime", () => {
     }
   });
 
+  it("reads the generic webhook idempotency opt-in into the editor draft", () => {
+    const enabled = destinationEditorFormDraftFromRuntime(
+      genericWebhookDestination({
+        url: "https://hooks.example.test/ingest",
+        idempotencyKey: true,
+      }),
+    );
+    const legacy = destinationEditorFormDraftFromRuntime(
+      genericWebhookDestination({ url: "https://hooks.example.test/ingest" }),
+    );
+
+    expect(enabled.idempotencyKey).toBe(true);
+    // Configs saved before the opt-in existed have no key; the schema default
+    // is off, so the editor must render off rather than reject the draft.
+    expect(legacy.idempotencyKey).toBe(false);
+  });
+
   it("leaves a URL without credentials untouched", () => {
     const destination = genericWebhookDestination({ url: "https://hooks.example.test/ingest" });
 

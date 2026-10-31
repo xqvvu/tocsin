@@ -33,6 +33,13 @@ export interface DestinationPresentation {
 export interface DestinationRenderInput<Config> {
   eventId: string;
   /**
+   * Persisted delivery id, filled by the worker for the delivery being sent and
+   * stable across its retries. Adapters that support an idempotency header use
+   * it to let the target drop a duplicate. Absent for previews and test sends,
+   * because neither has a persisted delivery.
+   */
+  deliveryId?: string;
+  /**
    * Absolute dashboard link for this Event, filled by rendering sites from the
    * deployment's public URL. The template renders an empty string when it is
    * absent, which is also the behavior for samples with no stored Event.

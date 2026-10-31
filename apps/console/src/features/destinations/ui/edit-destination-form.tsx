@@ -99,6 +99,7 @@ export function EditDestinationForm({
           headers: editorDraft.form.headers,
           webhookUrl: editorDraft.form.webhookUrl,
           method: editorDraft.form.method,
+          idempotencyKey: editorDraft.form.idempotencyKey,
           signSecret: "",
           sendMode: editorDraft.form.sendMode,
           appRef: editorDraft.form.appRef,

@@ -27,6 +27,9 @@ describe("delivery execution", () => {
         expect(kind).toBe("generic_webhook");
         expect(input).toMatchObject({
           eventId: "event-1",
+          // Stable across retries; adapters that opt in use it as the
+          // outbound Idempotency-Key.
+          deliveryId: "delivery-1",
           payload: {
             monitor: "checkout",
             token: "[REDACTED]",

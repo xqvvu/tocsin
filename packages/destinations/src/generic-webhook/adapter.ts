@@ -67,6 +67,12 @@ export const genericWebhookAdapter = Adapter.define({
         method: config.method,
         headers: {
           "Content-Type": "application/json",
+          // Only a persisted delivery has a stable id; previews and test sends
+          // leave the header out. An operator-configured header of the same
+          // name still wins, because it is spread last.
+          ...(config.idempotencyKey && input.deliveryId
+            ? { "Idempotency-Key": input.deliveryId }
+            : {}),
           ...config.headers,
         },
         body: JSON.stringify(renderedPayload),

@@ -40,6 +40,8 @@ export type DestinationFormValues = DestinationTemplateFormState & {
    */
   webhookUrl: string;
   method: string;
+  /** Generic-webhook opt-in for the outbound `Idempotency-Key` header. */
+  idempotencyKey: boolean;
   signSecret: string;
   /** Feishu send mode and app-mode target fields. */
   sendMode: DestinationFeishuSendMode;

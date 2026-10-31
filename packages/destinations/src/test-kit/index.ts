@@ -64,6 +64,8 @@ export interface DestinationSendInputOverrides<Config> {
    */
   destination: Partial<Omit<DestinationSummary, "kind">> & Pick<DestinationSummary, "kind">;
   eventId?: string;
+  /** Persisted delivery id; omitted stands for a preview or test send. */
+  deliveryId?: string;
   source?: Partial<SourceSummary>;
   normalizedEvent?: Partial<NormalizedEvent>;
   /** Upstream group size; omitted keeps `tocsin.alertCount` empty. */
@@ -83,6 +85,7 @@ export function destinationSendInput<Config>(
 ): DestinationSendInput<Config> {
   const input: DestinationSendInput<Config> = {
     eventId: overrides.eventId ?? "event-1",
+    ...(overrides.deliveryId === undefined ? {} : { deliveryId: overrides.deliveryId }),
     source: { ...SampleSource, ...overrides.source },
     destination: { ...SampleDestination, ...overrides.destination },
     normalizedEvent: { ...SampleEvent, ...overrides.normalizedEvent },

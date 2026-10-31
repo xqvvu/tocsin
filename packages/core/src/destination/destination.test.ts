@@ -157,6 +157,7 @@ describe("destination dashboard DTOs", () => {
         url: "",
         webhookUrl: "https://open.feishu.cn/open-apis/bot/v2/hook/abc",
         method: "",
+        idempotencyKey: false,
         sendMode: "webhook",
         appRef: "",
         chatId: "",

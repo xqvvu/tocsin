@@ -24,6 +24,7 @@ describe("destination form helpers", () => {
     // "url: Invalid URL".
     data.set("webhookUrl", "https://relay.example.test/tocsin");
     data.set("method", "PATCH");
+    data.set("idempotencyKey", "true");
     data.set("headers", "Authorization: Bearer relay-secret\nX-Team: sre\ninvalid");
     data.set("templateText", "{{event.title}} from {{source.name}}");
 
@@ -31,6 +32,7 @@ describe("destination form helpers", () => {
     expect(destinationConfigFromForm("generic_webhook", data)).toEqual({
       url: "https://relay.example.test/tocsin",
       method: "PATCH",
+      idempotencyKey: true,
       headers: {
         Authorization: "Bearer relay-secret",
         "X-Team": "sre",
@@ -170,11 +172,15 @@ describe("destination form helpers", () => {
     generic.set("kind", "generic_webhook");
     generic.set("url", "");
     generic.set("method", "PATCH");
+    // An explicit false must reach the patch so the edit form can turn the
+    // opt-in back off; unlike text fields, absence is not "keep stored".
+    generic.set("idempotencyKey", "false");
     generic.set("headers", "");
     generic.set("templateText", "{{event.title}} from {{destination.name}}");
 
     expect(destinationConfigPatchFromForm("generic_webhook", generic)).toEqual({
       method: "PATCH",
+      idempotencyKey: false,
       template: {
         mode: "text",
         text: "{{event.title}} from {{destination.name}}",

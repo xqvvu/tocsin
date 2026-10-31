@@ -111,6 +111,9 @@ export class DeliveryExecution {
         delivery.destination.kind,
         {
           eventId: delivery.event.id,
+          // Stable across retries of the same delivery, so an adapter that
+          // supports an idempotency header can dedupe a cross-attempt repeat.
+          deliveryId: delivery.job.id,
           eventUrl: eventDetailUrl(this.publicBaseUrl, delivery.event.id),
           deliveryUrl: deliveryDetailUrl(this.publicBaseUrl, delivery.job.id),
           // The group size is an upstream fact recorded at intake; it is a

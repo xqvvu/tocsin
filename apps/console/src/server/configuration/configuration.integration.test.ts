@@ -418,6 +418,7 @@ describe("configuration capabilities", () => {
     expect(stored?.config).toEqual({
       url: "https://example.test/webhook",
       method: "PATCH",
+      idempotencyKey: false,
       headers: {
         "x-team": "sre",
       },
@@ -1574,6 +1575,7 @@ describe("configuration capabilities", () => {
     expect((await store.destinations.get(destination.id))?.config).toEqual({
       url: "https://example.test/webhook-secret",
       method: "PATCH",
+      idempotencyKey: false,
       headers: {
         Authorization: "Bearer relay-secret",
         "X-Team": "platform",

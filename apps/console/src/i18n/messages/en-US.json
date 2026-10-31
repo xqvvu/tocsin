@@ -538,6 +538,8 @@
   "destinations.form.headersDescription": "One Name: value header per line — values stay server-side and are shown as names only, leave a value blank to keep the stored one",
   "destinations.form.htmlTemplate": "HTML body template",
   "destinations.form.htmlTemplateDescription": "Replaces the generated pre block, your markup is emitted as written while every variable value is HTML-escaped",
+  "destinations.form.idempotencyKey": "Send Idempotency-Key",
+  "destinations.form.idempotencyKeyDescription": "Attach a stable Idempotency-Key header (the delivery id) so the target can drop a duplicate that arrives after a retry — previews and test sends omit it, and the target must honour the convention",
   "destinations.form.jsonPayloadTemplate": "JSON payload template",
   "destinations.form.jsonPayloadTemplateDescription": "Only string values are interpolated, the URL and headers never enter the outbound body",
   "destinations.form.keepExisting": "Keep existing",
