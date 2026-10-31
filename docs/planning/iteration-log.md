@@ -2,6 +2,72 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-31（第 194 轮）
+
+- 时间：2026-10-31 10:53 CST 起（定时触发；并发锁获取于 10:53）。
+- 基线：`origin/main` @ `be2f19d4`；启动时最新 commit 的 CI 绿（另一 workflow 仍在跑），无 open PR。
+  执行期间 docs-site routine 把 main 推进到 `7a7e1817`，本轮分支基于最新 main。
+- 类型：**full-audit**（距上次全量审计 2026-10-30 22:51 CST 约 12h ≥ 6h）+ 1 个需求切片（REQ-381）。
+- **全量审计时间戳更新为 2026-10-31 10:53 CST**。
+- 车道轮转位置：本轮执行 `requirements`、`ui-triage`、`docs-drift`；下一个非必跑车道为 **quality**。
+- `ui-triage`：**defer**。`last_ui_review_at` 2026-10-30 17:45 CST（距约 17.2h < 48h）；自上次评审
+  以来 6 个 UI 路径提交中真正新的 UI 合并仅 `95cfb0c0`（事件详情深链，有组件测试）1 个；
+  67 条 `UI-*` candidate 为饱和存量，最大 UI-126，无 UI-127+。下一次触发：
+  2026-11-01 17:45 CST 后首个轮次做整页巡检，或新增 ≥3 个真正新的 UI 合并 / ≥2 条 UI-127+ 发现。
+- `last_ui_review_at` 保持 **2026-10-30 17:45 CST**（本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、发版在本会话工作树
+  `happy-easley-46c4cb`。依赖为半删残留（根 `node_modules` 无 `zod`、无包级 `node_modules`），
+  `vp install --frozen-lockfile --force` 5.3 秒重建 844 个包后恢复。
+
+### 本轮交付
+
+- **PR #799** `feat(console): expose expected delivery targets in the event list`（REQ-381，28 分）
+  - `EventListItem.expectedDeliveryCount: number | null`：接入快照中所有命中路由的
+    `destinationIds` 之和（按路由-目标对计数）；无 `route_matches_json` 时返回 `null`，不把
+    「未知」伪装成 0。
+  - 仓储一次解码同时得到 `routeMatchCount` 与 `expectedDeliveryCount`；列表投递列在实际数
+    少于预期时显示「缺 N」徽标并链接到事件详情原因表。
+  - 测试：仓储投影 6 个场景（缺口/完整/同目标双路由/空目标/未命中/无快照）+ 单元格
+    （缺口徽标、零投递叠加、未知与无缺口静默）。
+  - 文档：中文 PRD `docs/prd/event-delivery-gap.md`；`apps/docs/guide/events.md` 补判读方式。
+  - 验证：`vp check` 0 error（35 warning 基线）；`vp run -r test` 4/4（247 文件 / 1499 用例）；
+    `vp run -r build` 2/2。
+
+### 专家发现
+
+**requirements（窄 brief，10 分钟）**：**无新候选**。`post-mvp-planning` 中尚未交付的方向
+（Route 干跑预览、抑制试跑、fingerprint 聚合/绝对时间窗/导出、provider fixture、删除策略）
+均已由 backlog 现有 candidate 覆盖；On-call 排班/ack/短信等为文档明确 out-of-scope，不提议。
+
+**docs-drift（窄 brief，12 分钟）**：
+
+- Suppression 的 service / oRPC / 页面 / 路由断言全部与代码一致
+  （`docs/release/mvp-rc-checklist.md:28,58-64` ↔ `server/suppressions/`、
+  `server/orpc/router.ts:30`、`features/suppressions/ui/`、`routes/_dashboard.suppressions*.tsx`），
+  无漂移。
+- `xqvvu/vane` 共 372 处：329 处是真实 ACR 镜像坐标，43 处均在 `docs/planning/` 历史叙述；
+  `README.md`、`apps/docs/` 及其他文档 0 处失效 GitHub 链接。
+- RC checklist 未勾 gate（`mvp-rc-checklist.md:132,186,188,189`）逐条核实为真实未完成：
+  E2E 缺历史筛选/失败 retry 用例、无 provider 贡献指南、无 fixture 目录、无多版本 payload 矩阵；
+  `.github/workflows/e2e.yml` 存在，已勾选项成立。无可执行的文档更正。
+
+**ui-triage**：见上，defer。
+
+### EXPERT_PANEL
+
+本轮无新 EXPERT_PANEL 事项（纯只读投影 + 列表展示）。
+
+### 发布
+
+（见本轮后续记录）
+
+### 下一轮优先项
+
+1. REQ-382 / REQ-384（28）或 REQ-373（28）：下一轮选 1 实现。
+2. REQ-380 / REQ-383（27）与 REQ-374 / REQ-376（27）。
+3. 车道轮转：下一个非必跑车道 **quality**（第 193 轮因 API timeout 未返回，优先重跑）。
+4. UI 评审：2026-11-01 17:45 CST 后首个轮次做整页巡检。
+
 ## 2026-10-31（第 193 轮）
 
 - 时间：2026-10-31 01:19 CST 起（定时触发；并发锁获取于 01:19）。
