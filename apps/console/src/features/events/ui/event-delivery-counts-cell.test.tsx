@@ -14,16 +14,24 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({
     to,
     search,
+    params,
     children,
     ...props
   }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
     to: string;
     search?: Record<string, string>;
+    params?: Record<string, string>;
   }) => {
     const query = search ? `?${new URLSearchParams(search).toString()}` : "";
+    const path = params
+      ? Object.entries(params).reduce(
+          (resolved, [key, value]) => resolved.replace(`$${key}`, value),
+          to,
+        )
+      : to;
 
     return (
-      <a href={`${to}${query}`} {...props}>
+      <a href={`${path}${query}`} {...props}>
         {children}
       </a>
     );
@@ -32,13 +40,19 @@ vi.mock("@tanstack/react-router", () => ({
 
 const EMPTY_COUNTS = { pending: 0, running: 0, succeeded: 0, failed: 0, suppressed: 0 };
 
-function renderCell(counts: typeof EMPTY_COUNTS, routeMatchCount: number, eventId = "evt-1") {
+function renderCell(
+  counts: typeof EMPTY_COUNTS,
+  routeMatchCount: number,
+  eventId = "evt-1",
+  expectedDeliveryCount: number | null = null,
+) {
   return render(
     <AppIntlProvider locale="en-US">
       <EventDeliveryCountsCell
         eventId={eventId}
         counts={counts}
         routeMatchCount={routeMatchCount}
+        expectedDeliveryCount={expectedDeliveryCount}
       />
     </AppIntlProvider>,
   );
@@ -84,5 +98,38 @@ describe("event delivery counts cell", () => {
 
     expect(screen.getByText("No route matched")).toBeTruthy();
     expect(unmatched.container.querySelector("a")).toBeNull();
+  });
+
+  it("flags the deliveries the intake snapshot promised but did not create", () => {
+    renderCell({ ...EMPTY_COUNTS, succeeded: 2 }, 2, "evt-42", 3);
+
+    // The counts say "2 succeeded", but the rules selected 3 targets. The gap
+    // badge is the only place that difference is visible in the list.
+    const gap = screen.getByText("1 missing").closest("a");
+
+    expect(gap?.getAttribute("href")).toBe("/events/evt-42");
+    expect(gap?.getAttribute("title")).toBe(
+      "The intake route snapshot promised 3 deliveries and 2 exist — fingerprint dedupe, a disabled route or target, or a deleted target explains the gap, and the event detail names the actual one",
+    );
+  });
+
+  it("keeps the zero badge when nothing was delivered but targets were expected", () => {
+    renderCell(EMPTY_COUNTS, 1, "evt-1", 2);
+
+    expect(screen.getByText("0")).toBeTruthy();
+    expect(screen.getByText("2 missing")).toBeTruthy();
+  });
+
+  it("stays silent when the snapshot is unknown or fully delivered", () => {
+    const unknown = renderCell({ ...EMPTY_COUNTS, succeeded: 2 }, 2, "evt-1", null);
+
+    // No intake snapshot means "we cannot tell", which must not render as a
+    // gap. The same holds when every promised delivery exists.
+    expect(unknown.queryByText(/missing/)).toBeNull();
+
+    cleanup();
+    const complete = renderCell({ ...EMPTY_COUNTS, succeeded: 2 }, 2, "evt-1", 2);
+
+    expect(complete.queryByText(/missing/)).toBeNull();
   });
 });

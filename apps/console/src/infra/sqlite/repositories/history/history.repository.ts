@@ -186,28 +186,33 @@ export class SqliteHistoryRepository implements HistoryRepository {
     const rows = await builder.execute();
 
     return {
-      items: rows.map((row) => ({
-        id: row.id,
-        sourceId: row.source_id,
-        sourceName: row.source_name,
-        severity: row.severity,
-        status: row.status,
-        // Provider-authored copy can carry a credential pasted into the alert;
-        // matching already happened against the raw value at intake.
-        title: redactText(row.title),
-        fingerprint: row.fingerprint,
-        receivedAt: row.received_at,
-        parseFailed: isParseFailureRow(row.provider_metadata_json),
-        alertCount: alertCountFrom(row.provider_metadata_json),
-        routeMatchCount: countMatchedRoutes(row.route_matches_json),
-        deliveryCounts: {
-          pending: row.pending_count ?? 0,
-          running: row.running_count ?? 0,
-          succeeded: row.succeeded_count ?? 0,
-          failed: row.failed_count ?? 0,
-          suppressed: row.suppressed_count ?? 0,
-        },
-      })),
+      items: rows.map((row) => {
+        const routeMatches = routeMatchSummary(row.route_matches_json);
+
+        return {
+          id: row.id,
+          sourceId: row.source_id,
+          sourceName: row.source_name,
+          severity: row.severity,
+          status: row.status,
+          // Provider-authored copy can carry a credential pasted into the alert;
+          // matching already happened against the raw value at intake.
+          title: redactText(row.title),
+          fingerprint: row.fingerprint,
+          receivedAt: row.received_at,
+          parseFailed: isParseFailureRow(row.provider_metadata_json),
+          alertCount: alertCountFrom(row.provider_metadata_json),
+          routeMatchCount: routeMatches.matchedRoutes,
+          expectedDeliveryCount: routeMatches.expectedDeliveries,
+          deliveryCounts: {
+            pending: row.pending_count ?? 0,
+            running: row.running_count ?? 0,
+            succeeded: row.succeeded_count ?? 0,
+            failed: row.failed_count ?? 0,
+            suppressed: row.suppressed_count ?? 0,
+          },
+        };
+      }),
       total,
       page,
       pageSize,
@@ -941,14 +946,31 @@ export class SqliteHistoryRepository implements HistoryRepository {
   }
 }
 
-function countMatchedRoutes(routeMatchesJson: string | null): number {
+/**
+ * Route-match facts the event list can show without opening the detail.
+ *
+ * `expectedDeliveries` is the promise the intake snapshot recorded: every
+ * destination a matched route selected. A route that matched with no
+ * destinations contributes nothing, matching the detail gap table's reading.
+ * A missing snapshot yields `null` instead of `0` — the event was written
+ * directly, so what the rules selected was never recorded.
+ */
+function routeMatchSummary(routeMatchesJson: string | null): {
+  matchedRoutes: number;
+  expectedDeliveries: number | null;
+} {
   if (routeMatchesJson === null) {
-    return 0;
+    return { matchedRoutes: 0, expectedDeliveries: null };
   }
 
-  return decodeSchemaJson(RouteMatchResultsSchema, routeMatchesJson).filter(
+  const matched = decodeSchemaJson(RouteMatchResultsSchema, routeMatchesJson).filter(
     (match) => match.matched,
-  ).length;
+  );
+
+  return {
+    matchedRoutes: matched.length,
+    expectedDeliveries: matched.reduce((sum, match) => sum + match.destinationIds.length, 0),
+  };
 }
 
 /**

@@ -874,6 +874,8 @@
   "events.replay.toast.notFound": "Event not found",
   "events.replay.toast.success": "Event replay queued",
   "events.replay.toast.successDescription": "{created} created, {skipped} already existed",
+  "events.table.deliveryGap": "{count} missing",
+  "events.table.deliveryGapTitle": "The intake route snapshot promised {expected} deliveries and {created} exist — fingerprint dedupe, a disabled route or target, or a deleted target explains the gap, and the event detail names the actual one",
   "events.table.deliveryShort.failed": "F",
   "events.table.deliveryShort.pending": "P",
   "events.table.deliveryShort.running": "R",

@@ -30,10 +30,12 @@ export function EventDeliveryCountsCell({
   eventId,
   counts,
   routeMatchCount,
+  expectedDeliveryCount,
 }: {
   eventId: string;
   counts: EventDeliveryCounts;
   routeMatchCount: number;
+  expectedDeliveryCount: number | null;
 }) {
   const t = useTranslations();
   const total = DELIVERY_STATES.reduce((sum, state) => sum + counts[state], 0);
@@ -50,10 +52,11 @@ export function EventDeliveryCountsCell({
 
   if (total === 0) {
     return (
-      <div className="flex justify-center">
+      <div className="flex flex-wrap justify-center gap-1">
         <Badge variant="outline" className="min-w-8 justify-center font-mono tabular-nums">
           0
         </Badge>
+        <DeliveryGapBadge eventId={eventId} expected={expectedDeliveryCount} created={total} />
       </div>
     );
   }
@@ -68,7 +71,50 @@ export function EventDeliveryCountsCell({
           value={counts[state]}
         />
       ))}
+      <DeliveryGapBadge eventId={eventId} expected={expectedDeliveryCount} created={total} />
     </div>
+  );
+}
+
+/**
+ * The difference between what the intake snapshot promised and what exists.
+ *
+ * Counts alone cannot show this: three succeeded deliveries look complete until
+ * the rules said four targets. The badge opens the event detail, whose route
+ * gap table names the actual reason (dedupe, a disabled route or target, or an
+ * already-deleted one) — this cell deliberately does not guess at it.
+ */
+function DeliveryGapBadge({
+  eventId,
+  expected,
+  created,
+}: {
+  eventId: string;
+  expected: number | null;
+  created: number;
+}) {
+  const t = useTranslations();
+
+  if (expected === null) {
+    return null;
+  }
+
+  const missing = expected - created;
+
+  if (missing <= 0) {
+    return null;
+  }
+
+  const title = t("events.table.deliveryGapTitle", { expected, created });
+
+  return (
+    <Badge
+      variant="outline"
+      className="min-w-12 justify-center gap-1 px-1.5"
+      render={<Link to="/events/$eventId" params={{ eventId }} aria-label={title} title={title} />}
+    >
+      {t("events.table.deliveryGap", { count: missing })}
+    </Badge>
   );
 }
 
