@@ -59,7 +59,30 @@
 
 ### 发布
 
-（见本轮后续记录）
+- 三位只读专家（发布经理 / 阻断审计 / 运维回滚）一致：**发布 `0.1.0-beta.157`**。
+  - 发布经理：beta.156 之后仅 1 个用户可见变更 #799，其余为 docs/planning；建议预发布序号 +1。
+  - 阻断审计：6/6 门槛 PASS；`origin/main` @ `945a5cb4` check/test/build 与 playwright 双绿；
+    唯一 open PR 为发布 PR #800；无迁移改动；无新增阻塞项。
+  - 运维回滚：无 Dockerfile/compose/env/锁文件变化、无迁移；升级只需换镜像并重启；
+    回滚 `0.1.0-beta.156` 无需数据库操作；旧镜像忽略新增 DTO 字段。
+- 版本 `0.1.0-beta.157`；PR #800（只改根 `package.json`，rebase 合并 `945a5cb4`，main CI 双绿）。
+- tag `v0.1.0-beta.157` @ `945a5cb4`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.157`
+  （linux/amd64 + linux/arm64，`--provenance=false --sbom=false`）：
+  - index digest `sha256:57f48b7410351c7a0feec0a5e13b0228011bd03688e9c15c0b06285f2b0598ed`
+  - amd64 `sha256:147d9eb7a12ca5c36dc0529ee64b4edd08f3a38828c66992aa1bfbcc277bac67`
+  - arm64 `sha256:3b8cde900593a8cc9d2ad4b128f381dac44b638fc1ba715438dd176ecb450e78`
+- 回滚 `0.1.0-beta.156`，无需数据库操作；升级前已存在事件不会回填新徽标数据。
+
+### 清理
+
+- 删除 tag 检出用的临时构建工作树 `/tmp/tocsin-build-beta157`。
+- 回收 1 个干净的历史 session 工作树；`youthful-murdock-b65fc6` 有真实未提交改动
+  （`destinations/api/destination.queries.ts`），跳过。`.claude/worktrees` 2.1G → 2.1G
+  （存量主要来自该分支工作树与运行中的 docs-site 工作树）。
+- 按 PR 状态删除已合并分支 `agent/event-delivery-gap`、`agent/release-beta-157`；
+  无 PR 记录的存量 `agent/*` 分支保留。
+- 删除 `agent-iteration` 的并发锁目录。
 
 ### 下一轮优先项
 
