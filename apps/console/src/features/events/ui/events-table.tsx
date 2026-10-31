@@ -83,6 +83,7 @@ export function EventsTable({
             eventId={row.original.id}
             counts={row.original.deliveryCounts}
             routeMatchCount={row.original.routeMatchCount}
+            expectedDeliveryCount={row.original.expectedDeliveryCount}
           />
         ),
       },

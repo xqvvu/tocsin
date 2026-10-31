@@ -55,6 +55,9 @@ export const EventListItemSchema = z.object({
   fingerprint: z.string(),
   receivedAt: IsoDateTimeSchema,
   routeMatchCount: z.number().int().min(0),
+  // Deliveries the intake route snapshot promised; null when no snapshot was
+  // recorded, so the UI can distinguish "unknown" from "nothing expected".
+  expectedDeliveryCount: z.number().int().min(0).nullable(),
   // The history projection always emits all four delivery states.
   deliveryCounts: z.record(DeliveryStateSchema, z.number().int().min(0)),
   // Intake's audit rows for payloads a provider parser rejected. Derived from

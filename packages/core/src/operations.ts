@@ -228,6 +228,18 @@ export interface EventListItem {
   fingerprint: string;
   receivedAt: IsoDateTimeString;
   routeMatchCount: number;
+  /**
+   * How many deliveries the intake route snapshot said to create: the sum of
+   * the destinations every matched route selected.
+   *
+   * Comparing this with `deliveryCounts` exposes a fan-out gap the counts alone
+   * cannot show — fingerprint dedupe, a route or target disabled at intake, or
+   * a deleted target all leave fewer rows than the rules promised. `null` when
+   * the event has no intake snapshot (replay fixtures, parser-failure audit
+   * rows): those rows were written directly, so the rules' intent was never
+   * recorded and `0` would read as "nothing was expected".
+   */
+  expectedDeliveryCount: number | null;
   deliveryCounts: Record<DeliveryState, number>;
   /**
    * True when the event is intake's audit row for a payload its provider

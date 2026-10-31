@@ -874,6 +874,8 @@
   "events.replay.toast.notFound": "事件不存在",
   "events.replay.toast.success": "事件补投已入队",
   "events.replay.toast.successDescription": "新建 {created} 条，跳过已有 {skipped} 条",
+  "events.table.deliveryGap": "缺 {count}",
+  "events.table.deliveryGapTitle": "接入时的路由快照应创建 {expected} 条投递，当前只有 {created} 条 — 同指纹去重、路由或目标已停用、目标已删除都会造成缺口，打开事件详情可查看具体原因",
   "events.table.deliveryShort.failed": "失",
   "events.table.deliveryShort.pending": "待",
   "events.table.deliveryShort.running": "运",

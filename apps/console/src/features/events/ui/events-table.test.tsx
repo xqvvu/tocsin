@@ -80,6 +80,7 @@ describe("events table", () => {
             {
               ...eventFixture("event-1"),
               routeMatchCount: 0,
+              expectedDeliveryCount: 0,
               deliveryCounts: {
                 pending: 0,
                 running: 0,
@@ -184,6 +185,7 @@ function eventFixture(id: string): Operations["events"]["items"][number] {
     fingerprint: "cpu:api",
     receivedAt: "2026-06-06T00:00:00.000Z",
     routeMatchCount: 1,
+    expectedDeliveryCount: 1,
     parseFailed: false,
     alertCount: null,
     deliveryCounts: {
