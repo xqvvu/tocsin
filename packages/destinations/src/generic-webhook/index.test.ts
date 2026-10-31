@@ -10,6 +10,7 @@ const input = destinationSendInput<GenericWebhookConfig>({
   config: {
     url: "https://relay.example.test/tocsin",
     method: "POST",
+    idempotencyKey: false,
     headers: {
       "X-Team": "sre",
     },
@@ -38,6 +39,59 @@ describe("generic webhook sender", () => {
         title: "Checkout API latency high",
         severity: "critical",
       },
+    });
+  });
+
+  it("sends the delivery id as Idempotency-Key when the opt-in is enabled", async () => {
+    const fetcher = fakeFetch(() => ({ status: 202, body: "accepted" }));
+    const optedIn = destinationSendInput<GenericWebhookConfig>({
+      ...input,
+      deliveryId: "delivery-42",
+      config: { ...input.config, idempotencyKey: true },
+    });
+
+    await genericWebhookSender.send(optedIn, { fetch: fetcher });
+
+    expect(fetcher.calls[0]?.init.headers).toMatchObject({
+      "Idempotency-Key": "delivery-42",
+    });
+  });
+
+  it("omits Idempotency-Key for previews and test sends even when enabled", async () => {
+    const fetcher = fakeFetch(() => ({ status: 202, body: "accepted" }));
+    const optedIn = destinationSendInput<GenericWebhookConfig>({
+      ...input,
+      config: { ...input.config, idempotencyKey: true },
+    });
+
+    await genericWebhookSender.send(optedIn, { fetch: fetcher });
+
+    expect(fetcher.calls[0]?.init.headers).not.toHaveProperty("Idempotency-Key");
+  });
+
+  it("omits Idempotency-Key by default and lets a configured header win", async () => {
+    const fetcher = fakeFetch(() => ({ status: 202, body: "accepted" }));
+
+    await genericWebhookSender.send(
+      destinationSendInput<GenericWebhookConfig>({ ...input, deliveryId: "delivery-42" }),
+      { fetch: fetcher },
+    );
+    await genericWebhookSender.send(
+      destinationSendInput<GenericWebhookConfig>({
+        ...input,
+        deliveryId: "delivery-42",
+        config: {
+          ...input.config,
+          idempotencyKey: true,
+          headers: { "Idempotency-Key": "operator-chosen" },
+        },
+      }),
+      { fetch: fetcher },
+    );
+
+    expect(fetcher.calls[0]?.init.headers).not.toHaveProperty("Idempotency-Key");
+    expect(fetcher.calls[1]?.init.headers).toMatchObject({
+      "Idempotency-Key": "operator-chosen",
     });
   });
 

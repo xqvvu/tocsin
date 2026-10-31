@@ -538,6 +538,8 @@
   "destinations.form.headersDescription": "每行一个 Name: value Header，值只保留在服务端，编辑时只显示名称，值留空表示保留原值",
   "destinations.form.htmlTemplate": "HTML 正文模板",
   "destinations.form.htmlTemplateDescription": "取代自动生成的 pre 正文，你写的 HTML 标记按原样输出，变量值一律经过 HTML 转义",
+  "destinations.form.idempotencyKey": "发送 Idempotency-Key",
+  "destinations.form.idempotencyKeyDescription": "投递时附带稳定的 Idempotency-Key 请求头（取投递 ID），重试时目标可据此丢弃重复告警，预览与测试发送不带该头，目标系统需支持此约定",
   "destinations.form.jsonPayloadTemplate": "JSON 负载模板",
   "destinations.form.jsonPayloadTemplateDescription": "只在字符串取值中插值变量，URL 与请求头不会进入外发请求体",
   "destinations.form.keepExisting": "保留现有值",

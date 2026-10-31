@@ -135,6 +135,9 @@ export function destinationEditorFormDraftFromRuntime(
     // address into `url`, which no input ever displayed.
     webhookUrl: configString(config, "url") ?? configString(config, "webhookUrl") ?? "",
     method: configString(config, "method") ?? "",
+    // Absent on every config saved before the opt-in existed; the schema's
+    // default is off, so an unreadable or missing value must render off too.
+    idempotencyKey: configBoolean(config, "idempotencyKey") ?? false,
     sendMode: feishuSendMode(config) ?? "webhook",
     appRef: feishuApp ? (configString(feishuApp, "appRef") ?? "") : "",
     chatId: feishuApp ? (configString(feishuApp, "chatId") ?? "") : "",
@@ -407,6 +410,12 @@ function configStringArray(config: JsonObject, key: string): string[] {
   }
 
   return value.filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+}
+
+function configBoolean(config: JsonObject, key: string): boolean | null {
+  const value = config[key];
+
+  return typeof value === "boolean" ? value : null;
 }
 
 function configPlainObject(config: JsonObject, key: string): JsonObject | null {

@@ -18,6 +18,7 @@ import type {
 import { defaultFeishuCardTemplate as defaultFeishuCardTemplateObject } from "@tocsin/destinations/feishu/default-card";
 
 import { Button } from "#/components/ui/button";
+import { Checkbox } from "#/components/ui/checkbox";
 import {
   Field as UiField,
   FieldDescription,
@@ -1040,6 +1041,27 @@ export function DestinationForm({
                   </UiField>
                 )}
               </form.Field>
+              <form.Field name="idempotencyKey">
+                {(field) => (
+                  <UiField>
+                    <label className="flex items-start gap-2 text-xs font-medium">
+                      <Checkbox
+                        id={field.name}
+                        name={field.name}
+                        checked={field.state.value}
+                        className="mt-0.5"
+                        onCheckedChange={(checked: boolean) => field.handleChange(checked)}
+                      />
+                      <span className="min-w-0">
+                        <span className="block">{t("destinations.form.idempotencyKey")}</span>
+                        <span className="text-muted-foreground block text-[11px] font-normal">
+                          {t("destinations.form.idempotencyKeyDescription")}
+                        </span>
+                      </span>
+                    </label>
+                  </UiField>
+                )}
+              </form.Field>
               {renderHeaderLinesField()}
             </>
           ) : null}
@@ -1275,6 +1297,7 @@ export function createDestinationDefaults(): DestinationFormValues {
     headers: "",
     webhookUrl: "",
     method: "POST",
+    idempotencyKey: false,
     signSecret: "",
     sendMode: "webhook",
     appRef: "",

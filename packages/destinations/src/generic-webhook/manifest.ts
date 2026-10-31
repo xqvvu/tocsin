@@ -38,6 +38,13 @@ export const genericWebhookManifest = {
       valueSensitive: true,
     },
     {
+      type: "boolean",
+      path: "idempotencyKey",
+      labelKey: "destinations.form.idempotencyKey",
+      descriptionKey: "destinations.form.idempotencyKeyDescription",
+      defaultValue: false,
+    },
+    {
       type: "template",
       path: "template",
       labelKey: "destinations.form.template",

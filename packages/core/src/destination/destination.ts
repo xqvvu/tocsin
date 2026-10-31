@@ -232,6 +232,8 @@ export const DestinationEditorFormDraftSchema = z.object({
    */
   webhookUrl: z.string(),
   method: z.string(),
+  /** Generic-webhook opt-in for the outbound `Idempotency-Key` header. */
+  idempotencyKey: z.boolean(),
   /** Feishu send mode and app-mode target fields. */
   sendMode: z.enum(["webhook", "app"]),
   appRef: z.string(),

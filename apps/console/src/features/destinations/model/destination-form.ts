@@ -462,6 +462,7 @@ export function destinationConfigFromForm(kind: DestinationFormKind, data: FormD
     // with "url: Invalid URL". Same defect as in `destinationConfigPatchFromForm`.
     url: formTrimmedString(data, "webhookUrl"),
     method: formWebhookMethod(data),
+    idempotencyKey: formString(data, "idempotencyKey") === "true",
     ...nonEmptyObject({ headers }),
     ...nonEmptyObject({ template }),
   };
@@ -563,6 +564,11 @@ export function destinationConfigPatchFromForm(
     if (method === "POST" || method === "PUT" || method === "PATCH") {
       config.method = method;
     }
+
+    // Patch semantics: the edit form always renders the toggle, so writing the
+    // explicit boolean is what lets an operator turn the opt-in back off. Other
+    // fields use truthiness because an empty input there means "keep stored".
+    config.idempotencyKey = formString(data, "idempotencyKey") === "true";
 
     if (nonEmptyObject(headers)) {
       config.headers = headers;
