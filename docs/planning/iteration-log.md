@@ -2,6 +2,88 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-31（第 193 轮）
+
+- 时间：2026-10-31 01:19 CST 起（定时触发；并发锁获取于 01:19）。
+- 基线：`origin/main` @ `9af3db14`；启动时 main CI 绿（41097518236 在本轮启动后完成 success），无 open PR。
+- 类型：**需求切片（非 full-audit）**。距上次全量审计（2026-10-30 22:51 CST）约 2h28m < 6h，
+  按第 1.5 步配额闸门不展开全量审计；backlog 有 28 分候选，续做第 192 轮「下一轮优先项」第 1 条。
+- **全量审计时间戳保持 2026-10-30 22:51 CST**（本轮未做全量审计）。
+- 车道轮转位置：本轮执行 `requirements` + `ui-triage` + `quality`；下一个非必跑车道为 **docs-drift**。
+- `ui-triage`：**defer**。`last_ui_review_at` 17:45 CST（距今 7h35m < 48h）；自上次评审以来
+  4 个 UI 路径提交，真正新的 UI 合并仅 `0d9bce75`（告警组徽标，已真实浏览器验证），未评审
+  churn 为 0；67 条 `UI-` candidate 为饱和存量，最新 UI-126，无 UI-127+。下一次触发：
+  2026-11-01 17:45 CST 后首个轮次做整页巡检，或新增 ≥3 个真正新的 UI 合并 / ≥2 条 UI-127+ 发现。
+- `last_ui_review_at` 保持 **2026-10-30 17:45 CST**（本轮未做 UI 评审）。
+- 工作树：`agent-iteration` 仅用于并发锁与基线读取；实现、验证、发版在本会话工作树
+  `optimistic-mcclintock-c52ca9`。会话工作树 node_modules 半删残留导致 `@tocsin/core`
+  解析失败，`vp install --frozen-lockfile --force` 4.6 秒恢复。
+
+### 本轮交付
+
+- **PR #794** `feat(console): link Grafana dashboards and silences from event detail`（REQ-372，28 分）
+  - Grafana 解析器从首条 alert 写出 `dashboardURL` / `panelURL` / `silenceURL`（含 snake_case
+    别名）；Alertmanager 兼容解析器补写可选 `silenceURL`；仅非空字符串写入。
+  - `event-upstream-source` 投影把三个键加入链接白名单与产品文案，复用既有 `http(s)` 白名单与
+    userinfo 剥离；中英文案「仪表盘 / 面板 / 上游静默页」（Dashboard / Panel / Silence page）。
+  - 测试：Grafana/Alertmanager 解析器写入、投影链接顺序、非 http 回退惰性元数据、组件
+    href/target/rel/文案。
+  - 文档：`docs/prd/event-upstream-deep-links.md`；`apps/docs/guide/events.md` 新增「上游告警回链」。
+  - 验证：`vp check` 0 error（35 warning 基线）；`vp run -r test` 4/4（console 246 文件 /
+    1490 用例）；`vp run -r build` 2/2；PR CI 双绿；rebase 合并 `7dcd91ba`。
+  - 浏览器验证：未做（本机 5173 为其他项目、无 Tocsin dev server）；变更只新增一行链接，
+    DOM 契约由组件测试覆盖。
+
+### 专家发现
+
+**requirements（第 193 轮，5 条新候选，已入 backlog）**：
+
+- REQ-380（27）顶栏四个运行态指示器没有 `isError` 分支，查询失败与计数 0 同形
+  （`delivery-failure-indicator.tsx:20-25`、`parse-failure-indicator.tsx:20-25`、
+  `delivery-pause-indicator.tsx:19-23`、`active-suppression-indicator.tsx:23-35`；
+  `apps/docs/operations/monitoring.md:124,141` 承认该边界）。
+- REQ-381（28）事件列表缺「应投递目标对 vs 已创建投递」缺口
+  （`history.repository.ts:1133-1165`；`apps/docs/guide/events.md:106`；
+  `packages/api/src/schemas/operations.ts:48-66`）。
+- REQ-382（28）通用 Webhook 无可选 `Idempotency-Key`
+  （`generic-webhook/schema.ts:15-20`、`adapter.ts:66-72`；
+  `delivery-execution.ts:110-128`；`apps/docs/operations/deliveries.md:247`）。
+- REQ-383（27）解析失败事件缺可执行修复闭环（`event-parse-failure-notice.tsx:93-99`；
+  `event-raw-tab.tsx:7-39`；`source-rehearsal-dialog.tsx:46-48`；
+  `apps/docs/guide/sources.md:118`）。
+- REQ-384（28）接入预演结果未说明未验证项（`source-rehearsal-result.tsx:26-50`；
+  `apps/docs/guide/sources.md:113`）。
+
+**quality**：车道因 API timeout（server_error）提前失败，未返回发现；下一轮重跑。
+
+**ui-triage**：见上，defer。
+
+### EXPERT_PANEL
+
+本轮无新 EXPERT_PANEL 事项（纯加法解析器/投影字段）。
+
+### 发布
+
+- 三位只读专家（发布经理 / 阻断审计 / 运维回滚）一致：**发布 `0.1.0-beta.156`**。
+  - 发布经理：自 beta.155 起唯一用户可见变更 #794，建议 beta.N+1；`v0.1.0-beta.156` 未占用。
+  - 阻断审计：6/6 门槛 PASS；`origin/main` @ `7dcd91ba` 双绿、无 open PR、无迁移（仍止
+    `0005`）、无高优 `blocked-autonomous`、tag 未占用。
+  - 运维回滚：无 Dockerfile/compose/env/锁文件变化；回滚只需换回 `0.1.0-beta.155`，无需数据库
+    操作；旧镜像可读新 metadata（未知键按普通元数据展示）；升级前已存在的事件不会回填新链接。
+- 版本 `0.1.0-beta.156`；PR #795（只改根 `package.json`，rebase 合并 `f608262f`）。
+
+### 清理
+
+（见本节末尾更新）
+
+### 下一轮优先项
+
+1. REQ-381 / REQ-382 / REQ-384（28）或 REQ-373（28）：下一轮选 1 实现。
+2. REQ-380 / REQ-383（27）与 REQ-374 / REQ-376（27）。
+3. quality 车道重跑（本轮 API timeout）。
+4. 车道轮转：下一个非必跑车道 **docs-drift**。
+5. UI 评审：2026-11-01 17:45 CST 后首个轮次做整页巡检。
+
 ## 2026-10-30（第 192 轮）
 
 - 时间：2026-10-30 22:51 CST 起（定时触发；并发锁获取于 22:51）。
