@@ -40,10 +40,23 @@ Provider 元数据损坏或缺失的旧记录也可能落在这一侧。若 Webh
 
 ## Webhook 没有 Event
 
-1. 确认请求目标是告警源自己的 `/api/sources/<source-id>/webhook` URL，而不是 dashboard 页面或通用 `/api` 路径。
-2. 检查 HTTP 状态：`401` 通常是缺少或无效告警源 Token；`403` 可能表示告警源已禁用；`404` 表示告警源不存在；`413` 表示请求体超过实例上限；`400` 表示 JSON 或 Provider 解析失败。
-3. Token 可放在 `Authorization: Bearer ...` 或 `X-Tocsin-Source-Token`；也可用该 Source 已配置的共享密钥，通过 `X-Tocsin-Provider-Secret` 认证。当前实现接受任一有效凭据；凭据丢失或轮换影响见[告警源接入与生命周期](/guide/sources)。
-4. 检查告警源选择的 Provider 是否与上游 payload 格式一致。可在「告警源」页使用[接入预演](/guide/sources#接入预演)回放这段请求体，查看解析结果、路由判定与投递判定；投递判定能直接区分会被静默、目标已停用和全局暂停排队。它不写 Event、不创建 Delivery，也不校验 Token 与网络可达性。目标页的“测试”只验证出站通知，同样不会创建 Event。
+如果响应没有 `eventId`，先不要在 Event 页面查。认证初筛、请求体大小检查和 JSON 解码失败都不会写入审计 Event；只有通过这些边界后，Provider 解析失败才会留下带 `eventId` 的 `400`。先确认请求目标是告警源自己的 `/api/sources/<source-id>/webhook` URL，而不是 dashboard 页面或通用 `/api` 路径，再按响应体和状态码分流：
+
+| 响应 | 无 `eventId` 时先判断 | 下一步 |
+| --- | --- | --- |
+| `401`，`Missing source credentials` | 请求没有带 `Authorization: Bearer ...`、`X-Tocsin-Source-Token` 或已配置的 `X-Tocsin-Provider-Secret`；应用会在读取请求体前返回 | 从受保护的 secret store 补齐凭据后重发；不要因为 `401` 去修改 JSON 或增大请求体上限 |
+| `401`，`Invalid source token` | 告警源存在且启用，但 Token 或共享密钥校验失败 | 核对 URL 中的 Source ID、凭据位置和最近一次轮换；不要把 Token 明文写进工单或日志 |
+| `403`，`Source is disabled` | 告警源被停用；凭据是否正确不会改变这个结果 | 在「告警源」页确认变更窗口后重新启用；停用期间不会补写 Event |
+| `404`，`Source not found` | URL 中的 Source ID 不存在，或复制了错误的 Webhook 地址 | 从告警源列表重新复制完整 URL；确认请求没有被代理改写路径 |
+| `413`，应用返回 JSON 错误 | 请求体超过 `TOCSIN_MAX_WEBHOOK_BYTES`；应用没有创建 Event | 缩小载荷，或评估调整应用上限；同时把反向代理上限设为不低于应用值，见[TLS 反向代理](/operations/reverse-proxy#代理必须满足的边界) |
+| `413`，代理返回自己的页面或错误体 | 请求在到达 Tocsin 前被 nginx、Caddy、WAF 或网关拒绝，应用日志通常没有对应请求 | 先查代理请求体上限和访问日志，再对齐代理与应用配置；不要只看 Tocsin 的 `tocsin.intake` |
+| `400`，`Expected JSON webhook payload` 且无 `eventId` | 请求体为空、不是合法 JSON，或在代理层被改写为无效 JSON；应用没有创建 Event | 检查上游模板、转义、`Content-Type` 和代理转发的请求体；用最小合法 JSON 重试 |
+
+`400` 但响应带 `eventId` 是另一条路径：JSON 已通过边界，Provider 解析器拒绝了载荷。打开对应的解析失败 Event，按[Provider 接入验收配方](/integrations/provider-verification#先分清响应)核对 Provider 与载荷契约，不要把它当成无效 JSON 或“未命中路由”。
+
+接入 Token 可放在 `Authorization: Bearer ...` 或 `X-Tocsin-Source-Token`；也可用该 Source 已配置的共享密钥，通过 `X-Tocsin-Provider-Secret` 认证。当前实现接受任一有效凭据；凭据丢失或轮换影响见[告警源接入与生命周期](/guide/sources)。应用返回的 `400`、`401`、`403`、`404` 和 `413` 都是 JSON 响应；如果收到 HTML 或代理自定义格式，先按反向代理链路排查。
+
+检查完边界后，可在「告警源」页使用[接入预演](/guide/sources#接入预演)回放请求体，查看解析结果、路由判定与投递判定；投递判定能直接区分会被静默、目标已停用和全局暂停排队。它不写 Event、不创建 Delivery，也不校验 Token 与网络可达性。目标页的“测试”只验证出站通知，同样不会创建 Event。
 
 要验证入站解析，请从上游使用测试发送能力，或按[Provider 接入验收配方](/integrations/provider-verification)向一个专用的非生产告警源发送唯一标题的代表性 Webhook。确认响应为 `202` 并记录 `eventId`，再打开对应 Event 核对 Provider 规范化字段。测试告警源可以不配置已启用的路由，这样只会留下 Event 与匹配证据，不会触发生产通知；需要验证完整链路时，再使用独立测试目标与路由。响应为带 `eventId` 的 `400` 时，打开对应的解析失败 Event，而不是仅凭状态码猜测字段问题。
 
