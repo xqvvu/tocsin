@@ -165,6 +165,84 @@ tocsin.example.com {
 
 若 Caddy 前还有 CDN，先按 CDN 的官方方式把来源 IP 配置为可信代理，再让 Caddy 解析真实客户端地址。不要直接信任公网客户端传入的 `X-Forwarded-For` 链。
 
+## 代理日志与请求关联
+
+排查代理是否丢弃请求体、认证头或响应时，先建立一个不会包含 secret 的关联 ID。Tocsin 的请求日志和响应遵循同一规则：
+
+1. 优先使用请求中的 `x-request-id`，其次使用 `x-correlation-id`；值必须匹配允许的字符集且不超过 128 个字符，否则 Tocsin 生成 UUID。
+2. Tocsin 把最终 ID 写回响应的 `x-request-id`，并在 `tocsin.http` 的 `properties.requestId` 中记录。
+3. `tocsin.http` 只记录 method、pathname、handlerType、status 和 durationMs，不记录请求体、请求头或 query；代理访问日志必须补充安全的边缘元数据，才能判断请求在哪一跳被改写。
+
+单层 nginx 可以让边缘生成 ID，再把它传给 Tocsin。下面的日志格式只保留方法、路径、状态、上游状态、请求大小、耗时和两个关联 ID；不要把 `$request`、请求头或请求体写入访问日志。
+
+```nginx
+log_format tocsin_edge escape=json
+    '{"request_id":"$request_id",'
+    '"upstream_request_id":"$upstream_http_x_request_id",'
+    '"method":"$request_method",'
+    '"path":"$uri",'
+    '"status":$status,'
+    '"upstream_status":"$upstream_status",'
+    '"request_length":$request_length,'
+    '"request_time":$request_time,'
+    '"upstream_response_time":"$upstream_response_time"}';
+
+server {
+    # ... TLS 与 server_name 配置省略 ...
+    access_log /var/log/nginx/tocsin_access.log tocsin_edge;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header X-Request-Id $request_id;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+}
+```
+
+`$request_id` 需要 nginx 构建提供该变量；如果部署使用的网关不能生成 ID，就让它保留上游已经提供的有效 `X-Request-Id`，并在访问日志中同时记录入站与上游响应 ID。无论哪种方式，都要让同一个 ID 出现在边缘日志、Tocsin 响应和 `tocsin.http` 日志中。`$uri` 不含 query，适合长期保留；请求体大小只用于判断代理是否在边界前拒绝，不代表请求体内容。
+
+Caddy 使用 JSON access log 时，至少保留请求方法、路径、状态、上游状态、耗时和 `X-Request-Id` 关联字段。根据 Caddy 版本配置日志过滤器或采集端，删除 `Authorization`、`Cookie`、`X-Tocsin-Source-Token`、`X-Tocsin-Provider-Secret` 和 query；不要因为启用 JSON 日志就把整组请求头直接写入长期存储。现有 `reverse_proxy` 配置中的 `Host`、`X-Forwarded-Host` 和 `X-Forwarded-Proto` 仍须保持不变。
+
+### 三方对账
+
+用一个专用测试告警源发一次唯一标题的请求，并从响应头取得 `x-request-id`。也可以先传入一个短的测试值，验证代理是否原样传递；不要在命令行、shell history 或工单中写入真实 Token：
+
+```bash
+curl -sS -i \
+  -X POST https://tocsin.example.com/api/sources/<source-id>/webhook \
+  -H 'Content-Type: application/json' \
+  -H 'X-Request-Id: proxy-check-20261031' \
+  -H 'X-Tocsin-Source-Token: <source-token>' \
+  --data '{"title":"proxy-correlation-check","status":"firing"}'
+```
+
+按同一个 ID 对照三处记录：
+
+| 证据 | 应看到什么 | 用途 |
+| --- | --- | --- |
+| 外部响应 | `x-request-id` 与测试值相同，或与边缘生成值相同 | 确认响应没有被代理替换，并拿到后续检索键 |
+| 代理 access log | 请求 ID、`method`、`path`、边缘 `status`、`upstream_status`、请求大小与耗时 | 判断请求是否到达 Tocsin，以及边缘和上游状态是否一致 |
+| Tocsin `tocsin.http` | `properties.requestId`、`method`、`pathname`、`status`、`durationMs` | 判断应用实际收到的路径和最终响应；再按 `tocsin.intake` 查认证、解析和接受结果 |
+
+```bash
+docker compose logs --no-log-prefix --since=15m console \
+  | jq -R 'fromjson? | select(.logger == "tocsin.http" and .properties.requestId == "<request-id>")'
+```
+
+按差异定位：
+
+- 代理没有 access log，或只看到代理自己的 `4xx/413`：请求没有到达 Tocsin，先查 TLS、WAF、路径、请求体上限和代理访问日志。
+- 代理有 `upstream_status`，Tocsin 也有同一 ID 的 `tocsin.http`，但状态为 `401`：请求已到应用，重点查 Source ID、Token/共享密钥是否被代理删除或改写。
+- Tocsin 为 `400` 且没有 `eventId`：应用收到的 JSON 为空或无效；对照代理记录的请求大小和上游重写规则，检查 Content-Type 与请求体转发。
+- 代理返回自己的 `413`，且没有对应的 Tocsin `tocsin.http`：请求在应用前被拦截；代理上限低于 `TOCSIN_MAX_WEBHOOK_BYTES`，或 WAF 有更低限制。
+- Tocsin 为 `413` 且代理 `upstream_status` 也是 `413`：请求已到应用但超过应用上限；调整载荷或同步提高应用与代理上限。
+- Tocsin 返回 `202`，但边缘返回其它状态，或两个日志中的 ID 不一致：检查代理是否缓存、重写响应、转发到错误 upstream，或存在第二层代理没有传递关联头。
+
+不要只凭 `tocsin.http` 证明请求体或认证头在边缘保持不变：该日志刻意不包含它们。要证明这两项，使用测试告警源的结果、代理安全元数据和上游日志三方互证；真实 secret 只在受保护的部署日志或 secret store 中核对。
+
 ## 客户端 IP 与多层代理
 
 Better Auth 默认读取 `X-Forwarded-For` 记录 session 的 IP。当前 Tocsin 没有暴露可信代理 CIDR 配置；在没有 `trustedProxies` 设置时，Better Auth 只接受**单值**地址，多段代理链可能显示为「未知」。
