@@ -2,6 +2,81 @@
 
 按轮次倒序追加。每条记录：时间、基线、专家发现、本轮交付、上报事项、下一轮优先项。
 
+## 2026-10-31（第 195 轮）
+
+- 时间：2026-10-31 11:25 CST 起（定时触发；并发锁获取于 11:25）。
+- 基线：`origin/main` @ `d021167b`；启动时 main 无失败 CI、无 open PR。
+- 类型：**需求切片（非 full-audit）**。距上次全量审计（2026-10-31 10:53 CST）约 32 分钟，
+  < 6 小时，按第 1.5 步配额闸门不展开全量审计；backlog 已有多个 27–28 分候选，续做第 194 轮
+  「下一轮优先项」第 1 条。
+- **全量审计时间戳保持 2026-10-31 10:53 CST**（本轮未做全量审计）。
+- 车道轮转位置：本轮 **未 spawn requirements / ui-triage**。相邻两轮仅间隔 32 分钟、仓库代码
+  零变化，按跨轮记忆「相邻轮次不重跑车道」直接沿用第 194 轮实测基线选题；下一个非必跑车道
+  仍为 **quality**（第 193 轮因 API timeout 未返回，待重跑）。
+- `ui-triage` 决策沿用 **defer**：`last_ui_review_at` 2026-10-30 17:45 CST；下一次触发为
+  2026-11-01 17:45 CST 后首个轮次，或新增 ≥3 个真正新的 UI 合并 / ≥2 条 UI-127+ 发现。
+- 工作树：`agent-iteration` 目录不是注册工作树，本轮只用 Bash 写入并发锁（不做任何
+  `git -C` 写操作）；实现、验证、发版在本会话工作树 `sweet-proskuriakova-772697`。
+  `vp install --frozen-lockfile --force` 5.3 秒重建 844 个包。
+
+### 本轮交付
+
+- **PR #803** `feat(destinations): send an optional Idempotency-Key to generic webhooks`
+  （REQ-382，28 分；rebase 合并 `7f447e12`）
+  - 通用 Webhook 配置新增 `idempotencyKey`（默认关）：真实投递附带
+    `Idempotency-Key: <deliveryId>`；`deliveryId` 取自 `delivery.job.id`，在同一条投递的
+    重试之间保持不变。预览与测试发送没有持久化投递，不发该头；运营者在 `headers` 中显式
+    配置同名头时以运营者配置为准。
+  - `DestinationRenderInput` 新增可选 `deliveryId`；执行器负责填充，预览/测试/预演调用方不传。
+  - 表单（创建/编辑）、编辑器草稿、适配器清单、便携导出、中英文案全部接通；无迁移。
+  - 测试：适配器三种头行为、执行器传递 `deliveryId`、表单创建/编辑映射、草稿回读、
+    配置归一化、便携导出。
+  - 文档：PRD `docs/prd/generic-webhook-idempotency-key.md`、`apps/docs/integrations/destinations.md`、
+    `apps/docs/operations/deliveries.md`。
+  - 验证：`vp check` 0 error（35 warning 基线）；`vp run -r test` 4/4（247 文件 / 1500 用例）；
+    `vp run -r build` 2/2；PR CI 双绿。
+  - 浏览器验证：未做（本机无 Tocsin dev server 监听）。变更由表单模型测试与适配器测试覆盖。
+
+### 专家发现
+
+本轮未 spawn 车道（理由见上）。code-review（low）自查发现一处覆盖缺口：新开关没有便携导出
+断言；已在本轮补充 `configuration.integration.test.ts` 的导出测试后一并合入。
+
+### EXPERT_PANEL
+
+本轮无 EXPERT_PANEL 事项。
+
+### 发布
+
+- 三位只读专家（发布经理 / 阻断审计 / 运维回滚）结论：
+  - **发布经理**：beta.157 之后仅 1 个用户可见变更（#803），其余为 docs/planning；
+    建议预发布序号 +1，`0.1.0-beta.158`。
+  - **阻断审计**：open PR 0、迁移 0、无阻塞回归；main CI 当时 pending，合并前已确认
+    `42a0c973` 的 CI 与 E2E 双绿。三条历史 `blocked-autonomous` 项（LICENSE、CI 必需检查）
+    均不影响本版本运行。
+  - **运维回滚**：无 Dockerfile/compose/env/锁文件/迁移变化；升级只需换镜像并重启。
+    **回滚注意**：beta.158 上创建或编辑过的通用 Webhook 目标会把 `idempotencyKey` 写进
+    `config_json`，beta.157 的 `strictObject` 会拒绝该字段；回滚前需冷备份，并离线执行
+    `UPDATE destinations SET config_json = json_remove(config_json, '$.idempotencyKey')
+    WHERE kind = 'generic_webhook';`，或恢复升级前备份。
+- 版本 `0.1.0-beta.158`；PR #804（只改根 `package.json`，rebase 合并 `42a0c973`）。
+- tag `v0.1.0-beta.158` @ `42a0c973`；GitHub Release（prerelease，body 非空）。
+- 镜像 `registry.cn-hangzhou.aliyuncs.com/xqvvu/vane:0.1.0-beta.158`
+  （linux/amd64 + linux/arm64，`--provenance=false --sbom=false`）：
+  - index digest `sha256:27e9213bff385231dd323f0b57188605cc2424107b29ab6bab39711038ea5668`
+  - amd64 `sha256:2b1e8299da497f21e3e4dc03ae6885a764edcaf8432fbdd54ecc70c0da02087c`
+  - arm64 `sha256:8278538297bbd32df4446af25fa2fd5eae6dce7a031a201439498af7c9ab47a9`
+- 回滚目标 `0.1.0-beta.157`；数据库 schema 无需操作，但通用 Webhook 配置需按上述步骤移除新字段。
+
+### 下一轮优先项
+
+1. REQ-384 / REQ-373（28）：下一轮选 1 实现。
+2. REQ-380 / REQ-383（27）与 REQ-374 / REQ-376（27）。
+3. 车道轮转：下一个非必跑车道 **quality**。
+4. UI 评审：2026-11-01 17:45 CST 后首个轮次做整页巡检。
+5. 考虑为 `idempotencyKey` 设计 rollback-compatible 的存储方式（可选字段 + 不落盘 false），
+   降低回滚摩擦；需 EXPERT_PANEL 评估。
+
 ## 2026-10-31（第 194 轮）
 
 - 时间：2026-10-31 10:53 CST 起（定时触发；并发锁获取于 10:53）。
